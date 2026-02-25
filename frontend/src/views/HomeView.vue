@@ -9,12 +9,12 @@ export default {
   <div class="landing-container">
     <nav class="navbar">
       <div class="nav-container">
-        <div class="nav-logo">
+        <div class="nav-logo" style="margin-right: 50px">
           <span class="logo-icon">🏍️</span>
           <span class="logo-text">MOTOPREMIUM</span>
         </div>
 
-        <div class="nav-menu">
+        <div class="nav-menu" style="margin-right: 400px">
           <div class="nav-links">
             <a href="#how-it-works" class="nav-link">How it works</a>
             <a href="#vehicles" class="nav-link">Vehicles</a>

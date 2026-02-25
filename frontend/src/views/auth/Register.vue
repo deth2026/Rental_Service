@@ -8,47 +8,39 @@ export default {
   <div class="register-container">
     <div class="hero-section">
       <div class="hero-content">
-        <div class="logo">
-          <span class="logo-icon">🏍️</span>
-          <span>MOTOPREMIUM</span>
-        </div>
-
-        <h1 class="hero-title">
+        <h1 class="hero-title" style="margin-bottom20px">
           Start Your <br />
           <span class="highlight">Premium Journey</span>
         </h1>
 
-        <p class="hero-subtitle">
+        <!-- <p class="hero-subtitle">
           Create your account and unlock exclusive access to our premium
           motorbike collection. Join thousands of riders who trust us for their
           adventures.
-        </p>
+        </p> -->
 
         <div class="features">
           <div class="feature-item">
-            <span class="feature-icon">✨</span>
+            <span class="feature-icon"></span>
             <span>Premium Bikes</span>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">🛡️</span>
+            <span class="feature-icon"></span>
             <span>Insurance Included</span>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">📍</span>
+            <span class="feature-icon"></span>
             <span>Multiple Locations</span>
           </div>
         </div>
 
         <div class="social-proof">
-          <div class="avatar-group">
-            <img src="https://i.pravatar.cc/40?u=1" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=2" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=3" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=4" alt="user" />
-          </div>
           <div class="proof-text">
-            <p class="proof-number">50,000+</p>
-            <p class="proof-label">Happy Riders</p>
+            <p class="proof-label">
+              Create your account and unlock exclusive access to our premium
+              motorbike collection. Join thousands of riders who trust us for
+              their adventures.
+            </p>
           </div>
         </div>
       </div>

@@ -8,46 +8,37 @@ export default {
   <div class="login-container">
     <div class="hero-section">
       <div class="hero-content">
-        <div class="logo">
-          <span class="logo-icon">🏍️</span>
-          <span>MOTOPREMIUM</span>
-        </div>
-
         <h1 class="hero-title">
           Welcome Back to <br />
           <span class="highlight">Your Adventure</span>
         </h1>
 
-        <p class="hero-subtitle">
+        <!-- <p class="hero-subtitle">
           Sign in to continue your premium riding experience. Your next journey
           is just a login away.
-        </p>
+        </p> -->
 
         <div class="features">
           <div class="feature-item">
-            <span class="feature-icon">🔐</span>
+            <span class="feature-icon"></span>
             <span>Secure Login</span>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">⚡</span>
+            <span class="feature-icon"></span>
             <span>Quick Access</span>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">🎯</span>
+            <span class="feature-icon"></span>
             <span>Personalized</span>
           </div>
         </div>
 
         <div class="social-proof">
-          <div class="avatar-group">
-            <img src="https://i.pravatar.cc/40?u=5" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=6" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=7" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=8" alt="user" />
-          </div>
           <div class="proof-text">
-            <p class="proof-number">24/7</p>
-            <p class="proof-label">Support Available</p>
+            <p class="proof-label">
+              Sign in to continue your premium riding experience. Your next
+              journey is just a login away.
+            </p>
           </div>
         </div>
       </div>
@@ -114,7 +105,11 @@ export default {
           </div>
 
           <button type="submit" class="btn-login" :disabled="isLoading">
-            <span v-if="!isLoading">Sign In</span>
+            <span v-if="!isLoading"
+              ><a href="/chooserole" style="text-decoration: none; color: white"
+                >Login</a
+              ></span
+            >
             <span v-else class="loading-spinner">
               <span class="spinner"></span>
               Signing In...
