@@ -27,6 +27,11 @@ Route::get('/test', function () {
 });
 
 Route::apiResource('users', UserController::class);
+
+// Authentication routes
+Route::post('/users/register', [UserController::class, 'register']);
+Route::post('/users/login', [UserController::class, 'login']);
+Route::post('/users/logout', [UserController::class, 'logout'])->middleware('auth:sanctum');
 Route::apiResource('categories', CategoryController::class);
 Route::apiResource('vehicles', VehicleController::class);
 Route::apiResource('shops', ShopController::class);
