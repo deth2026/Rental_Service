@@ -1,6 +1,6 @@
-import './assets/main.css'
-import './assets/register.css'
-import './assets/dashboard.css'
+
+import './assets/ChooseRole.css'
+import './assets/HomeView.css'
 
 import { createApp } from 'vue'
 import App from './App.vue'
