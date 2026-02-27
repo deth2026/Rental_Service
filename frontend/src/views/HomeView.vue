@@ -8,12 +8,7 @@ export default {
   <div class="home-page">
     <header class="top-nav">
       <div class="brand">Chong Choul</div>
-      <nav class="nav-links">
-        <a href="#">Home</a>
-        <a href="#">Explore</a>
-        <a href="#">About</a>
-        <a href="#">Contact</a>
-      </nav>
+      
       <div class="nav-auth">
         <RouterLink class="link-login" to="/choose-role">Login</RouterLink>
         <RouterLink class="btn-signup" to="/choose-role">Sign Up</RouterLink>
@@ -169,19 +164,16 @@ const search = reactive({
 const categories = [
   {
     title: 'Cars',
-    tag: 'Adventure',
     availability: '120+ Vehicles Available',
     image: 'https://i.pinimg.com/1200x/76/4d/1e/764d1e19a2fb69a9046e53ceb4381391.jpg'
   },
   {
     title: 'Motorbikes',
-    tag: 'City Move',
     availability: '450+ Vehicles Available',
     image: 'https://i.pinimg.com/1200x/b3/a3/84/b3a384d5a8624aba2943bf7d41edd5e2.jpg'
   },
   {
     title: 'Bicycles',
-    tag: 'Eco Friendly',
     availability: '85+ Vehicles Available',
     image: 'https://i.pinimg.com/1200x/9d/a8/87/9da8873b9c5bfdc2ac0dd4915e594d02.jpg'
   }
@@ -207,29 +199,29 @@ const features = [
 
 const rides = [
   {
-    name: 'Lexus LX 570',
-    detail: 'Luxury SUV - Phnom Penh',
+    name: 'Small Camper Van/RV',
+    detail: 'Small Camper Van/RV - Siem Reap',
     rating: '4.9',
     price: 120,
     image: 'https://i.pinimg.com/1200x/aa/4f/54/aa4f548f44f2ad9a5917c99bb85ad06a.jpg'
   },
   {
-    name: 'Honda Click 160i',
+    name: 'Adventure Touring Motorcycle',
     detail: 'Motorbike - Siem Reap',
     rating: '4.8',
     price: 12,
     image: 'https://i.pinimg.com/1200x/29/d1/13/29d11367c93335cdd7232c6f0594c344.jpg'
   },
   {
-    name: 'Giant Talon 2',
-    detail: 'Mountain Bike - Kampot',
+    name: 'Road Bicycle',
+    detail: 'Bicycle - Siem Reap',
     rating: '4.7',
     price: 5,
     image: 'https://i.pinimg.com/1200x/02/32/61/0232617f4158002b9f542b15f113cd9b.jpg'
   },
   {
-    name: 'Honda CRF 250',
-    detail: 'Off-road - Siem Reap',
+    name: 'Step-through City Bicycle',
+    detail: 'Bicycle - Siem Reap',
     rating: '5.0',
     price: 25,
     image: 'https://i.pinimg.com/1200x/26/88/ba/2688ba0b802e2a168450e8f598ddc8d9.jpg'
