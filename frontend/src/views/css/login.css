@@ -20,16 +20,232 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Floating Animated Elements */
+.floating-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.floating-car {
+  position: absolute;
+  font-size: 32px;
+  opacity: 0.7;
+  animation: floatCar 8s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.car-1 {
+  top: 15%;
+  left: 10%;
+  animation-delay: 0s;
+  animation-duration: 7s;
+}
+
+.car-2 {
+  top: 25%;
+  right: 15%;
+  animation-delay: -2s;
+  animation-duration: 9s;
+}
+
+.car-3 {
+  top: 45%;
+  left: 5%;
+  animation-delay: -4s;
+  animation-duration: 8s;
+}
+
+.car-4 {
+  top: 60%;
+  right: 10%;
+  animation-delay: -1s;
+  animation-duration: 10s;
+}
+
+.car-5 {
+  top: 75%;
+  left: 20%;
+  animation-delay: -3s;
+  animation-duration: 11s;
+}
+
+@keyframes floatCar {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  25% {
+    transform: translateY(-15px) rotate(5deg) scale(1.1);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-3deg) scale(1);
+  }
+  75% {
+    transform: translateY(-20px) rotate(3deg) scale(1.05);
+  }
+}
+
+.floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.15;
+  background: white;
+}
+
+.shape-1 {
+  width: 120px;
+  height: 120px;
+  top: 10%;
+  right: 20%;
+  animation: pulseShape 6s ease-in-out infinite;
+}
+
+.shape-2 {
+  width: 80px;
+  height: 80px;
+  top: 50%;
+  left: 25%;
+  animation: pulseShape 8s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.shape-3 {
+  width: 150px;
+  height: 150px;
+  bottom: 20%;
+  right: 30%;
+  animation: pulseShape 10s ease-in-out infinite;
+  animation-delay: -4s;
+}
+
+@keyframes pulseShape {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.15;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.25;
+  }
+}
+
+.floating-bubble {
+  position: absolute;
+  font-size: 24px;
+  animation: bubbleFloat 5s ease-in-out infinite;
+  opacity: 0.8;
+}
+
+.bubble-1 {
+  top: 20%;
+  left: 30%;
+  animation-delay: 0s;
+}
+
+.bubble-2 {
+  top: 40%;
+  right: 25%;
+  animation-delay: -1.5s;
+}
+
+.bubble-3 {
+  bottom: 30%;
+  left: 15%;
+  animation-delay: -3s;
+}
+
+@keyframes bubbleFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Road Animation */
+.road-animation {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  opacity: 0.3;
+}
+
+.road-line {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, white, transparent);
+  animation: roadMove 2s linear infinite;
+}
+
+.line-1 {
+  animation-delay: 0s;
+}
+
+.line-2 {
+  animation-delay: 0.5s;
+}
+
+.line-3 {
+  animation-delay: 1s;
+}
+
+@keyframes roadMove {
+  0% {
+    transform: translateY(-60px);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(60px);
+    opacity: 0;
+  }
 }
 
 .logo {
   font-size: 28px;
   font-weight: bold;
+  position: relative;
+  z-index: 10;
 }
 
 .logo span {
   font-weight: 300;
   letter-spacing: 1px;
+}
+
+.logo span {
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.logo-pic{
+  width: 80px;
+  height: 80px;
+  background-color: #ffd700;
+  border-radius: 80px;
+}
+
+.left-content {
+  position: relative;
+  z-index: 10;
 }
 
 .left-content h1 {
@@ -51,6 +267,8 @@
   border-radius: 16px;
   backdrop-filter: blur(10px);
   width: 340px;
+  position: relative;
+  z-index: 10;
 }
 
 .stars {
@@ -86,11 +304,118 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Right side decorative elements */
+.right-decor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.decor-circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.08;
+  background: linear-gradient(135deg, #2f9ed8, #1c8ac2);
+}
+
+.circle-1 {
+  width: 300px;
+  height: 300px;
+  top: -100px;
+  right: -50px;
+  animation: floatCircle 15s ease-in-out infinite;
+}
+
+.circle-2 {
+  width: 200px;
+  height: 200px;
+  bottom: -80px;
+  left: -60px;
+  animation: floatCircle 12s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+.circle-3 {
+  width: 150px;
+  height: 150px;
+  top: 40%;
+  right: -30px;
+  animation: floatCircle 18s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+@keyframes floatCircle {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-20px, 30px) scale(1.05);
+  }
+  66% {
+    transform: translate(15px, -20px) scale(0.95);
+  }
+}
+
+.decor-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2f9ed8;
+  opacity: 0.3;
+}
+
+.dot-1 {
+  top: 20%;
+  left: 15%;
+  animation: pulseDot 3s ease-in-out infinite;
+}
+
+.dot-2 {
+  top: 60%;
+  left: 10%;
+  animation: pulseDot 3s ease-in-out infinite;
+  animation-delay: -1s;
+}
+
+.dot-3 {
+  top: 30%;
+  right: 12%;
+  animation: pulseDot 3s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.dot-4 {
+  bottom: 25%;
+  right: 18%;
+  animation: pulseDot 3s ease-in-out infinite;
+  animation-delay: -0.5s;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
 }
 
 .form-box {
   width: 100%;
   max-width: 420px;
+  position: relative;
+  z-index: 10;
 }
 
 .form-header {
@@ -351,5 +676,12 @@
   
   .right {
     padding: 30px 20px;
+  }
+  
+  /* Hide floating elements on mobile */
+  .floating-elements,
+  .road-animation,
+  .right-decor {
+    display: none;
   }
 }

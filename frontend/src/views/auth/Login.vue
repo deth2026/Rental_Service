@@ -3,35 +3,46 @@
   <div class="container">
     <!-- LEFT SIDE -->
     <div class="left">
-      <div class="overlay">
-        <div class="logo">
-          🚘 <span>GoRent</span>
-        </div>
+        <div class="overlay">
+          <div class="logo">
+            <div class="logo-pic"></div>
+            <span>GoRent</span>
+          </div>
 
-        <div class="left-content">
-          <h1>Start your journey<br />in minutes.</h1>
-          <p>
-            Access a fleet of premium vehicles at your fingertips.
-            Rent for an hour, drive for a lifetime.
-          </p>
-        </div>
+          <div class="left-content">
+            <h1>Start your journey<br />in minutes.</h1>
+            <p>
+              Access a fleet of premium vehicles at your fingertips.
+              Rent for an hour, drive for a lifetime.
+            </p>
+          </div>
 
-        <div class="review-card">
-          <div class="stars">★★★★★</div>
-          <p class="review-text">
-            "The easiest rental experience I've ever had.
-            No paperwork, just pure driving pleasure."
-          </p>
-          <div class="review-user">
-            <strong>Alex Rivera</strong>
-            <span>Platinum Member</span>
+          <div class="review-card">
+            <div class="stars">★★★★★</div>
+            <p class="review-text">
+              "The easiest rental experience I've ever had.
+              No paperwork, just pure driving pleasure."
+            </p>
+            <div class="review-user">
+              <strong>Alex Rivera</strong>
+              <span>Platinum Member</span>
+            </div>
           </div>
         </div>
-      </div>
     </div>
 
     <!-- RIGHT SIDE -->
     <div class="right">
+      <!-- Floating decorative elements for right side -->
+      <div class="right-decor">
+        <div class="decor-circle circle-1"></div>
+        <div class="decor-circle circle-2"></div>
+        <div class="decor-circle circle-3"></div>
+        <div class="decor-dot dot-1"></div>
+        <div class="decor-dot dot-2"></div>
+        <div class="decor-dot dot-3"></div>
+        <div class="decor-dot dot-4"></div>
+      </div>
       <div class="form-box">
         <div class="form-header">
           <h2>Welcome Back</h2>
@@ -174,7 +185,16 @@ const handleLogin = async () => {
     localStorage.setItem('user', JSON.stringify(data.user));
 
     console.log('Login successful:', data);
-    router.push('/dashboard');
+    
+    // Redirect based on user role
+    const userRole = data.user.role;
+    if (userRole === 'admin') {
+      router.push('/admin');
+    } else if (userRole === 'shop') {
+      router.push('/dashboard');
+    } else {
+      router.push('/');
+    }
   } catch (error) {
     console.error('Login error:', error);
     errors.value.email = error.message || 'Invalid email or password';
