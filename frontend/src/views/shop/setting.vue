@@ -16,9 +16,11 @@
               @error="onAvatarError"
             />
             <div class="avatar-actions">
-              <button type="button" class="btn btn-primary" @click="triggerAvatarPicker">Upload Profile</button>
-              <button type="button" class="btn btn-muted" :disabled="avatarUploading" @click="openRemoveConfirm">
-                {{ avatarUploading ? 'Removing...' : 'Remove Profile' }}
+              <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
+                {{ avatarUploadLoading ? 'Uploading...' : 'Upload Profile' }}
+              </button>
+              <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
+                {{ avatarRemoveLoading ? 'Removing...' : 'Remove Profile' }}
               </button>
             </div>
           </div>
@@ -58,7 +60,12 @@
             <label class="field">
               <span>Password</span>
               <div class="password-wrap">
-                <input v-model="form.password" :type="showPassword ? 'text' : 'password'" minlength="6" />
+                <input
+                  v-model="form.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  minlength="6"
+                  placeholder="........"
+                />
                 <button
                   type="button"
                   class="eye-btn"
@@ -125,7 +132,7 @@
         <p class="confirm-text">Are you sure you want to delete your profile?</p>
         <div class="confirm-actions">
           <button type="button" class="btn btn-muted" @click="closeRemoveConfirm">Cancel</button>
-          <button type="button" class="btn btn-primary" :disabled="avatarUploading" @click="confirmRemoveAvatar">
+          <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="confirmRemoveAvatar">
             Confirm
           </button>
         </div>
@@ -142,8 +149,9 @@ import { logoutUser } from '../../services/auth';
 
 const router = useRouter();
 const loading = ref(false);
-const avatarUploading = ref(false);
-const showPassword = ref(true);
+const avatarUploadLoading = ref(false);
+const avatarRemoveLoading = ref(false);
+const showPassword = ref(false);
 const showRemoveConfirm = ref(false);
 const success = ref('');
 const error = ref('');
@@ -171,7 +179,13 @@ const profileImageUrl = computed(() => {
   if (user.img_url) {
     if (/^https?:\/\//.test(user.img_url)) return user.img_url;
     const normalized = user.img_url.replace(/^\/+/, '');
-    return `${apiOrigin.value}/${normalized}`;
+    if (normalized.startsWith('storage/')) {
+      return `${apiOrigin.value}/${normalized}`;
+    }
+    if (normalized.includes('/')) {
+      return `${apiOrigin.value}/storage/${normalized}`;
+    }
+    return `${apiOrigin.value}/storage/avatars/${normalized}`;
   }
   return null;
 });
@@ -289,16 +303,7 @@ const loadData = async () => {
 const onAvatarChange = (event) => {
   const file = event.target.files?.[0] || null;
   if (!file) return;
-
-  avatarFile.value = null;
-  if (localPreviewUrl.value) {
-    URL.revokeObjectURL(localPreviewUrl.value);
-    localPreviewUrl.value = null;
-  }
-  if (avatarInputRef.value) {
-    avatarInputRef.value.value = '';
-  }
-  error.value = 'Avatar upload endpoint is not configured in backend yet.';
+  uploadAvatar(file);
 };
 
 const triggerAvatarPicker = () => {
@@ -326,21 +331,95 @@ const confirmRemoveAvatar = async () => {
 };
 
 const removeAvatar = async () => {
+  if (!user.id) {
+    error.value = 'User not found. Please login again.';
+    return;
+  }
+
+  avatarRemoveLoading.value = true;
   success.value = '';
   error.value = '';
-  user.img_url = null;
-  user.avatar_url = null;
-  avatarLoadFailed.value = false;
-  imageVersion.value = Date.now();
-  if (localPreviewUrl.value) {
-    URL.revokeObjectURL(localPreviewUrl.value);
-    localPreviewUrl.value = null;
+
+  try {
+    const { data } = await api.delete(`/users/${user.id}/avatar`);
+    const updatedUser = data?.user || {};
+
+    user.img_url = updatedUser.img_url || null;
+    user.avatar_url = updatedUser.avatar_url || null;
+    avatarLoadFailed.value = false;
+    imageVersion.value = Date.now();
+
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value);
+      localPreviewUrl.value = null;
+    }
+
+    avatarFile.value = null;
+    if (avatarInputRef.value) {
+      avatarInputRef.value.value = '';
+    }
+
+    localStorage.setItem('user', JSON.stringify(user));
+    success.value = data?.message || 'Avatar removed successfully.';
+  } catch (err) {
+    error.value = err.response?.data?.message || err.message || 'Failed to remove avatar.';
+  } finally {
+    avatarRemoveLoading.value = false;
   }
-  avatarFile.value = null;
-  if (avatarInputRef.value) {
-    avatarInputRef.value.value = '';
+};
+
+const uploadAvatar = async (file) => {
+  if (!user.id) {
+    error.value = 'User not found. Please login again.';
+    return;
   }
-  error.value = 'Avatar remove endpoint is not configured in backend yet.';
+
+  avatarUploadLoading.value = true;
+  success.value = '';
+  error.value = '';
+
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  try {
+    const previewUrl = URL.createObjectURL(file);
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value);
+    }
+    localPreviewUrl.value = previewUrl;
+    avatarFile.value = file;
+
+    const { data } = await api.post(`/users/${user.id}/avatar`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    const updatedUser = data?.user || {};
+    user.img_url = updatedUser.img_url || null;
+    user.avatar_url = updatedUser.avatar_url || null;
+    avatarLoadFailed.value = false;
+    imageVersion.value = Date.now();
+
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value);
+      localPreviewUrl.value = null;
+    }
+    avatarFile.value = null;
+    if (avatarInputRef.value) {
+      avatarInputRef.value.value = '';
+    }
+
+    localStorage.setItem('user', JSON.stringify(user));
+    success.value = data?.message || 'Avatar uploaded successfully.';
+  } catch (err) {
+    if (localPreviewUrl.value) {
+      URL.revokeObjectURL(localPreviewUrl.value);
+      localPreviewUrl.value = null;
+    }
+    avatarFile.value = null;
+    error.value = err.response?.data?.message || err.message || 'Failed to upload avatar.';
+  } finally {
+    avatarUploadLoading.value = false;
+  }
 };
 
 const saveSettings = async () => {

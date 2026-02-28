@@ -35,6 +35,8 @@ Route::get('/test', function () {
 });
 
 Route::apiResource('users', UserController::class);
+Route::post('/users/{user}/avatar', [UserController::class, 'uploadAvatar']);
+Route::delete('/users/{user}/avatar', [UserController::class, 'removeAvatar']);
 Route::apiResource('categories', CategoryController::class);
 Route::apiResource('vehicles', VehicleController::class);
 Route::apiResource('shops', ShopController::class);
