@@ -39,3 +39,8 @@ Route::apiResource('feedback', FeedbackController::class);
 Route::apiResource('histories', HistoryController::class);
 Route::apiResource('loyalty-points', LoyaltyPointController::class);
 Route::apiResource('payments', PaymentController::class);
+
+
+use App\Http\Controllers\AuthController;
+
+Route::post('/register', [AuthController::class, 'register']);

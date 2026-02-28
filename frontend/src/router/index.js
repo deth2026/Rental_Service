@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
+
 import HomeView from '../views/HomeView.vue';
-import Login from '../views/auth/Login.vue';
-import Register from '../views/auth/Register.vue';
 import ChooseRole from '../views/ChooseRole.vue';
+import Register from '../views/auth/Register.vue';
+import Login from '../views/auth/Login.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -13,9 +14,9 @@ const router = createRouter({
       component: HomeView
     },
     {
-      path: '/login',
-      name: 'login',
-      component: Login
+      path: '/chooserole',
+      name: 'chooserole',
+      component: ChooseRole
     },
     {
       path: '/register',
@@ -23,12 +24,10 @@ const router = createRouter({
       component: Register
     },
     {
-      path: '/chooserole',
-      name: 'chooserole',
-      component: ChooseRole
+      path: '/login',
+      name: 'login',
+      component: Login
     }
-
-
   ]
 })
 
