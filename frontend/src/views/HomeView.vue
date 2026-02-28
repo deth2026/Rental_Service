@@ -1,17 +1,16 @@
-﻿<script>
+<script>
+import { reactive } from "vue";
 import "../assets/HomeView.css";
-export default {
-  name: "home",
-};
+
 </script>
 <template>
   <div class="home-page">
     <header class="top-nav">
       <div class="brand">Chong Choul</div>
-      
+
       <div class="nav-auth">
-        <RouterLink class="link-login" to="/choose-role">Login</RouterLink>
-        <RouterLink class="btn-signup" to="/choose-role">Sign Up</RouterLink>
+        <RouterLink class="link-login" to="/login">Login</RouterLink>
+        <RouterLink class="btn-signup" to="/chooserole">Sign Up</RouterLink>
       </div>
     </header>
 
@@ -19,13 +18,16 @@ export default {
       <div class="hero-overlay">
         <div class="hero-content">
           <h1>
-            Find Your Perfect Ride and Explore 
-            <br/>
+            Find Your Perfect Ride and Explore
+            <br />
             <span>Cambodia</span> in Style!
             <!-- <br/>
              <span> Cambodia</span> -->
           </h1>
-          <p>Choose from hundreds of cars, motorbikes, and bicycles from verified local shops in Cambodia.</p>
+          <p>
+            Choose from hundreds of cars, motorbikes, and bicycles from verified
+            local shops in Cambodia.
+          </p>
 
           <form class="search-panel">
             <div class="search-item">
@@ -39,13 +41,17 @@ export default {
             </div>
             <div class="search-item">
               <label>Location</label>
-              <select v-model="search.location">  
+              <select v-model="search.location">
                 <option>Siem Reap</option>
               </select>
             </div>
             <div class="search-item">
               <label>Pick-Up Date</label>
-              <input v-model="search.pickupDate" type="text" placeholder="Select Date" />
+              <input
+                v-model="search.pickupDate"
+                type="text"
+                placeholder="Select Date"
+              />
             </div>
             <button class="search-btn" type="button">Search</button>
           </form>
@@ -63,7 +69,11 @@ export default {
       </div>
 
       <div class="category-grid">
-        <article v-for="item in categories" :key="item.title" class="category-card">
+        <article
+          v-for="item in categories"
+          :key="item.title"
+          class="category-card"
+        >
           <img :src="item.image" :alt="item.title" />
           <div class="card-overlay"></div>
           <div class="card-text">
@@ -79,7 +89,11 @@ export default {
       <div class="features-inner">
         <h2 class="features-title">How it works</h2>
         <div class="features-grid">
-          <article v-for="feature in features" :key="feature.title" class="feature-item">
+          <article
+            v-for="feature in features"
+            :key="feature.title"
+            class="feature-item"
+          >
             <div class="feature-icon">{{ feature.icon }}</div>
             <h4>{{ feature.title }}</h4>
             <p>{{ feature.description }}</p>
@@ -99,7 +113,9 @@ export default {
             <h4>{{ ride.name }}</h4>
             <p>{{ ride.detail }}</p>
             <div class="ride-bottom">
-              <span><strong>${{ ride.price }}</strong> /day</span>
+              <span
+                ><strong>${{ ride.price }}</strong> /day</span
+              >
               <span class="rating">{{ ride.rating }}</span>
             </div>
           </div>
@@ -111,12 +127,16 @@ export default {
       <div class="cta-card">
         <div class="cta-text">
           <h2>List Your Shop &amp; Start Earning Today</h2>
-          <p>Join Cambodia's largest vehicle rental network and connect with more customers.</p>
+          <p>
+            Join Cambodia's largest vehicle rental network and connect with more
+            customers.
+          </p>
           <button type="button">Register Your Shop</button>
         </div>
         <div class="cta-device"></div>
       </div>
     </section>
+
 
     <footer class="footer">
       <div class="footer-main">
@@ -228,5 +248,4 @@ const rides = [
   }
 ]
 </script>
-
 

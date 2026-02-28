@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
+
 import HomeView from '../views/HomeView.vue';
+import ChooseRole from '../views/Chooserole.vue';
 import Login from '../views/auth/Login.vue';
-// import Register from '../views/auth/Register.vue';
+import Register from '../views/auth/Register.vue';
 import Dashboard from '../views/shop/Dashboard.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
@@ -26,12 +28,20 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/home'
-    },
-    {
-      path: '/home',
       name: 'home',
       component: HomeView,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/chooserole',
+      name: 'chooserole',
+      component: ChooseRole,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: Register,
       meta: { requiresAuth: false }
     },
     {
@@ -40,12 +50,6 @@ const router = createRouter({
       component: Login,
       meta: { guest: true }
     },
-    // {
-    //   path: '/register',
-    //   name: 'register',
-    //   component: Register,
-    //   meta: { guest: true }
-    // },
     {
       path: '/dashboard',
       name: 'dashboard',

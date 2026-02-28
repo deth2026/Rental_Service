@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -27,7 +28,8 @@ Route::get('/test', function () {
 });
 
 // Public authentication routes
-Route::post('/users/register', [UserController::class, 'register']);
+Route::post('/users/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register']); // Add this route for frontend compatibility
 Route::post('/users/login', [UserController::class, 'login']);
 
 // Protected routes - require authentication
