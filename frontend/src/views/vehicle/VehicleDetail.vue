@@ -1,6 +1,4 @@
 <script>
-import '../../assets/main.css'
-
 export default {
   name: 'vehicle-detail',
   data() {

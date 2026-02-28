@@ -84,7 +84,6 @@
   </template>
 
 <script setup>
-import '../../assets/dashboard.css'
 import { useRouter } from 'vue-router';
 
 const router = useRouter();

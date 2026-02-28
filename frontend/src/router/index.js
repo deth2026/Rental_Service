@@ -1,18 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
-<<<<<<< HEAD
-import ChooseRole from '../views/ChooseRole.vue';
-
-=======
 import Login from '../views/auth/Login.vue';
-import Register from '../views/auth/Register.vue';
+// import Register from '../views/auth/Register.vue';
 import Dashboard from '../views/shop/Dashboard.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
-  return localStorage.getItem('auth_token') !== null;
+  return Boolean(localStorage.getItem('auth_token') || localStorage.getItem('token'));
 };
 
 // Get user role from localStorage
@@ -24,7 +20,6 @@ const getUserRole = () => {
   }
   return null;
 };
->>>>>>> 6045f9589879af1a4e571fe390f4f6c2569a8358
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -37,27 +32,20 @@ const router = createRouter({
       path: '/home',
       name: 'home',
       component: HomeView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: false }
     },
     {
-<<<<<<< HEAD
-      path: '/choose-role',
-      name: 'choose-role',
-      component: ChooseRole
-    },
-    
-=======
       path: '/login',
       name: 'login',
       component: Login,
       meta: { guest: true }
     },
-    {
-      path: '/register',
-      name: 'register',
-      component: Register,
-      meta: { guest: true }
-    },
+    // {
+    //   path: '/register',
+    //   name: 'register',
+    //   component: Register,
+    //   meta: { guest: true }
+    // },
     {
       path: '/dashboard',
       name: 'dashboard',
@@ -77,7 +65,6 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['customer', 'shop', 'admin'] }
     }
    
->>>>>>> 6045f9589879af1a4e571fe390f4f6c2569a8358
   ]
 })
 
@@ -103,7 +90,7 @@ router.beforeEach((to, from, next) => {
     } else if (userRole === 'shop') {
       next('/dashboard');
     } else {
-      next('/');
+      next('/home');
     }
     return;
   }
@@ -117,7 +104,7 @@ router.beforeEach((to, from, next) => {
       } else if (userRole === 'shop') {
         next('/dashboard');
       } else {
-        next('/');
+        next('/home');
       }
       return;
     }
