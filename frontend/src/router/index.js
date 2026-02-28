@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
-import ChooseRole from '../views/Chooserole.vue';
+import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import Dashboard from '../views/shop/Dashboard.vue';
@@ -48,7 +48,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: Login,
-      meta: { guest: true }
+      meta: { guest: true, allowAuthenticated: true }
     },
     {
       path: '/dashboard',
@@ -88,6 +88,12 @@ router.beforeEach((to, from, next) => {
 
   // Redirect to dashboard if user is already authenticated and trying to access guest pages (login/register)
   if (isGuestOnly && isAuth) {
+    // Allow authenticated users to access login page (to switch accounts)
+    const allowAuthenticated = to.matched.some(record => record.meta.allowAuthenticated);
+    if (allowAuthenticated) {
+      next();
+      return;
+    }
     // Redirect based on role
     if (userRole === 'admin') {
       next('/admin');
