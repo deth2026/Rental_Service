@@ -138,7 +138,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import api from '../../services/api';
-import { clearSession } from '../../services/auth';
+import { logoutUser } from '../../services/auth';
 
 const router = useRouter();
 const loading = ref(false);
@@ -212,10 +212,22 @@ const getStoredUserId = () => {
   }
 };
 
+const getStoredUser = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const loadData = async () => {
   error.value = '';
   try {
     const storedUserId = getStoredUserId();
+    const storedUser = getStoredUser();
 
     const [citiesResult, usersResult, shopsResult] = await Promise.allSettled([
       api.get('/cities'),
@@ -242,9 +254,15 @@ const loadData = async () => {
     }
 
     const users = extractCollection(usersData);
-    const selectedUser = usersData?.id ? usersData : (users.find((entry) => entry.id === storedUserId) || users[0] || null);
+    const selectedUser =
+      (usersData?.id ? usersData : null) ||
+      users.find((entry) => Number(entry.id) === Number(storedUserId)) ||
+      users.find((entry) => storedUser?.email && entry.email === storedUser.email) ||
+      users[0] ||
+      storedUser ||
+      null;
     if (!selectedUser) {
-      throw new Error('No user found in database. Create at least one user first.');
+      throw new Error('Cannot load user data. Ensure backend is running and login again.');
     }
 
     Object.assign(user, selectedUser);
@@ -351,6 +369,7 @@ const saveSettings = async () => {
     }
 
     Object.assign(user, userResponse.data || {});
+    localStorage.setItem('user', JSON.stringify(user));
 
     const shopPayload = {
       owner_id: user.id,
@@ -385,7 +404,7 @@ const saveSettings = async () => {
 };
 
 const logout = async () => {
-  await clearSession();
+  await logoutUser();
   router.push('/login');
 };
 
