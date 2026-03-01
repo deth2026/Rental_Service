@@ -1,5 +1,5 @@
 <template>
-  <div class="container" style="min-height: 100vh">
+  <div class="container" style="min-height: 150vh">
     <!-- LEFT SIDE -->
     <div class="left">
       <div class="overlay">
@@ -44,7 +44,26 @@
       </div>
       <div class="form-box">
         <div class="form-header">
-          <h2>Register</h2>
+          <div class="header-top" style="display: flex">
+            <h2 style="margin-right: 31vh">Register</h2>
+            <button type="button" @click="goHome" class="back-home-btn">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+              Home
+            </button>
+          </div>
           <p class="subtitle">Please enter your details to sign up</p>
         </div>
 
@@ -422,6 +441,10 @@ const toggleConfirmPassword = () => {
 
 const changeRole = () => {
   router.push("/chooserole");
+};
+
+const goHome = () => {
+  router.push("/");
 };
 </script>
 
