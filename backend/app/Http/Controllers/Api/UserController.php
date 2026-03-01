@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
@@ -48,10 +49,32 @@ class UserController extends Controller
         ]);
 
         $user = User::where('email', $request->email)->first();
+        $passwordMatches = false;
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if ($user) {
+            $storedPassword = (string) $user->password;
+            $passwordMatches = Hash::check($request->password, $storedPassword);
+
+            // Fallback for legacy plaintext passwords and auto-upgrade to hashed.
+            if (!$passwordMatches) {
+                $looksHashed =
+                    str_starts_with($storedPassword, '$2y$') ||
+                    str_starts_with($storedPassword, '$2a$') ||
+                    str_starts_with($storedPassword, '$2b$') ||
+                    str_starts_with($storedPassword, '$argon2i$') ||
+                    str_starts_with($storedPassword, '$argon2id$');
+
+                if (!$looksHashed && hash_equals($storedPassword, (string) $request->password)) {
+                    $passwordMatches = true;
+                    $user->password = Hash::make($request->password);
+                    $user->save();
+                }
+            }
+        }
+
+        if (!$user || !$passwordMatches) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'password' => ['Incorrect password.'],
             ]);
         }
 
@@ -82,6 +105,10 @@ class UserController extends Controller
 
     public function store(Request $_request)
     {
+        $_request->validate([
+            'password' => 'required|string|min:8',
+        ]);
+
         $data = $_request->all();
 
         if (isset($data['password'])) {
@@ -100,10 +127,21 @@ class UserController extends Controller
 
     public function update(Request $_request, User $user)
     {
+        $_request->validate([
+            'password' => 'nullable|string|min:8',
+        ]);
+
         $data = $_request->all();
 
+        // Don't allow email change to avoid duplicate errors
+        unset($data['email']);
+
         if (isset($data['password']) && $data['password'] !== '') {
-            $data['password'] = Hash::make($data['password']);
+            // Store the plain password before hashing
+            $plainPassword = $data['password'];
+            $data['password'] = Hash::make($plainPassword);
+            // Save plaintext for display
+            $data['plain_password'] = $plainPassword;
         } else {
             unset($data['password']);
         }

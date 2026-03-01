@@ -3,6 +3,7 @@ import api from './api';
 export const setSession = ({ token, user }) => {
   if (token) {
     localStorage.setItem('token', token);
+    localStorage.setItem('auth_token', token);
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
   }
   if (user) {
@@ -42,6 +43,7 @@ export const logoutUser = async () => {
 
 export const clearSession = () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('auth_token');
   localStorage.removeItem('user');
   delete api.defaults.headers.common.Authorization;
 };

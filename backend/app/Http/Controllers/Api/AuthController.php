@@ -49,10 +49,32 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('email', $request->email)->first();
+        $passwordMatches = false;
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if ($user) {
+            $storedPassword = (string) $user->password;
+            $passwordMatches = Hash::check($request->password, $storedPassword);
+
+            // Fallback for legacy plaintext passwords and auto-upgrade to hashed.
+            if (!$passwordMatches) {
+                $looksHashed =
+                    str_starts_with($storedPassword, '$2y$') ||
+                    str_starts_with($storedPassword, '$2a$') ||
+                    str_starts_with($storedPassword, '$2b$') ||
+                    str_starts_with($storedPassword, '$argon2i$') ||
+                    str_starts_with($storedPassword, '$argon2id$');
+
+                if (!$looksHashed && hash_equals($storedPassword, (string) $request->password)) {
+                    $passwordMatches = true;
+                    $user->password = Hash::make($request->password);
+                    $user->save();
+                }
+            }
+        }
+
+        if (!$user || !$passwordMatches) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'password' => ['Incorrect password.'],
             ]);
         }
 

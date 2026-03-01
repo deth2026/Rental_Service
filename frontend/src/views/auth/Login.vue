@@ -69,6 +69,7 @@
                 :type="showPassword ? 'text' : 'password'" 
                 placeholder="••••••••" 
                 v-model="form.password"
+                autocomplete="current-password"
                 :class="{ 'error': errors.password }"
                 required 
               />
@@ -170,18 +171,36 @@ const handleLogin = async () => {
 
     console.log('Login successful:', data);
     
+    // Store user data in localStorage
+    if (data.user) {
+      localStorage.setItem('user', JSON.stringify(data.user));
+    }
+    
     // Redirect based on user role
-    const userRole = data.user.role;
+    const userRole = data.user?.role;
     if (userRole === 'admin') {
-      router.push('/admin');
+      router.push('/setting');
     } else if (userRole === 'shop_owner') {
-      router.push('/dashboard');
+      router.push('/setting');
     } else {
       router.push('/');
     }
   } catch (error) {
     console.error('Login error:', error);
-    errors.value.email = error.message || 'Invalid email or password';
+    const responseData = error?.response?.data || {};
+    const responseErrors = responseData?.errors || {};
+
+    if (Array.isArray(responseErrors.email) && responseErrors.email.length > 0) {
+      errors.value.email = responseErrors.email[0];
+    }
+
+    if (Array.isArray(responseErrors.password) && responseErrors.password.length > 0) {
+      errors.value.password = responseErrors.password[0];
+    }
+
+    if (!errors.value.email && !errors.value.password) {
+      errors.value.password = responseData?.message || 'Invalid email or password';
+    }
   } finally {
     isLoading.value = false;
   }

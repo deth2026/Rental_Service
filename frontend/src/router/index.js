@@ -5,6 +5,7 @@ import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import Dashboard from '../views/shop/Dashboard.vue';
+import Setting from '../views/shop/setting.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
@@ -48,13 +49,19 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: Login,
-      meta: { guest: true }
+      meta: { guest: true, allowAuthenticated: true }
     },
     {
       path: '/dashboard',
       name: 'dashboard',
       component: Dashboard,
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
+    },
+    {
+      path: '/setting',
+      name: 'setting',
+      component: Setting,
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
     },
     {
       path: '/admin',
@@ -87,11 +94,17 @@ router.beforeEach((to, from, next) => {
 
   // Redirect to dashboard if user is already authenticated and trying to access guest pages (login/register)
   if (isGuestOnly && isAuth) {
+    // Allow authenticated users to access login page (to switch accounts)
+    const allowAuthenticated = to.matched.some(record => record.meta.allowAuthenticated);
+    if (allowAuthenticated) {
+      next();
+      return;
+    }
     // Redirect based on role
     if (userRole === 'admin') {
-      next('/admin');
+      next('/setting');
     } else if (userRole === 'shop_owner') {
-      next('/dashboard');
+      next('/setting');
     } else {
       next('/');
     }

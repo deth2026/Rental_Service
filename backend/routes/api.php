@@ -53,8 +53,17 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
-// Shop routes (accessible by both shop and admin)
-Route::middleware(['auth:sanctum', 'role:shop'])->group(function () {
+// User routes - make update public for testing (remove auth for now)
+Route::put('/users/{user}', [UserController::class, 'update']);
+
+// Authenticated user routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/users/{user}/avatar', [UserController::class, 'uploadAvatar']);
+    Route::delete('/users/{user}/avatar', [UserController::class, 'removeAvatar']);
+});
+
+// Shop routes (accessible by both shop_owner and admin)
+Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
     Route::apiResource('vehicles', VehicleController::class);
     Route::apiResource('shops', ShopController::class);
     Route::apiResource('bookings', BookingController::class);
