@@ -44,4 +44,13 @@ export const feedbackApi = {
   delete: (id) => api.delete(`/feedback/${id}`)
 };
 
+// Loyalty Points API calls
+export const loyaltyPointApi = {
+  getAll: () => api.get('/loyalty-points'),
+  getById: (id) => api.get(`/loyalty-points/${id}`),
+  create: (data) => api.post('/loyalty-points', data),
+  update: (id, data) => api.put(`/loyalty-points/${id}`, data),
+  delete: (id) => api.delete(`/loyalty-points/${id}`)
+};
+
 export default api;

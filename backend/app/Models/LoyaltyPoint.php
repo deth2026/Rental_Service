@@ -20,4 +20,10 @@ class LoyaltyPoint extends Model
         'points' => 'integer',
         'updated_at' => 'datetime'
     ];
+
+    // Relationship with User
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

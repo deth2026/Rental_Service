@@ -5,6 +5,7 @@ import Payments from './Payments.vue'
 import DamageReports from './Demage_reports.vue'
 import ReviewsFeedback from './Review_Feedback.vue'
 import Coupons from './Coupons.vue'
+import LoyaltyPoints from './Loyalty_points.vue'
 import { vehicleApi } from '@/services/api'
 
 // Toast notifications
@@ -431,6 +432,10 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'coupons'" class="coupons-view">
         <Coupons />
+      </section>
+
+      <section v-else-if="active === 'loyalty'" class="loyalty-view">
+        <LoyaltyPoints />
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
