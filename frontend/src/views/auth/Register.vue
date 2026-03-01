@@ -1,5 +1,5 @@
 <template>
-  <div class="container" style="height: 150vh">
+  <div class="container" style="min-height: 100vh">
     <!-- LEFT SIDE -->
     <div class="left">
       <div class="overlay">
