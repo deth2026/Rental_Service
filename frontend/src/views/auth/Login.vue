@@ -102,7 +102,7 @@
 
         <div class="register-prompt">
           <span>Don't have an account?</span>
-          <router-link to="/register" class="register-link">Create account</router-link>
+          <router-link to="/register" class="register-link">Register</router-link>
         </div>
 
         <div class="divider">

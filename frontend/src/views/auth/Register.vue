@@ -1,39 +1,52 @@
 <template>
-  <div class="register-container">
-    <div class="hero-section">
-      <div class="hero-content">
-        <h1 class="hero-title" style="margin-bottom: 20px">
-          Start Your <br />
-          <span class="highlight">Premium Journey</span>
-        </h1>
-        <p class="proof-label">
-          Create your account and unlock exclusive access to our premium
-          motorbike collection. Join thousands of riders who trust us for their
-          adventures.
-        </p>
+  <div class="container" style="height: 150vh">
+    <!-- LEFT SIDE -->
+    <div class="left">
+      <div class="overlay">
+        <div class="logo">
+          <div class="logo-pic"></div>
+          <span>GoRent</span>
+        </div>
 
-        <div class="social-proof">
-          <div class="proof-text">
-            <p class="proof-label" style="margin-right: 70px">Bicycle</p>
-            <p class="proof-label" style="margin-right: 70px">Motorbike</p>
-            <p class="proof-label">Car</p>
+        <div class="left-content">
+          <h1>Start your journey<br />in minutes.</h1>
+          <p>
+            Access a fleet of premium vehicles at your fingertips. Rent for an
+            hour, drive for a lifetime.
+          </p>
+        </div>
+
+        <div class="review-card">
+          <div class="stars">★★★★★</div>
+          <p class="review-text">
+            "The easiest rental experience I've ever had. No paperwork, just
+            pure driving pleasure."
+          </p>
+          <div class="review-user">
+            <strong>Alex Rivera</strong>
+            <span>Platinum Member</span>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="form-section">
-      <div class="form-wrapper">
-        <div class="back-home">
-          <a href="/" class="back-home-btn">
-            <span class="back-icon">←</span>
-            Back to Home
-          </a>
+    <!-- RIGHT SIDE -->
+    <div class="right">
+      <!-- Floating decorative elements for right side -->
+      <div class="right-decor">
+        <div class="decor-circle circle-1"></div>
+        <div class="decor-circle circle-2"></div>
+        <div class="decor-circle circle-3"></div>
+        <div class="decor-dot dot-1"></div>
+        <div class="decor-dot dot-2"></div>
+        <div class="decor-dot dot-3"></div>
+        <div class="decor-dot dot-4"></div>
+      </div>
+      <div class="form-box">
+        <div class="form-header">
+          <h2>Register</h2>
+          <p class="subtitle">Please enter your details to sign up</p>
         </div>
-        <h2>Register</h2>
-        <p class="form-intro">
-          Join us today and start your premium riding experience.
-        </p>
 
         <!-- Selected Role Display -->
         <div class="selected-role" v-if="selectedRole">
@@ -62,183 +75,205 @@
           v-if="Object.keys(errors).length > 0 && !successMessage"
         >
           <span class="message-icon">✗</span>
-          <span class="message-text"
-            >Please fix the errors below to continue.</span
-          >
+          <span class="message-text">Please fix errors below to continue.</span>
         </div>
 
         <form @submit.prevent="handleRegister">
-          <div class="input-group">
-            <label>Full Name</label>
-            <div class="input-wrapper" :class="{ error: errors.fullName }">
-              <i class="icon-user" style="margin-right: 8px"></i>
-              <input
-                type="text"
-                v-model="form.fullName"
-                placeholder="John Doe"
-                @input="clearError('fullName')"
-                :class="{ 'error-input': errors.fullName }"
-                required
-              />
-            </div>
-            <span class="error-message" v-if="errors.fullName">{{
+          <div class="form-group">
+            <label><span class="required-star">*</span> Full Name</label>
+            <input
+              type="text"
+              placeholder="John Doe"
+              v-model="form.fullName"
+              :class="{ error: errors.fullName }"
+              required
+            />
+            <span class="error-text" v-if="errors.fullName">{{
               errors.fullName
             }}</span>
           </div>
 
-          <div class="input-group">
-            <label>Email</label>
-            <div class="input-wrapper" :class="{ error: errors.email }">
-              <i class="icon-mail" style="margin-right: 34px"></i>
-              <input
-                type="email"
-                v-model="form.email"
-                placeholder="john@example.com"
-                @input="clearError('email')"
-                :class="{ 'error-input': errors.email }"
-                required
-              />
-            </div>
-            <span class="error-message" v-if="errors.email">{{
+          <div class="form-group">
+            <label><span class="required-star">*</span> Email Address</label>
+            <input
+              type="email"
+              placeholder="name@example.com"
+              v-model="form.email"
+              :class="{ error: errors.email }"
+              required
+            />
+            <span class="error-text" v-if="errors.email">{{
               errors.email
             }}</span>
           </div>
 
-          <div class="input-group">
-            <label>Phone Number</label>
-            <div class="input-wrapper" :class="{ error: errors.phone }">
-              <i class="icon-phone" style="margin-right: 32px"></i>
-              <input
-                type="tel"
-                v-model="form.phone"
-                placeholder="+855 12 345 678"
-                @input="clearError('phone')"
-                :class="{ 'error-input': errors.phone }"
-                required
-              />
-            </div>
-            <span class="error-message" v-if="errors.phone">{{
+          <div class="form-group">
+            <label><span class="required-star">*</span> Phone Number</label>
+            <input
+              type="tel"
+              placeholder="+855 12 345 678"
+              v-model="form.phone"
+              :class="{ error: errors.phone }"
+              required
+            />
+            <span class="error-text" v-if="errors.phone">{{
               errors.phone
             }}</span>
           </div>
 
           <div class="row">
-            <div class="input-group">
-              <label>Password</label>
-              <div class="input-wrapper" :class="{ error: errors.password }">
-                <i class="icon-lock" style="margin-right: 8px"></i>
+            <div class="form-group">
+              <label><span class="required-star">*</span> Password</label>
+              <div class="password-input-wrapper">
                 <input
                   :type="showPassword ? 'text' : 'password'"
-                  v-model="form.password"
                   placeholder="••••••••"
-                  @input="clearError('password')"
-                  :class="{ 'error-input': errors.password }"
+                  v-model="form.password"
+                  :class="{ error: errors.password }"
                   required
                 />
                 <button
                   type="button"
-                  @click="togglePassword"
-                  class="password-toggle"
-                  style="
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    padding: 0;
-                    margin-left: 8px;
-                  "
+                  class="toggle-password"
+                  @click="showPassword = !showPassword"
                 >
-                  <img
-                    :src="
-                      showPassword
-                        ? 'https://cdn-icons-png.flaticon.com/512/565/565655.png'
-                        : 'https://cdn-icons-png.flaticon.com/512/709/709612.png'
-                    "
-                    style="width: 20px; height: 20px; opacity: 0.6"
-                    alt="Toggle password visibility"
-                  />
+                  <svg
+                    v-if="showPassword"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                    ></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                    ></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
                 </button>
               </div>
-              <span class="error-message" v-if="errors.password">{{
+              <span class="error-text" v-if="errors.password">{{
                 errors.password
               }}</span>
             </div>
-            <div class="input-group">
-              <label>Confirm Password</label>
-              <div
-                class="input-wrapper"
-                :class="{ error: errors.confirmPassword }"
+            <div class="form-group">
+              <label
+                ><span class="required-star">*</span> Confirm Password</label
               >
-                <i class="icon-lock" style="margin-right: 8px"></i>
+              <div class="password-input-wrapper">
                 <input
                   :type="showConfirmPassword ? 'text' : 'password'"
-                  v-model="form.confirmPassword"
                   placeholder="••••••••"
-                  @input="clearError('confirmPassword')"
-                  :class="{ 'error-input': errors.confirmPassword }"
+                  v-model="form.confirmPassword"
+                  :class="{ error: errors.confirmPassword }"
                   required
                 />
                 <button
                   type="button"
-                  @click="toggleConfirmPassword"
-                  class="password-toggle"
-                  style="
-                    background: none;
-                    border: none;
-                    cursor: pointer;
-                    padding: 0;
-                    margin-left: 8px;
-                  "
+                  class="toggle-password"
+                  @click="showConfirmPassword = !showConfirmPassword"
                 >
-                  <img
-                    :src="
-                      showConfirmPassword
-                        ? 'https://cdn-icons-png.flaticon.com/512/565/565655.png'
-                        : 'https://cdn-icons-png.flaticon.com/512/709/709612.png'
-                    "
-                    style="width: 20px; height: 20px; opacity: 0.6"
-                    alt="Toggle password visibility"
-                  />
+                  <svg
+                    v-if="showConfirmPassword"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                    ></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+                    ></path>
+                    <line x1="1" y1="1" x2="23" y2="23"></line>
+                  </svg>
                 </button>
               </div>
-              <span class="error-message" v-if="errors.confirmPassword">{{
+              <span class="error-text" v-if="errors.confirmPassword">{{
                 errors.confirmPassword
               }}</span>
             </div>
           </div>
 
-          <button type="submit" class="btn-register" :disabled="isLoading">
+          <button type="submit" class="login-btn" :disabled="isLoading">
             <span v-if="!isLoading">Register</span>
-            <span v-else class="loading-spinner">
-              <span class="spinner"></span>
-              Creating Account...
-            </span>
+            <span v-else>Creating account...</span>
           </button>
         </form>
 
-        <p class="login-link">
-          Already have an account? <a href="/login">Login</a>
-        </p>
-
-        <div class="divider">
-          <span>Or sign up with</span>
+        <div class="register-prompt">
+          <span>Already have an account?</span>
+          <router-link to="/login" class="register-link">Login</router-link>
         </div>
 
-        <div class="social-btns">
+        <div class="divider">
+          <span>OR CONTINUE WITH</span>
+        </div>
+
+        <div class="social-buttons">
           <button class="social-btn">
             <img
-              src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-              width="18"
+              src="https://www.svgrepo.com/show/475656/google-color.svg"
+              alt="Google"
+              width="20"
             />
             Google
           </button>
           <button class="social-btn">
             <img
-              src="https://cdn-icons-png.flaticon.com/512/733/733547.png"
-              width="18"
+              src="https://www.svgrepo.com/show/475647/facebook-color.svg"
+              alt="Facebook"
+              width="20"
             />
             Facebook
           </button>
         </div>
+
+        <p class="terms">
+          By creating an account, you agree to GoRent's
+          <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+        </p>
       </div>
     </div>
   </div>
@@ -391,5 +426,5 @@ const changeRole = () => {
 </script>
 
 <style>
-@import "../../assets/register.css";
+@import "../../assets/auth.css";
 </style>

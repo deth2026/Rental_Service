@@ -100,7 +100,7 @@ router.beforeEach((to, from, next) => {
     } else if (userRole === 'shop') {
       next('/dashboard');
     } else {
-      next('/home');
+      next('/');
     }
     return;
   }
@@ -114,7 +114,7 @@ router.beforeEach((to, from, next) => {
       } else if (userRole === 'shop') {
         next('/dashboard');
       } else {
-        next('/home');
+        next('/');
       }
       return;
     }

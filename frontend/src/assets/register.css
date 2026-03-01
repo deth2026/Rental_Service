@@ -8,7 +8,8 @@
 
 .register-container {
   display: flex;
-  min-height: 100vh;
+  /* min-height: 100vh; */
+  height: 180vh;
 }
 
 /* Left Section: Hero */
@@ -198,7 +199,7 @@ h2 {
   .hero-title {
     font-size: 3rem;
   }
-  
+
   .hero-content {
     max-width: 450px;
   }
@@ -215,7 +216,7 @@ h2 {
     width: 100%;
     min-height: 100vh;
   }
-  
+
   .form-wrapper {
     max-width: 500px;
   }
@@ -225,44 +226,44 @@ h2 {
   .form-section {
     padding: 30px 20px;
   }
-  
+
   .form-wrapper {
     max-width: 100%;
   }
-  
+
   h2 {
     font-size: 1.75rem;
   }
-  
+
   .form-intro {
     font-size: 0.95rem;
   }
-  
+
   .input-group {
     margin-bottom: 16px;
   }
-  
+
   .input-wrapper {
     padding: 10px 12px;
   }
-  
+
   .btn-register {
     padding: 14px;
   }
-  
+
   .social-btns {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .social-btn {
     padding: 10px;
   }
-  
+
   .divider {
     margin: 24px 0;
   }
-  
+
   .login-link {
     font-size: 0.9rem;
   }
@@ -277,33 +278,33 @@ h2 {
   .form-section {
     padding: 20px 15px;
   }
-  
+
   h2 {
     font-size: 1.5rem;
   }
-  
+
   .input-group label {
     font-size: 0.85rem;
   }
-  
+
   .input-wrapper input {
     font-size: 0.95rem;
   }
-  
+
   .back-home {
     margin-bottom: 20px;
   }
-  
+
   .selected-role {
     flex-direction: column;
     gap: 10px;
     text-align: center;
   }
-  
+
   .change-role-btn {
     align-self: center;
   }
-  
+
   .message-block {
     padding: 12px;
     font-size: 0.9rem;
@@ -315,12 +316,12 @@ h2 {
   .form-section {
     padding: 15px 12px;
   }
-  
+
   .btn-register {
     padding: 12px;
     font-size: 0.95rem;
   }
-  
+
   .social-btn {
     font-size: 0.9rem;
   }
