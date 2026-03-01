@@ -1,15 +1,10 @@
 <template>
-  <section class="dashboard">
+  <main class="dashboard-page">
     <h1>Shop Dashboard</h1>
-    <p>This page is ready.</p>
-  </section>
+    <p>Dashboard page is ready for implementation.</p>
+  </main>
 </template>
 
 <script setup>
 </script>
 
-<style scoped>
-.dashboard {
-  padding: 2rem;
-}
-</style>
