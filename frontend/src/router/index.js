@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import Dashboard from '../views/shop/Dashboard.vue';
+import Dashboard from '../views/shop/DashboardLayout.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL), 
