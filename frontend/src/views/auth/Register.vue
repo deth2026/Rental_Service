@@ -326,7 +326,7 @@ const validateForm = () => {
 
   if (!form.password) {
     newErrors.password = "Password is required";
-  } else if (form.password.length < 1) {
+  } else if (form.password.length < 8) {
     newErrors.password = "Password must be at least 8 characters";
   }
 
@@ -350,7 +350,7 @@ const handleRegister = async () => {
   errors.value = {};
 
   try {
-    const response = await fetch("http://localhost:8000/api/register", {
+    const response = await fetch("/api/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -162,7 +162,7 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetch('http://localhost:8000/api/users/login', {
+    const response = await fetch('/api/users/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ const handleLogin = async () => {
     const userRole = data.user.role;
     if (userRole === 'admin') {
       router.push('/admin');
-    } else if (userRole === 'shop') {
+    } else if (userRole === 'shop_owner') {
       router.push('/dashboard');
     } else {
       router.push('/');

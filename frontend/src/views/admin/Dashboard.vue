@@ -113,7 +113,7 @@ const statusClass = (status) => {
 const handleLogout = async () => {
   try {
     const token = localStorage.getItem('auth_token');
-    await fetch('http://localhost:8000/api/users/logout', {
+    await fetch('/api/users/logout', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
