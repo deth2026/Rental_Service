@@ -14,19 +14,21 @@ class Vehicle extends Model
 
     protected $fillable = [
         'shop_id',
+        'name',
         'type',
         'brand',
         'model',
-        'year',
+        'plate_number',
         'price_per_day',
         'fuel_type',
         'transmission',
         'status',
-        'image_url'
+        'description',
+        'image_url',
+        'photos'
     ];
 
     protected $casts = [
-        'price_per_day' => 'decimal:2',
-        'year' => 'integer'
+        'price_per_day' => 'decimal:2'
     ];
 }
