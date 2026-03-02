@@ -51,6 +51,23 @@ const coupons = ref([])
 const modal = ref(false)
 const editId = ref(null)
 
+// Delete confirmation modal
+const showDeleteModal = ref(false)
+const deleteId = ref(null)
+const deleteCouponCode = ref('')
+
+const confirmDelete = (c) => {
+  deleteId.value = c.id
+  deleteCouponCode.value = c.code || 'this coupon'
+  showDeleteModal.value = true
+}
+
+const cancelDelete = () => {
+  deleteId.value = null
+  deleteCouponCode.value = ''
+  showDeleteModal.value = false
+}
+
 const form = ref({ 
   code: '', 
   discount: '',
@@ -119,13 +136,17 @@ const save = async () => {
   }
 }
 
-const removeCoupon = async (id) => {
-  if (!confirm('Are you sure you want to delete this coupon?')) return
+const removeCoupon = async () => {
+  if (!deleteId.value) return
   try {
-    await couponApi.delete(id)
+    await couponApi.delete(deleteId.value)
     await fetchCoupons()
+    showToast('Coupon deleted successfully!', 'success')
   } catch (err) {
     console.error('Error deleting coupon:', err)
+    showToast('Failed to delete coupon. Please try again.', 'error')
+  } finally {
+    cancelDelete()
   }
 }
 
@@ -221,7 +242,7 @@ const formatDate = (date) => {
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
               </svg>
             </button>
-            <button class="action-btn delete" @click="removeCoupon(c.id)" title="Delete">
+            <button class="action-btn delete" @click="confirmDelete(c)" title="Delete">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="3 6 5 6 21 6"></polyline>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -354,6 +375,28 @@ const formatDate = (date) => {
         {{ toast.message }}
       </div>
     </Transition>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+      <div class="delete-modal">
+        <div class="delete-icon-wrapper">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            <line x1="10" y1="11" x2="10" y2="17"></line>
+            <line x1="14" y1="11" x2="14" y2="17"></line>
+          </svg>
+        </div>
+        <h3 class="delete-title">Delete Coupon</h3>
+        <p class="delete-message">Are you sure you want to delete this coupon?</p>
+        <p class="delete-coupon-code">{{ deleteCouponCode }}</p>
+        <p class="delete-warning">This action cannot be undone. The coupon will be permanently removed.</p>
+        <div class="delete-actions">
+          <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
+          <button class="delete-confirm-btn" @click="removeCoupon">Delete</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -361,7 +404,7 @@ const formatDate = (date) => {
 /* Container */
 .coupons-container {
   padding: 20px;
-  max-width: 900px;
+  /* max-width: 900px; */
   margin: 0 auto;
 }
 
@@ -860,28 +903,31 @@ const formatDate = (date) => {
 /* Toast Notification */
 .toast {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 20px;
+  right: 20px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 0.9375rem;
   font-weight: 500;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 2000;
-  animation: slideIn 0.3s ease-out;
+  animation: slideInRight 0.3s ease-out;
+  min-width: 220px;
 }
 
 .toast.success {
   background: #d1fae5;
-  color: #047857;
+  color: #0f172a;
+  border-left: 4px solid #10b981;
 }
 
 .toast.error {
   background: #fee2e2;
-  color: #b91c1c;
+  color: #0f172a;
+  border-left: 4px solid #ef4444;
 }
 
 .toast svg {
@@ -891,20 +937,135 @@ const formatDate = (date) => {
 }
 
 .toast-enter-active {
-  animation: slideIn 0.3s ease-out;
+  animation: slideInRight 0.3s ease-out;
 }
 
 .toast-leave-active {
-  animation: slideIn 0.2s ease-in reverse;
+  animation: slideInRight 0.2s ease-in reverse;
 }
 
-@keyframes slideIn {
+@keyframes slideInRight {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateX(100%);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
-}</style>
+}
+
+/* Delete Confirmation Modal */
+.delete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.delete-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  animation: modalPop 0.2s ease-out;
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.delete-icon-wrapper {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 20px;
+  background: #fee2e2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.delete-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 8px;
+}
+
+.delete-message {
+  color: #64748b;
+  font-size: 0.9375rem;
+  margin: 0 0 8px;
+}
+
+.delete-coupon-code {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+
+.delete-warning {
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  margin: 0 0 24px;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.delete-cancel-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.delete-cancel-btn:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.delete-confirm-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.delete-confirm-btn:hover {
+  background: #dc2626;
+}
+</style>

@@ -478,17 +478,16 @@ const onPhotoDrop = async (e) => {
                         </td>
                         <td>{{ formatDate(v.createdAt) }}</td>
                         <td class="actions">
-                            <button class="icon-btn" @click="openEdit(v)">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 20h9"></path>
-                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path>
+                            <button class="action-btn edit" @click="openEdit(v)">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                             </button>
-                            <button class="danger icon-btn" @click="confirmDelete(v)">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18"></path>
-                                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                            <button class="action-btn delete" @click="confirmDelete(v)">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                 </svg>
                             </button>
                         </td>
@@ -784,10 +783,7 @@ button {
     color: #fff
 }
 
-.danger {
-    background: #ef4444;
-    color: #fff
-}
+
 
 .overlay {
     position: fixed;
@@ -969,13 +965,43 @@ button {
     white-space: nowrap;
 }
 
-.icon-btn {
+/* Action Buttons - matching Coupons.vue style */
+.action-btn {
+    width: 36px;
+    height: 36px;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    background: #eef2ff;
-    color: #1e3a8a;
-    margin-right: 6px;
+    justify-content: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 8px;
+}
+
+.action-btn:last-child {
+    margin-right: 0;
+}
+
+.action-btn:hover {
+    background: #f1f5f9;
+}
+
+.action-btn.edit:hover {
+    color: #2563eb;
+    border-color: #2563eb;
+}
+
+.action-btn.delete:hover {
+    color: #dc2626;
+    border-color: #dc2626;
+}
+
+.action-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 /* modal form styles */

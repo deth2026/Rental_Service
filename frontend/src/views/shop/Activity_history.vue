@@ -17,5 +17,6 @@
 <style scoped>
 .activity-history-container {
   min-height: 100%;
+  padding:20px;
 }
 </style>

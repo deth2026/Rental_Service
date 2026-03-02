@@ -39,6 +39,7 @@
 
 <style scoped>
 .loyalty-points-container {
-  min-height: 100%;
+  /* min-height: 100%; */
+  padding: 20px;
 }
 </style>
