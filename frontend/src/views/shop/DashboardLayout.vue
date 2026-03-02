@@ -7,7 +7,7 @@ import ReviewsFeedback from './Review_Feedback.vue'
 import Coupons from './Coupons.vue'
 import MyShop from './myShop.vue'
 import LoyaltyPoints from './Loyalty_points.vue'
-import { vehicleApi } from '@/services/api'
+import { shopApi, vehicleApi } from '@/services/api'
 
 // Toast notifications
 const toast = ref({ show: false, message: '', type: 'success' })
@@ -195,8 +195,52 @@ const histories = ref([
 
 const form = reactive({
   name: '', type: '', brand: '', plate: '', price: '', fuel: '', transmission: '',
-  status: 'Available', description: '', shop: 'Main Shop - Phnom Penh', image: '', createdAt: '', updatedAt: ''
+  status: 'Available', description: '', shop: '', image: '', createdAt: '', updatedAt: ''
 })
+
+const currentShopName = ref('No Shop Found')
+
+const getUserId = () => {
+  const rawUser = localStorage.getItem('user')
+  if (!rawUser) return 1
+  try {
+    const parsed = JSON.parse(rawUser)
+    return parsed.id || 1
+  } catch {
+    return 1
+  }
+}
+
+const loadOwnerShopName = async () => {
+  try {
+    const ownerId = getUserId()
+    const response = await shopApi.getAll()
+    const shops = response.data?.data || response.data || []
+    const myShops = shops.filter((s) => Number(s.owner_id) === Number(ownerId))
+
+    if (!myShops.length) {
+      currentShopName.value = 'No Shop Found'
+      form.shop = currentShopName.value
+      return
+    }
+
+    myShops.sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+      if (bTime !== aTime) return bTime - aTime
+      return Number(b.id || 0) - Number(a.id || 0)
+    })
+
+    currentShopName.value = myShops[0]?.name || 'No Shop Name'
+    form.shop = currentShopName.value
+  } catch (error) {
+    console.error('Error loading owner shop name:', error)
+    currentShopName.value = 'No Shop Found'
+    form.shop = currentShopName.value
+  }
+}
+
+loadOwnerShopName()
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -277,7 +321,7 @@ const openCreate = () => {
   editId.value = null
   Object.assign(form, {
     name: '', type: '', brand: '', plate: '', price: '', fuel: '', transmission: '',
-    status: 'Available', description: '', shop: 'Main Shop - Phnom Penh', image: '',
+    status: 'Available', description: '', shop: currentShopName.value, image: '',
     createdAt: khTime(), updatedAt: khTime()
   })
   modal.value = true
@@ -288,7 +332,7 @@ const openEdit = (v) => {
   Object.assign(form, {
     name: v.name || '', type: v.type || '', brand: v.brand || '', plate: v.plate || '',
     price: v.price || '', fuel: v.fuel || '', transmission: v.transmission || '',
-    status: v.status || 'Available', description: v.description || '', shop: v.shop || 'Main Shop - Phnom Penh',
+    status: v.status || 'Available', description: v.description || '', shop: v.shop || currentShopName.value,
     image: v.image || '', createdAt: v.createdAt || '', updatedAt: khTime()
   })
   modal.value = true
@@ -307,6 +351,7 @@ const saveVehicle = async () => {
     price: Number(form.price),
     status: form.status,
     description: form.description,
+    shop: form.shop,
     fuel: form.fuel,
     transmission: form.transmission,
     photos: form.image ? [form.image] : [],
@@ -729,11 +774,8 @@ const iconSvg = (name) => {
                 </div>
               </div>
               <div class="form-group mt-12">
-                <label>Shop Location</label>
-                <select v-model="form.shop">
-                  <option>Main Shop - Phnom Penh</option>
-                  <option>Branch Shop - Siem Reap</option>
-                </select>
+                <label>Shop Name</label>
+                <input v-model="form.shop" class="shop-name-input" readonly />
               </div>
             </div>
 
@@ -1998,6 +2040,13 @@ textarea {
 .form-group textarea {
   min-height: 80px;
   resize: vertical;
+}
+
+.shop-name-input[readonly] {
+  background: #f8fafc;
+  color: #334155;
+  border-style: dashed;
+  cursor: not-allowed;
 }
 
 .form-row {
