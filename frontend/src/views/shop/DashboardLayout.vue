@@ -5,6 +5,7 @@ import Payments from './Payments.vue'
 import DamageReports from './Demage_reports.vue'
 import ReviewsFeedback from './Review_Feedback.vue'
 import Coupons from './Coupons.vue'
+import MyShop from './myShop.vue'
 import { vehicleApi } from '@/services/api'
 
 // Toast notifications
@@ -616,6 +617,10 @@ const iconSvg = (name) => {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section v-else-if="active === 'my-shop'" class="my-shop-view">
+        <MyShop />
       </section>
 
       <section v-else class="panel placeholder">

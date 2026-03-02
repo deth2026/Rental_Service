@@ -17,6 +17,20 @@ export const vehicleApi = {
   delete: (id) => api.delete(`/vehicles/${id}`)
 };
 
+// Shop API calls
+export const shopApi = {
+  getAll: () => api.get('/shops'),
+  getById: (id) => api.get(`/shops/${id}`),
+  create: (data) => api.post('/shops', data),
+  update: (id, data) => api.put(`/shops/${id}`, data),
+  delete: (id) => api.delete(`/shops/${id}`)
+};
+
+// City API calls
+export const cityApi = {
+  getAll: () => api.get('/cities')
+};
+
 // Payment API calls
 export const paymentApi = {
   getAll: () => api.get('/payments'),
