@@ -5,6 +5,28 @@ import { couponApi } from '@/services/api'
 const loading = ref(true)
 const error = ref(null)
 
+// Format date to show only day/month/year
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  try {
+    const date = new Date(dateStr)
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  } catch (e) {
+    return dateStr
+  }
+}
+
+// Format penalty display - shows % or $
+const getPenaltyDisplay = (penalty, desc) => {
+  if (desc && desc.includes('%')) {
+    return desc.replace('% discount', '%')
+  }
+  return '$' + penalty
+}
+
 // Fetch coupons from database
 const fetchCoupons = async () => {
   try {
@@ -99,8 +121,8 @@ const closeModal = () => {
             <td class="id-cell">#{{ r.id }}</td>
             <td class="vehicle-cell">{{ r.vehicle }}</td>
             <td class="description-cell">{{ r.description }}</td>
-            <td class="penalty-cell">${{ r.penalty }}</td>
-            <td class="date-cell">{{ r.date }}</td>
+            <td class="penalty-cell">{{ getPenaltyDisplay(r.penalty, r.description) }}</td>
+            <td class="date-cell">{{ formatDate(r.date) }}</td>
           </tr>
         </tbody>
       </table>
@@ -134,15 +156,15 @@ const closeModal = () => {
           </div>
           <div class="detail-row">
             <span class="detail-label">Discount Amount</span>
-            <span class="detail-value penalty">${{ selectedReport.penalty }}</span>
+            <span class="detail-value penalty">{{ getPenaltyDisplay(selectedReport.penalty, selectedReport.description) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Valid From</span>
-            <span class="detail-value">{{ selectedReport.date }}</span>
+            <span class="detail-value">{{ formatDate(selectedReport.date) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Valid Until</span>
-            <span class="detail-value">{{ selectedReport.validUntil }}</span>
+            <span class="detail-value">{{ formatDate(selectedReport.validUntil) }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Usage Limit</span>
