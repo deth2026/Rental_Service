@@ -18,7 +18,6 @@ export default {
   verified: 'បានផ្ទៀងផ្ទាត់',
   shopName: 'ឈ្មោះហាង',
   phoneNumber: 'លេខទូរស័ព្ទ',
-  city: 'ទីក្រុង',
   password: 'ពាក្យសម្ងាត់',
   passwordPlaceholder: 'បញ្ចូលពាក្យសម្ងាត់ថ្មី ឬទុកចោល',
   changePassword: 'ផ្លាស់ប្តូរពាក្យសម្ងាត់',

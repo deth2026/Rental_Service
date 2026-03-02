@@ -18,7 +18,6 @@ export default {
   verified: 'Verified',
   shopName: 'Shop name',
   phoneNumber: 'Phone number',
-  city: 'City',
   password: 'Password',
   passwordPlaceholder: 'Enter new password or leave blank',
   changePassword: 'Change Password',

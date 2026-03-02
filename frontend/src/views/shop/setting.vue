@@ -51,12 +51,6 @@
               <input v-model="form.phone" type="text" />
             </label>
 
-            <label class="field">
-              <span>{{ t('city') }}</span>
-              <select v-model.number="form.city_id">
-                <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
-              </select>
-            </label>
 
             <label class="field">
               <span>{{ t('password') }}</span>
@@ -174,6 +168,7 @@
         </div>
       </div>
     </div>
+
   </section>
 </template>
 
@@ -243,7 +238,6 @@ const displayImageUrl = computed(() => {
   if (avatarLoadFailed.value || !profileImageUrl.value) return fallbackImageUrl.value;
   return profileImageUrl.value;
 });
-const cities = ref([]);
 const avatarFile = ref(null);
 const avatarInputRef = ref(null);
 let successToastTimer = null;
@@ -254,7 +248,6 @@ const form = reactive({
   phone: '',
   shop_address: '',
   notifications_enabled: true,
-  city_id: null,
   password: '',
 });
 
@@ -293,17 +286,10 @@ const loadData = async () => {
     const storedUserId = getStoredUserId();
     const storedUser = getStoredUser();
 
-    const [citiesResult, usersResult, shopsResult] = await Promise.allSettled([
-      api.get('/cities'),
+    const [usersResult, shopsResult] = await Promise.allSettled([
       storedUserId ? api.get(`/users/${storedUserId}`) : api.get('/users'),
       api.get('/shops')
     ]);
-
-    if (citiesResult.status === 'fulfilled') {
-      cities.value = extractCollection(citiesResult.value.data);
-    } else {
-      cities.value = [];
-    }
 
     let usersData = null;
     if (usersResult.status === 'fulfilled') {
@@ -341,7 +327,6 @@ const loadData = async () => {
     form.phone = user.phone || '';
     form.shop_name = selectedShop?.name || '';
     form.shop_address = selectedShop?.address || '';
-    form.city_id = selectedShop?.city_id || cities.value?.[0]?.id || null;
     form.password = '';
 
     const notifyRaw = localStorage.getItem(`${NOTIFY_KEY_PREFIX}${user.id}`);
@@ -506,7 +491,6 @@ const saveSettings = async () => {
 
     const shopPayload = {
       owner_id: user.id,
-      city_id: form.city_id ? Number(form.city_id) : null,
       name: form.shop_name,
       address: form.shop_address || '',
       status: 'active'
