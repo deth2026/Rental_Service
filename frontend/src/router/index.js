@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import Dashboard from '../views/shop/Dashboard.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
+import AdminDashboard from '../views/admin/Dashboard.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,8 +26,13 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: Dashboard
-    }
+      component: UserDashboard
+    },
+    {
+      path: '/admin/dashboard',
+      name: 'admin-dashboard',
+      component: AdminDashboard
+    },
    
   ]
 })

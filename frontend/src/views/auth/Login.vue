@@ -1,13 +1,13 @@
 <template>
-  <section class="dashboard">
-    <h2>Admin Dashboard</h2>
-    <p>Admin area is loading correctly.</p>
+  <section class="auth-page">
+    <h2>Login</h2>
+    <p>This is a placeholder login view.</p>
     <router-link to="/">Back to Home</router-link>
   </section>
 </template>
 
 <style scoped>
-.dashboard {
+.auth-page {
   min-height: 100vh;
   display: grid;
   place-content: center;
