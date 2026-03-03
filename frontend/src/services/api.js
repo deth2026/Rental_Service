@@ -8,6 +8,32 @@ const api = axios.create({
   }
 });
 
+const getStoredToken = () => {
+  return localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
+};
+
+const token = getStoredToken();
+if (token) {
+  api.defaults.headers.common.Authorization = `Bearer ${token}`;
+}
+
+api.interceptors.request.use((config) => {
+  const nextConfig = { ...config };
+  const authToken = getStoredToken();
+
+  if (authToken) {
+    nextConfig.headers = nextConfig.headers || {};
+    nextConfig.headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  // Let browser set correct multipart boundary automatically.
+  if (typeof FormData !== 'undefined' && nextConfig.data instanceof FormData && nextConfig.headers) {
+    delete nextConfig.headers['Content-Type'];
+  }
+
+  return nextConfig;
+});
+
 // Vehicle API calls
 export const vehicleApi = {
   getAll: () => api.get('/vehicles'),

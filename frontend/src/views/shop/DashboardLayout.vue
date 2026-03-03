@@ -1,5 +1,6 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Bookings from './Bookings.vue'
 import Payments from './Payments.vue'
 import DamageReports from './Demage_reports.vue'
@@ -9,8 +10,10 @@ import MyShop from './myShop.vue'
 import LoyaltyPoints from './Loyalty_points.vue'
 import Setting from './setting.vue'
 import api, { shopApi, vehicleApi } from '@/services/api'
+import { getSessionUser, logoutUser } from '@/services/auth'
 
 // Toast notifications
+const router = useRouter()
 const toast = ref({ show: false, message: '', type: 'success' })
 const showToast = (message, type = 'success') => {
   toast.value = { show: true, message, type }
@@ -35,6 +38,66 @@ const sections = [
 const active = ref('dashboard')
 const isSidebarCollapsed = ref(false)
 const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 240))
+const sessionUser = ref(getSessionUser() || {})
+const avatarLoadFailed = ref(false)
+const apiOrigin = computed(() => {
+  try {
+    return new URL(api.defaults.baseURL, window.location.origin).origin
+  } catch {
+    return window.location.origin
+  }
+})
+
+const displayName = computed(() => sessionUser.value?.name || 'User')
+
+const displayRole = computed(() => {
+  const role = sessionUser.value?.role
+  if (role === 'shop_owner' || role === 'owner') return 'Shop Owner'
+  if (role === 'admin') return 'Admin'
+  if (role === 'customer') return 'Customer'
+  return role || 'User'
+})
+
+const normalizeAvatarUrl = (url) => {
+  if (!url) return ''
+  if (/^https?:\/\//.test(url)) return url
+  const normalized = String(url).replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `${apiOrigin.value}/${normalized}`
+  if (normalized.includes('/')) return `${apiOrigin.value}/storage/${normalized}`
+  return `${apiOrigin.value}/storage/avatars/${normalized}`
+}
+
+const displayAvatarUrl = computed(() => {
+  if (avatarLoadFailed.value) return ''
+  return normalizeAvatarUrl(sessionUser.value?.avatar_url || sessionUser.value?.img_url || '')
+})
+
+const displayInitials = computed(() => {
+  const name = (displayName.value || '').trim()
+  if (!name) return 'U'
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+})
+
+const refreshSessionUser = () => {
+  sessionUser.value = getSessionUser() || {}
+  avatarLoadFailed.value = false
+}
+
+const onAvatarError = () => {
+  avatarLoadFailed.value = true
+}
+
+onMounted(() => {
+  window.addEventListener('storage', refreshSessionUser)
+  window.addEventListener('user-updated', refreshSessionUser)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('storage', refreshSessionUser)
+  window.removeEventListener('user-updated', refreshSessionUser)
+})
 const categories = ['Car', 'Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
 const search = ref('')
@@ -42,6 +105,7 @@ const categoryFilter = ref('All Categories')
 const statusFilter = ref('All Status')
 const modal = ref(false)
 const editId = ref(null)
+const showLogoutModal = ref(false)
 
 // Delete confirmation modal
 const showDeleteModal = ref(false)
@@ -58,6 +122,27 @@ const cancelDelete = () => {
   deleteId.value = null
   deleteVehicleName.value = ''
   showDeleteModal.value = false
+}
+
+const onMenuClick = (item) => {
+  if (item.id === 'logout') {
+    showLogoutModal.value = true
+    return
+  }
+  active.value = item.id
+}
+
+const cancelLogout = () => {
+  showLogoutModal.value = false
+}
+
+const confirmLogout = async () => {
+  showLogoutModal.value = false
+  try {
+    await logoutUser()
+  } finally {
+    router.push('/login')
+  }
 }
 
 const vehicles = ref([])
@@ -82,10 +167,21 @@ const isLoadingShop = ref(false)
 // Fetch shop data
 const fetchShop = async () => {
   try {
+    const ownerId = Number(sessionUser.value?.id || 0)
     const response = await api.get('/shops')
     const shops = response.data.data || response.data || []
-    // Get first shop for this user (you may need to filter by owner_id)
-    shop.value = shops[0] || null
+    const myShops = ownerId
+      ? shops.filter((entry) => Number(entry.owner_id) === ownerId)
+      : shops
+
+    myShops.sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+      if (bTime !== aTime) return bTime - aTime
+      return Number(b.id || 0) - Number(a.id || 0)
+    })
+
+    shop.value = myShops[0] || null
   } catch (error) {
     console.error('Error fetching shop:', error)
     shop.value = null
@@ -121,7 +217,9 @@ const saveShop = async () => {
   
   isLoadingShop.value = true
   try {
+    const ownerId = Number(sessionUser.value?.id || getUserId())
     const payload = {
+      owner_id: ownerId,
       name: shopForm.name,
       city_id: shopForm.city_id,
       description: shopForm.description,
@@ -481,7 +579,7 @@ const iconSvg = (name) => {
 
       <div class="menu-title">MENU</div>
       <button v-for="item in sections" :key="item.id" class="menu-item" :class="{ active: item.id === active }"
-        @click="active = item.id">
+        @click="onMenuClick(item)">
         <span class="menu-icon" v-html="iconSvg(item.icon)"></span>
         <span class="menu-label">{{ item.label }}</span>
       </button>
@@ -498,10 +596,13 @@ const iconSvg = (name) => {
           <div class="bell-dot"></div>
         </div>
         <div class="user-box">
-          <div class="avatar">CC</div>
+          <div class="avatar">
+            <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="User profile" class="avatar-img" @error="onAvatarError" />
+            <span v-else>{{ displayInitials }}</span>
+          </div>
           <div>
-            <strong>Chong Choul</strong>
-            <p>Shop Owner</p>
+            <strong>{{ displayName }}</strong>
+            <p>{{ displayRole }}</p>
           </div>
         </div>
       </header>
@@ -843,6 +944,25 @@ const iconSvg = (name) => {
       <div class="delete-actions">
         <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
         <button class="delete-confirm-btn" @click="removeVehicle">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Confirmation Modal -->
+  <div v-if="showLogoutModal" class="delete-overlay" @click.self="cancelLogout">
+    <div class="delete-modal">
+      <div class="delete-icon-wrapper">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </div>
+      <h3 class="delete-title">Logout</h3>
+      <p class="delete-message">Are you sure you want to logout?</p>
+      <div class="delete-actions">
+        <button class="delete-cancel-btn" @click="cancelLogout">No</button>
+        <button class="delete-confirm-btn logout-confirm-btn" @click="confirmLogout">Yes</button>
       </div>
     </div>
   </div>
@@ -1241,6 +1361,13 @@ const iconSvg = (name) => {
   font-weight: 700;
   display: grid;
   place-items: center;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-box strong {
@@ -1873,6 +2000,14 @@ textarea {
 
 .delete-confirm-btn:hover {
   background: #c0392b;
+}
+
+.logout-confirm-btn {
+  background: #1d4ed8;
+}
+
+.logout-confirm-btn:hover {
+  background: #1e40af;
 }
 
 @media (max-width: 480px) {

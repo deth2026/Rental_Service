@@ -17,6 +17,42 @@ const createForm = reactive({
   status: 'active'
 })
 
+const getCachedShop = (ownerId) => {
+  if (!ownerId) return null
+  try {
+    const raw = localStorage.getItem(`myshop_cache_${ownerId}`)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const setCachedShop = (ownerId, shopData) => {
+  if (!ownerId) return
+  try {
+    if (!shopData) {
+      localStorage.removeItem(`myshop_cache_${ownerId}`)
+      return
+    }
+    localStorage.setItem(`myshop_cache_${ownerId}`, JSON.stringify(shopData))
+  } catch {
+    // Ignore cache write errors.
+  }
+}
+
+const getStoredUser = () => {
+  try {
+    const rawUser = localStorage.getItem('user')
+    if (!rawUser) return null
+    const parsed = JSON.parse(rawUser)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
 const getUserId = () => {
   const rawUser = localStorage.getItem('user')
   if (!rawUser) return 1
@@ -40,13 +76,23 @@ const formatDateTime = (value) => {
 
 const loadMyShop = async () => {
   const ownerId = getUserId()
+  const storedUser = getStoredUser()
+  ownerName.value = storedUser?.name || 'N/A'
+  const cachedShop = getCachedShop(ownerId)
+  if (cachedShop) {
+    shop.value = cachedShop
+  }
+
   try {
     const response = await shopApi.getAll()
     const shops = asArray(response.data)
     const myShops = shops.filter((item) => Number(item.owner_id) === Number(ownerId))
 
     if (!myShops.length) {
-      shop.value = null
+      if (!cachedShop) {
+        shop.value = null
+      }
+      setCachedShop(ownerId, null)
       return
     }
 
@@ -59,9 +105,14 @@ const loadMyShop = async () => {
     })
 
     shop.value = myShops[0]
+    setCachedShop(ownerId, shop.value)
+    ownerName.value = shop.value?.owner_name || shop.value?.owner?.name || storedUser?.name || 'N/A'
   } catch (e) {
     console.error('Failed to load shop', e)
-    shop.value = null
+    if (!cachedShop) {
+      shop.value = null
+    }
+    ownerName.value = storedUser?.name || 'N/A'
   }
 }
 
@@ -96,7 +147,12 @@ const createShop = async () => {
       status: createForm.status
     }
 
-    await shopApi.create(payload)
+    const { data: created } = await shopApi.create(payload)
+    const createdShop = created?.data || created || null
+    if (createdShop && typeof createdShop === 'object') {
+      shop.value = createdShop
+      setCachedShop(getUserId(), createdShop)
+    }
     await loadMyShop()
 
     showCreateModal.value = false

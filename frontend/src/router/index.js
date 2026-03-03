@@ -34,6 +34,10 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/home',
+      redirect: '/'
+    },
+    {
       path: '/chooserole',
       name: 'chooserole',
       component: ChooseRole,
@@ -55,7 +59,7 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: DashboardLayout,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
     },
     {
       path: '/setting',
@@ -73,10 +77,10 @@ const router = createRouter({
       path: '/vehicles/:id',
       name: 'vehicle-detail',
       component: VehicleDetail,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'shop', 'admin'] }
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
     }
   ]
-})
+});
 
 // Navigation guard to check authentication and authorization
 router.beforeEach((to, from, next) => {
@@ -102,11 +106,9 @@ router.beforeEach((to, from, next) => {
     }
     // Redirect based on role
     if (userRole === 'admin') {
-      next('/setting');
-    } else if (userRole === 'shop_owner') {
-      next('/setting');
+      next('/admin');
     } else {
-      next('/');
+      next('/dashboard');
     }
     return;
   }
@@ -117,10 +119,8 @@ router.beforeEach((to, from, next) => {
       // User doesn't have the required role, redirect to their appropriate dashboard
       if (userRole === 'admin') {
         next('/admin');
-      } else if (userRole === 'shop_owner') {
-        next('/dashboard');
       } else {
-        next('/');
+        next('/dashboard');
       }
       return;
     }

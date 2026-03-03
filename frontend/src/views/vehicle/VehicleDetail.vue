@@ -15,7 +15,7 @@ export default {
     async fetchVehicle() {
       try {
         const vehicleId = this.$route.params.id
-        const response = await fetch(`http://localhost:8000/api/vehicles/${vehicleId}`, {
+        const response = await fetch(`/api/vehicles/${vehicleId}`, {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'

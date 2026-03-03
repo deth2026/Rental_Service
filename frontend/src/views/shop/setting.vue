@@ -5,7 +5,10 @@
         <section class="content-card">
           <div class="section-head">
             <p class="section-title">{{ t('settingOwnership') }}</p>
-            <button type="button" class="btn btn-logout" @click="logout">{{ t('logout') }}</button>
+            <button type="button" class="btn btn-logout creative-logout-btn" @click="openLogoutConfirm">
+              <span class="logout-icon">↪</span>
+              <span>{{ t('logout') }}</span>
+            </button>
           </div>
 
           <div class="avatar-row">
@@ -144,16 +147,13 @@
             </div>
           </form>
 
-          <p v-if="success" class="feedback ok">{{ success }}</p>
-          <p v-if="error" class="feedback err">{{ error }}</p>
-
         </section>
       </main>
     </div>
 
-    <div v-if="showSuccessToast" class="success-toast" role="status" aria-live="polite">
-      <span>{{ successToastMessage }}</span>
-      <button type="button" class="success-toast-close" @click="showSuccessToast = false">×</button>
+    <div v-if="showToast" class="settings-toast" :class="toastType === 'error' ? 'is-error' : 'is-success'" role="status" aria-live="polite">
+      <span>{{ toastMessage }}</span>
+      <button type="button" class="settings-toast-close" @click="closeToast">×</button>
     </div>
 
     <div v-if="showRemoveConfirm" class="confirm-overlay" @click="closeRemoveConfirm">
@@ -169,11 +169,22 @@
       </div>
     </div>
 
+    <div v-if="showLogoutConfirm" class="confirm-overlay" @click="closeLogoutConfirm">
+      <div class="confirm-modal logout-modal" @click.stop>
+        <p class="confirm-title">{{ t('logout') }}</p>
+        <p class="confirm-text">{{ confirmLogoutText }}</p>
+        <div class="confirm-actions">
+          <button type="button" class="btn btn-muted" @click="closeLogoutConfirm">{{ t('cancel') }}</button>
+          <button type="button" class="btn btn-primary" @click="confirmLogout">{{ t('confirm') }}</button>
+        </div>
+      </div>
+    </div>
+
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import api from '../../services/api';
@@ -184,6 +195,10 @@ const { t } = useI18n();
 const router = useRouter();
 
 const currentLanguage = ref(getCurrentLanguage());
+const confirmLogoutText = computed(() => {
+  const msg = t('confirmLogout');
+  return msg === 'confirmLogout' ? 'Are you sure you want to logout?' : msg;
+});
 
 const changeLanguage = (lang) => {
   setLanguage(lang);
@@ -195,10 +210,12 @@ const avatarUploadLoading = ref(false);
 const avatarRemoveLoading = ref(false);
 const showPassword = ref(false);
 const showRemoveConfirm = ref(false);
+const showLogoutConfirm = ref(false);
 const success = ref('');
 const error = ref('');
-const showSuccessToast = ref(false);
-const successToastMessage = ref('');
+const showToast = ref(false);
+const toastType = ref('success');
+const toastMessage = ref('');
 const user = reactive({ id: null, name: '', email: '', role: '', avatar_url: null, img_url: null });
 const avatarLoadFailed = ref(false);
 const localPreviewUrl = ref(null);
@@ -240,7 +257,7 @@ const displayImageUrl = computed(() => {
 });
 const avatarFile = ref(null);
 const avatarInputRef = ref(null);
-let successToastTimer = null;
+let toastTimer = null;
 const form = reactive({
   name: '',
   email: '',
@@ -280,37 +297,91 @@ const getStoredUser = () => {
   }
 };
 
+const getCachedShop = (userId) => {
+  if (!userId) return null;
+  try {
+    const raw = localStorage.getItem(`settings_shop_${userId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const setCachedShop = (userId, shopData) => {
+  if (!userId) return;
+  try {
+    if (!shopData) {
+      localStorage.removeItem(`settings_shop_${userId}`);
+      return;
+    }
+    localStorage.setItem(`settings_shop_${userId}`, JSON.stringify(shopData));
+  } catch {
+    // Ignore cache write failures.
+  }
+};
+
+const notifyUserUpdated = () => {
+  window.dispatchEvent(new Event('user-updated'));
+};
+
+const openToast = (message, type = 'success') => {
+  if (!message) return;
+  toastType.value = type;
+  toastMessage.value = message;
+  showToast.value = true;
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    showToast.value = false;
+    toastTimer = null;
+  }, 3200);
+};
+
+const closeToast = () => {
+  showToast.value = false;
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+};
+
+watch(success, (value) => {
+  if (value) openToast(value, 'success');
+});
+
+watch(error, (value) => {
+  if (value) openToast(value, 'error');
+});
+
 const loadData = async () => {
   error.value = '';
   try {
     const storedUserId = getStoredUserId();
     const storedUser = getStoredUser();
+    const cachedShop = getCachedShop(storedUserId);
+
+    // Show known data immediately without waiting for API calls.
+    if (storedUser) {
+      Object.assign(user, storedUser);
+      form.name = storedUser.name || '';
+      form.email = storedUser.email || '';
+      form.phone = storedUser.phone || '';
+    }
+    if (cachedShop) {
+      currentShopId.value = cachedShop.id || null;
+      form.shop_name = cachedShop.name || '';
+      form.shop_address = cachedShop.address || '';
+    }
 
     const [usersResult, shopsResult] = await Promise.allSettled([
-      storedUserId ? api.get(`/users/${storedUserId}`) : api.get('/users'),
+      storedUserId ? api.get(`/users/${storedUserId}`) : Promise.resolve({ data: storedUser }),
       api.get('/shops')
     ]);
 
-    let usersData = null;
-    if (usersResult.status === 'fulfilled') {
-      usersData = usersResult.value.data;
-    } else if (storedUserId) {
-      try {
-        const fallbackUsers = await api.get('/users');
-        usersData = fallbackUsers.data;
-      } catch {
-        usersData = null;
-      }
-    }
-
-    const users = extractCollection(usersData);
-    const selectedUser =
-      (usersData?.id ? usersData : null) ||
-      users.find((entry) => Number(entry.id) === Number(storedUserId)) ||
-      users.find((entry) => storedUser?.email && entry.email === storedUser.email) ||
-      users[0] ||
-      storedUser ||
-      null;
+    const usersData = usersResult.status === 'fulfilled' ? usersResult.value.data : storedUser;
+    const selectedUser = (usersData?.id ? usersData : null) || storedUser || null;
     if (!selectedUser) {
       throw new Error('Cannot load user data. Ensure backend is running and login again.');
     }
@@ -319,7 +390,15 @@ const loadData = async () => {
     imageVersion.value = Date.now();
 
     const shops = shopsResult.status === 'fulfilled' ? extractCollection(shopsResult.value.data) : [];
-    const selectedShop = shops.find((shop) => Number(shop.owner_id) === Number(user.id)) || shops[0] || null;
+    const myShops = shops.filter((shop) => Number(shop.owner_id) === Number(user.id));
+    myShops.sort((a, b) => {
+      const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
+      if (bTime !== aTime) return bTime - aTime;
+      return Number(b.id || 0) - Number(a.id || 0);
+    });
+    const selectedShop = myShops[0] || null;
+    setCachedShop(user.id, selectedShop);
     currentShopId.value = selectedShop?.id || null;
 
     form.name = user.name || '';
@@ -339,7 +418,14 @@ const loadData = async () => {
 const onAvatarChange = (event) => {
   const file = event.target.files?.[0] || null;
   if (!file) return;
-  uploadAvatar(file);
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value);
+  }
+  localPreviewUrl.value = URL.createObjectURL(file);
+  avatarFile.value = file;
+  avatarLoadFailed.value = false;
+  success.value = 'Image selected. Click Save Setting to upload.';
+  error.value = '';
 };
 
 const triggerAvatarPicker = () => {
@@ -359,6 +445,20 @@ const openRemoveConfirm = () => {
 
 const closeRemoveConfirm = () => {
   showRemoveConfirm.value = false;
+};
+
+const openLogoutConfirm = () => {
+  showLogoutConfirm.value = true;
+};
+
+const closeLogoutConfirm = () => {
+  showLogoutConfirm.value = false;
+};
+
+const confirmLogout = async () => {
+  showLogoutConfirm.value = false;
+  await logoutUser();
+  router.push('/login');
 };
 
 const confirmRemoveAvatar = async () => {
@@ -396,6 +496,7 @@ const removeAvatar = async () => {
     }
 
     localStorage.setItem('user', JSON.stringify(user));
+    notifyUserUpdated();
     success.value = data?.message || t('avatarRemoved');
   } catch (err) {
     error.value = err.response?.data?.message || err.message || t('failedRemoveAvatar');
@@ -404,30 +505,24 @@ const removeAvatar = async () => {
   }
 };
 
-const uploadAvatar = async (file) => {
+const uploadAvatar = async (file, options = {}) => {
+  const { showSuccessMessage = true } = options;
   if (!user.id) {
     error.value = t('userNotFound');
-    return;
+    throw new Error(t('userNotFound'));
   }
 
   avatarUploadLoading.value = true;
-  success.value = '';
+  if (showSuccessMessage) {
+    success.value = '';
+  }
   error.value = '';
 
   const formData = new FormData();
   formData.append('avatar', file);
 
   try {
-    const previewUrl = URL.createObjectURL(file);
-    if (localPreviewUrl.value) {
-      URL.revokeObjectURL(localPreviewUrl.value);
-    }
-    localPreviewUrl.value = previewUrl;
-    avatarFile.value = file;
-
-    const { data } = await api.post(`/users/${user.id}/avatar`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+    const { data } = await api.post(`/users/${user.id}/avatar`, formData);
 
     const updatedUser = data?.user || {};
     user.img_url = updatedUser.img_url || null;
@@ -445,14 +540,21 @@ const uploadAvatar = async (file) => {
     }
 
     localStorage.setItem('user', JSON.stringify(user));
-    success.value = data?.message || t('avatarUploaded');
+    notifyUserUpdated();
+    if (showSuccessMessage) {
+      success.value = data?.message || t('avatarUploaded');
+    }
+    return data;
   } catch (err) {
     if (localPreviewUrl.value) {
       URL.revokeObjectURL(localPreviewUrl.value);
       localPreviewUrl.value = null;
     }
     avatarFile.value = null;
-    error.value = err.response?.data?.message || err.message || t('failedUploadAvatar');
+    const apiErrors = err.response?.data?.errors;
+    const avatarError = Array.isArray(apiErrors?.avatar) ? apiErrors.avatar[0] : null;
+    error.value = avatarError || err.response?.data?.message || err.message || t('failedUploadAvatar');
+    throw err;
   } finally {
     avatarUploadLoading.value = false;
   }
@@ -488,6 +590,11 @@ const saveSettings = async () => {
 
     Object.assign(user, userResponse.data || {});
     localStorage.setItem('user', JSON.stringify(user));
+    notifyUserUpdated();
+
+    if (avatarFile.value) {
+      await uploadAvatar(avatarFile.value, { showSuccessMessage: false });
+    }
 
     const shopPayload = {
       owner_id: user.id,
@@ -502,21 +609,17 @@ const saveSettings = async () => {
       const { data: createdShop } = await api.post('/shops', shopPayload);
       currentShopId.value = createdShop?.id || null;
     }
+    setCachedShop(user.id, {
+      id: currentShopId.value,
+      name: form.shop_name,
+      address: form.shop_address
+    });
 
     localStorage.setItem(`${NOTIFY_KEY_PREFIX}${user.id}`, form.notifications_enabled ? '1' : '0');
     if (form.password) {
       form.password = '';
     }
     success.value = t('settingsSaved');
-    successToastMessage.value = success.value;
-    showSuccessToast.value = true;
-    if (successToastTimer) {
-      clearTimeout(successToastTimer);
-    }
-    successToastTimer = setTimeout(() => {
-      showSuccessToast.value = false;
-      successToastTimer = null;
-    }, 3200);
     try {
       await loadData();
     } catch {
@@ -530,12 +633,13 @@ const saveSettings = async () => {
   }
 };
 
-const logout = async () => {
-  await logoutUser();
-  router.push('/login');
-};
-
 onMounted(loadData);
+onBeforeUnmount(() => {
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+});
 </script>
 
 <style>
@@ -583,7 +687,7 @@ onMounted(loadData);
   border-color: #1d4ed8;
 }
 
-.success-toast {
+.settings-toast {
   position: fixed;
   top: 16px;
   right: 16px;
@@ -601,14 +705,55 @@ onMounted(loadData);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
 
-.success-toast-close {
+.settings-toast.is-error {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #9f1239;
+}
+
+.settings-toast-close {
   margin-left: auto;
   border: none;
   background: transparent;
-  color: #136b44;
+  color: inherit;
   cursor: pointer;
   font-size: 22px;
   line-height: 1;
   padding: 0;
+}
+
+.creative-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(29, 78, 216, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.creative-logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(29, 78, 216, 0.34);
+  filter: brightness(1.03);
+}
+
+.logout-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.logout-modal {
+  border-top: 4px solid #1d4ed8;
 }
 </style>
