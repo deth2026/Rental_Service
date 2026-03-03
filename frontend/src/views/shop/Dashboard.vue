@@ -9,7 +9,7 @@ export default {
     
     <aside class="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col">
       <div class="flex items-center gap-2 mb-10 text-xl font-bold">
-        <div class="p-2 bg-blue-500 rounded-lg">🚲</div> MOTOPREMIUM
+        <div class="p-2 bg-blue-500 rounded-lg"></div> MOTOPREMIUM
       </div>
       
       <nav class="flex-1 space-y-4">
