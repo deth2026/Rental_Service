@@ -1,20 +1,17 @@
 <template>
   <header class="navbar">
     <nav class="nav-links">
-      <RouterLink to="/" class="nav-link">{{ t('home') }}</RouterLink>
-      <RouterLink to="/login" class="nav-link">{{ t('login') }}</RouterLink>
-      <RouterLink to="/register" class="nav-link">{{ t('register') }}</RouterLink>
-      <RouterLink to="/dashboard" class="nav-link">{{ t('dashboard') }}</RouterLink>
-      <RouterLink to="/setting" class="nav-link setting-link">{{ t('setting') }}</RouterLink>
+      <RouterLink to="/" class="nav-link">Home</RouterLink>
+      <RouterLink to="/login" class="nav-link">Login</RouterLink>
+      <RouterLink to="/register" class="nav-link">Register</RouterLink>
+      <RouterLink to="/dashboard" class="nav-link">Dashboard</RouterLink>
+      <RouterLink to="/setting" class="nav-link setting-link">Setting</RouterLink>
     </nav>
   </header>
 </template>
 
 <script setup>
 import { RouterLink } from 'vue-router';
-import { useI18n } from 'vue-i18n';
-
-const { t } = useI18n();
 </script>
 
 <style scoped>

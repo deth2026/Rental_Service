@@ -1,13 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
-import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import DashboardLayout from '../views/shop/DashboardLayout.vue';
-import Setting from '../views/shop/setting.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -40,7 +37,7 @@ const router = createRouter({
     {
       path: '/chooserole',
       name: 'chooserole',
-      component: ChooseRole,
+      component: Register,
       meta: { requiresAuth: false }
     },
     {
@@ -58,13 +55,13 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: DashboardLayout,
+      component: UserDashboard,
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
     },
     {
       path: '/setting',
       name: 'setting',
-      component: Setting,
+      component: UserDashboard,
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
     },
     {
@@ -76,7 +73,7 @@ const router = createRouter({
     {
       path: '/vehicles/:id',
       name: 'vehicle-detail',
-      component: VehicleDetail,
+      component: UserDashboard,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
     }
   ]
