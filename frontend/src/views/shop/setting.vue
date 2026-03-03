@@ -553,6 +553,7 @@ onMounted(loadData);
 .language-box .language-options {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .language-field {
@@ -567,6 +568,7 @@ onMounted(loadData);
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 600;
+  min-width: 96px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -576,9 +578,9 @@ onMounted(loadData);
 }
 
 .lang-btn.active {
-  background: linear-gradient(135deg, var(--teal-700), var(--teal-600));
+  background: #1d4ed8;
   color: #fff;
-  border-color: var(--teal-600);
+  border-color: #1d4ed8;
 }
 
 .success-toast {

@@ -7,7 +7,8 @@ import ReviewsFeedback from './Review_Feedback.vue'
 import Coupons from './Coupons.vue'
 import MyShop from './myShop.vue'
 import LoyaltyPoints from './Loyalty_points.vue'
-import { shopApi, vehicleApi } from '@/services/api'
+import Setting from './setting.vue'
+import api, { shopApi, vehicleApi } from '@/services/api'
 
 // Toast notifications
 const toast = ref({ show: false, message: '', type: 'success' })
@@ -673,9 +674,8 @@ const iconSvg = (name) => {
         <MyShop />
       </section>
 
-      <section v-else class="panel placeholder">
-        <h3>{{sections.find((s) => s.id === active)?.label}}</h3>
-        <p>This section is ready for your next data integration.</p>
+      <section v-else-if="active === 'settings'" class="settings-view">
+        <Setting />
       </section>
     </main>
 

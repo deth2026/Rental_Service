@@ -4,7 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import Dashboard from '../views/shop/Dashboard.vue';
+import DashboardLayout from '../views/shop/DashboardLayout.vue';
 import Setting from '../views/shop/setting.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
@@ -54,7 +54,7 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'dashboard',
-      component: Dashboard,
+      component: DashboardLayout,
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
     {
