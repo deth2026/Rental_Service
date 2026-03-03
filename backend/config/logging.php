@@ -4,6 +4,8 @@ use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
 use Monolog\Handler\SyslogUdpHandler;
 use Monolog\Processor\PsrLogMessageProcessor;
+use Illuminate\Support\Facades\Channel;
+use Illuminate\Support\Str;
 
 return [
 
@@ -26,8 +28,8 @@ return [
     |--------------------------------------------------------------------------
     |
     | This option controls the log channel that should be used to log warnings
-    | regarding deprecated PHP and library features. This allows you to get
-    | your application ready for upcoming major versions of dependencies.
+    | regarding deprecated PHP and library features. Those warnings are
+    | triggered when deprecated features are being used.
     |
     */
 
@@ -41,9 +43,8 @@ return [
     | Log Channels
     |--------------------------------------------------------------------------
     |
-    | Here you may configure the log channels for your application. Out of
-    | the box, Laravel uses the Monolog PHP logging library. This gives
-    | you a variety of powerful log handlers / formatters to utilize.
+    | Here you may configure the log channels for your application. Laravel
+    | comes with Monolog logging integrations that you may configure.
     |
     | Available Drivers: "single", "daily", "slack", "syslog",
     |                    "errorlog", "monolog",
@@ -85,7 +86,7 @@ return [
         'papertrail' => [
             'driver' => 'monolog',
             'level' => env('LOG_LEVEL', 'debug'),
-            'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
+            'handler' => env('LOG_PAPERTRAIL_HANDLER', Monolog\Handler\SyslogUdpHandler::class),
             'handler_with' => [
                 'host' => env('PAPERTRAIL_URL'),
                 'port' => env('PAPERTRAIL_PORT'),
