@@ -1,68 +1,58 @@
 export default {
-  // General
-  settings: 'Settings',
-  profile: 'Profile',
+  // Navigation
+  home: 'Home',
+  login: 'Login',
+  register: 'Register',
+  dashboard: 'Dashboard',
+  setting: 'Setting',
+  
+  // Settings Page
+  settingOwnership: 'Setting OwnerShip',
+  logout: 'Logout',
+  uploadProfile: 'Upload Profile',
+  uploading: 'Uploading...',
+  removeProfile: 'Remove Profile',
+  removing: 'Removing...',
+  fullName: 'Full name',
+  emailAddress: 'Email address',
+  verified: 'Verified',
+  shopName: 'Shop name',
+  phoneNumber: 'Phone number',
+  password: 'Password',
+  passwordPlaceholder: 'Enter new password or leave blank',
   changePassword: 'Change Password',
-  notifications: 'Notifications',
-  saveProfile: 'Save Profile',
-  changePasswordBtn: 'Change Password',
-  saved: 'Saved',
-  
-  // Profile fields
-  name: 'Name',
-  email: 'Email',
-  phone: 'Phone',
-  
-  // Password fields
   currentPassword: 'Current Password',
   newPassword: 'New Password',
   confirmPassword: 'Confirm Password',
+  passwordChanged: 'Password changed successfully!',
+  passwordMismatch: 'Passwords do not match!',
+  shopAddress: 'Shop Address',
+  notifications: 'Notifications',
+  enableNotifications: 'Enable notifications',
+  receiveOrderUpdates: 'Receive order and account updates.',
+  saveSetting: 'Save Setting',
+  saving: 'Saving...',
   
-  // Notifications
-  emailNotifications: 'Email notifications',
-  smsNotifications: 'SMS notifications',
+  // Messages
+  settingsSaved: 'Settings saved to database successfully.',
+  avatarRemoved: 'Avatar removed successfully.',
+  avatarUploaded: 'Avatar uploaded successfully.',
+  deleteProfile: 'Delete Profile',
+  confirmDelete: 'Are you sure you want to delete your profile?',
+  cancel: 'Cancel',
+  confirm: 'Confirm',
   
   // Language
   language: 'Language',
   selectLanguage: 'Select Language',
+  languageDescription: 'Choose your preferred language.',
   english: 'English',
   khmer: 'Khmer',
   
-  // Dashboard - Shop
-  dashboard: 'Dashboard',
-  myShop: 'My Shop',
-  vehicles: 'Vehicles',
-  bookings: 'Bookings',
-  coupons: 'Coupons',
-  payments: 'Payments',
-  loyaltyPoints: 'Loyalty Points',
-  damageReports: 'Damage Reports',
-  reviewFeedback: 'Review & Feedback',
-  activityHistory: 'Activity History',
-  logout: 'Logout',
-  
-  // Vehicle
-  addVehicle: 'Add Vehicle',
-  vehicleName: 'Vehicle Name',
-  category: 'Category',
-  pricePerDay: 'Price Per Day',
-  status: 'Status',
-  available: 'Available',
-  rented: 'Rented',
-  maintenance: 'Maintenance',
-  
-  // Common
-  save: 'Save',
-  cancel: 'Cancel',
-  delete: 'Delete',
-  edit: 'Edit',
-  create: 'Create',
-  search: 'Search',
-  filter: 'Filter',
-  action: 'Action',
-  confirm: 'Confirm',
-  success: 'Success',
-  error: 'Error',
-  loading: 'Loading...',
-  noData: 'No data available'
-}
+  // Errors
+  userNotFound: 'User not found. Please login again.',
+  failedLoadSettings: 'Failed to load settings.',
+  failedSaveSettings: 'Failed to save settings.',
+  failedUploadAvatar: 'Failed to upload avatar.',
+  failedRemoveAvatar: 'Failed to remove avatar.',
+};

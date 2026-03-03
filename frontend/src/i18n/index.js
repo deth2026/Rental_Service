@@ -1,55 +1,42 @@
-import { reactive, computed } from 'vue'
-import en from './en.js'
-import kh from './kh.js'
+import { createI18n } from 'vue-i18n';
+import en from './en';
+import kh from './kh';
 
-// Messages
-const messages = { en, kh }
-
-// Reactive state
-const state = reactive({
-  locale: localStorage.getItem('locale') || 'en'
-})
-
-// Get current translations
-const translations = computed(() => messages[state.locale])
-
-// Translation function
-export function t(key) {
-  return translations.value[key] || key
-}
-
-// Set locale
-export function setLocale(locale) {
-  if (locale === 'en' || locale === 'kh') {
-    state.locale = locale
-    localStorage.setItem('locale', locale)
+// Get stored language or default to English
+const getStoredLanguage = () => {
+  try {
+    const stored = localStorage.getItem('app_language');
+    if (stored && (stored === 'en' || stored === 'kh')) {
+      return stored;
+    }
+  } catch (e) {
+    console.warn('Failed to get stored language:', e);
   }
-}
+  return 'en';
+};
 
-// Get locale
-export function getLocale() {
-  return state.locale
-}
+const i18n = createI18n({
+  legacy: false,
+  locale: getStoredLanguage(),
+  fallbackLocale: 'en',
+  messages: {
+    en,
+    kh,
+  },
+});
 
-// Get reactive state for use in templates
-export function useI18n() {
-  return {
-    t,
-    locale: computed({
-      get: () => state.locale,
-      set: (val) => setLocale(val)
-    }),
-    state
+// Helper function to change language
+export const setLanguage = (lang) => {
+  if (lang === 'en' || lang === 'kh') {
+    i18n.global.locale.value = lang;
+    localStorage.setItem('app_language', lang);
+    document.documentElement.lang = lang;
   }
-}
+};
 
-// Export for global use
-export default {
-  install(app) {
-    app.config.globalProperties.$t = t
-    app.config.globalProperties.$setLocale = setLocale
-    app.config.globalProperties.$getLocale = getLocale
-  }
-}
+// Helper function to get current language
+export const getCurrentLanguage = () => {
+  return i18n.global.locale.value;
+};
 
-export { state }
+export default i18n;

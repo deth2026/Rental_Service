@@ -1,54 +1,22 @@
-<script>
-import "../../assets/auth.css";
-export default {
-  name: "register",
-};
-</script>
 <template>
   <div class="register-container">
     <div class="hero-section">
       <div class="hero-content">
-        <div class="logo">
-          <span class="logo-icon">🏍️</span>
-          <span>MOTOPREMIUM</span>
-        </div>
-
-        <h1 class="hero-title">
+        <h1 class="hero-title" style="margin-bottom: 20px">
           Start Your <br />
           <span class="highlight">Premium Journey</span>
         </h1>
-
-        <p class="hero-subtitle">
+        <p class="proof-label">
           Create your account and unlock exclusive access to our premium
           motorbike collection. Join thousands of riders who trust us for their
           adventures.
         </p>
 
-        <div class="features">
-          <div class="feature-item">
-            <span class="feature-icon">✨</span>
-            <span>Premium Bikes</span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">🛡️</span>
-            <span>Insurance Included</span>
-          </div>
-          <div class="feature-item">
-            <span class="feature-icon">📍</span>
-            <span>Multiple Locations</span>
-          </div>
-        </div>
-
         <div class="social-proof">
-          <div class="avatar-group">
-            <img src="https://i.pravatar.cc/40?u=1" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=2" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=3" alt="user" />
-            <img src="https://i.pravatar.cc/40?u=4" alt="user" />
-          </div>
           <div class="proof-text">
-            <p class="proof-number">50,000+</p>
-            <p class="proof-label">Happy Riders</p>
+            <p class="proof-label" style="margin-right: 70px">Bicycle</p>
+            <p class="proof-label" style="margin-right: 70px">Motorbike</p>
+            <p class="proof-label">Car</p>
           </div>
         </div>
       </div>
@@ -62,17 +30,48 @@ export default {
             Back to Home
           </a>
         </div>
-
-        <h2>Create Account</h2>
+        <h2>Register</h2>
         <p class="form-intro">
           Join us today and start your premium riding experience.
         </p>
+
+        <!-- Selected Role Display -->
+        <div class="selected-role" v-if="selectedRole">
+          <span class="role-label">Selected Role:</span>
+          <span class="role-badge" :data-role="selectedRole">{{
+            selectedRole === "customer"
+              ? "Customer"
+              : selectedRole === "shop_owner"
+              ? "Shop Owner"
+              : "Admin"
+          }}</span>
+          <button type="button" @click="changeRole" class="change-role-btn">
+            Change
+          </button>
+        </div>
+
+        <!-- Success Message -->
+        <div class="message-block success" v-if="successMessage">
+          <span class="message-icon">✓</span>
+          <span class="message-text">{{ successMessage }}</span>
+        </div>
+
+        <!-- Error Message -->
+        <div
+          class="message-block error"
+          v-if="Object.keys(errors).length > 0 && !successMessage"
+        >
+          <span class="message-icon">✗</span>
+          <span class="message-text"
+            >Please fix the errors below to continue.</span
+          >
+        </div>
 
         <form @submit.prevent="handleRegister">
           <div class="input-group">
             <label>Full Name</label>
             <div class="input-wrapper" :class="{ error: errors.fullName }">
-              <i class="icon-user"></i>
+              <i class="icon-user" style="margin-right: 8px"></i>
               <input
                 type="text"
                 v-model="form.fullName"
@@ -108,7 +107,7 @@ export default {
           <div class="input-group">
             <label>Phone Number</label>
             <div class="input-wrapper" :class="{ error: errors.phone }">
-              <i class="icon-phone" style="margin-right: 34px"></i>
+              <i class="icon-phone" style="margin-right: 32px"></i>
               <input
                 type="tel"
                 v-model="form.phone"
@@ -127,15 +126,37 @@ export default {
             <div class="input-group">
               <label>Password</label>
               <div class="input-wrapper" :class="{ error: errors.password }">
-                <i class="icon-lock" style="margin-right: 34px"></i>
+                <i class="icon-lock" style="margin-right: 8px"></i>
                 <input
-                  type="password"
+                  :type="showPassword ? 'text' : 'password'"
                   v-model="form.password"
                   placeholder="••••••••"
                   @input="clearError('password')"
                   :class="{ 'error-input': errors.password }"
                   required
                 />
+                <button
+                  type="button"
+                  @click="togglePassword"
+                  class="password-toggle"
+                  style="
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    padding: 0;
+                    margin-left: 8px;
+                  "
+                >
+                  <img
+                    :src="
+                      showPassword
+                        ? 'https://cdn-icons-png.flaticon.com/512/565/565655.png'
+                        : 'https://cdn-icons-png.flaticon.com/512/709/709612.png'
+                    "
+                    style="width: 20px; height: 20px; opacity: 0.6"
+                    alt="Toggle password visibility"
+                  />
+                </button>
               </div>
               <span class="error-message" v-if="errors.password">{{
                 errors.password
@@ -147,15 +168,37 @@ export default {
                 class="input-wrapper"
                 :class="{ error: errors.confirmPassword }"
               >
-                <i class="icon-lock" style="margin-right: 34px"></i>
+                <i class="icon-lock" style="margin-right: 8px"></i>
                 <input
-                  type="password"
+                  :type="showConfirmPassword ? 'text' : 'password'"
                   v-model="form.confirmPassword"
                   placeholder="••••••••"
                   @input="clearError('confirmPassword')"
                   :class="{ 'error-input': errors.confirmPassword }"
                   required
                 />
+                <button
+                  type="button"
+                  @click="toggleConfirmPassword"
+                  class="password-toggle"
+                  style="
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    padding: 0;
+                    margin-left: 8px;
+                  "
+                >
+                  <img
+                    :src="
+                      showConfirmPassword
+                        ? 'https://cdn-icons-png.flaticon.com/512/565/565655.png'
+                        : 'https://cdn-icons-png.flaticon.com/512/709/709612.png'
+                    "
+                    style="width: 20px; height: 20px; opacity: 0.6"
+                    alt="Toggle password visibility"
+                  />
+                </button>
               </div>
               <span class="error-message" v-if="errors.confirmPassword">{{
                 errors.confirmPassword
@@ -164,7 +207,7 @@ export default {
           </div>
 
           <button type="submit" class="btn-register" :disabled="isLoading">
-            <span v-if="!isLoading">Create Account</span>
+            <span v-if="!isLoading">Register</span>
             <span v-else class="loading-spinner">
               <span class="spinner"></span>
               Creating Account...
@@ -203,11 +246,19 @@ export default {
 
 <script setup>
 import { reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
+import { registerUser } from "../../services/auth";
 
 const router = useRouter();
+const route = useRoute();
 const isLoading = ref(false);
 const errors = ref({});
+const successMessage = ref("");
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+
+// Get role from query parameter or default to customer
+const selectedRole = ref(route.query.role || "customer");
 
 const form = reactive({
   fullName: "",
@@ -215,6 +266,7 @@ const form = reactive({
   phone: "",
   password: "",
   confirmPassword: "",
+  role: selectedRole.value, // Set role from query parameter
 });
 
 const validateForm = () => {
@@ -242,9 +294,6 @@ const validateForm = () => {
     newErrors.password = "Password is required";
   } else if (form.password.length < 8) {
     newErrors.password = "Password must be at least 8 characters";
-  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) {
-    newErrors.password =
-      "Password must contain uppercase, lowercase, and number";
   }
 
   if (!form.confirmPassword) {
@@ -263,21 +312,49 @@ const handleRegister = async () => {
   }
 
   isLoading.value = true;
+  successMessage.value = "";
+  errors.value = {};
 
   try {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await registerUser({
+      name: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      password: form.password,
+      password_confirmation: form.confirmPassword,
+      role: selectedRole.value,
+    });
 
-    console.log("Registration Form Submitted:", form);
+    successMessage.value =
+      "Registration successful! Please check your email to verify your account.";
 
-    // Show success message or redirect
-    alert(
-      "Registration successful! Please check your email to verify your account."
-    );
-    router.push("/login");
+    // Reset form
+    form.fullName = "";
+    form.email = "";
+    form.phone = "";
+    form.password = "";
+    form.confirmPassword = "";
+
+    // Redirect to login after successful registration
+    setTimeout(() => {
+      router.push("/login");
+    }, 100);
   } catch (error) {
-    console.error("Registration error:", error);
-    alert("Registration failed. Please try again.");
+    const responseErrors = error?.response?.data?.errors;
+    const responseMessage = error?.response?.data?.message;
+
+    // Handle validation errors from backend
+    if (responseErrors) {
+      const newErrors = {};
+      Object.keys(responseErrors).forEach((field) => {
+        newErrors[field === "name" ? "fullName" : field] =
+          responseErrors[field][0];
+      });
+      errors.value = newErrors;
+    } else {
+      errors.value.email =
+        responseMessage || error.message || "Registration failed. Please try again.";
+    }
   } finally {
     isLoading.value = false;
   }
@@ -288,4 +365,20 @@ const clearError = (field) => {
     delete errors.value[field];
   }
 };
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value;
+};
+
+const toggleConfirmPassword = () => {
+  showConfirmPassword.value = !showConfirmPassword.value;
+};
+
+const changeRole = () => {
+  router.push("/chooserole");
+};
 </script>
+
+<style>
+@import "../../assets/register.css";
+</style>

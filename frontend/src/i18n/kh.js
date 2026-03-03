@@ -1,68 +1,58 @@
 export default {
-  // General
-  settings: 'ការកំណត់',
-  profile: 'ប្រវត្តិរូប',
+  // Navigation
+  home: 'ទំព័រដើម',
+  login: 'ចូល',
+  register: 'ចុះឈ្មោះ',
+  dashboard: 'ផ្ទាំងគ្រប់គ្រង',
+  setting: 'ការកំណត់',
+  
+  // Settings Page
+  settingOwnership: 'ការកំណត់ម្ចាស់',
+  logout: 'ចេញ',
+  uploadProfile: 'ផ្ទុករូបភាព',
+  uploading: 'កំពុងផ្ទុក...',
+  removeProfile: 'លុបរូបភាព',
+  removing: 'កំពុងលុប...',
+  fullName: 'ឈ្មោះពេញ',
+  emailAddress: 'អាស័យដ្ឋានអ៊ីមែល',
+  verified: 'បានផ្ទៀងផ្ទាត់',
+  shopName: 'ឈ្មោះហាង',
+  phoneNumber: 'លេខទូរស័ព្ទ',
+  password: 'ពាក្យសម្ងាត់',
+  passwordPlaceholder: 'បញ្ចូលពាក្យសម្ងាត់ថ្មី ឬទុកចោល',
   changePassword: 'ផ្លាស់ប្តូរពាក្យសម្ងាត់',
-  notifications: 'ការជូនដំណឹង',
-  saveProfile: 'រក្សាទុកប្រវត្តិរូប',
-  changePasswordBtn: 'ផ្លាស់ប្តូរពាក្យសម្ងាត់',
-  saved: 'បានរក្សាទុក',
-  
-  // Profile fields
-  name: 'ឈ្មោះ',
-  email: 'អ៊ីមែល',
-  phone: 'លេខទូរស័ព្ទ',
-  
-  // Password fields
   currentPassword: 'ពាក្យសម្ងាត់បច្ចុប្បន្ន',
   newPassword: 'ពាក្យសម្ងាត់ថ្មី',
   confirmPassword: 'បញ្ជាក់ពាក្យសម្ងាត់',
+  passwordChanged: 'ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ!',
+  passwordMismatch: 'ពាក្យសម្ងាត់មិនត្រូវគ្នា!',
+  shopAddress: 'អាស័យដ្ឋានហាង',
+  notifications: 'ការជូនដំណឹង',
+  enableNotifications: 'បើកការជូនដំណឹង',
+  receiveOrderUpdates: 'ទទួលបានការបន្ទាន់ពីការបញ្ជាទិញនិងគណនី។',
+  saveSetting: 'រក្សាទុក',
+  saving: 'កំពុងរក្សាទុក...',
   
-  // Notifications
-  emailNotifications: 'ការជូនដំណឹងតាមអ៊ីមែល',
-  smsNotifications: 'ការជូនដំណឹងតាម SMS',
+  // Messages
+  settingsSaved: 'ការកំណត់ត្រូវបានរក្សាទុកដោយជោគជ័យ។',
+  avatarRemoved: 'រូបភាពត្រូវបានលុបដោយជោគជ័យ។',
+  avatarUploaded: 'រូបភាពត្រូវបានផ្ទុកដោយជោគជ័យ។',
+  deleteProfile: 'លុបប្រូហ្វាល',
+  confirmDelete: 'តើអ្នកពិតជាចង់លុបប្រូហ្វាលរបស់អ្នកទេ?',
+  cancel: 'បោះបង',
+  confirm: 'បញ្ជាក់',
   
   // Language
   language: 'ភាសា',
   selectLanguage: 'ជ្រើសរើសភាសា',
-  english: 'អង់គ្លេស',
+  languageDescription: 'ជ្រើសរើសភាសាដែលអ្នកចូលចិត្ត។',
+  english: 'English',
   khmer: 'ខ្មែរ',
   
-  // Dashboard - Shop
-  dashboard: 'ផ្ទាំងគ្រប់គ្រង',
-  myShop: 'ហាងរបស់ខ្ញុំ',
-  vehicles: 'យានយន្ត',
-  bookings: 'ការក្រឡាចត្រង្គ',
-  coupons: 'គូប៉ុង',
-  payments: 'ការបង់ប្រាក់',
-  loyaltyPoints: 'ពិន្ទុភាពជាប់ចិត្ត',
-  damageReports: 'របាយការណ៍ប៉ោយប៉ែត',
-  reviewFeedback: 'មតិនិងប្រតិចារិក',
-  activityHistory: 'ប្រវត្តិសកម្មភាព',
-  logout: 'ចេញ',
-  
-  // Vehicle
-  addVehicle: 'បន្ថែមយាន',
-  vehicleName: 'ឈ្មោះយាន',
-  category: 'ប្រភេទ',
-  pricePerDay: 'តម្លៃក្នុងមួយថ្ងៃ',
-  status: 'ស្ថានភាព',
-  available: 'មាន',
-  rented: 'បានជួល',
-  maintenance: 'កំពុងថែទាំ',
-  
-  // Common
-  save: 'រក្សាទុក',
-  cancel: 'បោះបង់',
-  delete: 'លុប',
-  edit: 'កែសម្រួល',
-  create: 'បង្កើត',
-  search: 'ស្វែងរក',
-  filter: 'តម្រង',
-  action: 'សកម្មភាព',
-  confirm: 'បញ្ជាក់',
-  success: 'ជោគជ័យ',
-  error: 'កំហុស',
-  loading: 'កំពុងផ្ទុក...',
-  noData: 'គ្មានទិន្ន័យ'
-}
+  // Errors
+  userNotFound: 'រកមិនឃើញអ្នកប្រើប្រាស់ទេ។ សូមចូលម្តងទៀត។',
+  failedLoadSettings: 'មិនអាចផ្ទុកការកំណត់បានទេ។',
+  failedSaveSettings: 'មិនអាចរក្សាទុកការកំណត់បានទេ។',
+  failedUploadAvatar: 'មិនអាចផ្ទុករូបភាពបានទេ។',
+  failedRemoveAvatar: 'មិនអាចលុបរូបភាពបានទេ។',
+};
