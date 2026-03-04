@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -26,16 +27,38 @@ Route::get('/test', function () {
     ]);
 });
 
-Route::apiResource('users', UserController::class);
-Route::apiResource('categories', CategoryController::class);
-Route::apiResource('vehicles', VehicleController::class);
-Route::apiResource('shops', ShopController::class);
-Route::apiResource('bookings', BookingController::class);
-Route::apiResource('booking-status-logs', BookingStatusLogController::class);
-Route::apiResource('cities', CityController::class);
-Route::apiResource('coupons', CouponController::class);
-Route::apiResource('damage-reports', DamageReportController::class);
-Route::apiResource('feedback', FeedbackController::class);
-Route::apiResource('histories', HistoryController::class);
-Route::apiResource('loyalty-points', LoyaltyPointController::class);
-Route::apiResource('payments', PaymentController::class);
+// Public authentication routes
+Route::post('/users/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register']); // Add this route for frontend compatibility
+Route::post('/users/login', [UserController::class, 'login']);
+
+// Protected routes - require authentication
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/users/logout', [UserController::class, 'logout']);
+});
+
+// Admin only routes
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+    Route::apiResource('users', UserController::class)->except(['create', 'edit']);
+    Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('cities', CityController::class);
+    Route::apiResource('coupons', CouponController::class);
+    Route::apiResource('loyalty-points', LoyaltyPointController::class);
+});
+
+// Shop routes (accessible by both shop and admin)
+Route::middleware(['auth:sanctum', 'role:shop'])->group(function () {
+    Route::apiResource('vehicles', VehicleController::class);
+    Route::apiResource('shops', ShopController::class);
+    Route::apiResource('bookings', BookingController::class);
+    Route::apiResource('booking-status-logs', BookingStatusLogController::class);
+    Route::apiResource('damage-reports', DamageReportController::class);
+    Route::apiResource('feedback', FeedbackController::class);
+    Route::apiResource('histories', HistoryController::class);
+    Route::apiResource('payments', PaymentController::class);
+});
+
+// Customer routes (accessible by all authenticated users)
+Route::middleware('auth:sanctum')->group(function () {
+    // Add customer-specific routes here if needed
+});

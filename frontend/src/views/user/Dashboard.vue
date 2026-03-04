@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -726,3 +727,8 @@ onMounted(() => {
     </div>
   </div>
 </template>
+=======
+<template>
+  <h1>Welcome to User Dashboard</h1>
+</template>
+>>>>>>> develop
