@@ -24,7 +24,7 @@
               No paperwork, just pure driving pleasure."
             </p>
             <div class="review-user">
-              <strong>Alex Rivera</strong>
+              <strong>Alex campos</strong>
               <span>Platinum Member</span>
             </div>
           </div>
