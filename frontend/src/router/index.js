@@ -54,7 +54,13 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
       component: Dashboard,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
+    },
+    {
+      path: '/view_shop',
+      name: 'view_shop',
+      component: Dashboard,
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
     },
     {
       path: '/admin',
