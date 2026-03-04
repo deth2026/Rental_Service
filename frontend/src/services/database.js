@@ -170,11 +170,22 @@ const withoutPassword = (user) => {
 
 export const userService = {
   getCurrentUser() {
-    return read(CURRENT_USER_KEY, null)
+    const localUser = read(CURRENT_USER_KEY, null)
+    if (localUser) return localUser
+
+    const backendUserRaw = localStorage.getItem('user')
+    if (!backendUserRaw) return null
+    try {
+      return JSON.parse(backendUserRaw)
+    } catch {
+      return null
+    }
   },
 
   isAuthenticated() {
-    return Boolean(this.getCurrentUser())
+    return Boolean(
+      this.getCurrentUser() || localStorage.getItem('auth_token') || localStorage.getItem('token')
+    )
   },
 
   async login(payload) {
@@ -226,13 +237,43 @@ export const userService = {
   async logout() {
     await delay(50)
     localStorage.removeItem(CURRENT_USER_KEY)
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
   },
 }
 
 export const shopService = {
   async getShops() {
     await delay()
-    return [...seedShops]
+
+    const token = localStorage.getItem('auth_token')
+    const headers = {
+      Accept: 'application/json',
+    }
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    try {
+      const response = await fetch('/api/shops', {
+        method: 'GET',
+        headers,
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch shops from API.')
+      }
+
+      const data = await response.json()
+      const shops = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : []
+
+      return shops
+    } catch {
+      // Fallback to local seed data if API is unavailable.
+      return [...seedShops]
+    }
   },
 }
 

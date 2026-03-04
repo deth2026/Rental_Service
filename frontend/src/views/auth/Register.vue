@@ -4,23 +4,9 @@
     <div class="left">
       <div class="overlay">
         <div class="logo">
-<<<<<<< HEAD
-          <span>MOTOPREMIUM</span>
-        </div>
-
-        <h1 class="hero-title">
-          Ride the Ride of <br />
-          <span class="highlight">Your Dreams</span>
-        </h1>
-
-        <p class="hero-subtitle">
-          Join our exclusive community of riders and explore the most iconic routes with our premium motorbike rentals.
-        </p>
-=======
           <div class="logo-pic"></div>
           <span>GoRent</span>
         </div>
->>>>>>> develop
 
         <div class="left-content">
           <h1>Start your journey<br />in minutes.</h1>
@@ -44,36 +30,6 @@
       </div>
     </div>
 
-<<<<<<< HEAD
-    <div class="form-section">
-      <div class="form-wrapper">
-        <h2>Welcome to Register</h2>
-        <p class="form-intro">Create account to start booking from your favorite shop.</p>
-
-        <form @submit.prevent="handleRegister">
-          <div class="input-group">
-            <label>Username</label>
-            <div class="input-wrapper">
-              <i class="icon-at"></i>
-              <input type="text" v-model.trim="form.username" placeholder="john" required />
-            </div>
-          </div>
-
-          <div class="input-group">
-            <label>Email</label>
-            <div class="input-wrapper">
-              <i class="icon-mail"></i>
-              <input type="email" v-model.trim="form.email" placeholder="john@example.com" required />
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="input-group">
-              <label>Password</label>
-              <div class="input-wrapper">
-                <i class="icon-lock"></i>
-                <input type="password" v-model="form.password" placeholder="••••••••" required />
-=======
     <!-- RIGHT SIDE -->
     <div class="right">
       <!-- Floating decorative elements for right side -->
@@ -216,7 +172,6 @@
                     <line x1="1" y1="1" x2="23" y2="23"></line>
                   </svg>
                 </button>
->>>>>>> develop
               </div>
               <span class="error-text" v-if="errors.password">{{
                 errors.password
@@ -281,16 +236,6 @@
             </div>
           </div>
 
-<<<<<<< HEAD
-          <p v-if="errorMessage" class="login-link" style="color: #b4002a">{{ errorMessage }}</p>
-          <button type="submit" class="btn-register" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Registering...' : 'Register' }}
-          </button>
-        </form>
-
-        <p class="login-link">Already have an account? <router-link to="/login">Login</router-link></p>
-        <p class="login-link"><router-link to="/home">Come Back</router-link></p>
-=======
           <button type="submit" class="login-btn" :disabled="isLoading">
             <span v-if="!isLoading">Register</span>
             <span v-else>Creating account...</span>
@@ -324,7 +269,6 @@
             Facebook
           </button>
         </div>
->>>>>>> develop
 
         <p class="terms">
           By creating an account, you agree to GoRent's
@@ -336,36 +280,6 @@
 </template>
 
 <script setup>
-<<<<<<< HEAD
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { userService } from '../../services/database.js'
-
-const router = useRouter()
-const isSubmitting = ref(false)
-const errorMessage = ref('')
-
-const form = reactive({
-  username: '',
-  email: '',
-  password: '',
-})
-
-const handleRegister = async () => {
-  isSubmitting.value = true
-  errorMessage.value = ''
-
-  try {
-    await userService.register(form)
-    await router.push('/dashboard')
-  } catch (error) {
-    errorMessage.value = error.message || 'Registration failed.'
-  } finally {
-    isSubmitting.value = false
-  }
-}
-</script>
-=======
 import { reactive, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 
@@ -436,23 +350,30 @@ const handleRegister = async () => {
   errors.value = {};
 
   try {
-    const response = await fetch("/api/register", {
+    const payload = {
+      name: form.fullName.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      password: form.password,
+      password_confirmation: form.confirmPassword,
+      role: selectedRole.value,
+    };
+
+    const requestInit = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        name: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        password: form.password,
-        password_confirmation: form.confirmPassword,
-        role: selectedRole.value,
-      }),
-    });
+      body: JSON.stringify(payload),
+    };
 
-    const data = await response.json();
+    let response = await fetch("/api/users/register", requestInit);
+    if (response.status === 404) {
+      response = await fetch("/api/register", requestInit);
+    }
+
+    const data = await response.json().catch(() => ({}));
 
     if (response.ok) {
       successMessage.value =
@@ -475,7 +396,9 @@ const handleRegister = async () => {
         const newErrors = {};
         Object.keys(data.errors).forEach((field) => {
           newErrors[field === "name" ? "fullName" : field] =
-            data.errors[field][0];
+            Array.isArray(data.errors[field]) 
+              ? data.errors[field][0] 
+              : data.errors[field];
         });
         errors.value = newErrors;
       } else {
@@ -486,7 +409,7 @@ const handleRegister = async () => {
   } catch (error) {
     console.error("Registration error:", error);
     errors.value.email =
-      "Network error. Please check your connection and try again.";
+      error.message || "Network error. Please check your connection and try again.";
   } finally {
     isLoading.value = false;
   }
@@ -514,4 +437,3 @@ const changeRole = () => {
 <style>
 @import "../../assets/auth.css";
 </style>
->>>>>>> develop

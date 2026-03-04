@@ -1,22 +1,3 @@
-<<<<<<< HEAD
-<template>
-  <div class="register-container">
-    <div class="hero-section">
-      <div class="hero-content">
-        <div class="logo">
-          <span>MOTOPREMIUM</span>
-        </div>
-
-        <h1 class="hero-title">
-          Ride the Ride of <br />
-          <span class="highlight">Your Dreams</span>
-        </h1>
-
-        <p class="hero-subtitle">
-          Join our exclusive community of riders and explore the most iconic routes with our premium motorbike rentals.
-        </p>
-=======
->>>>>>> develop
 
 <template>
   <div class="container">
@@ -43,36 +24,13 @@
               No paperwork, just pure driving pleasure."
             </p>
             <div class="review-user">
-              <strong>Alex campos</strong>
+              <strong>Alex Rivera</strong>
               <span>Platinum Member</span>
             </div>
           </div>
         </div>
     </div>
 
-<<<<<<< HEAD
-    <div class="form-section">
-      <div class="form-wrapper">
-        <h2>Welcome to Login</h2>
-        <p class="form-intro">Enter your details to get started with your adventure.</p>
-
-        <form @submit.prevent="handleLogin">
-          <div class="input-group">
-            <label>Email</label>
-            <div class="input-wrapper">
-              <i class="icon-mail"></i>
-              <input type="email" v-model.trim="form.email" placeholder="john@example.com" required />
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="input-group">
-              <label>Password</label>
-              <div class="input-wrapper">
-                <i class="icon-lock"></i>
-                <input type="password" v-model="form.password" placeholder="••••••••" required />
-              </div>
-=======
     <!-- RIGHT SIDE -->
     <div class="right">
       <!-- Floating decorative elements for right side -->
@@ -124,20 +82,10 @@
                   <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>
               </button>
->>>>>>> develop
             </div>
             <span class="error-text" v-if="errors.password">{{ errors.password }}</span>
           </div>
 
-<<<<<<< HEAD
-          <p v-if="errorMessage" class="login-link" style="color: #b4002a">{{ errorMessage }}</p>
-          <button type="submit" class="btn-register" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Logging in...' : 'Login' }}
-          </button>
-        </form>
-
-        <p class="login-link">No account yet? <router-link to="/register">Register</router-link></p>
-=======
           <div class="form-options">
             <label class="checkbox">
               <input type="checkbox" v-model="form.remember" />
@@ -171,7 +119,6 @@
             Facebook
           </button>
         </div>
->>>>>>> develop
 
         <p class="terms">
           By signing in, you agree to GoRent's
@@ -184,35 +131,6 @@
 </template>
 
 <script setup>
-<<<<<<< HEAD
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { userService } from '../../services/database.js'
-
-const router = useRouter()
-const isSubmitting = ref(false)
-const errorMessage = ref('')
-
-const form = reactive({
-  email: '',
-  password: '',
-})
-
-const handleLogin = async () => {
-  isSubmitting.value = true
-  errorMessage.value = ''
-
-  try {
-    await userService.login(form)
-    await router.push('/dashboard')
-  } catch (error) {
-    errorMessage.value = error.message || 'Login failed.'
-  } finally {
-    isSubmitting.value = false
-  }
-}
-</script>
-=======
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import "../css/login.css";
@@ -244,22 +162,43 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetch('/api/users/login', {
+    const email = form.email.trim().toLowerCase();
+    const requestInit = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        email: form.email,
+        email,
         password: form.password,
       }),
-    });
+    };
 
-    const data = await response.json();
+    let response = await fetch('/api/users/login', requestInit);
+    if (response.status === 404) {
+      response = await fetch('/api/login', requestInit);
+    }
+
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.message || data.email || 'Login failed');
+      // Handle Laravel validation error format
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (data.errors) {
+        // Get first field error
+        const firstField = Object.keys(data.errors)[0];
+        if (firstField && data.errors[firstField]) {
+          errorMessage = Array.isArray(data.errors[firstField]) 
+            ? data.errors[firstField][0] 
+            : data.errors[firstField];
+        }
+      } else if (data.message) {
+        errorMessage = data.message;
+      }
+      
+      throw new Error(errorMessage);
     }
 
     // Store the token
@@ -275,7 +214,7 @@ const handleLogin = async () => {
     } else if (userRole === 'shop_owner') {
       router.push('/dashboard');
     } else {
-      router.push('/');
+      router.push('/view_shop');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -285,6 +224,3 @@ const handleLogin = async () => {
   }
 };
 </script>
-
-
->>>>>>> develop

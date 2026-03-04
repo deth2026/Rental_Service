@@ -1,19 +1,11 @@
-<<<<<<< HEAD
-import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
-import Login from '../views/auth/Login.vue'
-import Register from '../views/auth/Register.vue'
-import UserDashboard from '../views/user/Dashboard.vue'
-import ShopDashboard from '../views/shop/Dashboard.vue'
-import { userService } from '../services/database.js'
-=======
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import Dashboard from '../views/shop/Dashboard.vue';
+import ShopDashboard from '../views/shop/Dashboard.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
@@ -31,27 +23,12 @@ const getUserRole = () => {
   }
   return null;
 };
->>>>>>> develop
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-<<<<<<< HEAD
-      redirect: '/home',
-    },
-    {
-      path: '/home',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: Login,
-      meta: { guestOnly: true },
-=======
       name: 'home',
       component: HomeView,
       meta: { requiresAuth: false }
@@ -61,15 +38,11 @@ const router = createRouter({
       name: 'chooserole',
       component: ChooseRole,
       meta: { requiresAuth: false }
->>>>>>> develop
     },
     {
       path: '/register',
       name: 'register',
       component: Register,
-<<<<<<< HEAD
-      meta: { guestOnly: true },
-=======
       meta: { requiresAuth: false }
     },
     {
@@ -77,44 +50,18 @@ const router = createRouter({
       name: 'login',
       component: Login,
       meta: { guest: true, allowAuthenticated: true }
->>>>>>> develop
     },
     {
       path: '/dashboard',
       name: 'dashboard',
-<<<<<<< HEAD
-      component: UserDashboard,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/shop-dashboard',
-      name: 'shop-dashboard',
       component: ShopDashboard,
-    },
-  ],
-})
-
-router.beforeEach((to) => {
-  const isAuthenticated = userService.isAuthenticated()
-
-  if (to.meta?.requiresAuth && !isAuthenticated) {
-    return { path: '/login' }
-  }
-
-  if (to.meta?.guestOnly && isAuthenticated) {
-    return { path: '/dashboard' }
-  }
-
-  return true
-=======
-      component: Dashboard,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
     {
       path: '/view_shop',
       name: 'view_shop',
-      component: Dashboard,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
+      component: UserDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'admin'] }
     },
     {
       path: '/admin',
@@ -130,7 +77,6 @@ router.beforeEach((to) => {
     }
    
   ]
->>>>>>> develop
 })
 
 // Navigation guard to check authentication and authorization
