@@ -1,23 +1,16 @@
-<script>
-import '../../assets/register.css'
-export default {
-  name: 'register'
-}
-</script>
 <template>
   <div class="register-container">
     <div class="hero-section">
       <div class="hero-content">
         <div class="logo">
-          <!-- <img src="/logo-icon.png" alt="Logo" class="logo-img" /> -->
           <span>MOTOPREMIUM</span>
         </div>
-        
+
         <h1 class="hero-title">
           Ride the Ride of <br />
           <span class="highlight">Your Dreams</span>
         </h1>
-        
+
         <p class="hero-subtitle">
           Join our exclusive community of riders and explore the most iconic routes with our premium motorbike rentals.
         </p>
@@ -35,16 +28,15 @@ export default {
 
     <div class="form-section">
       <div class="form-wrapper">
-        <h2>Welcom to Login</h2>
+        <h2>Welcome to Login</h2>
         <p class="form-intro">Enter your details to get started with your adventure.</p>
 
-        <form @submit.prevent="handleRegister">
-
+        <form @submit.prevent="handleLogin">
           <div class="input-group">
             <label>Email</label>
             <div class="input-wrapper">
               <i class="icon-mail"></i>
-              <input type="email" v-model="form.email" placeholder="john@example.com" />
+              <input type="email" v-model.trim="form.email" placeholder="john@example.com" required />
             </div>
           </div>
 
@@ -53,24 +45,18 @@ export default {
               <label>Password</label>
               <div class="input-wrapper">
                 <i class="icon-lock"></i>
-                <input type="password" v-model="form.password" placeholder="••••••••" />
+                <input type="password" v-model="form.password" placeholder="••••••••" required />
               </div>
             </div>
           </div>
 
-          <button type="submit" class="btn-register"><a href="/dashboard">Login</a></button>
+          <p v-if="errorMessage" class="login-link" style="color: #b4002a">{{ errorMessage }}</p>
+          <button type="submit" class="btn-register" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Logging in...' : 'Login' }}
+          </button>
         </form>
 
-        <p class="login-link">Already have an account? <a href="/register">Login</a></p>
-
-        <div class="divider">
-          <span>Or sign up with</span>
-        </div>
-
-        <div class="social-btns">
-          <!-- <button class="social-btn"><img src="/google.png" /> Google</button> -->
-          <!-- <button class="social-btn"><img src="/facebook.png" /> Facebook</button> -->
-        </div>
+        <p class="login-link">No account yet? <router-link to="/register">Register</router-link></p>
 
         <footer class="form-footer">
           <a href="#">Privacy Policy</a>
@@ -78,26 +64,35 @@ export default {
           <a href="#">Support</a>
         </footer>
       </div>
-      
-      <button class="theme-toggle">
-        <i class="icon-moon"></i>
-      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { userService } from '../../services/database.js'
+
+const router = useRouter()
+const isSubmitting = ref(false)
+const errorMessage = ref('')
 
 const form = reactive({
-  fullName: '',
-  username: '',
   email: '',
   password: '',
-  confirmPassword: ''
-});
+})
 
-const handleRegister = () => {
-  console.log('Form Submitted:', form);
-};
+const handleLogin = async () => {
+  isSubmitting.value = true
+  errorMessage.value = ''
+
+  try {
+    await userService.login(form)
+    await router.push('/dashboard')
+  } catch (error) {
+    errorMessage.value = error.message || 'Login failed.'
+  } finally {
+    isSubmitting.value = false
+  }
+}
 </script>
