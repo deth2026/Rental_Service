@@ -152,8 +152,8 @@
 }
 
 .user-display-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 800;
   color: #33435d;
   white-space: nowrap;
   order: 1;
@@ -165,18 +165,20 @@
 
 .nav-links {
   display: flex;
-  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  gap: 24px;
   justify-self: center;
   padding-right: 0;
   border-right: none;
 }
 
 .nav-link {
-  padding: 7px 12px;
+  padding: 16px 12px;
   border-radius: 8px;
   color: #4a556b;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 800;
   transition: all 0.2s ease;
 }
 
@@ -282,7 +284,7 @@
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 26px;
 }
 
 .search-chip {
@@ -721,13 +723,13 @@
 }
 
 .shop-kpi:first-child {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
+  background: #fefaf0;
+  border-color: #fed7aa;
 }
 
 .shop-kpi:last-child {
-  background: #fefaf0;
-  border-color: #fed7aa;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
 }
 
 .view-shop-btn {
