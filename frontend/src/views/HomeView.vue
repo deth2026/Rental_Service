@@ -1,7 +1,10 @@
 <template>
   <div class="home-page">
     <header class="top-nav">
-      <div class="brand">Chong Choul</div>
+      <div class="brand">
+        <img class="brand-icon" :src="brandIcon" alt="Chong Choul logo" />
+        <span class="brand-text">Chong Choul</span>
+      </div>
 
       <div class="nav-auth">
         <RouterLink class="link-login" to="/login">Login</RouterLink>
@@ -13,8 +16,7 @@
       <div class="hero-overlay">
         <div class="hero-content">
           <h1>
-            <span class="hero-line">Find Your Perfect Ride</span>
-            <span class="hero-line">and Explore</span>
+            <span class="hero-line">Find Your Perfect Ride and Explore</span>
             <span class="hero-line"><span>Cambodia</span> in Style!</span>
           </h1>
         </div>
@@ -27,7 +29,7 @@
           <h2>Browse by Category</h2>
           <p>Find the right ride for your journey</p>
         </div>
-        <a href="#">View All</a>
+        
       </div>
 
       <div class="category-grid">
@@ -50,15 +52,26 @@
     <section class="features">
       <div class="features-inner">
         <h2 class="features-title">How it works</h2>
+        <div class="features-divider"></div>
         <div class="features-grid">
           <article
             v-for="feature in features"
             :key="feature.title"
             class="feature-item"
           >
-            <div class="feature-icon">{{ feature.icon }}</div>
-            <h4>{{ feature.title }}</h4>
-            <p>{{ feature.description }}</p>
+            <div class="feature-content">
+              <div class="feature-icon" aria-hidden="true">
+                <span class="feature-icon-box"></span>
+                <span class="feature-icon-letter">{{ feature.icon }}</span>
+              </div>
+              <div class="feature-copy">
+                <h4>
+                  <span class="feature-step">{{ feature.step }}</span>
+                  <span class="feature-title-text">{{ feature.title }}</span>
+                </h4>
+                <p>{{ feature.description }}</p>
+              </div>
+            </div>
           </article>
         </div>
       </div>
@@ -136,6 +149,7 @@
 
 <script setup>
 import { reactive } from 'vue'
+import brandIcon from '../assets/chongchoul-brand-icon.svg'
 
 const search = reactive({
   type: 'All Vehicles',
@@ -164,17 +178,20 @@ const categories = [
 const features = [
   {
     icon: 'Q',
-    title: '1. Browse & Select',
+    step: '1.',
+    title: 'Browse & Select',
     description: 'Filter by vehicle type, location, and your travel dates to find the best match.'
   },
   {
     icon: 'C',
-    title: '2. Secure Booking',
+    step: '2.',
+    title: 'Secure Booking',
     description: 'Book instantly using ABA, Wing, or international cards. No hidden fees.'
   },
   {
     icon: 'K',
-    title: '3. Pick Up & Go',
+    step: '3.',
+    title: 'Pick Up & Go',
     description: 'Meet your host at the shop or get the vehicle delivered to your hotel.'
   }
 ]
