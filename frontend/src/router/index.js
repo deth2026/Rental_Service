@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import HomeView from '../views/HomeView.vue';
-import ChooseRole from '../views/ChooseRole.vue';
+import VehiclesByShop from '../views/User/VehiclesByShop.vue';
+import ViewDetail from '../views/User/ViewDetail.vue';
 
 
 const router = createRouter({
@@ -8,17 +8,17 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/home'
+      redirect: '/vehicles'
     },
     {
-      path: '/home',
-      name: 'home',
-      component: HomeView
+      path: '/vehicles',
+      name: 'vehicles-by-shop',
+      component: VehiclesByShop
     },
     {
-      path: '/choose-role',
-      name: 'choose-role',
-      component: ChooseRole
+      path: '/vehicles/:id',
+      name: 'vehicle-detail',
+      component: ViewDetail
     },
     
   ]

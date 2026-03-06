@@ -9,9 +9,6 @@ class Vehicle extends Model
 {
     use HasFactory;
 
-    const CREATED_AT = 'create_at';
-    const UPDATED_AT = 'updated_at';
-
     protected $fillable = [
         'shop_id',
         'type',
@@ -21,6 +18,7 @@ class Vehicle extends Model
         'price_per_day',
         'fuel_type',
         'transmission',
+        'seats',
         'status',
         'image_url'
     ];
