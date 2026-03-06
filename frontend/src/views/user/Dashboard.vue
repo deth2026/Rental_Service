@@ -10,6 +10,7 @@ const shops = ref([])
 const isLoadingShops = ref(false)
 const shopsError = ref('')
 const isMobileMenuOpen = ref(false)
+const showLogoutConfirm = ref(false)
 
 // Navbar state
 const location = ref('Phnom Penh')
@@ -96,9 +97,18 @@ const loadShops = async () => {
   }
 }
 
-const handleLogout = async () => {
+const handleLogout = () => {
+  showLogoutConfirm.value = true
+}
+
+const confirmLogout = async () => {
+  showLogoutConfirm.value = false
   await userService.logout()
   router.push('/login')
+}
+
+const cancelLogout = () => {
+  showLogoutConfirm.value = false
 }
 
 const toggleMobileMenu = () => {
@@ -245,6 +255,23 @@ onMounted(() => {
           </div>
         </div>
       </footer>
+    </div>
+  </div>
+
+  <!-- Logout Confirmation Modal -->
+  <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
+    <div class="confirm-modal" @click.stop>
+      <div class="confirm-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </div>
+      <p class="confirm-title">Logout</p>
+      <p class="confirm-text">Are you sure you want to logout from your account?</p>
+      <div class="confirm-actions">
+        <button class="confirm-cancel-btn" @click="cancelLogout">No</button>
+        <button class="confirm-logout-btn" @click="confirmLogout">Yes, Logout</button>
+      </div>
     </div>
   </div>
 </template>
