@@ -1442,6 +1442,411 @@
   .managed-card {
     gap: 8px;
   }
+
+  .top-header {
+    padding: 12px 14px;
+  }
+
+  .brand {
+    font-size: 1.5rem;
+  }
+
+  .search-chip-group {
+    display: none;
+  }
+
+  .top-nav {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .notify,
+  .avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logout-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .results-head {
+    margin: 16px 0 12px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .type-pill,
+  .filter-select {
+    width: 100%;
+    text-align: center;
+  }
+
+  .vehicle-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .vehicle-card {
+    border-radius: 12px;
+  }
+
+  .image-wrap {
+    height: 160px;
+  }
+
+  .vehicle-body {
+    padding: 10px;
+  }
+
+  .title-row h3 {
+    font-size: 1rem;
+  }
+
+  .price {
+    font-size: 1rem;
+  }
+
+  .page-footer {
+    margin-top: 20px;
+  }
+
+  .footer-top {
+    gap: 16px;
+  }
+
+  .footer-brand h4 {
+    font-size: 1.6rem;
+    padding-left: 36px;
+  }
+
+  .footer-brand h4::before {
+    font-size: 1.3rem;
+  }
+
+  .footer-brand p {
+    font-size: 0.9rem;
+    margin-top: 12px;
+  }
+
+  .footer-col h5 {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .page-footer a {
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  .footer-copy,
+  .footer-legal a {
+    font-size: 0.85rem;
+  }
+
+  .vehicle-detail-overlay {
+    padding: 12px;
+  }
+
+  .vehicle-detail-modal {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .vehicle-detail-main-grid {
+    gap: 12px;
+  }
+
+  .vehicle-detail-image {
+    height: 200px;
+    border-radius: 10px;
+  }
+
+  .vehicle-gallery-row {
+    gap: 6px;
+    overflow-x: auto;
+  }
+
+  .vehicle-thumb img {
+    width: 60px;
+    height: 50px;
+  }
+
+  .vehicle-name-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .vehicle-name-row h2 {
+    font-size: 1.3rem;
+  }
+
+  .vehicle-spec-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .managed-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .managed-card img {
+    margin: 0 auto;
+  }
+
+  .days-controls {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .days-controls button {
+    width: 100%;
+  }
+
+  .vehicle-detail-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .vehicle-detail-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .shops-grid {
+    gap: 12px;
+  }
+
+  .shop-card-image {
+    height: 200px;
+  }
+
+  .shop-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .shop-brand-mark {
+    width: 60px;
+    height: 60px;
+    font-size: 1.4rem;
+  }
+
+  .shop-title-block h3 {
+    font-size: 1.2rem;
+  }
+
+  .shop-chip-row {
+    gap: 6px;
+  }
+
+  .shop-chip {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+
+  .shop-kpi-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .view-shop-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .rides-page {
+    padding: 0 8px 8px;
+  }
+
+  .top-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .brand {
+    font-size: 1.3rem;
+  }
+
+  .results-head h1 {
+    font-size: 1.6rem;
+  }
+
+  .results-head p {
+    font-size: 0.9rem;
+  }
+
+  .search-input {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .type-pill,
+  .filter-select {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .image-wrap {
+    height: 140px;
+  }
+
+  .vehicle-body {
+    padding: 8px;
+  }
+
+  .title-row h3 {
+    font-size: 0.95rem;
+  }
+
+  .meta {
+    font-size: 0.75rem;
+  }
+
+  .specs {
+    gap: 4px;
+  }
+
+  .specs span {
+    font-size: 0.65rem;
+    padding: 3px 6px;
+  }
+
+  .card-footer {
+    margin-top: 8px;
+  }
+
+  .price {
+    font-size: 0.95rem;
+  }
+
+  .price small {
+    font-size: 0.7rem;
+  }
+
+  .rating {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  .page-footer {
+    padding: 16px 12px 14px;
+  }
+
+  .footer-top {
+    padding-bottom: 16px;
+  }
+
+  .footer-brand h4 {
+    font-size: 1.4rem;
+    padding-left: 32px;
+  }
+
+  .footer-brand p {
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+
+  .footer-col h5 {
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+  }
+
+  .page-footer a {
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .footer-bottom {
+    padding-top: 14px;
+  }
+
+  .footer-copy {
+    font-size: 0.8rem;
+  }
+
+  .footer-legal {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-legal a {
+    font-size: 0.8rem;
+  }
+
+  .vehicle-detail-overlay {
+    padding: 8px;
+  }
+
+  .vehicle-detail-modal {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .vehicle-detail-close {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .vehicle-detail-image {
+    height: 180px;
+  }
+
+  .vehicle-gallery-row {
+    margin: 8px 0;
+  }
+
+  .vehicle-thumb img {
+    width: 50px;
+    height: 42px;
+  }
+
+  .vehicle-name-row h2 {
+    font-size: 1.1rem;
+  }
+
+  .spec-box {
+    padding: 8px;
+  }
+
+  .spec-box span {
+    font-size: 0.7rem;
+  }
+
+  .review-box p {
+    font-size: 1.4rem;
+  }
+
+  .addon-item {
+    padding: 8px;
+  }
+
+  .cost-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .booking-popup {
+    padding: 18px;
+  }
+
+  .booking-popup-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
 }
 
 /* Mobile Menu Toggle */
