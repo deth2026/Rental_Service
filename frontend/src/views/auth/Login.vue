@@ -4,13 +4,33 @@
     <!-- LEFT SIDE -->
     <div class="left">
         <div class="overlay">
-          <div class="logo">
-            <div class="logo-pic"></div>
+        <div class="logo">
+            <div class="logo-icon-wrap">
+              <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Location Pin -->
+                <path d="M30 2C23.37 2 17 7.37 17 14C17 21.5 30 30 30 30C30 30 43 21.5 43 14C43 7.37 36.63 2 30 2Z" fill="white"/>
+                <circle cx="30" cy="14" r="5" fill="rgba(25,100,210,0.6)"/>
+                <!-- Car Cabin -->
+                <path d="M18 42L21 33Q23 30 27 30H33Q37 30 39 33L42 42Z" fill="white"/>
+                <!-- Car Body -->
+                <rect x="6" y="42" width="48" height="15" rx="4" fill="white"/>
+                <!-- Windshield -->
+                <path d="M23 41L25 32H35L37 41Z" fill="rgba(25,100,210,0.45)"/>
+                <!-- Left Wheel -->
+                <circle cx="16" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
+                <!-- Right Wheel -->
+                <circle cx="44" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
+              </svg>
+            </div>
             <span>GoRent</span>
           </div>
 
           <div class="left-content">
-            <h1>Start your journey<br />in minutes.</h1>
+            <div class="hero-badge">
+              <span class="hero-badge-dot"></span>
+              Premium Car Rental
+            </div>
+            <h1>Start your journey<br /><span class="journey-highlight">in minutes.</span></h1>
             <p>
               Access a fleet of premium vehicles at your fingertips.
               Rent for an hour, drive for a lifetime.
@@ -33,6 +53,14 @@
 
     <!-- RIGHT SIDE -->
     <div class="right">
+      <!-- Back to Home -->
+      <router-link to="/" class="back-home-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Back to Home
+      </router-link>
+
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
         <div class="decor-circle circle-1"></div>
@@ -49,7 +77,17 @@
           <p class="subtitle">Please enter your details to sign in</p>
         </div>
 
-        <form @submit.prevent="handleLogin">
+        <form @submit.prevent="handleLogin" novalidate>
+          <!-- Error Alert -->
+          <div v-if="generalError" class="error-alert">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>{{ generalError }}</span>
+          </div>
+
           <div class="form-group">
             <label><span class="required-star">*</span> Email Address</label>
             <input 
@@ -67,7 +105,7 @@
             <div class="password-input-wrapper">
               <input 
                 :type="showPassword ? 'text' : 'password'" 
-                placeholder="••••••••" 
+                placeholder="Enter your password" 
                 v-model="form.password"
                 autocomplete="current-password"
                 :class="{ 'error': errors.password }"
@@ -84,7 +122,7 @@
                 </svg>
               </button>
             </div>
-            <span class="error-text" v-if="errors.password">{{ errors.password }}</span>
+            <span class="error-text danger-text" v-if="errors.password">{{ errors.password }}</span>
           </div>
 
           <div class="form-options">
@@ -141,6 +179,7 @@ const router = useRouter();
 const isLoading = ref(false);
 const errors = ref({});
 const showPassword = ref(false);
+const generalError = ref("");
 
 const form = reactive({
   email: "",
@@ -150,6 +189,7 @@ const form = reactive({
 
 const handleLogin = async () => {
   errors.value = {};
+  generalError.value = "";
   
   if (!form.email) {
     errors.value.email = "Email is required";
@@ -229,7 +269,7 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('Login error:', error);
     const apiMessage = error?.response?.data?.message;
-    errors.value.password = apiMessage || error.message || 'Invalid email or password';
+    generalError.value = apiMessage || error.message || 'Invalid email or password';
   } finally {
     isLoading.value = false;
   }
