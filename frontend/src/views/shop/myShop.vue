@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { shopApi } from '@/services/api'
 
 const shop = ref(null)
@@ -9,12 +9,33 @@ const showCreateModal = ref(false)
 const showSuccessPopup = ref(false)
 const loading = ref(false)
 const error = ref('')
+const shopImageFile = ref(null)
+const shopImagePreview = ref('')
+const shopImageInputRef = ref(null)
+const isShopImageDragOver = ref(false)
 
 const createForm = reactive({
   name: '',
+  phone: '',
   description: '',
   address: '',
   status: 'active'
+})
+const fieldErrors = reactive({
+  name: '',
+  status: '',
+  address: '',
+  phone: '',
+  description: ''
+})
+
+const shopImageSource = computed(() => {
+  const image = shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
+  if (!image) return ''
+  if (/^https?:\/\//.test(String(image)) || String(image).startsWith('data:')) return String(image)
+  const normalized = String(image).replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `/${normalized}`
+  return `/storage/${normalized}`
 })
 
 const getCachedShop = (ownerId) => {
@@ -118,10 +139,83 @@ const loadMyShop = async () => {
 
 const resetForm = () => {
   createForm.name = ''
+  createForm.phone = ''
   createForm.description = ''
   createForm.address = ''
   createForm.status = 'active'
+  fieldErrors.name = ''
+  fieldErrors.status = ''
+  fieldErrors.address = ''
+  fieldErrors.phone = ''
+  fieldErrors.description = ''
+  shopImageFile.value = null
+  if (shopImagePreview.value) {
+    URL.revokeObjectURL(shopImagePreview.value)
+    shopImagePreview.value = ''
+  }
   error.value = ''
+}
+
+const clearFieldError = (field) => {
+  if (fieldErrors[field]) fieldErrors[field] = ''
+}
+
+const validateCreateForm = () => {
+  fieldErrors.name = ''
+  fieldErrors.status = ''
+  fieldErrors.address = ''
+  fieldErrors.phone = ''
+  fieldErrors.description = ''
+
+  const name = createForm.name.trim()
+  const status = createForm.status.trim()
+  const address = createForm.address.trim()
+  const phone = createForm.phone.trim()
+  const description = createForm.description.trim()
+
+  if (!name) fieldErrors.name = 'Shop name is required.'
+  if (!status) fieldErrors.status = 'Status is required.'
+  if (!address) fieldErrors.address = 'Address is required.'
+  if (!phone) {
+    fieldErrors.phone = 'Phone number is required.'
+  } else if (!/^[0-9+\-\s()]{8,20}$/.test(phone)) {
+    fieldErrors.phone = 'Please enter a valid phone number.'
+  }
+  if (!description) fieldErrors.description = 'Description is required.'
+
+  return !fieldErrors.name && !fieldErrors.status && !fieldErrors.address && !fieldErrors.phone && !fieldErrors.description
+}
+
+const applyShopImageFile = (file) => {
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    error.value = 'Please select a valid image file.'
+    return
+  }
+  if (shopImagePreview.value) {
+    URL.revokeObjectURL(shopImagePreview.value)
+  }
+  shopImageFile.value = file
+  shopImagePreview.value = URL.createObjectURL(file)
+  error.value = ''
+}
+
+const onShopImageChange = (event) => {
+  const file = event.target.files?.[0] || null
+  applyShopImageFile(file)
+}
+
+const triggerShopImagePicker = () => {
+  if (shopImageInputRef.value) {
+    shopImageInputRef.value.value = ''
+    shopImageInputRef.value.click()
+  }
+}
+
+const onShopImageDrop = (event) => {
+  isShopImageDragOver.value = false
+  const file = event.dataTransfer?.files?.[0] || null
+  applyShopImageFile(file)
 }
 
 const openCreateModal = () => {
@@ -135,16 +229,35 @@ const closeCreateModal = () => {
 }
 
 const createShop = async () => {
+  if (!validateCreateForm()) {
+    error.value = 'Please fill all required fields correctly.'
+    return
+  }
+
   loading.value = true
   error.value = ''
 
   try {
-    const payload = {
+    const payloadBase = {
       owner_id: getUserId(),
       name: createForm.name.trim(),
+      phone: createForm.phone.trim(),
       description: createForm.description.trim(),
       address: createForm.address.trim(),
       status: createForm.status
+    }
+
+    let payload = payloadBase
+    if (shopImageFile.value) {
+      const formData = new FormData()
+      formData.append('owner_id', String(payloadBase.owner_id))
+      formData.append('name', payloadBase.name)
+      formData.append('phone', payloadBase.phone)
+      formData.append('description', payloadBase.description)
+      formData.append('address', payloadBase.address)
+      formData.append('status', payloadBase.status)
+      formData.append('image', shopImageFile.value)
+      payload = formData
     }
 
     const { data: created } = await shopApi.create(payload)
@@ -173,6 +286,12 @@ const createShop = async () => {
 onMounted(async () => {
   await loadMyShop()
 })
+
+onBeforeUnmount(() => {
+  if (shopImagePreview.value) {
+    URL.revokeObjectURL(shopImagePreview.value)
+  }
+})
 </script>
 
 <template>
@@ -195,6 +314,10 @@ onMounted(async () => {
         <span :class="['status-badge', (shop.status || 'inactive').toLowerCase()]">
           {{ shop.status || 'inactive' }}
         </span>
+      </div>
+
+      <div v-if="shopImageSource" class="shop-image-wrap">
+        <img :src="shopImageSource" alt="Shop" class="shop-image" />
       </div>
 
       <div class="shop-grid">
@@ -226,26 +349,62 @@ onMounted(async () => {
           <div class="form-grid">
             <label>
               Shop Name *
-              <input v-model="createForm.name" required type="text" placeholder="Enter shop name" />
+              <input v-model="createForm.name" required type="text" placeholder="Enter shop name" @input="clearFieldError('name')" />
+              <small v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name }}</small>
             </label>
 
             <label>
-              Status
-              <select v-model="createForm.status">
+              Status *
+              <select v-model="createForm.status" @change="clearFieldError('status')">
                 <option value="active">active</option>
                 <option value="inactive">inactive</option>
               </select>
+              <small v-if="fieldErrors.status" class="field-error">{{ fieldErrors.status }}</small>
             </label>
 
             <label class="wide">
               Address *
-              <input v-model="createForm.address" required type="text" placeholder="Enter address" />
+              <input v-model="createForm.address" required type="text" placeholder="Enter address" @input="clearFieldError('address')" />
+              <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
             </label>
 
-            <label class="wide">
-              Description
-              <textarea v-model="createForm.description" rows="4" placeholder="Tell customers about your shop..."></textarea>
+            <label>
+              Phone Number *
+              <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
+              <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
             </label>
+
+            <label>
+              Description *
+              <textarea v-model="createForm.description" rows="4" placeholder="Tell customers about your shop..." @input="clearFieldError('description')"></textarea>
+              <small v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</small>
+            </label>
+
+            <div class="wide">
+              <label class="upload-label">Shop Picture</label>
+              <input
+                ref="shopImageInputRef"
+                type="file"
+                accept="image/*"
+                class="hidden-file-input"
+                @change="onShopImageChange"
+              />
+              <div
+                class="shop-upload-dropzone"
+                :class="{ dragging: isShopImageDragOver }"
+                @click="triggerShopImagePicker"
+                @dragover.prevent="isShopImageDragOver = true"
+                @dragleave.prevent="isShopImageDragOver = false"
+                @drop.prevent="onShopImageDrop"
+              >
+                <p><strong>Drag and drop image here</strong> or click to upload</p>
+                <span>PNG, JPG, JPEG</span>
+              </div>
+            </div>
+
+            <div v-if="shopImagePreview" class="wide image-preview-wrap">
+              <img :src="shopImagePreview" alt="Shop preview" class="image-preview" />
+            </div>
           </div>
 
           <p v-if="error" class="error-text">{{ error }}</p>
@@ -336,6 +495,20 @@ onMounted(async () => {
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.shop-image-wrap {
+  margin-bottom: 16px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #dbeafe;
+}
+
+.shop-image {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  display: block;
 }
 
 .card-title-row {
@@ -451,11 +624,14 @@ onMounted(async () => {
 
 .modal-card {
   width: min(820px, 100%);
+  max-height: 90vh;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid #dbeafe;
   box-shadow: 0 30px 70px rgba(2, 6, 23, 0.35);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -509,6 +685,7 @@ onMounted(async () => {
 
 .shop-form {
   padding: 20px;
+  overflow-y: auto;
 }
 
 .form-grid {
@@ -530,6 +707,54 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+.field-error {
+  margin-top: -2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.upload-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.shop-upload-dropzone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 18px;
+  background: #f8fafc;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.shop-upload-dropzone p {
+  margin: 0;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.shop-upload-dropzone span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.shop-upload-dropzone:hover,
+.shop-upload-dropzone.dragging {
+  border-color: #22d3ee;
+  background: #ecfeff;
+}
+
 .form-grid input,
 .form-grid select,
 .form-grid textarea {
@@ -541,6 +766,21 @@ onMounted(async () => {
   box-sizing: border-box;
   background: #f8fafc;
   transition: all 0.2s ease;
+}
+
+.image-preview-wrap {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.image-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
 }
 
 .form-grid input:focus,
@@ -566,38 +806,44 @@ onMounted(async () => {
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
   margin-top: 16px;
+  background: transparent;
+  border-top: 0;
+  padding-top: 0;
 }
 
 .btn-cancel,
 .btn-submit {
-  border: 0;
-  border-radius: 12px;
-  padding: 11px 18px;
+  border-radius: 10px;
+  padding: 10px 16px;
   font-weight: 700;
+  font-size: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .btn-cancel {
-  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
   color: #334155;
 }
 
 .btn-cancel:hover {
-  background: #cbd5e1;
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
 .btn-submit {
-  background: #1d4ed8;
+  border: 1px solid #2563eb;
+  background: #2563eb;
   color: #fff;
   min-width: 140px;
 }
 
 .btn-submit:hover {
-  background: #1e40af;
-  transform: translateY(-1px);
+  background: #1d4ed8;
+  border-color: #1d4ed8;
 }
 
 .btn-submit:disabled {
@@ -608,31 +854,32 @@ onMounted(async () => {
 .success-toast {
   position: fixed;
   right: 20px;
-  top: 18px;
+  bottom: 20px;
   z-index: 1200;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  width: min(320px, calc(100vw - 24px));
-  background: #ffffff;
-  border: 1px solid #bfdbfe;
-  border-left: 4px solid #1d4ed8;
-  border-radius: 14px;
-  padding: 12px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
-  animation: toastIn 0.24s ease-out;
+  min-width: 240px;
+  max-width: min(360px, calc(100vw - 24px));
+  background: #d1fae5;
+  border-left: 4px solid #10b981;
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: #0f172a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
 }
 
 .toast-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #dbeafe;
-  color: #1d4ed8;
-  flex: 0 0 30px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #065f46;
+  flex: 0 0 28px;
 }
 
 .toast-icon svg {
@@ -648,24 +895,24 @@ onMounted(async () => {
 
 .toast-content strong {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   color: #0f172a;
 }
 
 .toast-content p {
   margin: 0;
   font-size: 13px;
-  color: #475569;
+  color: #065f46;
 }
 
-@keyframes toastIn {
+@keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateX(100%);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0);
   }
 }
 

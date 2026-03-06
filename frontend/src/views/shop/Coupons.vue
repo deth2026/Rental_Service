@@ -1,15 +1,22 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { couponApi } from '@/services/api'
 
 const loading = ref(true)
 const error = ref(null)
+const coupons = ref([])
+
+const normalizeActiveFlag = (value) => {
+  if (value === undefined || value === null || value === '') return true
+  if (value === false || value === 0 || value === '0' || value === 'false') return false
+  return true
+}
 
 // Toast notification
 const toast = ref({ show: false, message: '', type: 'success' })
 const showToast = (message, type = 'success') => {
   toast.value = { show: true, message, type }
-  setTimeout(() => toast.value.show = false, 3000)
+  setTimeout(() => (toast.value.show = false), 3000)
 }
 
 // Fetch coupons from database
@@ -18,91 +25,77 @@ const fetchCoupons = async () => {
     loading.value = true
     const response = await couponApi.getAll()
     const data = response.data.data || response.data || []
-    
-    // Map database fields to expected format
-    coupons.value = data.map(c => ({
+    coupons.value = data.map((c) => ({
       id: c.id,
       code: c.code || '',
-      discountPercent: c.discount_percent || 0,
-      discountAmount: c.discount_amount || 0,
-      description: c.description || '',
-      validFrom: c.valid_from || '',
-      validUntil: c.valid_until || '',
-      usageLimit: c.usage_limit || null,
-      minimumAmount: c.minimum_amount || 0,
-      isActive: c.is_active !== false
+      discountPercent: c.discount_percent ?? null,
+      discountAmount: c.discount_amount ?? null,
+      createDate: c.valid_from || c.created_at || '',
+      expireDate: c.valid_until || '',
+      isActive: normalizeActiveFlag(c.is_active)
     }))
   } catch (err) {
     console.error('Error fetching coupons:', err)
-    error.value = 'Failed to load coupons data'
+    error.value = 'Failed to load coupons'
   } finally {
     loading.value = false
   }
 }
 
-// Fetch on mount
-onMounted(() => {
-  fetchCoupons()
-})
+onMounted(fetchCoupons)
 
-// Empty coupons data - connected to coupons table
-const coupons = ref([])
-
-const modal = ref(false)
+// Create / Edit modal
+const showModal = ref(false)
 const editId = ref(null)
-
-const form = ref({ 
-  code: '', 
-  discount: '',
-  discountType: 'percent',
-  description: '', 
-  validUntil: '', 
-  maxUses: ''
+const form = ref({
+  code: '',
+  discountPercent: '',
+  discountAmount: '',
+  createDate: '',
+  expireDate: '',
+  isActive: true
 })
 
-const openCreate = () => { 
+const openCreate = () => {
   editId.value = null
-  form.value = { 
-    code: '', 
-    discount: '',
-    discountType: 'percent',
-    description: '', 
-    validUntil: '', 
-    maxUses: ''
+  const today = new Date().toISOString().split('T')[0]
+  form.value = {
+    code: '',
+    discountPercent: '',
+    discountAmount: '',
+    createDate: today,
+    expireDate: '',
+    isActive: true
   }
-  modal.value = true 
+  showModal.value = true
 }
 
-const openEdit = (c) => { 
+const openEdit = (c) => {
   editId.value = c.id
-  form.value = { 
-    code: c.code, 
-    discount: c.discountPercent || c.discountAmount || '',
-    discountType: c.discountPercent ? 'percent' : 'fixed',
-    description: c.description || '', 
-    validUntil: c.validUntil, 
-    maxUses: c.usageLimit || ''
+  form.value = {
+    code: c.code,
+    discountPercent: c.discountPercent ?? '',
+    discountAmount: c.discountAmount ?? '',
+    createDate: c.createDate ? c.createDate.split('T')[0] : '',
+    expireDate: c.expireDate ? c.expireDate.split('T')[0] : '',
+    isActive: c.isActive !== false
   }
-  modal.value = true 
+  showModal.value = true
 }
 
 const save = async () => {
-  if (!form.value.code || !form.value.discount || !form.value.validUntil) {
-    showToast('Please fill in all required fields', 'error')
+  if (!form.value.code || !form.value.expireDate) {
+    showToast('Please fill in Code and Expire Date', 'error')
     return
   }
-  
   const payload = {
     code: form.value.code.toUpperCase(),
-    discount_percent: form.value.discountType === 'percent' ? form.value.discount : null,
-    discount_amount: form.value.discountType === 'fixed' ? form.value.discount : null,
-    description: form.value.description || null,
-    valid_from: new Date().toISOString().split('T')[0],
-    valid_until: form.value.validUntil,
-    usage_limit: form.value.maxUses ? parseInt(form.value.maxUses) : null,
-    is_active: true
+    discount_percent: form.value.discountPercent !== '' ? Number(form.value.discountPercent) : null,
+    discount_amount: form.value.discountAmount !== '' ? Number(form.value.discountAmount) : null,
+    valid_from: form.value.createDate || new Date().toISOString().split('T')[0],
+    valid_until: form.value.expireDate,
+    is_active: form.value.isActive ? 1 : 0
   }
-  
   try {
     if (editId.value) {
       await couponApi.update(editId.value, payload)
@@ -112,450 +105,512 @@ const save = async () => {
       showToast('Coupon created successfully!', 'success')
     }
     await fetchCoupons()
-    modal.value = false
+    showModal.value = false
   } catch (err) {
     console.error('Error saving coupon:', err)
     showToast('Failed to save coupon. Please try again.', 'error')
   }
 }
 
-const removeCoupon = async (id) => {
-  if (!confirm('Are you sure you want to delete this coupon?')) return
+// Delete confirmation modal
+const showDeleteModal = ref(false)
+const deleteId = ref(null)
+const deleteCouponCode = ref('')
+
+const confirmDelete = (c) => {
+  deleteId.value = c.id
+  deleteCouponCode.value = c.code || 'Unknown Coupon'
+  showDeleteModal.value = true
+}
+
+const cancelDelete = () => {
+  deleteId.value = null
+  deleteCouponCode.value = ''
+  showDeleteModal.value = false
+}
+
+const removeCoupon = async () => {
+  if (!deleteId.value) return
   try {
-    await couponApi.delete(id)
+    await couponApi.delete(deleteId.value)
     await fetchCoupons()
+    showToast('Coupon deleted successfully!', 'success')
   } catch (err) {
     console.error('Error deleting coupon:', err)
+    showToast('Failed to delete coupon', 'error')
+  } finally {
+    cancelDelete()
   }
 }
 
-// Format discount display
-const formatDiscount = (c) => {
-  if (c.discountPercent) return `${c.discountPercent}%`
-  if (c.discountAmount) return `$${c.discountAmount}`
-  return '0%'
-}
-
-// Check if coupon is expired
-const isExpired = (validUntil) => {
-  if (!validUntil) return false
-  return new Date(validUntil) < new Date()
-}
-
-// Format date for display
 const formatDate = (date) => {
-  if (!date) return ''
-  const d = new Date(date)
-  return d.toLocaleDateString('en-GB')
+  if (!date) return '—'
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return date
+    const day = String(d.getDate()).padStart(2, '0')
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = d.getFullYear()
+    return `${day}/${month}/${year}`
+  } catch {
+    return date
+  }
 }
+
+const formatId = (id) => `C${String(id).padStart(3, '0')}`
+
+const isExpired = (expireDate) => {
+  if (!expireDate) return false
+  return new Date(expireDate) < new Date()
+}
+
 </script>
 
 <template>
-  <div class="coupons-container">
-    <!-- Page Header -->
-    <div class="page-header">
-      <h1 class="page-title">Coupons</h1>
-      <button class="create-btn" @click="openCreate">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        New Coupon
-      </button>
+  <div class="panel coupons-page">
+    <div class="line top-line">
+      <div>
+        <h3>Manage Coupons</h3>
+        <p class="muted">Create and manage discount coupons</p>
+      </div>
+      <div class="controls">
+        <button class="primary add-btn" @click="openCreate">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg> Add New Coupon
+        </button>
+      </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
-      <p>Loading coupons...</p>
-    </div>
-    
-    <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <p>{{ error }}</p>
-      <button class="retry-btn" @click="fetchCoupons">Retry</button>
-    </div>
-
-    <!-- Coupons List -->
-    <div v-else class="coupons-list">
-      <!-- Empty State -->
-      <div v-if="coupons.length === 0" class="empty-state">
-        <div class="empty-content">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"></path>
-            <path d="M15 6v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V6"></path>
-            <line x1="12" y1="2" x2="12" y2="6"></line>
-            <line x1="12" y1="18" x2="12" y2="22"></line>
-          </svg>
-          <p>No coupons yet</p>
-          <button class="create-btn small" @click="openCreate">Create Your First Coupon</button>
-        </div>
+    <!-- Table Container -->
+    <div class="table-container">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading coupons...</p>
       </div>
 
-      <!-- Coupon Cards -->
-      <div v-else v-for="c in coupons" :key="c.id" class="coupon-card">
-        <div class="coupon-left">
-          <div class="coupon-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6"></path>
-              <path d="M15 6v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V6"></path>
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <p>{{ error }}</p>
+        <button class="retry-btn" @click="fetchCoupons">Retry</button>
+      </div>
+
+      <!-- Data Table -->
+      <table v-else class="coupons-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>CODE</th>
+            <th>DISCOUNT %</th>
+            <th>DISCOUNT AMOUNT</th>
+            <th>CREATE DATE</th>
+            <th>EXPIRE DATE</th>
+            <th>STATUS</th>
+            <th>ACTIONS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Empty State -->
+          <tr v-if="coupons.length === 0">
+            <td colspan="8" class="empty-state">
+              <div class="empty-content">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M3 8a2 2 0 0 1 2-2h14v4a2 2 0 0 0 0 4v4H5a2 2 0 0 1-2-2z"/>
+                  <path d="M9 6v12M15 6v12"/>
+                </svg>
+                <p>No coupons yet</p>
+                <button class="create-btn-sm" @click="openCreate">Create Your First Coupon</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Coupon Rows -->
+          <tr v-for="c in coupons" :key="c.id">
+            <td class="id-cell">{{ formatId(c.id) }}</td>
+            <td class="code-cell">{{ c.code }}</td>
+            <td class="percent-cell">
+              <span v-if="c.discountPercent" class="discount-percent">{{ c.discountPercent }}%</span>
+              <span v-else class="no-data">—</span>
+            </td>
+            <td class="amount-cell">
+              <span v-if="c.discountAmount" class="discount-amount">${{ c.discountAmount }}</span>
+              <span v-else class="no-data">—</span>
+            </td>
+            <td class="date-cell">{{ formatDate(c.createDate) }}</td>
+            <td class="date-cell" :class="{ 'expired-date': isExpired(c.expireDate) }">
+              {{ formatDate(c.expireDate) }}
+            </td>
+            <td class="status-cell">
+              <div class="status-toggle">
+                <span class="status-btn" :class="c.isActive ? 'active' : 'inactive'">
+                  {{ c.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+            </td>
+            <td class="actions-cell">
+              <button class="action-btn edit" @click="openEdit(c)" title="Edit">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+              <button class="action-btn delete" @click="confirmDelete(c)" title="Delete">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Create / Edit Modal - Matching Vehicles.vue Style -->
+    <div v-if="showModal" class="add-vehicle-overlay" @click.self="showModal = false">
+      <div class="add-vehicle-modal">
+        <!-- Header -->
+        <div class="add-vehicle-header">
+          <h2>{{ editId ? 'Edit Coupon' : 'Add New Coupon' }}</h2>
+          <button class="close-btn" @click="showModal = false">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-          </div>
-          <div class="coupon-info">
-            <span class="coupon-code">{{ c.code }}</span>
-            <span class="coupon-expires">Expires: {{ formatDate(c.validUntil) }}</span>
-          </div>
+          </button>
         </div>
-        
-        <div class="coupon-right">
-          <span class="coupon-discount" :class="{ 'has-percent': c.discountPercent, 'has-amount': c.discountAmount }">
-            {{ formatDiscount(c) }}
-          </span>
-          <span :class="['status-badge', c.isActive && !isExpired(c.validUntil) ? 'active' : 'expired']">
-            {{ c.isActive && !isExpired(c.validUntil) ? 'Active' : 'Expired' }}
-          </span>
-          <div class="coupon-actions">
-            <button class="action-btn edit" @click="openEdit(c)" title="Edit">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
-            <button class="action-btn delete" @click="removeCoupon(c.id)" title="Delete">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Create/Edit Modal -->
-    <Transition name="modal">
-      <div v-if="modal" class="modal-overlay" @click.self="modal = false">
-        <div class="modal-content">
-          <!-- Modal Header -->
-          <div class="modal-header">
-            <h2 class="modal-title">+ New Coupon</h2>
-            <button class="close-btn" @click="modal = false">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-          
-          <!-- Modal Body -->
-          <div class="modal-body">
-            <!-- Coupon Code -->
-            <div class="form-group">
-              <label for="code">Coupon Code <span class="required">*</span></label>
-              <input 
-                id="code" 
-                v-model="form.code" 
-                type="text" 
-                placeholder="e.g., SUMMER2024"
-                class="form-input"
-              />
+        <!-- Content -->
+        <div class="add-vehicle-content">
+          <!-- Left Column -->
+          <div class="add-vehicle-left">
+            <!-- Coupon Information -->
+            <div class="form-card">
+              <h3 class="card-title">Coupon Information</h3>
+              <div class="form-group">
+                <label>Coupon Code</label>
+                <input v-model="form.code" placeholder="e.g., SUMMER2024" />
+              </div>
             </div>
 
-            <!-- Discount Row -->
-            <div class="form-row">
-              <div class="form-group flex-2">
-                <label for="discount">Discount <span class="required">*</span></label>
-                <div class="input-with-suffix">
-                  <input 
-                    id="discount" 
-                    v-model="form.discount" 
-                    type="number" 
-                    placeholder="Amount"
-                    class="form-input"
-                  />
-                  <span class="input-suffix">{{ form.discountType === 'percent' ? '%' : '$' }}</span>
+            <!-- Discount -->
+            <div class="form-card">
+              <h3 class="card-title">Discount</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Discount Percent (%)</label>
+                  <input v-model="form.discountPercent" type="number" min="0" max="100" placeholder="0" />
+                </div>
+                <div class="form-group">
+                  <label>Discount Amount ($)</label>
+                  <input v-model="form.discountAmount" type="number" min="0" placeholder="0" />
                 </div>
               </div>
-              <div class="form-group flex-1">
-                <label for="discountType">Type</label>
-                <select id="discountType" v-model="form.discountType" class="form-select">
-                  <option value="percent">%</option>
-                  <option value="fixed">$</option>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div class="add-vehicle-right">
+            <!-- Validity Period -->
+            <div class="form-card">
+              <h3 class="card-title">Validity Period</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Create Date</label>
+                  <input v-model="form.createDate" type="date" />
+                </div>
+                <div class="form-group">
+                  <label>Expire Date</label>
+                  <input v-model="form.expireDate" type="date" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="form-card">
+              <h3 class="card-title">Status</h3>
+              <div class="form-group">
+                <label>Coupon Status</label>
+                <select v-model="form.isActive">
+                  <option :value="true">Active</option>
+                  <option :value="false">Inactive</option>
                 </select>
               </div>
             </div>
-
-            <!-- Description -->
-            <div class="form-group">
-              <label for="description">Description</label>
-              <input 
-                id="description" 
-                v-model="form.description" 
-                type="text" 
-                placeholder="e.g., Summer sale discount"
-                class="form-input"
-              />
-            </div>
-
-            <!-- Expiry Date -->
-            <div class="form-group">
-              <label for="validUntil">Expiry Date <span class="required">*</span></label>
-              <div class="date-input-wrapper">
-                <input 
-                  id="validUntil" 
-                  v-model="form.validUntil" 
-                  type="date" 
-                  class="form-input"
-                />
-                <svg class="date-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </div>
-            </div>
-
-            <!-- Max Uses -->
-            <div class="form-group">
-              <label for="maxUses">Max Uses <span class="optional">(optional)</span></label>
-              <input 
-                id="maxUses" 
-                v-model="form.maxUses" 
-                type="number" 
-                placeholder="Unlimited"
-                class="form-input"
-              />
-            </div>
-          </div>
-
-          <!-- Modal Footer -->
-          <div class="modal-footer">
-            <button class="submit-btn" @click="save">
-              Add Coupon
-            </button>
           </div>
         </div>
+
+        <!-- Footer -->
+        <div class="add-vehicle-footer">
+          <button class="discard-btn" @click="showModal = false">Cancel</button>
+          <button class="store-btn" @click="save">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            {{ editId ? 'Update Coupon' : 'Store Coupon' }}
+          </button>
+        </div>
       </div>
-    </Transition>
+    </div>
 
     <!-- Toast Notification -->
-    <Transition name="toast">
-      <div v-if="toast.show" :class="['toast', toast.type]">
-        <svg v-if="toast.type === 'success'" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    <div v-if="toast.show" :class="['toast', toast.type]">
+      {{ toast.message }}
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+    <div class="delete-modal">
+      <div class="delete-icon-wrapper">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
         </svg>
-        <svg v-else xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="8" x2="12" y2="12"></line>
-          <line x1="12" y1="16" x2="12.01" y2="16"></line>
-        </svg>
-        {{ toast.message }}
       </div>
-    </Transition>
+      <h3 class="delete-title">Delete Coupon</h3>
+      <p class="delete-message">Are you sure you want to delete this coupon?</p>
+      <p class="delete-coupon-code">{{ deleteCouponCode }}</p>
+      <p class="delete-warning">This action cannot be undone. All associated data will be permanently removed.</p>
+      <div class="delete-actions">
+        <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
+        <button class="delete-confirm-btn" @click="removeCoupon">Delete</button>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* Container */
-.coupons-container {
-  padding: 20px;
-  max-width: 900px;
-  margin: 0 auto;
+.panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
 }
 
-/* Page Header */
-.page-header {
+.line {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  gap: 10px;
 }
 
-/* Page Title */
-.page-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1e293b;
+.top-line {
+  margin-bottom: 14px;
+}
+
+.top-line h3 {
   margin: 0;
 }
 
-/* Create Button */
-.create-btn {
-  display: inline-flex;
+.top-line .muted {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
+}
+
+.primary,
+button {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.primary {
+  background: #1d4ed8;
+  color: #fff;
+}
+
+.add-btn {
   background: #2563eb;
   color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.9375rem;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  border-radius: 10px;
+  padding: 10px 16px;
   font-weight: 600;
+}
+
+.danger {
+  background: #ef4444;
+  color: #fff;
+}
+
+/* Table Styles */
+.table-container {
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.coupons-table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+}
+
+.coupons-table th,
+.coupons-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.coupons-table th {
+  font-size: 12px;
+  background: #f8fafc;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.coupons-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.id-cell {
+  font-weight: 600;
+  color: #475569;
+}
+
+.code-cell {
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.discount-percent {
+  font-weight: 700;
+  color: #059669;
+}
+
+.discount-amount {
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.no-data {
+  color: #94a3b8;
+}
+
+.date-cell {
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.expired-date {
+  color: #dc2626;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-expired {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-expiring {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-inactive {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.status-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-btn {
+  padding: 6px 10px;
+  border: 1px solid #d1d9e6;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: default;
+  transition: all 0.2s;
+}
+
+.status-btn.active {
+  background: #d1fae5;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.status-btn.inactive {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.actions-cell {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.create-btn:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.create-btn.small {
-  padding: 10px 16px;
-  font-size: 0.875rem;
-}
-
-.create-btn svg {
+.action-btn svg {
   width: 18px;
   height: 18px;
 }
 
-/* Coupons List */
-.coupons-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Coupon Card */
-.coupon-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 20px 24px;
-  transition: box-shadow 0.2s;
-}
-
-.coupon-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* Coupon Left */
-.coupon-left {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.coupon-icon {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #eff6ff;
-  border-radius: 10px;
-  color: #2563eb;
-}
-
-.coupon-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.coupon-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.coupon-code {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #1e293b;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.coupon-expires {
-  font-size: 0.875rem;
-  color: #64748b;
-}
-
-/* Coupon Right */
-.coupon-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.coupon-discount {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.coupon-discount.has-percent {
-  color: #0d9488;
-}
-
-.coupon-discount.has-amount {
-  color: #059669;
-}
-
-/* Status Badge */
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.status-badge.active {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.status-badge.expired {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
-/* Coupon Actions */
-.coupon-actions {
-  display: flex;
-  gap: 8px;
-  margin-left: 8px;
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.action-btn:hover {
-  background: #f1f5f9;
-}
-
 .action-btn.edit:hover {
-  color: #2563eb;
+  background: #eff6ff;
   border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-1px);
 }
 
 .action-btn.delete:hover {
-  color: #dc2626;
+  background: #fef2f2;
   border-color: #dc2626;
-}
-
-.action-btn svg {
-  width: 16px;
-  height: 16px;
+  color: #dc2626;
+  transform: translateY(-1px);
 }
 
 /* Loading State */
@@ -605,7 +660,7 @@ const formatDate = (date) => {
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 60px 16px !important;
 }
 
 .empty-content {
@@ -617,294 +672,363 @@ const formatDate = (date) => {
 }
 
 .empty-content svg {
-  width: 64px;
-  height: 64px;
-  opacity: 0.5;
+  width: 56px;
+  height: 56px;
+  opacity: 0.4;
 }
 
 .empty-content p {
   margin: 0;
   font-size: 1rem;
+  font-weight: 500;
 }
 
-/* Modal Overlay */
-.modal-overlay {
+.create-btn-sm {
+  padding: 10px 20px;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Toast */
+.toast {
   position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.6);
+  bottom: 20px;
+  right: 20px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  color: #0f172a;
+  font-weight: 500;
+  font-size: 14px;
+  z-index: 9999;
+  animation: slideIn 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 220px;
+}
+
+.toast.success {
+  background: #d1fae5;
+  color: #065f46;
+  border-left: 4px solid #10b981;
+}
+
+.toast.error {
+  background: #fee2e2;
+  color: #dc2626;
+  border-left: 4px solid #ef4444;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Styles - Matching Vehicles.vue */
+.add-vehicle-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
   z-index: 1000;
-  backdrop-filter: blur(4px);
+  padding: 20px;
 }
 
-/* Modal Content */
-.modal-content {
-  background: #fff;
-  border-radius: 16px;
+.add-vehicle-modal {
+  background: white;
+  border-radius: 12px;
   width: 100%;
-  max-width: 480px;
+  max-width: 800px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
-/* Modal Header */
-.modal-header {
+.add-vehicle-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   padding: 20px 24px;
   border-bottom: 1px solid #e2e8f0;
 }
 
-.modal-title {
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: #1e293b;
+.add-vehicle-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
   margin: 0;
 }
 
-.close-btn {
-  width: 36px;
-  height: 36px;
+.add-vehicle-header .close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f1f5f9;
+  border-radius: 8px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
   color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s;
 }
 
-.close-btn:hover {
-  background: #f1f5f9;
-  color: #1e293b;
+.add-vehicle-header .close-btn:hover {
+  background: #e2e8f0;
+  color: #1a1a1a;
 }
 
-.close-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-/* Modal Body */
-.modal-body {
+.add-vehicle-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
   padding: 24px;
   overflow-y: auto;
+  flex: 1;
+}
+
+.add-vehicle-left,
+.add-vehicle-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+  flex: 1;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 .form-group label {
   display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
 }
 
-.required {
-  color: #dc2626;
-}
-
-.optional {
-  color: #9ca3af;
-  font-weight: 400;
-}
-
-.form-input {
+.form-group input,
+.form-group select {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #d1d5db;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9375rem;
-  color: #1f2937;
-  transition: all 0.15s;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: white;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
 
-.form-input:focus {
+.form-group input:focus,
+.form-group select:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
-.form-input::placeholder {
-  color: #9ca3af;
+.form-group input::placeholder {
+  color: #94a3b8;
 }
 
-.form-select {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  color: #1f2937;
-  background: #fff;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.form-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-}
-
-/* Form Row */
 .form-row {
   display: flex;
   gap: 12px;
 }
 
-.form-row .flex-1 {
-  flex: 1;
+.add-vehicle-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
-.form-row .flex-2 {
-  flex: 2;
-}
-
-/* Input with suffix */
-.input-with-suffix {
-  position: relative;
-}
-
-.input-suffix {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #6b7280;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  pointer-events: none;
-}
-
-.input-with-suffix .form-input {
-  padding-right: 36px;
-}
-
-/* Date Input Wrapper */
-.date-input-wrapper {
-  position: relative;
-}
-
-.date-icon {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: #9ca3af;
-  pointer-events: none;
-}
-
-/* Modal Footer */
-.modal-footer {
-  padding: 16px 24px 24px;
-}
-
-/* Submit Button */
-.submit-btn {
-  width: 100%;
-  padding: 14px 24px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
+.discard-btn {
+  padding: 10px 20px;
+  border: 1px solid #cbd5e1;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.submit-btn:hover {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+.discard-btn:hover {
+  border-color: #94a3b8;
+  color: #1a1a1a;
 }
 
-.submit-btn:active {
-  transform: translateY(0);
-}
-
-/* Modal Transitions */
-.modal-enter-active {
-  animation: modal-in 0.25s ease-out;
-}
-
-.modal-leave-active {
-  animation: modal-in 0.2s ease-in reverse;
-}
-
-@keyframes modal-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Toast Notification */
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
+.store-btn {
+  padding: 10px 24px;
+  border: none;
+  background: #3b82f6;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  border-radius: 10px;
-  font-size: 0.9375rem;
-  font-weight: 500;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 2000;
-  animation: slideIn 0.3s ease-out;
+  gap: 8px;
 }
 
-.toast.success {
-  background: #d1fae5;
-  color: #047857;
+.store-btn:hover {
+  background: #2563eb;
 }
 
-.toast.error {
-  background: #fee2e2;
-  color: #b91c1c;
+/* Delete Modal Styles */
+.delete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-.toast svg {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
+.delete-modal {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
-.toast-enter-active {
-  animation: slideIn 0.3s ease-out;
+.delete-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #fef2f2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
 }
 
-.toast-leave-active {
-  animation: slideIn 0.2s ease-in reverse;
+.delete-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+.delete-message {
+  font-size: 16px;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.delete-coupon-code {
+  font-size: 14px;
+  color: #e74c3c;
+  font-weight: 600;
+  margin: 0 0 16px;
+  padding: 8px 16px;
+  background: #fef2f2;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.delete-warning {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 24px;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.delete-cancel-btn {
+  padding: 12px 24px;
+  border: 2px solid #ddd;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.delete-cancel-btn:hover {
+  border-color: #999;
+}
+
+.delete-confirm-btn {
+  padding: 12px 24px;
+  border: none;
+  background: #e74c3c;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.delete-confirm-btn:hover {
+  background: #c0392b;
+}
+
+@media (max-width: 768px) {
+  .add-vehicle-content {
+    grid-template-columns: 1fr;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  .form-row {
+    flex-direction: column;
   }
-}</style>
+}
+</style>
+

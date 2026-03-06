@@ -45,6 +45,10 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('users', UserController::class)->except(['create', 'edit']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('cities', CityController::class);
+});
+
+// Admin + Shop Owner shared routes (coupons & loyalty points management)
+Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () {
     Route::apiResource('coupons', CouponController::class);
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });

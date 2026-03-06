@@ -13,7 +13,7 @@
   padding: 20px;
   background: linear-gradient(180deg, #ffffff, var(--blue-050));
   font-family: 'Noto Sans Khmer', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .frame {
@@ -45,7 +45,7 @@
 .section-title {
   margin: 0 0 10px;
   color: var(--ink-600);
-  font-size: 38px;
+  font-size: 30px;
   font-weight: 700;
 }
 
@@ -88,7 +88,7 @@
 }
 
 .field span {
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: var(--ink-600);
   font-weight: 600;
 }
@@ -118,14 +118,14 @@
 
 .notify-box strong {
   display: block;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   color: var(--ink-800);
   line-height: 1.45;
 }
 
 .notify-box p {
   margin: 2px 0 0;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: var(--ink-600);
   line-height: 1.55;
   word-break: break-word;
@@ -225,7 +225,7 @@ textarea {
   border: 1px solid #d5e7eb;
   border-radius: 9px;
   padding: 10px 11px;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   color: var(--ink-800);
   background: #fff;
   outline: none;
@@ -249,7 +249,7 @@ textarea {
 .btn {
   border-radius: 8px;
   padding: 10px 14px;
-  font-size: 1rem;
+  font-size: 0.9rem;
   border: none;
   cursor: pointer;
   font-weight: 700;
@@ -322,7 +322,7 @@ textarea {
 
 .confirm-title {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--ink-800);
 }
@@ -330,7 +330,7 @@ textarea {
 .confirm-text {
   margin: 8px 0 0;
   color: var(--ink-600);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 .confirm-actions {
