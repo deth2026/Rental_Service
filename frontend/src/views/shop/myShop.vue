@@ -1,12 +1,20 @@
 <script setup>
+<<<<<<< HEAD
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+=======
+import { onMounted, reactive, ref, computed } from 'vue'
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
 import { shopApi } from '@/services/api'
 
 const shop = ref(null)
 const ownerName = ref('')
 
+// Computed property to check if shop exists
+const hasShop = computed(() => !!shop.value)
+
 const showCreateModal = ref(false)
 const showSuccessPopup = ref(false)
+const showSingleShopAlert = ref(false)
 const loading = ref(false)
 const error = ref('')
 const shopImageFile = ref(null)
@@ -19,7 +27,9 @@ const createForm = reactive({
   phone: '',
   description: '',
   address: '',
-  status: 'active'
+  phone: '',
+  status: 'active',
+  img_url: ''
 })
 const fieldErrors = reactive({
   name: '',
@@ -37,6 +47,34 @@ const shopImageSource = computed(() => {
   if (normalized.startsWith('storage/')) return `/${normalized}`
   return `/storage/${normalized}`
 })
+
+// store the actual File object separately so we can send multipart data
+const selectedImage = ref(null)
+
+// Handle image upload
+const onImageUpload = (event) => {
+  const file = event.target.files?.[0]
+  if (file) {
+    selectedImage.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      createForm.img_url = e.target?.result || ''
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const onImageDrop = (event) => {
+  const file = event.dataTransfer?.files?.[0]
+  if (file && file.type.startsWith('image/')) {
+    selectedImage.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      createForm.img_url = e.target?.result || ''
+    }
+    reader.readAsDataURL(file)
+  }
+}
 
 const getCachedShop = (ownerId) => {
   if (!ownerId) return null
@@ -95,10 +133,38 @@ const formatDateTime = (value) => {
   return date.toLocaleDateString()
 }
 
+// Normalize shop image URL
+const getApiOrigin = () => {
+  try {
+    // For production, use the current origin
+    // For development, we need to use the Laravel backend port (8000)
+    const currentOrigin = window.location.origin
+    if (currentOrigin.includes('5173')) {
+      return 'http://127.0.0.1:8000'
+    }
+    return currentOrigin
+  } catch {
+    return 'http://127.0.0.1:8000'
+  }
+}
+
+const getShopImageUrl = (url) => {
+  if (!url) return ''
+  // If it's already a data URL or full URL, return as-is
+  if (/^data:image/.test(url)) return url
+  if (/^https?:\/\//.test(url)) return url
+  // For relative paths, prepend the storage URL
+  const cleanUrl = url.replace(/^\/+/, '')
+  return `${getApiOrigin()}/storage/${cleanUrl}`
+}
+
 const loadMyShop = async () => {
   const ownerId = getUserId()
   const storedUser = getStoredUser()
   ownerName.value = storedUser?.name || 'N/A'
+  
+  // Clear shop first to ensure we get fresh data
+  shop.value = null
   const cachedShop = getCachedShop(ownerId)
   if (cachedShop) {
     shop.value = cachedShop
@@ -142,7 +208,9 @@ const resetForm = () => {
   createForm.phone = ''
   createForm.description = ''
   createForm.address = ''
+  createForm.phone = ''
   createForm.status = 'active'
+<<<<<<< HEAD
   fieldErrors.name = ''
   fieldErrors.status = ''
   fieldErrors.address = ''
@@ -153,6 +221,10 @@ const resetForm = () => {
     URL.revokeObjectURL(shopImagePreview.value)
     shopImagePreview.value = ''
   }
+=======
+  createForm.img_url = ''
+  selectedImage.value = null
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
   error.value = ''
 }
 
@@ -220,7 +292,20 @@ const onShopImageDrop = (event) => {
 
 const openCreateModal = () => {
   resetForm()
+  // Pre-fill phone from user if available
+  const storedUser = getStoredUser()
+  if (storedUser?.phone) {
+    createForm.phone = storedUser.phone
+  }
   showCreateModal.value = true
+}
+
+const handleCreateClick = () => {
+  if (hasShop.value) {
+    showSingleShopAlert.value = true
+    return
+  }
+  openCreateModal()
 }
 
 const closeCreateModal = () => {
@@ -238,6 +323,7 @@ const createShop = async () => {
   error.value = ''
 
   try {
+<<<<<<< HEAD
     const payloadBase = {
       owner_id: getUserId(),
       name: createForm.name.trim(),
@@ -245,6 +331,30 @@ const createShop = async () => {
       description: createForm.description.trim(),
       address: createForm.address.trim(),
       status: createForm.status
+=======
+    let payload
+    // if an image file has been selected, use FormData to send multipart request
+    if (selectedImage.value) {
+      payload = new FormData()
+      payload.append('owner_id', getUserId())
+      payload.append('name', createForm.name.trim())
+      payload.append('description', createForm.description.trim())
+      payload.append('address', createForm.address.trim())
+      payload.append('phone', createForm.phone.trim())
+      payload.append('status', createForm.status)
+      // the backend expects the field name img_url
+      payload.append('img_url', selectedImage.value)
+    } else {
+      payload = {
+        owner_id: getUserId(),
+        name: createForm.name.trim(),
+        description: createForm.description.trim(),
+        address: createForm.address.trim(),
+        phone: createForm.phone.trim(),
+        status: createForm.status,
+        img_url: createForm.img_url || null
+      }
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
     }
 
     let payload = payloadBase
@@ -298,7 +408,7 @@ onBeforeUnmount(() => {
   <div class="myshop-page">
     <div class="page-header">
       <h1>My Shop</h1>
-      <button class="create-btn" @click="openCreateModal">
+      <button class="create-btn" @click="handleCreateClick">
         Create Shop
       </button>
     </div>
@@ -309,11 +419,26 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-else class="shop-card">
-      <div class="card-title-row">
-        <h2>{{ shop.name || 'My Shop' }}</h2>
-        <span :class="['status-badge', (shop.status || 'inactive').toLowerCase()]">
-          {{ shop.status || 'inactive' }}
-        </span>
+      <!-- Shop Image - Small profile style -->
+      <div class="shop-header-row">
+        <div class="shop-image-section" v-if="shop.img_url">
+          <img :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
+        </div>
+        <div class="shop-image-section" v-else>
+          <div class="shop-cover-placeholder">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="shop-title-row">
+          <h2>{{ shop.name || 'My Shop' }}</h2>
+          <span :class="['status-badge', (shop.status || 'inactive').toLowerCase()]">
+            {{ shop.status || 'inactive' }}
+          </span>
+        </div>
       </div>
 
       <div v-if="shopImageSource" class="shop-image-wrap">
@@ -330,6 +455,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="field"><b>Owner Name</b><span>{{ ownerName }}</span></div>
         <div class="field"><b>created_at</b><span>{{ formatDateTime(shop.created_at) }}</span></div>
+        <div class="field field-wide"><b>Phone</b><span>{{ shop.phone || 'N/A' }}</span></div>
         <div class="field field-wide"><b>Address</b><span>{{ shop.address || 'N/A' }}</span></div>
         <div class="field field-wide"><b>Description</b><span>{{ shop.description || 'N/A' }}</span></div>
       </div>
@@ -339,8 +465,7 @@ onBeforeUnmount(() => {
       <div class="modal-card">
         <div class="modal-header">
           <div class="modal-title-wrap">
-            <p class="modal-kicker">Setup your business</p>
-            <h2>Create Shop</h2>
+            <h3>Create Shop</h3>
           </div>
           <button class="close-btn" @click="closeCreateModal" aria-label="Close">x</button>
         </div>
@@ -368,6 +493,7 @@ onBeforeUnmount(() => {
               <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
             </label>
 
+<<<<<<< HEAD
             <label>
               Phone Number *
               <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
@@ -405,6 +531,39 @@ onBeforeUnmount(() => {
             <div v-if="shopImagePreview" class="wide image-preview-wrap">
               <img :src="shopImagePreview" alt="Shop preview" class="image-preview" />
             </div>
+=======
+            <label class="wide">
+              Phone Number
+              <input v-model="createForm.phone" type="tel" placeholder="Enter phone number" />
+            </label>
+
+            <label class="wide">
+              Description
+              <textarea v-model="createForm.description" rows="4" placeholder="Tell customers about your shop..."></textarea>
+            </label>
+
+            <label class="wide">
+              Shop Image
+              <div class="image-upload-area" :class="{ 'has-preview': createForm.img_url }" @click="$refs.shopImageInput && $refs.shopImageInput.click()" @dragover.prevent @drop.prevent="onImageDrop">
+                <input ref="shopImageInput" type="file" accept="image/*" @change="onImageUpload" style="display:none" />
+                <div v-if="!createForm.img_url" class="upload-placeholder">
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 5 17 10"></polyline>
+                    <line x1="12" y1="5" x2="12" y2="16"></line>
+                  </svg>
+                  <p>Click to upload or drag and drop</p>
+                  <span>PNG, JPG up to 10MB</span>
+                </div>
+                <div v-else class="image-preview">
+                  <img :src="createForm.img_url" alt="Shop preview" />
+                  <div class="image-overlay">
+                    <span>Click to change</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
           </div>
 
           <p v-if="error" class="error-text">{{ error }}</p>
@@ -428,6 +587,21 @@ onBeforeUnmount(() => {
       <div class="toast-content">
         <strong>Success</strong>
         <p>Your shop was created.</p>
+      </div>
+    </div>
+
+    <div v-if="showSingleShopAlert" class="alert-overlay" @click.self="showSingleShopAlert = false">
+      <div class="alert-modal">
+        <div class="alert-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        </div>
+        <h3>One Shop Only</h3>
+        <p>You can only create one shop per account. </p>
+        <button class="alert-btn" @click="showSingleShopAlert = false">OK</button>
       </div>
     </div>
   </div>
@@ -497,6 +671,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
+<<<<<<< HEAD
 .shop-image-wrap {
   margin-bottom: 16px;
   border-radius: 14px;
@@ -509,6 +684,55 @@ onBeforeUnmount(() => {
   max-height: 260px;
   object-fit: cover;
   display: block;
+=======
+.shop-image-section {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.shop-cover-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.shop-cover-placeholder {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 50%;
+  color: #64748b;
+}
+
+.shop-cover-placeholder p {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.shop-header-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.shop-title-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shop-title-row h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
 }
 
 .card-title-row {
@@ -623,8 +847,12 @@ onBeforeUnmount(() => {
 }
 
 .modal-card {
+<<<<<<< HEAD
   width: min(820px, 100%);
   max-height: 90vh;
+=======
+  width: min(500px, 95%);
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border-radius: 22px;
   overflow: hidden;
@@ -701,8 +929,8 @@ onBeforeUnmount(() => {
 .form-grid label {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 14px;
+  gap: 6px;
+  font-size: 13px;
   color: #334155;
   font-weight: 600;
 }
@@ -759,9 +987,9 @@ onBeforeUnmount(() => {
 .form-grid select,
 .form-grid textarea {
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  padding: 12px 13px;
-  font-size: 14px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
   width: 100%;
   box-sizing: border-box;
   background: #f8fafc;
@@ -794,6 +1022,89 @@ onBeforeUnmount(() => {
 
 .wide {
   grid-column: span 2;
+}
+
+.image-upload-area {
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 400px; /* constrain width so box doesn’t stretch full column */
+  margin: 0 auto;
+}
+
+/* when a preview is showing reduce padding even more */
+.image-upload-area.has-preview {
+  padding: 8px;
+  min-height: auto;
+}
+
+.image-upload-area:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.upload-placeholder p {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.upload-placeholder span {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+  max-width: 100px;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 55px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-preview:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-overlay span {
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .error-text {
@@ -885,6 +1196,74 @@ onBeforeUnmount(() => {
 .toast-icon svg {
   width: 16px;
   height: 16px;
+}
+
+.alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+.alert-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+}
+
+.alert-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  background: #f4b3b4;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-icon svg {
+  width: 28px;
+  height: 28px;
+  color: #f50b0b;
+}
+
+.alert-modal h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #0f172a;
+}
+
+.alert-modal p {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.alert-btn {
+  background: #1d4ed8;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.alert-btn:hover {
+  background: #1e40af;
 }
 
 .toast-content {

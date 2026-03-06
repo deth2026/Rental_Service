@@ -14,7 +14,7 @@ const isMobileMenuOpen = ref(false)
 // Navbar state
 const location = ref('Phnom Penh')
 const dateRange = ref('Mar 15 - Mar 18')
-const navItems = ref(['Home', 'My Bookings', 'Support', 'About'])
+const navItems = ref(['Home', 'My Bookings', 'About'])
 const activeNav = ref('Home')
 
 const setActiveNav = (item) => {
@@ -120,29 +120,23 @@ onMounted(() => {
       <header class="topbar">
         <div class="brand">
           <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-          <span>Cambodia Rides</span>
+          <span>Chong Choul</span>
         </div>
 
-        <button class="search-pill btn-reset" @click="handleSearch">
-          <span class="pill-item"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ location }}</span>
-          <span class="pill-sep"></span>
-          <span class="pill-item"><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ dateRange }}</span>
-          <span class="pill-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
-        </button>
+        <nav class="nav-links">
+          <button
+            v-for="item in navItems"
+            :key="item"
+            class="btn-reset nav-link"
+            :class="{ active: activeNav === item }"
+            @click="setActiveNav(item)"
+          >
+            {{ item }}
+          </button>
+        </nav>
 
         <div class="top-actions">
-          <nav class="nav-links">
-            <button
-              v-for="item in navItems"
-              :key="item"
-              class="btn-reset nav-link"
-              :class="{ active: activeNav === item }"
-              @click="setActiveNav(item)"
-            >
-              {{ item }}
-            </button>
-          </nav>
-
+          <span class="user-display-name">{{ userDisplayName }}</span>
           <button class="btn-reset avatar" @click="notify('Profile opened')">{{ userInitials }}</button>
           <button class="btn-reset logout-btn" @click="handleLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span></button>
         </div>
@@ -169,6 +163,7 @@ onMounted(() => {
                 @error="$event.target.src = 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=600&q=80'"
               />
               <span :class="'status-badge status-' + (shop.status || 'active')">
+                <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
                 {{ shop.status || 'active' }}
               </span>
             </div>
@@ -220,7 +215,7 @@ onMounted(() => {
       <footer class="page-footer">
         <div class="footer-top">
           <div class="footer-brand">
-            <h4>Cambodia<span>Rides</span></h4>
+            <h4>Chong Choul<span>Rides</span></h4>
             <p>
               Connecting adventurous travelers with the best local vehicle rentals across the
               Kingdom of Wonder. Explore Cambodia on your own terms.
@@ -243,7 +238,7 @@ onMounted(() => {
         </div>
 
         <div class="footer-bottom">
-          <p class="footer-copy">&copy; 2023 Cambodia Rides. Made with ❤️ in Phnom Penh.</p>
+          <p class="footer-copy">&copy; 2023 Chong Choul Rides. Made with ❤️ in Phnom Penh.</p>
           <div class="footer-legal">
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>

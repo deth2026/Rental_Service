@@ -403,5 +403,211 @@ export default {
   .vehicle-details {
     grid-template-columns: 1fr 1fr;
   }
+
+  .navbar {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .nav-auth {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .vehicle-content {
+    padding: 0 1rem;
+    margin: 1rem auto;
+    gap: 1rem;
+  }
+
+  .vehicle-image-section {
+    border-radius: 12px;
+  }
+
+  .vehicle-image {
+    height: 200px;
+  }
+
+  .status-badge {
+    top: 0.75rem;
+    right: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .vehicle-info-section {
+    padding: 1.25rem;
+    border-radius: 12px;
+  }
+
+  .vehicle-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .vehicle-type {
+    font-size: 0.9rem;
+  }
+
+  .vehicle-details {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+    padding: 1.25rem 0;
+  }
+
+  .detail-item {
+    gap: 0.2rem;
+  }
+
+  .detail-label {
+    font-size: 0.75rem;
+  }
+
+  .detail-value {
+    font-size: 0.9rem;
+  }
+
+  .vehicle-price {
+    margin: 1.25rem 0;
+  }
+
+  .price-value {
+    font-size: 1.5rem;
+  }
+
+  .vehicle-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .btn-rent-now,
+  .btn-contact-shop {
+    padding: 0.875rem;
+    font-size: 0.95rem;
+  }
+
+  .nav-logo {
+    gap: 0.4rem;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .logo-text {
+    font-size: 1.1rem;
+  }
+
+  .nav-links {
+    gap: 0.75rem;
+  }
+
+  .nav-links a {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .vehicle-content {
+    padding: 0 0.75rem;
+    margin: 0.75rem auto;
+  }
+
+  .vehicle-image {
+    height: 180px;
+  }
+
+  .status-badge {
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .vehicle-info-section {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  .vehicle-header h1 {
+    font-size: 1.25rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .vehicle-type {
+    font-size: 0.85rem;
+  }
+
+  .vehicle-details {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin: 1rem 0;
+    padding: 1rem 0;
+  }
+
+  .detail-label {
+    font-size: 0.7rem;
+  }
+
+  .detail-value {
+    font-size: 0.85rem;
+  }
+
+  .vehicle-price {
+    margin: 1rem 0;
+  }
+
+  .price-label {
+    font-size: 0.75rem;
+  }
+
+  .price-value {
+    font-size: 1.25rem;
+  }
+
+  .vehicle-actions {
+    gap: 0.5rem;
+  }
+
+  .btn-rent-now,
+  .btn-contact-shop {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+
+  .logo-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+
+  .logo-text {
+    font-size: 1rem;
+  }
+
+  .nav-links {
+    gap: 0.5rem;
+  }
+
+  .nav-links a {
+    font-size: 0.8rem;
+  }
+
+  .btn-login,
+  .btn-signup {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+  }
 }
 </style>

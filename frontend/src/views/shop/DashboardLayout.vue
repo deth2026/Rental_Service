@@ -561,7 +561,11 @@ const iconSvg = (name) => {
     history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"/></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
+<<<<<<< HEAD
     brand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
+=======
+    brand: '<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" /><stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" /></linearGradient></defs><rect width="120" height="120" rx="20" fill="url(#bgGrad)"/><g transform="translate(30, 45)"><path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/><path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/><g transform="translate(15, -5)"><rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/><circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/><circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/><path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/></g></g></svg>',
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M10 17a2 2 0 0 0 4 0"/></svg>'
   }
   return icons[name] || ''
@@ -1046,7 +1050,12 @@ const iconSvg = (name) => {
 
 <style scoped>
 :root {
+<<<<<<< HEAD
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+=======
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
 }
 
 .toast {
@@ -1271,20 +1280,29 @@ const iconSvg = (name) => {
 }
 
 .brand-icon {
+<<<<<<< HEAD
   width: 40px;
   height: 40px;
   border-radius: 10px;
   background: #ffffff;
   color: #0891b2;
+=======
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: transparent;
+  color: #fff;
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
   font-weight: 700;
   display: grid;
   place-items: center;
-  flex: 0 0 40px;
+  flex: 0 0 48px;
 }
 
 .brand-icon :deep(svg) {
-  width: 22px;
-  height: 22px;
+  width: 48px;
+  height: 48px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
 }
 
 .brand h2 {
@@ -2157,7 +2175,7 @@ textarea {
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .sidebar {
     width: 100% !important;
     flex-basis: 100% !important;
@@ -2219,6 +2237,569 @@ textarea {
 
   .thumbs {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .topbar-left {
+    order: 1;
+  }
+
+  .topbar-right {
+    order: 2;
+    margin-right: 0;
+  }
+
+  .user-box {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4px;
+  }
+
+  .topbar h1 {
+    font-size: 16px;
+  }
+
+  .topbar-left {
+    gap: 8px;
+  }
+
+  .brand h2 {
+    font-size: 20px;
+  }
+
+  .brand p {
+    font-size: 11px;
+  }
+
+  .dashboard-view h2 {
+    font-size: 26px;
+  }
+
+  .sub {
+    font-size: 15px;
+    margin-bottom: 16px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .dashboard-cards .card {
+    min-height: 90px;
+    padding: 12px;
+  }
+
+  .card span {
+    font-size: 11px;
+  }
+
+  .card h3 {
+    font-size: 28px;
+  }
+
+  .stat-icon {
+    width: 26px;
+    height: 26px;
+    right: 10px;
+    top: 10px;
+  }
+
+  .stat-icon :deep(svg) {
+    width: 14px;
+    height: 14px;
+  }
+
+  .activity-card,
+  .panel {
+    padding: 12px;
+  }
+
+  .activity-card h3,
+  .panel h3 {
+    font-size: 16px;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 600px;
+  }
+
+  th,
+  td {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .panel-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .panel-top h3 {
+    font-size: 18px;
+  }
+
+  .primary {
+    width: 100%;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .filters {
+    gap: 8px;
+  }
+
+  .filters input,
+  .filters select {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .activity-card {
+    margin-top: 14px;
+  }
+
+  .add-vehicle-modal {
+    max-height: 95vh;
+  }
+
+  .add-vehicle-header {
+    padding: 16px 18px;
+  }
+
+  .add-vehicle-header h2 {
+    font-size: 18px;
+  }
+
+  .add-vehicle-content {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .form-card {
+    padding: 14px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .photo-upload-area {
+    padding: 20px;
+    min-height: 160px;
+  }
+
+  .upload-placeholder svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .upload-placeholder p {
+    font-size: 13px;
+  }
+
+  .add-vehicle-footer {
+    padding: 14px 18px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .discard-btn,
+  .store-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    height: auto;
+    width: 100% !important;
+    flex-basis: 100% !important;
+    flex-direction: row;
+    padding: 8px 10px;
+    overflow-x: auto;
+    z-index: 100;
+    border-right: none;
+    border-top: 1px solid #1b2a52;
+  }
+
+  .sidebar-toggle,
+  .brand,
+  .menu-title,
+  .brand-text {
+    display: none !important;
+  }
+
+  .menu-item {
+    flex-direction: column;
+    padding: 8px 10px;
+    margin-bottom: 0;
+    font-size: 10px;
+    min-width: 50px;
+    gap: 4px;
+  }
+
+  .menu-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+  }
+
+  .menu-label {
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .page {
+    padding-bottom: 70px;
+  }
+
+  .main {
+    padding: 0 12px 12px;
+  }
+
+  .topbar {
+    margin: 0 -12px 16px;
+    padding: 10px 12px;
+  }
+
+  .topbar h1 {
+    font-size: 15px;
+  }
+
+  .topbar-left {
+    gap: 6px;
+  }
+
+  .topbar-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .topbar-right {
+    display: none;
+  }
+
+  .user-box {
+    padding-top: 6px;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+
+  .user-box strong {
+    font-size: 13px;
+  }
+
+  .user-box p {
+    font-size: 11px;
+  }
+
+  .dashboard-view h2 {
+    font-size: 22px;
+  }
+
+  .sub {
+    font-size: 14px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .dashboard-cards .card {
+    min-height: 80px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .card span {
+    font-size: 10px;
+  }
+
+  .card h3 {
+    font-size: 24px;
+  }
+
+  .stat-icon {
+    width: 24px;
+    height: 24px;
+    right: 8px;
+    top: 8px;
+  }
+
+  .activity-card h3,
+  .panel h3 {
+    font-size: 15px;
+  }
+
+  .table-wrap {
+    border-radius: 8px;
+  }
+
+  table {
+    min-width: 500px;
+  }
+
+  th,
+  td {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .filters {
+    gap: 6px;
+  }
+
+  .filters input,
+  .filters select {
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .status-badge {
+    padding: 3px 8px;
+    font-size: 10px;
+  }
+
+  .status-badge :deep(svg) {
+    width: 10px;
+    height: 10px;
+  }
+
+  .delete-modal {
+    padding: 20px;
+    margin: 12px;
+  }
+
+  .delete-icon-wrapper {
+    width: 60px;
+    height: 60px;
+  }
+
+  .delete-icon-wrapper svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .delete-title {
+    font-size: 20px;
+  }
+
+  .delete-message {
+    font-size: 14px;
+  }
+
+  .delete-warning {
+    font-size: 12px;
+  }
+
+  .delete-actions {
+    flex-direction: column;
+  }
+
+  .delete-cancel-btn,
+  .delete-confirm-btn {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .toast {
+    bottom: 80px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .main {
+    padding: 0 8px 8px;
+  }
+
+  .topbar {
+    margin: 0 -8px 12px;
+    padding: 8px 10px;
+  }
+
+  .topbar h1 {
+    font-size: 14px;
+  }
+
+  .user-box strong {
+    font-size: 12px;
+  }
+
+  .user-box p {
+    font-size: 10px;
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+
+  .dashboard-view h2 {
+    font-size: 18px;
+  }
+
+  .sub {
+    font-size: 13px;
+    margin-bottom: 12px;
+  }
+
+  .card h3 {
+    font-size: 20px;
+  }
+
+  .activity-card,
+  .panel {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .activity-card h3,
+  .panel h3 {
+    font-size: 14px;
+  }
+
+  table {
+    min-width: 400px;
+  }
+
+  th,
+  td {
+    padding: 5px 6px;
+    font-size: 11px;
+  }
+
+  .filters input,
+  .filters select {
+    padding: 8px;
+    font-size: 11px;
+  }
+
+  .menu-item {
+    padding: 6px 8px;
+    min-width: 44px;
+  }
+
+  .menu-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .menu-label {
+    font-size: 8px;
+  }
+
+  .add-vehicle-modal {
+    margin: 8px;
+    border-radius: 10px;
+  }
+
+  .add-vehicle-header {
+    padding: 12px 14px;
+  }
+
+  .add-vehicle-header h2 {
+    font-size: 16px;
+  }
+
+  .add-vehicle-content {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .form-card {
+    padding: 12px;
+  }
+
+  .card-title {
+    font-size: 12px;
+  }
+
+  .photo-upload-area {
+    padding: 16px;
+    min-height: 140px;
+  }
+
+  .upload-placeholder svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .upload-placeholder p {
+    font-size: 12px;
+  }
+
+  .upload-placeholder span {
+    font-size: 10px;
+  }
+
+  .add-vehicle-footer {
+    padding: 12px 14px;
+  }
+
+  .discard-btn,
+  .store-btn {
+    padding: 10px;
+    font-size: 13px;
   }
 }
 
