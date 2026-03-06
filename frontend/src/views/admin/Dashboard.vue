@@ -55,5 +55,42 @@ const handleLogout = async () => {
 <style scoped>
 .dashboard {
   padding: 2rem;
+  min-height: 100vh;
+  background: #f1f5f9;
+}
+
+.dashboard h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #1e293b;
+}
+
+.dashboard p {
+  color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1.5rem;
+  }
+
+  .dashboard h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 1rem;
+  }
+
+  .dashboard h1 {
+    font-size: 1.25rem;
+  }
+
+  .dashboard p {
+    font-size: 0.9rem;
+  }
 }
 </style>

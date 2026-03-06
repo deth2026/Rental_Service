@@ -45,9 +45,9 @@
   z-index: 5;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 18px;
+  gap: 32px;
   align-items: center;
-  padding: 14px 20px;
+  padding: 14px 24px;
   background: #fff;
   border-bottom: 1px solid var(--line);
   width: 100vw;
@@ -63,15 +63,16 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-main);
+  color: #2563eb;
 }
 
 .brand span {
   background: none;
-  -webkit-text-fill-color: initial;
+  -webkit-text-fill-color: #2563eb;
+  color: #2563eb;
 }
 
 .brand-icon {
@@ -80,17 +81,18 @@
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: #daf2ff;
+  background: #dbeafe;
 }
 
 .brand-icon i {
-  color: #0ea5e9;
+  color: #2563eb;
 }
 
 .search-pill {
   max-width: 430px;
   justify-self: center;
   display: flex;
+  padding: 16px;
   align-items: center;
   gap: 12px;
   border: 1px solid var(--line);
@@ -121,36 +123,52 @@
   display: flex;
   align-items: center;
   gap: 12px;
+
 }
 
 .top-actions .avatar {
   order: 1;
+  border-radius: 90%;
 }
 
 .top-actions .logout-btn {
-  order: 2;
+  order: 3;
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #2da9ed, #1c8cd7);
+  background: #2563eb;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(33, 126, 184, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .top-actions .logout-btn:hover {
+  background: #1d4ed8;
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(33, 126, 184, 0.4);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.user-display-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #33435d;
+  white-space: nowrap;
+  order: 1;
+}
+
+.top-actions .avatar {
+  order: 2;
 }
 
 .nav-links {
   display: flex;
   gap: 8px;
-  padding-right: 12px;
-  border-right: 1px solid var(--line);
+  justify-self: center;
+  padding-right: 0;
+  border-right: none;
 }
 
 .nav-link {
@@ -164,8 +182,8 @@
 
 .nav-link.active,
 .nav-link:hover {
-  background: #eef7ff;
-  color: var(--brand);
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .icon-btn,
@@ -194,7 +212,28 @@
   cursor: pointer;
 }
 
-/* Old Header Styles - kept for compatibility */
+/* ── Old Header Styles - kept for compatibility ── */
+/* Override old brand gradient so new topbar brand shows #2563eb */
+.topbar .brand {
+  color: #2563eb;
+  background: none;
+  -webkit-text-fill-color: #2563eb;
+  background-clip: unset;
+  -webkit-background-clip: unset;
+  text-shadow: none;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.topbar .brand span {
+  background: none;
+  -webkit-text-fill-color: #2563eb;
+  color: #2563eb;
+  background-clip: unset;
+  -webkit-background-clip: unset;
+}
+
 .top-header {
   position: sticky;
   top: 0;
@@ -355,9 +394,9 @@
 
 .logout-btn,
 .secondary-btn {
-  background: linear-gradient(135deg, #2da9ed, #1c8cd7);
+  background: #2563eb;
   color: #fff;
-  box-shadow: 0 8px 18px rgba(33, 126, 184, 0.25);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
   position: relative;
   overflow: hidden;
 }
@@ -391,16 +430,17 @@
 .contact-btn,
 .booking-popup-btn {
   color: #fff;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  box-shadow: 0 10px 24px rgba(9, 118, 97, 0.27);
+  background: #2563eb;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.27);
 }
 
 .book-btn:hover,
 .view-shop-btn:hover,
 .contact-btn:hover,
 .booking-popup-btn:hover {
+  background: #1d4ed8;
   transform: translateY(-1px);
-  box-shadow: 0 14px 26px rgba(9, 118, 97, 0.34);
+  box-shadow: 0 14px 26px rgba(37, 99, 235, 0.34);
 }
 
 .back-btn {
@@ -539,6 +579,8 @@
   background: rgba(244, 247, 249, 0.95);
   border: 1px solid #d5dce8;
   text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
 }
 
 .status-badge.status-active {
@@ -572,8 +614,8 @@
   justify-content: center;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2a8ee0, #1e78d0);
-  box-shadow: 0 10px 20px rgba(40, 106, 167, 0.24);
+  background: #2563eb;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.24);
   font-size: 1.75rem;
 }
 
@@ -587,6 +629,7 @@
   font-size: 1.45rem;
   line-height: 1.1;
   font-weight: 700;
+  color: #2563eb;
 }
 
 .shop-title-block p {
@@ -678,21 +721,33 @@
 }
 
 .shop-kpi:first-child {
-  background: linear-gradient(130deg, #d6f6e1, #bdeecf);
-  border-color: #a9dfbd;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
 }
 
 .shop-kpi:last-child {
-  background: linear-gradient(130deg, #f9e9aa, #f3d873);
-  border-color: #eac85a;
+  background: #fefaf0;
+  border-color: #fed7aa;
 }
 
 .view-shop-btn {
   padding: 12px 16px;
   border-radius: 12px;
   font-size: 0.96rem;
-  background: linear-gradient(135deg, #2aa1ec, #1379c8);
-  box-shadow: 0 10px 20px rgba(30, 122, 185, 0.27);
+  background: #2563eb;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.27);
+}
+
+/* Green dot for active status badge */
+.status-green-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .filter-bar {
@@ -1267,7 +1322,7 @@
 }
 
 .page-footer h4 span {
-  color: #2798e7;
+  color: #2563eb;
 }
 
 .footer-brand p {
@@ -1441,6 +1496,411 @@
 
   .managed-card {
     gap: 8px;
+  }
+
+  .top-header {
+    padding: 12px 14px;
+  }
+
+  .brand {
+    font-size: 1.5rem;
+  }
+
+  .search-chip-group {
+    display: none;
+  }
+
+  .top-nav {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .notify,
+  .avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .logout-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .results-head {
+    margin: 16px 0 12px;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .type-pill,
+  .filter-select {
+    width: 100%;
+    text-align: center;
+  }
+
+  .vehicle-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .vehicle-card {
+    border-radius: 12px;
+  }
+
+  .image-wrap {
+    height: 160px;
+  }
+
+  .vehicle-body {
+    padding: 10px;
+  }
+
+  .title-row h3 {
+    font-size: 1rem;
+  }
+
+  .price {
+    font-size: 1rem;
+  }
+
+  .page-footer {
+    margin-top: 20px;
+  }
+
+  .footer-top {
+    gap: 16px;
+  }
+
+  .footer-brand h4 {
+    font-size: 1.6rem;
+    padding-left: 36px;
+  }
+
+  .footer-brand h4::before {
+    font-size: 1.3rem;
+  }
+
+  .footer-brand p {
+    font-size: 0.9rem;
+    margin-top: 12px;
+  }
+
+  .footer-col h5 {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .page-footer a {
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+
+  .footer-copy,
+  .footer-legal a {
+    font-size: 0.85rem;
+  }
+
+  .vehicle-detail-overlay {
+    padding: 12px;
+  }
+
+  .vehicle-detail-modal {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .vehicle-detail-main-grid {
+    gap: 12px;
+  }
+
+  .vehicle-detail-image {
+    height: 200px;
+    border-radius: 10px;
+  }
+
+  .vehicle-gallery-row {
+    gap: 6px;
+    overflow-x: auto;
+  }
+
+  .vehicle-thumb img {
+    width: 60px;
+    height: 50px;
+  }
+
+  .vehicle-name-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .vehicle-name-row h2 {
+    font-size: 1.3rem;
+  }
+
+  .vehicle-spec-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .managed-card {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .managed-card img {
+    margin: 0 auto;
+  }
+
+  .days-controls {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .days-controls button {
+    width: 100%;
+  }
+
+  .vehicle-detail-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .vehicle-detail-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .shops-grid {
+    gap: 12px;
+  }
+
+  .shop-card-image {
+    height: 200px;
+  }
+
+  .shop-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .shop-brand-mark {
+    width: 60px;
+    height: 60px;
+    font-size: 1.4rem;
+  }
+
+  .shop-title-block h3 {
+    font-size: 1.2rem;
+  }
+
+  .shop-chip-row {
+    gap: 6px;
+  }
+
+  .shop-chip {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+
+  .shop-kpi-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .view-shop-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .rides-page {
+    padding: 0 8px 8px;
+  }
+
+  .top-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .brand {
+    font-size: 1.3rem;
+  }
+
+  .results-head h1 {
+    font-size: 1.6rem;
+  }
+
+  .results-head p {
+    font-size: 0.9rem;
+  }
+
+  .search-input {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .type-pill,
+  .filter-select {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+
+  .image-wrap {
+    height: 140px;
+  }
+
+  .vehicle-body {
+    padding: 8px;
+  }
+
+  .title-row h3 {
+    font-size: 0.95rem;
+  }
+
+  .meta {
+    font-size: 0.75rem;
+  }
+
+  .specs {
+    gap: 4px;
+  }
+
+  .specs span {
+    font-size: 0.65rem;
+    padding: 3px 6px;
+  }
+
+  .card-footer {
+    margin-top: 8px;
+  }
+
+  .price {
+    font-size: 0.95rem;
+  }
+
+  .price small {
+    font-size: 0.7rem;
+  }
+
+  .rating {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  .page-footer {
+    padding: 16px 12px 14px;
+  }
+
+  .footer-top {
+    padding-bottom: 16px;
+  }
+
+  .footer-brand h4 {
+    font-size: 1.4rem;
+    padding-left: 32px;
+  }
+
+  .footer-brand p {
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+
+  .footer-col h5 {
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+  }
+
+  .page-footer a {
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .footer-bottom {
+    padding-top: 14px;
+  }
+
+  .footer-copy {
+    font-size: 0.8rem;
+  }
+
+  .footer-legal {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .footer-legal a {
+    font-size: 0.8rem;
+  }
+
+  .vehicle-detail-overlay {
+    padding: 8px;
+  }
+
+  .vehicle-detail-modal {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .vehicle-detail-close {
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+  }
+
+  .vehicle-detail-image {
+    height: 180px;
+  }
+
+  .vehicle-gallery-row {
+    margin: 8px 0;
+  }
+
+  .vehicle-thumb img {
+    width: 50px;
+    height: 42px;
+  }
+
+  .vehicle-name-row h2 {
+    font-size: 1.1rem;
+  }
+
+  .spec-box {
+    padding: 8px;
+  }
+
+  .spec-box span {
+    font-size: 0.7rem;
+  }
+
+  .review-box p {
+    font-size: 1.4rem;
+  }
+
+  .addon-item {
+    padding: 8px;
+  }
+
+  .cost-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .booking-popup {
+    padding: 18px;
+  }
+
+  .booking-popup-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
   }
 }
 

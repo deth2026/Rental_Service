@@ -685,3 +685,216 @@
     display: none;
   }
 }
+
+@media (max-width: 640px) {
+  .container {
+    min-height: 100vh;
+  }
+
+  .left {
+    min-height: 200px;
+  }
+
+  .overlay {
+    padding: 20px;
+  }
+
+  .logo {
+    font-size: 22px;
+  }
+
+  .logo-pic {
+    width: 50px;
+    height: 50px;
+  }
+
+  .left-content h1 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .left-content p {
+    font-size: 14px;
+    max-width: 280px;
+  }
+
+  .right {
+    padding: 24px 16px;
+  }
+
+  .form-box {
+    max-width: 100%;
+  }
+
+  .form-box h2 {
+    font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .form-header {
+    margin-bottom: 24px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+
+  .form-group input {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .form-options {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .checkbox {
+    font-size: 13px;
+  }
+
+  .forgot-link {
+    font-size: 13px;
+  }
+
+  .login-btn {
+    padding: 14px;
+    font-size: 15px;
+  }
+
+  .register-prompt {
+    margin-top: 20px;
+    font-size: 13px;
+  }
+
+  .divider {
+    margin: 20px 0;
+  }
+
+  .social-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .social-btn {
+    padding: 10px;
+  }
+
+  .terms {
+    margin-top: 20px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .left {
+    min-height: 160px;
+  }
+
+  .overlay {
+    padding: 16px;
+  }
+
+  .logo {
+    font-size: 18px;
+  }
+
+  .logo-pic {
+    width: 40px;
+    height: 40px;
+  }
+
+  .left-content h1 {
+    font-size: 20px;
+  }
+
+  .left-content p {
+    font-size: 12px;
+    max-width: 220px;
+  }
+
+  .right {
+    padding: 20px 14px;
+  }
+
+  .form-box h2 {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .form-group input {
+    padding: 10px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .password-input-wrapper input {
+    padding-right: 40px;
+  }
+
+  .toggle-password {
+    right: 10px;
+  }
+
+  .toggle-password svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .error-text {
+    font-size: 12px;
+  }
+
+  .login-btn {
+    padding: 12px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .register-prompt {
+    margin-top: 16px;
+    font-size: 12px;
+  }
+
+  .register-link {
+    font-size: 13px;
+  }
+
+  .divider {
+    margin: 16px 0;
+    font-size: 11px;
+  }
+
+  .social-btn {
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .terms {
+    margin-top: 16px;
+    font-size: 10px;
+    line-height: 1.5;
+  }
+}
