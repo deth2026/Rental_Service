@@ -1,3 +1,5 @@
+
+
 <template>
   <div class="home-page">
     <header class="top-nav">
@@ -192,7 +194,7 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive } from 'vue';
 
 const search = reactive({
   type: 'All Vehicles',
@@ -267,4 +269,10 @@ const rides = [
   }
 ]
 </script>
+
+<style>
+@import "../css/HomeView.css";
+</style>
+
+
 

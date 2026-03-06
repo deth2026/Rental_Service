@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
-import '../css/userDashboard.css'
+import '../../css/userDashboard.css'
 
 const router = useRouter()
 

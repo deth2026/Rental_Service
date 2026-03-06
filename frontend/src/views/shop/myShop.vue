@@ -804,12 +804,12 @@ onMounted(async () => {
 .image-preview {
   position: relative;
   width: 100%;
-  max-width: 100px;
+  max-width: 80px;
 }
 
 .image-preview img {
   width: 100%;
-  height: 55px;
+  height: 40px;
   border-radius: 8px;
   object-fit: cover;
 }

@@ -646,7 +646,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-@import "../../assets/setting.css";
+@import "../../css/setting.css";
 
 /* Language Selector Styles - Near Notifications */
 .language-box {

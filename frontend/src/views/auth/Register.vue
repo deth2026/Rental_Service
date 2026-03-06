@@ -440,5 +440,5 @@ const changeRole = () => {
 </script>
 
 <style>
-@import "../../assets/auth.css";
+@import "../../css/register.css";
 </style>
