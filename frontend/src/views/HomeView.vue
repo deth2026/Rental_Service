@@ -13,43 +13,10 @@
       <div class="hero-overlay">
         <div class="hero-content">
           <h1>
-            Find Your Perfect Ride and Explore
-            <br />
-            <span>Cambodia</span> in Style!
-            <!-- <br/>
-             <span> Cambodia</span> -->
+            <span class="hero-line">Find Your Perfect Ride</span>
+            <span class="hero-line">and Explore</span>
+            <span class="hero-line"><span>Cambodia</span> in Style!</span>
           </h1>
-          <p>
-            Choose from hundreds of cars, motorbikes, and bicycles from verified
-            local shops in Cambodia.
-          </p>
-
-          <form class="search-panel">
-            <div class="search-item">
-              <label>Vehicle Type</label>
-              <select v-model="search.type">
-                <option>All Vehicles</option>
-                <option>Cars</option>
-                <option>Motorbikes</option>
-                <option>Bicycles</option>
-              </select>
-            </div>
-            <div class="search-item">
-              <label>Location</label>
-              <select v-model="search.location">
-                <option>Siem Reap</option>
-              </select>
-            </div>
-            <div class="search-item">
-              <label>Pick-Up Date</label>
-              <input
-                v-model="search.pickupDate"
-                type="text"
-                placeholder="Select Date"
-              />
-            </div>
-            <button class="search-btn" type="button">Search</button>
-          </form>
         </div>
       </div>
     </section>
