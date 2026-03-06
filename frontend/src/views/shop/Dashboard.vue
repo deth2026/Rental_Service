@@ -1,9 +1,3 @@
-<script>
-import '../../assets/dashboard.css'
-export default {
-  name: 'dashboard'
-}
-</script>
 <template>
   <div class="min-h-screen bg-slate-100 flex flex-col md:flex-row font-sans">
     <aside class="w-full md:w-64 bg-slate-900 text-slate-100 p-6 flex flex-col">

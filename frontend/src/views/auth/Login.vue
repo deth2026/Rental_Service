@@ -177,9 +177,12 @@ const handleLogin = async () => {
       }),
     };
 
-    let response = await fetch('/api/users/login', requestInit);
+    // Try /api/login first (points to UserController)
+    let response = await fetch('/api/login', requestInit);
+    
+    // If 404, try /api/users/login as fallback
     if (response.status === 404) {
-      response = await fetch('/api/login', requestInit);
+      response = await fetch('/api/users/login', requestInit);
     }
 
     const data = await response.json().catch(() => ({}));
@@ -203,14 +206,21 @@ const handleLogin = async () => {
       throw new Error(errorMessage);
     }
 
-    // Store the token
-    localStorage.setItem('auth_token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    // Store the token - handle both response formats
+    const token = data.token || data.access_token;
+    const user = data.user || data.data?.user;
+    
+    if (!token) {
+      throw new Error('Invalid response: missing token');
+    }
 
-    console.log('Login successful:', data);
+    localStorage.setItem('auth_token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+
+    console.log('Login successful:', { user, token });
 
     // Redirect based on user role
-    const userRole = data.user?.role;
+    const userRole = user?.role;
     if (userRole === 'admin') {
       router.push('/admin');
     } else {

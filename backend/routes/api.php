@@ -17,15 +17,14 @@ use App\Http\Controllers\Api\VehicleController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Public authentication routes
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [UserController::class, 'login']);
+Route::post('/users/register', [AuthController::class, 'register']);
+Route::post('/users/login', [UserController::class, 'login']);
+
 Route::middleware('auth:sanctum')->get('/auth-user', function (Request $request) {
     return $request->user();
-});
-
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 Route::get('/test', function () {
@@ -34,15 +33,11 @@ Route::get('/test', function () {
     ]);
 });
 
-// Public authentication routes
-Route::post('/users/register', [AuthController::class, 'register'])->name('users.register');
-Route::post('/register', [AuthController::class, 'register'])->name('api/register');
-Route::post('/login', [UserController::class, 'login'])->name('api/login');
-Route::post('/users/login', [UserController::class, 'login'])->name('users.login');
-
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 // Admin only routes
@@ -54,7 +49,6 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
-<<<<<<< HEAD
 // User routes - make update public for testing (remove auth for now)
 Route::put('/users/{user}', [UserController::class, 'update']);
 
@@ -64,8 +58,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/users/{user}/avatar', [UserController::class, 'removeAvatar']);
 });
 
-// Shop routes (accessible by both shop_owner and admin)
-=======
 // Shop routes (accessible by both shop and admin)
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shops', [ShopController::class, 'index']);
@@ -73,7 +65,6 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Shop owner routes
->>>>>>> view_shop
 Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
     Route::apiResource('vehicles', VehicleController::class);
     Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
@@ -89,3 +80,4 @@ Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     // Add customer-specific routes here if needed
 });
+

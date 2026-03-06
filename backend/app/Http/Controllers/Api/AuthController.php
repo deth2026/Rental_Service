@@ -17,7 +17,7 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255',
             'phone' => 'required|string|max:20',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:customer,shop_owner,admin'
+            'role' => 'nullable|in:customer,shop_owner,admin'
         ]);
 
         $normalizedEmail = strtolower(trim((string) $payload['email']));
@@ -33,7 +33,7 @@ class AuthController extends Controller
             'email' => $normalizedEmail,
             'phone' => trim((string) $payload['phone']),
             'password' => Hash::make((string) $payload['password']),
-            'role' => $payload['role'],
+            'role' => $payload['role'] ?? 'customer',
             'is_verified' => false,
         ]);
 

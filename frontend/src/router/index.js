@@ -4,13 +4,8 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-<<<<<<< HEAD
-import DashboardLayout from '../views/shop/DashboardLayout.vue';
-import Setting from '../views/shop/setting.vue';
-=======
 import ShopDashboard from '../views/shop/Dashboard.vue';
 import UserDashboard from '../views/user/Dashboard.vue';
->>>>>>> view_shop
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
@@ -63,19 +58,8 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'dashboard',
-<<<<<<< HEAD
-      component: DashboardLayout,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
-    },
-    {
-      path: '/setting',
-      name: 'setting',
-      component: Setting,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin', 'customer'] }
-=======
       component: ShopDashboard,
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
->>>>>>> view_shop
     },
     {
       path: '/view_shop',
@@ -123,8 +107,10 @@ router.beforeEach((to, from, next) => {
     // Redirect based on role
     if (userRole === 'admin') {
       next('/admin');
-    } else {
+    } else if (userRole === 'shop_owner') {
       next('/dashboard');
+    } else {
+      next('/view_shop');
     }
     return;
   }
@@ -135,8 +121,10 @@ router.beforeEach((to, from, next) => {
       // User doesn't have the required role, redirect to their appropriate dashboard
       if (userRole === 'admin') {
         next('/admin');
-      } else {
+      } else if (userRole === 'shop_owner') {
         next('/dashboard');
+      } else {
+        next('/view_shop');
       }
       return;
     }
@@ -146,3 +134,4 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
+

@@ -357,8 +357,10 @@ const handleRegister = async () => {
       phone: form.phone.trim(),
       password: form.password,
       password_confirmation: form.confirmPassword,
-      role: selectedRole.value,
+      role: selectedRole.value || 'customer',
     };
+
+    console.log("Registering with payload:", payload);
 
     const requestInit = {
       method: "POST",
@@ -369,12 +371,18 @@ const handleRegister = async () => {
       body: JSON.stringify(payload),
     };
 
-    let response = await fetch("/api/users/register", requestInit);
+    // Try /api/register first (points to AuthController)
+    let response = await fetch("/api/register", requestInit);
+    console.log("Response status:", response.status);
+    
+    // If 404, try /api/users/register as fallback
     if (response.status === 404) {
-      response = await fetch("/api/register", requestInit);
+      response = await fetch("/api/users/register", requestInit);
+      console.log("Fallback response status:", response.status);
     }
 
     const data = await response.json().catch(() => ({}));
+    console.log("Response data:", data);
 
     if (response.ok) {
       // Reset form
@@ -401,14 +409,12 @@ const handleRegister = async () => {
         });
         errors.value = newErrors;
       } else {
-        errors.value.email =
-          data.message || "Registration failed. Please try again.";
+        errors.value.email = data.message || "Registration failed. Please try again.";
       }
     }
   } catch (error) {
     console.error("Registration error:", error);
-    errors.value.email =
-      error.message || "Network error. Please check your connection and try again.";
+    errors.value.email = error.message || "Network error. Please check if backend is running.";
   } finally {
     isLoading.value = false;
   }
