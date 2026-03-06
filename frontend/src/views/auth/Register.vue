@@ -351,6 +351,7 @@ const handleRegister = async () => {
   errors.value = {};
 
   try {
+<<<<<<< HEAD
     const data = await registerUser({
       name: form.fullName,
       email: form.email,
@@ -363,6 +364,32 @@ const handleRegister = async () => {
     successMessage.value =
       data?.message ||
       "Registration successful! Please check your email to verify your account.";
+=======
+    const payload = {
+      name: form.fullName.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      password: form.password,
+      password_confirmation: form.confirmPassword,
+      role: selectedRole.value,
+    };
+
+    const requestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    };
+
+    let response = await fetch("/api/users/register", requestInit);
+    if (response.status === 404) {
+      response = await fetch("/api/register", requestInit);
+    }
+
+    const data = await response.json().catch(() => ({}));
+>>>>>>> view_shop
 
     // Reset form
     form.fullName = "";
@@ -371,6 +398,7 @@ const handleRegister = async () => {
     form.password = "";
     form.confirmPassword = "";
 
+<<<<<<< HEAD
     // Redirect to login after successful registration
     setTimeout(() => {
       router.push("/login");
@@ -391,6 +419,39 @@ const handleRegister = async () => {
       errors.value.email =
         responseMessage || error.message || "Registration failed. Please try again.";
     }
+=======
+      // Reset form
+      form.fullName = "";
+      form.email = "";
+      form.phone = "";
+      form.password = "";
+      form.confirmPassword = "";
+
+      // Redirect to login after successful registration
+      setTimeout(() => {
+        router.push("/login");
+      }, 100);
+    } else {
+      // Handle validation errors from backend
+      if (data.errors) {
+        const newErrors = {};
+        Object.keys(data.errors).forEach((field) => {
+          newErrors[field === "name" ? "fullName" : field] =
+            Array.isArray(data.errors[field]) 
+              ? data.errors[field][0] 
+              : data.errors[field];
+        });
+        errors.value = newErrors;
+      } else {
+        errors.value.email =
+          data.message || "Registration failed. Please try again.";
+      }
+    }
+  } catch (error) {
+    console.error("Registration error:", error);
+    errors.value.email =
+      error.message || "Network error. Please check your connection and try again.";
+>>>>>>> view_shop
   } finally {
     isLoading.value = false;
   }

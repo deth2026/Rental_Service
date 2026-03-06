@@ -164,11 +164,57 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
+<<<<<<< HEAD
     const data = await loginUser({
       email: form.email,
       password: form.password,
     });
 
+=======
+    const email = form.email.trim().toLowerCase();
+    const requestInit = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password: form.password,
+      }),
+    };
+
+    let response = await fetch('/api/users/login', requestInit);
+    if (response.status === 404) {
+      response = await fetch('/api/login', requestInit);
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      // Handle Laravel validation error format
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (data.errors) {
+        // Get first field error
+        const firstField = Object.keys(data.errors)[0];
+        if (firstField && data.errors[firstField]) {
+          errorMessage = Array.isArray(data.errors[firstField]) 
+            ? data.errors[firstField][0] 
+            : data.errors[firstField];
+        }
+      } else if (data.message) {
+        errorMessage = data.message;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Store the token
+    localStorage.setItem('auth_token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+
+>>>>>>> view_shop
     console.log('Login successful:', data);
 
     // Redirect based on user role
@@ -176,7 +222,11 @@ const handleLogin = async () => {
     if (userRole === 'admin') {
       router.push('/admin');
     } else {
+<<<<<<< HEAD
       router.push('/dashboard');
+=======
+      router.push('/view_shop');
+>>>>>>> view_shop
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -187,4 +237,7 @@ const handleLogin = async () => {
   }
 };
 </script>
+<<<<<<< HEAD
 
+=======
+>>>>>>> view_shop

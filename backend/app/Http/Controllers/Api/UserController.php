@@ -43,11 +43,16 @@ class UserController extends Controller
      */
     public function login(Request $request)
     {
+        // Debug: log the raw input
+        $allInput = $request->all();
+        error_log("Login input: " . json_encode($allInput));
+        
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
 
+<<<<<<< HEAD
         $user = User::where('email', $request->email)->first();
         $passwordMatches = false;
 
@@ -73,6 +78,41 @@ class UserController extends Controller
         }
 
         if (!$user || !$passwordMatches) {
+=======
+        $normalizedEmail = strtolower(trim((string) $request->email));
+        $plainPassword = (string) $request->password;
+        $trimmedPassword = trim($plainPassword);
+        $user = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->first();
+        
+        error_log("User found: " . ($user ? $user->email : "null"));
+        if ($user) {
+            error_log("Stored password: " . $user->password);
+            error_log("Hash::check result: " . (Hash::check($plainPassword, $user->password) ? "true" : "false"));
+        }
+        
+        $isValidPassword = false;
+
+        if ($user) {
+            if (
+                Hash::check($plainPassword, (string) $user->password) ||
+                Hash::check($trimmedPassword, (string) $user->password) ||
+                password_verify($plainPassword, (string) $user->password) ||
+                password_verify($trimmedPassword, (string) $user->password)
+            ) {
+                $isValidPassword = true;
+            } elseif (
+                hash_equals((string) $user->password, $plainPassword) ||
+                hash_equals((string) $user->password, $trimmedPassword)
+            ) {
+                // Backward compatibility: migrate legacy plain-text passwords to hashed format.
+                $isValidPassword = true;
+                $user->password = Hash::make($trimmedPassword !== '' ? $trimmedPassword : $plainPassword);
+                $user->save();
+            }
+        }
+
+        if (!$user || !$isValidPassword) {
+>>>>>>> view_shop
             throw ValidationException::withMessages([
                 'password' => ['Incorrect password.'],
             ]);

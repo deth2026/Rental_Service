@@ -35,9 +35,10 @@ Route::get('/test', function () {
 });
 
 // Public authentication routes
-Route::post('/users/register', [AuthController::class, 'register']);
-Route::post('/register', [AuthController::class, 'register']); // Add this route for frontend compatibility
-Route::post('/users/login', [UserController::class, 'login']);
+Route::post('/users/register', [AuthController::class, 'register'])->name('users.register');
+Route::post('/register', [AuthController::class, 'register'])->name('api/register');
+Route::post('/login', [UserController::class, 'login'])->name('api/login');
+Route::post('/users/login', [UserController::class, 'login'])->name('users.login');
 
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
@@ -53,6 +54,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
+<<<<<<< HEAD
 // User routes - make update public for testing (remove auth for now)
 Route::put('/users/{user}', [UserController::class, 'update']);
 
@@ -63,9 +65,18 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Shop routes (accessible by both shop_owner and admin)
+=======
+// Shop routes (accessible by both shop and admin)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/shops', [ShopController::class, 'index']);
+    Route::get('/shops/{shop}', [ShopController::class, 'show']);
+});
+
+// Shop owner routes
+>>>>>>> view_shop
 Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
     Route::apiResource('vehicles', VehicleController::class);
-    Route::apiResource('shops', ShopController::class);
+    Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
     Route::apiResource('bookings', BookingController::class);
     Route::apiResource('booking-status-logs', BookingStatusLogController::class);
     Route::apiResource('damage-reports', DamageReportController::class);

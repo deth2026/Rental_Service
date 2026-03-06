@@ -12,20 +12,28 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
+        $payload = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email',
+            'email' => 'required|string|email|max:255',
             'phone' => 'required|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'required|in:customer,shop_owner,admin'
         ]);
 
+        $normalizedEmail = strtolower(trim((string) $payload['email']));
+        $exists = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->exists();
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'email' => ['This email is already registered. Please login.'],
+            ]);
+        }
+
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
+            'name' => trim((string) $payload['name']),
+            'email' => $normalizedEmail,
+            'phone' => trim((string) $payload['phone']),
+            'password' => Hash::make((string) $payload['password']),
+            'role' => $payload['role'],
             'is_verified' => false,
         ]);
 
