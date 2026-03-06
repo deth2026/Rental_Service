@@ -6,9 +6,109 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    /**
+     * Register a new user
+     */
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'role' => 'user',
+            'is_verified' => false,
+        ]);
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+        ], 201);
+    }
+
+    /**
+     * Login user
+     */
+    public function login(Request $request)
+    {
+        // Debug: log the raw input
+        $allInput = $request->all();
+        error_log("Login input: " . json_encode($allInput));
+        
+        $request->validate([
+            'email' => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+
+        $normalizedEmail = strtolower(trim((string) $request->email));
+        $plainPassword = (string) $request->password;
+        $trimmedPassword = trim($plainPassword);
+        $user = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->first();
+        
+        error_log("User found: " . ($user ? $user->email : "null"));
+        if ($user) {
+            error_log("Stored password: " . $user->password);
+            error_log("Hash::check result: " . (Hash::check($plainPassword, $user->password) ? "true" : "false"));
+        }
+        
+        $isValidPassword = false;
+
+        if ($user) {
+            if (
+                Hash::check($plainPassword, (string) $user->password) ||
+                Hash::check($trimmedPassword, (string) $user->password) ||
+                password_verify($plainPassword, (string) $user->password) ||
+                password_verify($trimmedPassword, (string) $user->password)
+            ) {
+                $isValidPassword = true;
+            } elseif (
+                hash_equals((string) $user->password, $plainPassword) ||
+                hash_equals((string) $user->password, $trimmedPassword)
+            ) {
+                // Backward compatibility: migrate legacy plain-text passwords to hashed format.
+                $isValidPassword = true;
+                $user->password = Hash::make($trimmedPassword !== '' ? $trimmedPassword : $plainPassword);
+                $user->save();
+            }
+        }
+
+        if (!$user || !$isValidPassword) {
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'user' => $user,
+            'token' => $token,
+        ]);
+    }
+
+    /**
+     * Logout user
+     */
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logged out successfully',
+        ]);
+    }
+
     public function index()
     {
         return response()->json(User::paginate(15));
