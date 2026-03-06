@@ -282,6 +282,7 @@
 <script setup>
 import { reactive, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { userService } from "../../services/database";
 
 const router = useRouter();
 const route = useRoute();
@@ -291,8 +292,25 @@ const successMessage = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 
+const ALLOWED_ROLES = ["customer", "shop_owner", "admin"];
+const ROLE_ALIASES = {
+  costomer: "customer",
+  shopper: "shop_owner",
+  shopowner: "shop_owner",
+};
+
+const normalizeRole = (value) => {
+  const raw = String(value || "")
+    .trim()
+    .toLowerCase();
+  const normalized = ROLE_ALIASES[raw] || raw;
+  return ALLOWED_ROLES.includes(normalized) ? normalized : "customer";
+};
+
 // Get role from query parameter or default to customer
-const selectedRole = ref(route.query.role || "customer");
+const selectedRole = ref(
+  normalizeRole(route.query.role || localStorage.getItem("selectedRole"))
+);
 
 const form = reactive({
   fullName: "",
@@ -350,13 +368,14 @@ const handleRegister = async () => {
   errors.value = {};
 
   try {
+    const normalizedRole = normalizeRole(selectedRole.value);
     const payload = {
       name: form.fullName.trim(),
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
       password: form.password,
       password_confirmation: form.confirmPassword,
-      role: selectedRole.value,
+      role: normalizedRole,
     };
 
     const requestInit = {
@@ -368,14 +387,49 @@ const handleRegister = async () => {
       body: JSON.stringify(payload),
     };
 
-    let response = await fetch("/api/users/register", requestInit);
-    if (response.status === 404) {
-      response = await fetch("/api/register", requestInit);
+    const registerEndpoints = ["/api/users/register", "/api/register"];
+    let response = null;
+    let lastError = null;
+
+    for (const endpoint of registerEndpoints) {
+      try {
+        const candidate = await fetch(endpoint, requestInit);
+        if (candidate.status === 404) {
+          continue;
+        }
+        response = candidate;
+        break;
+      } catch (error) {
+        lastError = error;
+        console.error(`Failed to fetch ${endpoint}:`, error);
+        continue;
+      }
     }
 
-    const data = await response.json().catch(() => ({}));
+    if (!response) {
+      // Only use localStorage fallback if explicitly requested, otherwise show error
+      console.error('API registration failed. Last error:', lastError);
+      errors.value.email = "Unable to connect to server. Please ensure the backend is running on port 8000.";
+      isLoading.value = false;
+      return;
+    }
+
+    const data = await response
+      .clone()
+      .json()
+      .catch(async () => {
+        const text = await response.text().catch(() => "");
+        return text ? { message: text } : {};
+      });
 
     if (response.ok) {
+      if (data?.token) {
+        localStorage.setItem("auth_token", data.token);
+      }
+      if (data?.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+      }
+
       successMessage.value =
         "Registration successful! Please check your email to verify your account.";
 
@@ -395,7 +449,14 @@ const handleRegister = async () => {
       if (data.errors) {
         const newErrors = {};
         Object.keys(data.errors).forEach((field) => {
-          newErrors[field === "name" ? "fullName" : field] =
+          const mappedField =
+            field === "name"
+              ? "fullName"
+              : field === "password_confirmation"
+              ? "confirmPassword"
+              : field;
+
+          newErrors[mappedField] =
             Array.isArray(data.errors[field]) 
               ? data.errors[field][0] 
               : data.errors[field];
@@ -408,8 +469,7 @@ const handleRegister = async () => {
     }
   } catch (error) {
     console.error("Registration error:", error);
-    errors.value.email =
-      error.message || "Network error. Please check your connection and try again.";
+    errors.value.email = error.message || "Network error. Please ensure the backend server is running on port 8000.";
   } finally {
     isLoading.value = false;
   }

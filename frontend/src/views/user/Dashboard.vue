@@ -83,6 +83,14 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+const goToHome = () => {
+  router.push('/view_shop')
+}
+
+const goToBookings = () => {
+  router.push('/my-bookings')
+}
+
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
@@ -108,8 +116,8 @@ onMounted(() => {
         </div>
 
         <nav class="top-nav" :class="{ active: isMobileMenuOpen }">
-          <a class="active" href="#" @click="closeMobileMenu">Home</a>
-          <a href="#" @click="closeMobileMenu">My Bookings</a>
+          <a class="active" href="#" @click.prevent="goToHome">Home</a>
+          <a href="#" @click.prevent="goToBookings">My Bookings</a>
           <a href="#" @click="closeMobileMenu">Support</a>
         </nav>
 

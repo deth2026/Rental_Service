@@ -6,6 +6,7 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/Dashboard.vue';
 import UserDashboard from '../views/user/Dashboard.vue';
+import UserBookings from '../views/user/Bookings.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
@@ -61,6 +62,12 @@ const router = createRouter({
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'admin'] }
+    },
+    {
+      path: '/my-bookings',
+      name: 'my-bookings',
+      component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'admin'] }
     },
     {
