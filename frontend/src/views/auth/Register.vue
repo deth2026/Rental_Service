@@ -351,20 +351,6 @@ const handleRegister = async () => {
   errors.value = {};
 
   try {
-<<<<<<< HEAD
-    const data = await registerUser({
-      name: form.fullName,
-      email: form.email,
-      phone: form.phone,
-      password: form.password,
-      password_confirmation: form.confirmPassword,
-      role: selectedRole.value,
-    });
-
-    successMessage.value =
-      data?.message ||
-      "Registration successful! Please check your email to verify your account.";
-=======
     const payload = {
       name: form.fullName.trim(),
       email: form.email.trim().toLowerCase(),
@@ -389,37 +375,8 @@ const handleRegister = async () => {
     }
 
     const data = await response.json().catch(() => ({}));
->>>>>>> view_shop
 
-    // Reset form
-    form.fullName = "";
-    form.email = "";
-    form.phone = "";
-    form.password = "";
-    form.confirmPassword = "";
-
-<<<<<<< HEAD
-    // Redirect to login after successful registration
-    setTimeout(() => {
-      router.push("/login");
-    }, 600);
-  } catch (error) {
-    const responseErrors = error?.response?.data?.errors;
-    const responseMessage = error?.response?.data?.message;
-
-    // Handle validation errors from backend
-    if (responseErrors) {
-      const newErrors = {};
-      Object.keys(responseErrors).forEach((field) => {
-        newErrors[field === "name" ? "fullName" : field] =
-          responseErrors[field][0];
-      });
-      errors.value = newErrors;
-    } else {
-      errors.value.email =
-        responseMessage || error.message || "Registration failed. Please try again.";
-    }
-=======
+    if (response.ok) {
       // Reset form
       form.fullName = "";
       form.email = "";
@@ -427,10 +384,11 @@ const handleRegister = async () => {
       form.password = "";
       form.confirmPassword = "";
 
-      // Redirect to login after successful registration
+      // Show success message and redirect to login
+      successMessage.value = "Registration successful! Redirecting to login...";
       setTimeout(() => {
         router.push("/login");
-      }, 100);
+      }, 1500);
     } else {
       // Handle validation errors from backend
       if (data.errors) {
@@ -451,7 +409,6 @@ const handleRegister = async () => {
     console.error("Registration error:", error);
     errors.value.email =
       error.message || "Network error. Please check your connection and try again.";
->>>>>>> view_shop
   } finally {
     isLoading.value = false;
   }

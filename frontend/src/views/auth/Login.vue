@@ -164,13 +164,6 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
-<<<<<<< HEAD
-    const data = await loginUser({
-      email: form.email,
-      password: form.password,
-    });
-
-=======
     const email = form.email.trim().toLowerCase();
     const requestInit = {
       method: 'POST',
@@ -214,7 +207,6 @@ const handleLogin = async () => {
     localStorage.setItem('auth_token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
 
->>>>>>> view_shop
     console.log('Login successful:', data);
 
     // Redirect based on user role
@@ -222,11 +214,7 @@ const handleLogin = async () => {
     if (userRole === 'admin') {
       router.push('/admin');
     } else {
-<<<<<<< HEAD
-      router.push('/dashboard');
-=======
       router.push('/view_shop');
->>>>>>> view_shop
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -237,7 +225,3 @@ const handleLogin = async () => {
   }
 };
 </script>
-<<<<<<< HEAD
-
-=======
->>>>>>> view_shop

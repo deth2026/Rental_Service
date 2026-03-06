@@ -52,33 +52,6 @@ class UserController extends Controller
             'password' => 'required|string',
         ]);
 
-<<<<<<< HEAD
-        $user = User::where('email', $request->email)->first();
-        $passwordMatches = false;
-
-        if ($user) {
-            $storedPassword = (string) $user->password;
-            $passwordMatches = Hash::check($request->password, $storedPassword);
-
-            // Fallback for legacy plaintext passwords and auto-upgrade to hashed.
-            if (!$passwordMatches) {
-                $looksHashed =
-                    str_starts_with($storedPassword, '$2y$') ||
-                    str_starts_with($storedPassword, '$2a$') ||
-                    str_starts_with($storedPassword, '$2b$') ||
-                    str_starts_with($storedPassword, '$argon2i$') ||
-                    str_starts_with($storedPassword, '$argon2id$');
-
-                if (!$looksHashed && hash_equals($storedPassword, (string) $request->password)) {
-                    $passwordMatches = true;
-                    $user->password = Hash::make($request->password);
-                    $user->save();
-                }
-            }
-        }
-
-        if (!$user || !$passwordMatches) {
-=======
         $normalizedEmail = strtolower(trim((string) $request->email));
         $plainPassword = (string) $request->password;
         $trimmedPassword = trim($plainPassword);
@@ -112,7 +85,6 @@ class UserController extends Controller
         }
 
         if (!$user || !$isValidPassword) {
->>>>>>> view_shop
             throw ValidationException::withMessages([
                 'password' => ['Incorrect password.'],
             ]);
