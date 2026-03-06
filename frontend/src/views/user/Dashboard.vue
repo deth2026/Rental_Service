@@ -2,13 +2,14 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
-import '../../Css/userDashboard.css'
+import '../css/userDashboard.css'
 
 const router = useRouter()
 
 const shops = ref([])
 const isLoadingShops = ref(false)
 const shopsError = ref('')
+const isMobileMenuOpen = ref(false)
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
@@ -82,6 +83,14 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+const toggleMobileMenu = () => {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+const closeMobileMenu = () => {
+  isMobileMenuOpen.value = false
+}
+
 onMounted(() => {
   loadShops()
 })
@@ -98,10 +107,10 @@ onMounted(() => {
           <div class="search-chip">🏬 {{ shops.length }} Shops</div>
         </div>
 
-        <nav class="top-nav">
-          <a class="active" href="#">Home</a>
-          <a href="#">My Bookings</a>
-          <a href="#">Support</a>
+        <nav class="top-nav" :class="{ active: isMobileMenuOpen }">
+          <a class="active" href="#" @click="closeMobileMenu">Home</a>
+          <a href="#" @click="closeMobileMenu">My Bookings</a>
+          <a href="#" @click="closeMobileMenu">Support</a>
         </nav>
 
         <div class="header-actions">
@@ -109,12 +118,18 @@ onMounted(() => {
           <div class="avatar">{{ userInitials }}</div>
           <button class="logout-btn" @click="handleLogout">Logout</button>
         </div>
+
+        <div class="menu-toggle" @click="toggleMobileMenu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
       </header>
 
       <section class="shops-section">
         <div class="results-head">
           <div class="choose-shop-box">
-            <h1>Choose a Shop</h1>
+            <h2>Choose a Shop</h2>
             <p>Select one shop to view its vehicles.</p>
           </div>
         </div>
