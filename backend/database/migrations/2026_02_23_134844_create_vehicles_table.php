@@ -11,16 +11,19 @@ return new class extends Migration
         Schema::create('vehicles', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('shop_id')->nullable();
+            $table->string('name');
             $table->string('type');
-            $table->string('brand');
-            $table->string('model');
-            $table->unsignedSmallInteger('year');
+            $table->string('brand')->nullable();
+            $table->string('model')->nullable();
+            $table->string('plate_number')->nullable();
             $table->decimal('price_per_day', 10, 2);
             $table->string('fuel_type')->nullable();
             $table->string('transmission')->nullable();
-            $table->string('status')->default('available');
-            $table->string('image_url')->nullable();
-            $table->timestamp('create_at')->useCurrent();
+            $table->string('status')->default('Available');
+            $table->text('description')->nullable();
+            $table->text('image_url')->nullable();  // Changed to TEXT for base64 images
+            $table->text('photos')->nullable();      // Changed to TEXT for base64 images
+            $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
         });
     }
