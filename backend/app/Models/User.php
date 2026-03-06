@@ -21,6 +21,7 @@ class User extends Authenticatable
         'password',
         'role',
         'is_verified',
+        'profile_picture',
     ];
 
     protected $hidden = [
@@ -29,7 +30,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'password' => 'hashed',
+        'password'    => 'hashed',
         'is_verified' => 'boolean',
     ];
 }

@@ -27,6 +27,8 @@ Route::get('/test', function () {
 });
 
 Route::apiResource('users', UserController::class);
+Route::post('users/{id}/update-profile', [UserController::class, 'updateProfile']);
+Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
 Route::apiResource('categories', CategoryController::class);
 Route::apiResource('vehicles', VehicleController::class);
 Route::apiResource('shops', ShopController::class);

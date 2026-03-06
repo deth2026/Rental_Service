@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import HomeView from '../views/HomeView.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import Dashboard from '../views/shop/Dashboard.vue';
+import SettingUser from '../views/user/Setting_user.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -23,11 +23,10 @@ const router = createRouter({
       component: Register
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: Dashboard
+      path: '/settings',
+      name: 'settings',
+      component: SettingUser
     }
-   
   ]
 })
 
