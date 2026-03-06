@@ -11,6 +11,24 @@ const isLoadingShops = ref(false)
 const shopsError = ref('')
 const isMobileMenuOpen = ref(false)
 
+// Navbar state
+const location = ref('Phnom Penh')
+const dateRange = ref('Mar 15 - Mar 18')
+const navItems = ref(['Home', 'My Bookings', 'Support', 'About'])
+const activeNav = ref('Home')
+
+const setActiveNav = (item) => {
+  activeNav.value = item
+}
+
+const handleSearch = () => {
+  console.log('Search clicked')
+}
+
+const notify = (message) => {
+  console.log(message)
+}
+
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
 const userInitials = computed(() => {
@@ -99,30 +117,34 @@ onMounted(() => {
 <template>
   <div class="rides-page">
     <div class="rides-shell">
-      <header class="top-header">
-        <div class="brand">Cambodia <span>Rides</span></div>
-
-        <div class="search-chip-group">
-          <div class="search-chip">👋 {{ userDisplayName }}</div>
-          <div class="search-chip">🏬 {{ shops.length }} Shops</div>
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+          <span>Cambodia Rides</span>
         </div>
 
-        <nav class="top-nav" :class="{ active: isMobileMenuOpen }">
-          <a class="active" href="#" @click="closeMobileMenu">Home</a>
-          <a href="#" @click="closeMobileMenu">My Bookings</a>
-          <a href="#" @click="closeMobileMenu">Support</a>
-        </nav>
+        <button class="search-pill btn-reset" @click="handleSearch">
+          <span class="pill-item"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> {{ location }}</span>
+          <span class="pill-sep"></span>
+          <span class="pill-item"><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ dateRange }}</span>
+          <span class="pill-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+        </button>
 
-        <div class="header-actions">
-          <span class="notify">🔔</span>
-          <div class="avatar">{{ userInitials }}</div>
-          <button class="logout-btn" @click="handleLogout">Logout</button>
-        </div>
+        <div class="top-actions">
+          <nav class="nav-links">
+            <button
+              v-for="item in navItems"
+              :key="item"
+              class="btn-reset nav-link"
+              :class="{ active: activeNav === item }"
+              @click="setActiveNav(item)"
+            >
+              {{ item }}
+            </button>
+          </nav>
 
-        <div class="menu-toggle" @click="toggleMobileMenu">
-          <span></span>
-          <span></span>
-          <span></span>
+          <button class="btn-reset avatar" @click="notify('Profile opened')">{{ userInitials }}</button>
+          <button class="btn-reset logout-btn" @click="handleLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span></button>
         </div>
       </header>
 
