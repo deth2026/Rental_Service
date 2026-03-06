@@ -685,7 +685,7 @@ onBeforeUnmount(() => {
 }
 
 .lang-btn.active {
-  background: #1d4ed8;
+  background: #2054e4;
   color: #fff;
   border-color: #1d4ed8;
 }
