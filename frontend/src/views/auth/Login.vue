@@ -263,6 +263,8 @@ const handleLogin = async () => {
     const userRole = user?.role;
     if (userRole === 'admin') {
       router.push('/admin');
+    } else if (userRole === 'shop_owner') {
+      router.push('/dashboard');
     } else {
       router.push('/view_shop');
     }
