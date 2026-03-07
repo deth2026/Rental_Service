@@ -1,3 +1,5 @@
+
+
 <template>
   <div class="home-page">
     <header class="top-nav">
@@ -170,7 +172,6 @@
 
 <script setup>
 import { reactive } from 'vue'
-const brandIcon = 'https://assets.grok.com/users/3eaabd2d-e536-46ac-a895-d7d0a98c809b/generated/a293c403-a50c-4f3e-9f39-e2b50f077872/image.jpg'
 
 const search = reactive({
   type: 'All Vehicles',
@@ -248,4 +249,10 @@ const rides = [
   }
 ]
 </script>
+
+<style>
+@import "../css/HomeView.css";
+</style>
+
+
 

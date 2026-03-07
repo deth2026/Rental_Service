@@ -173,7 +173,7 @@
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../../services/auth";
-import "../css/login.css";
+import "../../css/login.css";
 
 const router = useRouter();
 const isLoading = ref(false);

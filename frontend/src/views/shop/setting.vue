@@ -119,19 +119,21 @@
                 <div class="language-options">
                   <button 
                     type="button" 
-                    class="lang-btn" 
+                    class="lang-btn notranslate"
+                    translate="no"
                     :class="{ active: currentLanguage === 'en' }"
                     @click="changeLanguage('en')"
                   >
-                    {{ t('english') }}
+                    English
                   </button>
                   <button 
                     type="button" 
-                    class="lang-btn" 
+                    class="lang-btn notranslate"
+                    translate="no"
                     :class="{ active: currentLanguage === 'kh' }"
                     @click="changeLanguage('kh')"
                   >
-                    {{ t('khmer') }}
+                    Khmer
                   </button>
                 </div>
               </div>
@@ -197,7 +199,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import api from '../../services/api';
 import { logoutUser } from '../../services/auth';
-import { setLanguage, getCurrentLanguage } from '../../i18n';
+import { setLanguage, getCurrentLanguage, syncAutoTranslateWithCurrentLanguage } from '../../i18n';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -211,6 +213,12 @@ const confirmLogoutText = computed(() => {
 const changeLanguage = (lang) => {
   setLanguage(lang);
   currentLanguage.value = lang;
+  const delays = [120, 450, 1000];
+  delays.forEach((delay) => {
+    setTimeout(() => {
+      syncAutoTranslateWithCurrentLanguage();
+    }, delay);
+  });
 };
 
 const loading = ref(false);
@@ -658,7 +666,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-@import "../../assets/setting.css";
+@import "../../css/setting.css";
 
 /* Language Selector Styles - Near Notifications */
 .language-box {
