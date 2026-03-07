@@ -1321,12 +1321,6 @@ h2 {
   align-items: center;
   gap: 8px;
 }
-
-.role-label::before {
-  content: '👤';
-  font-size: 16px;
-}
-
 .role-badge {
   background: #00aeef;
   color: white;
@@ -1363,23 +1357,6 @@ h2 {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(135, 206, 250, 0.4);
 }
-
-/* Role-specific icons */
-.role-badge[data-role="customer"]::after {
-  content: '🛍️';
-  font-size: 14px;
-}
-
-.role-badge[data-role="shop_owner"]::after {
-  content: '🏪';
-  font-size: 14px;
-}
-
-.role-badge[data-role="admin"]::after {
-  content: '⚙️';
-  font-size: 14px;
-}
-
 .change-role-btn {
   background: #00aeef;
   border: none;
@@ -1390,7 +1367,7 @@ h2 {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  margin-left: auto;
+  margin-left: 10;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -1398,12 +1375,6 @@ h2 {
   gap: 6px;
   box-shadow: 0 4px 15px rgba(135, 206, 250, 0.3);
 }
-
-.change-role-btn::before {
-  content: '🔄';
-  font-size: 12px;
-}
-
 .change-role-btn::after {
   content: '';
   position: absolute;

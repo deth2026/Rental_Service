@@ -311,7 +311,7 @@
 import { reactive, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { registerUser } from "../../services/auth";
-import "../css/login.css";
+import "../../css/login.css";
 
 const router = useRouter();
 const route = useRoute();
