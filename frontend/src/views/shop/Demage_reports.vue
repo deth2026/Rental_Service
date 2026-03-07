@@ -5,6 +5,17 @@ import { couponApi } from '@/services/api'
 const loading = ref(true)
 const error = ref(null)
 
+const formatDateOnly = (value) => {
+  if (!value) return ''
+  const datePart = String(value).split('T')[0]
+  const d = new Date(datePart)
+  if (Number.isNaN(d.getTime())) return datePart
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}/${month}/${year}`
+}
+
 // Fetch coupons from database
 const fetchCoupons = async () => {
   try {
@@ -16,10 +27,10 @@ const fetchCoupons = async () => {
     reports.value = data.map(c => ({
       id: c.id,
       vehicle: c.code || 'N/A',
-      description: c.description || (c.discount_percent ? `${c.discount_percent}% discount` : `$${c.discount_amount} off`),
-      penalty: c.discount_amount || c.discount_percent || 0,
-      date: c.valid_from || '',
-      validUntil: c.valid_until || '',
+      description: c.description || 'Discount coupon',
+      discountPercent: Number(c.discount_percent || 0),
+      date: formatDateOnly(c.valid_from || ''),
+      validUntil: formatDateOnly(c.valid_until || ''),
       usageLimit: c.usage_limit || 'Unlimited',
       isActive: c.is_active || false,
       minimumAmount: c.minimum_amount || 0
@@ -99,7 +110,7 @@ const closeModal = () => {
             <td class="id-cell">#{{ r.id }}</td>
             <td class="vehicle-cell">{{ r.vehicle }}</td>
             <td class="description-cell">{{ r.description }}</td>
-            <td class="penalty-cell">${{ r.penalty }}</td>
+            <td class="penalty-cell">{{ r.discountPercent }}%</td>
             <td class="date-cell">{{ r.date }}</td>
           </tr>
         </tbody>
@@ -134,7 +145,7 @@ const closeModal = () => {
           </div>
           <div class="detail-row">
             <span class="detail-label">Discount Amount</span>
-            <span class="detail-value penalty">${{ selectedReport.penalty }}</span>
+            <span class="detail-value penalty">{{ selectedReport.discountPercent }}%</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Valid From</span>

@@ -36,7 +36,7 @@ class User extends Authenticatable
     ];
 
     protected $casts = [
-        'password' => 'hashed',
+        'password'    => 'hashed',
         'is_verified' => 'boolean',
     ];
 
@@ -68,3 +68,4 @@ class User extends Authenticatable
         return asset($normalized);
     }
 }
+

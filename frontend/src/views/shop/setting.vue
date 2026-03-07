@@ -50,6 +50,14 @@
             </label>
 
             <label class="field">
+              <span>Status</span>
+              <select v-model="form.shop_status">
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </select>
+            </label>
+
+            <label class="field">
               <span>{{ t('phoneNumber') }}</span>
               <input v-model="form.phone" type="text" />
             </label>
@@ -111,19 +119,21 @@
                 <div class="language-options">
                   <button 
                     type="button" 
-                    class="lang-btn" 
+                    class="lang-btn notranslate"
+                    translate="no"
                     :class="{ active: currentLanguage === 'en' }"
                     @click="changeLanguage('en')"
                   >
-                    {{ t('english') }}
+                    English
                   </button>
                   <button 
                     type="button" 
-                    class="lang-btn" 
+                    class="lang-btn notranslate"
+                    translate="no"
                     :class="{ active: currentLanguage === 'kh' }"
                     @click="changeLanguage('kh')"
                   >
-                    {{ t('khmer') }}
+                    Khmer
                   </button>
                 </div>
               </div>
@@ -189,7 +199,7 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import api from '../../services/api';
 import { logoutUser } from '../../services/auth';
-import { setLanguage, getCurrentLanguage } from '../../i18n';
+import { setLanguage, getCurrentLanguage, syncAutoTranslateWithCurrentLanguage } from '../../i18n';
 
 const { t } = useI18n();
 const router = useRouter();
@@ -203,6 +213,12 @@ const confirmLogoutText = computed(() => {
 const changeLanguage = (lang) => {
   setLanguage(lang);
   currentLanguage.value = lang;
+  const delays = [120, 450, 1000];
+  delays.forEach((delay) => {
+    setTimeout(() => {
+      syncAutoTranslateWithCurrentLanguage();
+    }, delay);
+  });
 };
 
 const loading = ref(false);
@@ -262,6 +278,7 @@ const form = reactive({
   name: '',
   email: '',
   shop_name: '',
+  shop_status: 'active',
   phone: '',
   shop_address: '',
   notifications_enabled: true,
@@ -372,6 +389,7 @@ const loadData = async () => {
     if (cachedShop) {
       currentShopId.value = cachedShop.id || null;
       form.shop_name = cachedShop.name || '';
+      form.shop_status = cachedShop.status || 'active';
       form.shop_address = cachedShop.address || '';
       form.phone = cachedShop.phone || storedUser.phone || '';
     }
@@ -406,6 +424,7 @@ const loadData = async () => {
     form.email = user.email || '';
     form.phone = selectedShop?.phone || user.phone || '';
     form.shop_name = selectedShop?.name || '';
+    form.shop_status = selectedShop?.status || 'active';
     form.shop_address = selectedShop?.address || '';
     form.password = '';
 
@@ -602,7 +621,7 @@ const saveSettings = async () => {
       name: form.shop_name,
       address: form.shop_address || '',
       phone: form.phone || '',
-      status: 'active'
+      status: form.shop_status || 'active'
     };
 
     if (currentShopId.value) {
@@ -614,6 +633,7 @@ const saveSettings = async () => {
     setCachedShop(user.id, {
       id: currentShopId.value,
       name: form.shop_name,
+      status: form.shop_status || 'active',
       address: form.shop_address,
       phone: form.phone
     });
@@ -646,7 +666,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
-@import "../../assets/setting.css";
+@import "../../css/setting.css";
 
 /* Language Selector Styles - Near Notifications */
 .language-box {
@@ -692,20 +712,21 @@ onBeforeUnmount(() => {
 
 .settings-toast {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  bottom: 20px;
+  right: 20px;
   z-index: 1200;
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 260px;
-  max-width: min(92vw, 420px);
-  padding: 12px 14px;
-  border-radius: 10px;
+  min-width: 220px;
+  max-width: min(92vw, 360px);
+  padding: 14px 20px;
+  border-radius: 8px;
   border: 1px solid #bfe9d2;
   background: #ecfbf3;
   color: #136b44;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
 }
 
 .settings-toast.is-error {
@@ -725,14 +746,25 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
 .creative-logout-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   border: none;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 10px 16px;
-  background: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
+  background: #2563eb;
   color: #ffffff;
   box-shadow: 0 8px 18px rgba(29, 78, 216, 0.28);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
