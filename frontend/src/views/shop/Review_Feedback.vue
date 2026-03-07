@@ -168,7 +168,7 @@ const getStars = (rating) => {
 /* Container */
 .reviews-container {
   padding: 20px;
-  max-width: 900px;
+  /* max-width: 900px; */
   margin: 0 auto;
 }
 
@@ -178,7 +178,8 @@ const getStars = (rating) => {
   font-weight: 700;
   color: #1e293b;
   margin-bottom: 24px;
-  text-align: left;
+  text-align: left;  
+  
 }
 
 /* Reviews List */

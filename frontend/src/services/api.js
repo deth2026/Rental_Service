@@ -84,6 +84,15 @@ export const feedbackApi = {
   delete: (id) => api.delete(`/feedback/${id}`)
 };
 
+// Histories (Activity) API calls
+export const historiesApi = {
+  getAll: () => api.get('/histories'),
+  getById: (id) => api.get(`/histories/${id}`),
+  create: (data) => api.post('/histories', data),
+  update: (id, data) => api.put(`/histories/${id}`, data),
+  delete: (id) => api.delete(`/histories/${id}`)
+};
+
 // Loyalty Points API calls
 export const loyaltyPointApi = {
   getAll: () => api.get('/loyalty-points'),

@@ -9,6 +9,7 @@ import Coupons from './Coupons.vue'
 import MyShop from './myShop.vue'
 import LoyaltyPoints from './Loyalty_points.vue'
 import Setting from './setting.vue'
+import ActivityHistory from './ActivityHistory.vue'
 import api, { shopApi, vehicleApi } from '@/services/api'
 import { getSessionUser, logoutUser } from '@/services/auth'
 
@@ -31,8 +32,7 @@ const sections = [
   { id: 'coupons', label: 'Coupons', icon: 'ticket' },
   { id: 'loyalty', label: 'Loyalty Points', icon: 'gift' },
   { id: 'activity', label: 'Activity History', icon: 'history' },
-  { id: 'settings', label: 'Settings', icon: 'settings' },
-  { id: 'logout', label: 'Logout', icon: 'logout' }
+  { id: 'settings', label: 'Settings', icon: 'settings' }
 ]
 
 const active = ref('dashboard')
@@ -40,6 +40,7 @@ const isSidebarCollapsed = ref(false)
 const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 240))
 const sessionUser = ref(getSessionUser() || {})
 const avatarLoadFailed = ref(false)
+const showUserMenu = ref(false)
 const apiOrigin = computed(() => {
   try {
     return new URL(api.defaults.baseURL, window.location.origin).origin
@@ -143,6 +144,15 @@ const confirmLogout = async () => {
   } finally {
     router.push('/login')
   }
+}
+
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+}
+
+const goToSettings = () => {
+  showUserMenu.value = false
+  active.value = 'settings'
 }
 
 const vehicles = ref([])
@@ -538,7 +548,7 @@ const iconSvg = (name) => {
   const icons = {
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
     shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9l1.5-5h13L20 9"/><path d="M5 10h14v9H5z"/><path d="M9 14h6"/></svg>',
-    car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 13v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="16.5" cy="17.5" r="1.5"/></svg>',
+    car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
     calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>',
     activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 18h14"/><path d="M8 16V9"/><path d="M12 16V6"/><path d="M16 16v-4"/></svg>',
     dollar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20"/><path d="M17 6.5a4 4 0 0 0-3-1.2h-3a3 3 0 1 0 0 6h2a3 3 0 1 1 0 6H9a4 4 0 0 1-3-1.2"/></svg>',
@@ -551,7 +561,7 @@ const iconSvg = (name) => {
     history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>',
     settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"/></svg>',
     logout: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
-    brand: '<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" /><stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" /></linearGradient></defs><rect width="120" height="120" rx="20" fill="url(#bgGrad)"/><g transform="translate(30, 45)"><path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/><path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/><g transform="translate(15, -5)"><rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/><circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/><circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/><path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/></g></g></svg>',
+    brand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M10 17a2 2 0 0 0 4 0"/></svg>'
   }
   return icons[name] || ''
@@ -577,32 +587,79 @@ const iconSvg = (name) => {
         </div>
       </div>
 
-      <div class="menu-title">MENU</div>
-      <button v-for="item in sections" :key="item.id" class="menu-item" :class="{ active: item.id === active }"
-        @click="onMenuClick(item)">
-        <span class="menu-icon" v-html="iconSvg(item.icon)"></span>
-        <span class="menu-label">{{ item.label }}</span>
-      </button>
+<div class="menu-area">
+        <div class="menu-title">MENU</div>
+        <button v-for="item in sections" :key="item.id" class="menu-item" :class="{ active: item.id === active }"
+          @click="onMenuClick(item)">
+          <span class="menu-icon" v-html="iconSvg(item.icon)"></span>
+          <span class="menu-label">{{ item.label }}</span>
+        </button>
+      </div>
+      
+      <div class="sidebar-footer">
+        <button class="menu-item logout-item" @click="showLogoutModal = true">
+          <span class="menu-icon logout-icon" v-html="iconSvg('logout')"></span>
+          <span class="menu-label">Logout</span>
+        </button>
+      </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div class="topbar-left">
-          <span class="topbar-icon" v-html="iconSvg('grid')"></span>
+          <span class="topbar-icon" v-html="iconSvg(sections.find((s) => s.id === active)?.icon || 'grid')"></span>
           <h1>{{sections.find((s) => s.id === active)?.label}}</h1>
         </div>
         <div class="topbar-right">
-          <button class="bell-btn" v-html="iconSvg('bell')"></button>
-          <div class="bell-dot"></div>
-        </div>
-        <div class="user-box">
-          <div class="avatar">
-            <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="User profile" class="avatar-img" @error="onAvatarError" />
-            <span v-else>{{ displayInitials }}</span>
-          </div>
-          <div>
-            <strong>{{ displayName }}</strong>
-            <p>{{ displayRole }}</p>
+          <button class="bell-btn">
+            <span class="bell-icon" v-html="iconSvg('bell')"></span>
+            <span class="bell-dot"></span>
+          </button>
+          <div class="user-box">
+            <div class="user-dropdown" @click="toggleUserMenu">
+              <div class="avatar">
+                <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="User profile" class="avatar-img" @error="onAvatarError" />
+                <span v-else>{{ displayInitials }}</span>
+              </div>
+              <div class="user-info">
+                <strong>{{ displayName }}</strong>
+                <p>{{ displayRole }}</p>
+              </div>
+              <svg class="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              
+              <!-- Dropdown Menu -->
+              <div v-if="showUserMenu" class="user-dropdown-menu">
+                <div class="dropdown-header">
+                  <div class="dropdown-avatar">
+                    <img v-if="displayAvatarUrl" :src="displayAvatarUrl" alt="User profile" class="avatar-img" @error="onAvatarError" />
+                    <span v-else>{{ displayInitials }}</span>
+                  </div>
+                  <div class="dropdown-user-info">
+                    <strong>{{ displayName }}</strong>
+                    <p>{{ displayRole }}</p>
+                    <p class="user-email">{{ sessionUser?.email || '' }}</p>
+                  </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item" @click="goToSettings">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"/>
+                  </svg>
+                  Settings
+                </button>
+                <button class="dropdown-item" @click="showLogoutModal = true; showUserMenu = false">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -613,7 +670,7 @@ const iconSvg = (name) => {
 
         <div class="stats dashboard-cards">
           <article class="card"><span>Total Bookings</span>
-            <h3>{{ totalBookings }}</h3><b class="stat-icon icon-blue" v-html="iconSvg('calendar')"></b>
+            <h3>{{ totalBookings }}</h3><b class="stat-icon icon-teal" v-html="iconSvg('calendar')"></b>
           </article>
           <article class="card"><span>Total Earnings</span>
             <h3>${{ totalEarnings }}</h3><b class="stat-icon icon-green" v-html="iconSvg('dollar')"></b>
@@ -628,10 +685,10 @@ const iconSvg = (name) => {
             <h3>${{ monthlyIncome }}</h3><b class="stat-icon icon-green" v-html="iconSvg('trend')"></b>
           </article>
           <article class="card"><span>New Customers</span>
-            <h3>{{ newCustomers }}</h3><b class="stat-icon icon-sky" v-html="iconSvg('users')"></b>
+            <h3>{{ newCustomers }}</h3><b class="stat-icon icon-teal" v-html="iconSvg('users')"></b>
           </article>
           <article class="card"><span>Average Rating</span>
-            <h3>{{ averageRating }}</h3><b class="stat-icon icon-orange" v-html="iconSvg('star')"></b>
+            <h3>{{ averageRating }}</h3><b class="stat-icon icon-yellow" v-html="iconSvg('star')"></b>
           </article>
         </div>
 
@@ -671,6 +728,10 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'loyalty'" class="loyalty-view">
         <LoyaltyPoints />
+      </section>
+
+      <section v-else-if="active === 'activity'" class="activity-view">
+        <ActivityHistory />
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
@@ -739,7 +800,12 @@ const iconSvg = (name) => {
                   <img :src="v.image || sampleThumb" alt="Vehicle"
                     style="width: 50px; height: 35px; object-fit: cover; border-radius: 4px;" />
                 </td>
-                <td>{{ v.name }}</td>
+                <td>
+                  <span class="vehicle-name-cell">
+                    <span class="vehicle-row-icon" v-html="iconSvg('car')"></span>
+                    {{ v.name }}
+                  </span>
+                </td>
                 <td>{{ v.category }}</td>
                 <td>{{ v.plate }}</td>
                 <td>${{ v.price }}</td>
@@ -907,14 +973,20 @@ const iconSvg = (name) => {
 
         <!-- Footer -->
         <div class="add-vehicle-footer">
-          <button class="discard-btn" @click="modal = false">Discard Draft</button>
+          <button class="cancel-btn-modal" @click="modal = false">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Cancel
+          </button>
           <button class="store-btn" @click="saveVehicle">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
               <polyline points="17 21 17 13 7 13 7 21"></polyline>
               <polyline points="7 3 7 8 15 8"></polyline>
             </svg>
-            {{ editId ? 'Update Vehicle' : 'Store Product' }}
+            {{ editId ? 'Update Vehicle' : 'Store Vehicle' }}
           </button>
         </div>
       </div>
@@ -968,10 +1040,13 @@ const iconSvg = (name) => {
   </div>
 </template>
 
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+</style>
+
 <style scoped>
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  overflow: hidden;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 .toast {
@@ -1120,6 +1195,7 @@ const iconSvg = (name) => {
   display: flex;
   background: #f1f3f7;
   color: #0f172a;
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 .sidebar {
@@ -1134,6 +1210,8 @@ const iconSvg = (name) => {
   overflow: visible;
   transition: width .2s ease, flex-basis .2s ease;
   z-index: 20;
+  display: flex;
+  flex-direction: column;
 }
 
 .page.sidebar-collapsed .sidebar {
@@ -1143,12 +1221,13 @@ const iconSvg = (name) => {
 
 .sidebar-toggle {
   position: absolute;
-  right: -14px;
+  right: 0;
+  transform: translateX(50%);
   top: 72px;
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px;
-  min-height: 28px;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px;
+  min-height: 32px;
   border-radius: 999px !important;
   background: #f8fafc;
   border: 1px solid #dbe1ea;
@@ -1159,7 +1238,7 @@ const iconSvg = (name) => {
   z-index: 50;
   line-height: 0;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.28);
 }
 
 .toggle-icon {
@@ -1192,11 +1271,11 @@ const iconSvg = (name) => {
 }
 
 .brand-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: transparent;
-  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0891b2;
   font-weight: 700;
   display: grid;
   place-items: center;
@@ -1268,103 +1347,155 @@ const iconSvg = (name) => {
 }
 
 .menu-item.active {
-  background: #11244d;
+  background: rgba(255, 255, 255, 0.10);
   color: #fff;
+  border-left: 3px solid #22d3ee;
+  padding-left: 9px;
+}
+
+.menu-item.active .menu-icon {
+  background: rgba(34, 211, 238, 0.18);
+  color: #22d3ee;
 }
 
 .main {
   flex: 1;
   min-width: 0;
-  padding: 0 18px 18px;
+  padding: 0 0 18px;
+  overflow-x: hidden;
 }
 
 .topbar {
-  height: 70px;
-  margin: 0 -18px 10px;
-  padding: 0 18px;
+  min-height: 64px;
+  margin: 0 0 20px;
+  padding: 0 16px 0 20px;
   border-bottom: 1px solid #dbe1ea;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: auto;
+  gap: 12px;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .topbar h1 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
 }
 
 .topbar-icon {
   width: 20px;
   height: 20px;
   color: #1f2937;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
 }
 
 .topbar-icon :deep(svg) {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .topbar-right {
-  margin-left: auto;
-  margin-right: 12px;
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 240px;
+  flex-shrink: 0;
 }
 
 .bell-btn {
-  width: 28px;
-  height: 28px;
+  position: relative;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  background: transparent;
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  color: #334155;
+  color: #64748b;
   padding: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.bell-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 .bell-btn :deep(svg) {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
+}
+
+.bell-icon {
+  display: inline-flex;
+  line-height: 0;
 }
 
 .bell-dot {
   position: absolute;
-  right: 4px;
-  top: 4px;
-  width: 7px;
-  height: 7px;
+  right: 7px;
+  top: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #ef4444;
+  border: 2px solid #fff;
+  pointer-events: none;
 }
 
 .user-box {
+  position: relative;
+  margin-right: 0;
+}
+
+.user-dropdown {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.user-dropdown:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
 }
 
 .avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #2f6bff;
+  background: #0ea5e9;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .avatar-img {
@@ -1373,26 +1504,173 @@ const iconSvg = (name) => {
   object-fit: cover;
 }
 
-.user-box strong {
-  display: block;
-  font-size: 14px;
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 120px;
 }
 
-.user-box p {
+.user-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-info p {
   margin: 0;
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e2e8f0;
+  z-index: 100;
+  overflow: hidden;
+  animation: dropdownFade 0.2s ease;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dropdown-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.dropdown-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dropdown-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dropdown-user-info strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 2px;
+}
+
+.dropdown-user-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.user-email {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  margin-top: 2px !important;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e2e8f0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.dropdown-item svg {
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.dropdown-item:hover svg {
+  color: #3b82f6;
+}
+
+.dashboard-view {
+  padding: 0 24px 24px;
 }
 
 .dashboard-view h2 {
   margin: 0;
-  font-size: 42px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #0f172a;
 }
 
 .sub {
-  margin: 8px 0 20px;
-  color: #607080;
-  font-size: 16px;
+  margin: 6px 0 22px;
+  color: #64748b;
+  font-size: 15px;
 }
 
 .stats {
@@ -1403,7 +1681,22 @@ const iconSvg = (name) => {
 }
 
 .dashboard-cards .card {
-  min-height: 116px;
+  min-height: 110px;
+  padding: 18px 16px;
+}
+
+.dashboard-cards .card span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #64748b;
+}
+
+.dashboard-cards .card h3 {
+  font-size: 30px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 10px 0 0;
 }
 
 .stats.compact {
@@ -1428,7 +1721,7 @@ const iconSvg = (name) => {
 
 .card h3 {
   margin: 8px 0 4px;
-  font-size: 42px;
+  font-size: 28px;
 }
 
 .card small {
@@ -1440,17 +1733,22 @@ const iconSvg = (name) => {
   position: absolute;
   right: 14px;
   top: 14px;
-  width: 30px;
-  height: 30px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: inline-grid;
   place-items: center;
   color: inherit;
 }
 
 .stat-icon :deep(svg) {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
+}
+
+.icon-teal {
+  background: #ccfbf1;
+  color: #0891b2;
 }
 
 .icon-blue {
@@ -1459,32 +1757,39 @@ const iconSvg = (name) => {
 }
 
 .icon-green {
-  background: #e7f7ef;
+  background: #dcfce7;
   color: #16a34a;
 }
 
 .icon-sky {
-  background: #e7f4fb;
+  background: #e0f2fe;
   color: #0284c7;
 }
 
 .icon-orange {
-  background: #fff3e3;
+  background: #ffedd5;
   color: #d97706;
+}
+
+.icon-yellow {
+  background: #fef9c3;
+  color: #ca8a04;
 }
 
 .activity-card,
 .panel {
   background: #fff;
-  border: 1px solid #d7dee9;
+  border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 14px;
+  padding: 20px;
 }
 
 .activity-card h3,
 .panel h3 {
-  margin: 4px 0 8px;
+  margin: 0 0 16px;
   font-size: 18px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .activity-row {
@@ -1524,8 +1829,9 @@ const iconSvg = (name) => {
 
 table {
   width: 100%;
-  min-width: 820px;
+  min-width: 500px;
   border-collapse: collapse;
+  
 }
 
 th,
@@ -1866,6 +2172,38 @@ textarea {
 
   .menu-item {
     font-size: 14px;
+  }
+
+  .sidebar-toggle {
+    right: 0;
+    transform: translateX(50%);
+    top: 10px;
+  }
+
+  .topbar {
+    min-height: 58px;
+    padding: 0 12px;
+  }
+
+  .topbar h1 {
+    font-size: 16px;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  .user-box {
+    margin-right: 0;
+  }
+
+  .user-dropdown {
+    padding-right: 6px;
+  }
+
+  .user-info,
+  .dropdown-arrow {
+    display: none;
   }
 
   .filters,
@@ -2878,6 +3216,26 @@ textarea {
   background: #2563eb;
 }
 
+.cancel-btn-modal {
+  padding: 10px 20px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-btn-modal:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
 @media (max-width: 768px) {
   .add-vehicle-content {
     grid-template-columns: 1fr;
@@ -2897,5 +3255,155 @@ textarea {
     width: 100%;
     justify-content: center;
   }
+}
+
+/* Sidebar layout helpers */
+.menu-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #1a2a52 transparent;
+}
+
+.menu-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.menu-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menu-area::-webkit-scrollbar-thumb {
+  background: #1a2a52;
+  border-radius: 4px;
+}
+
+/* Sidebar Profile Section */
+.sidebar-profile {
+  background: #0a1628;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.sidebar-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sidebar-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #2f6bff;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.sidebar-avatar .avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-user-info strong {
+  display: block;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-info p {
+  margin: 2px 0 0;
+  color: #8ca4df;
+  font-size: 11px;
+}
+
+.sidebar-profile-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #1a3a6e;
+  border: none;
+  border-radius: 8px;
+  color: #8ca4df;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-profile-btn:hover {
+  background: #2a4a8e;
+  color: #fff;
+}
+
+.sidebar-profile-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.page.sidebar-collapsed .sidebar-profile {
+  display: none;
+}
+
+.sidebar-footer {
+  border-top: 1px solid #1a2a52;
+  padding: 8px 0 0;
+  flex-shrink: 0;
+}
+
+.logout-item {
+  color: #fca5a5 !important;
+}
+
+.logout-icon {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #f87171 !important;
+}
+
+.logout-item:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Vehicle name cell with car icon */
+.vehicle-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vehicle-row-icon {
+  width: 20px;
+  height: 20px;
+  color: #2563eb;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.vehicle-row-icon :deep(svg) {
+  width: 18px;
+  height: 18px;
 }
 </style>

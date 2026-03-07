@@ -111,6 +111,10 @@ const cancelLogout = () => {
   showLogoutConfirm.value = false
 }
 
+const openProfile = () => {
+  router.push('/user/profile')
+}
+
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
@@ -147,7 +151,7 @@ onMounted(() => {
 
         <div class="top-actions">
           <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="notify('Profile opened')">{{ userInitials }}</button>
+          <button class="btn-reset avatar" @click="openProfile">{{ userInitials }}</button>
           <button class="btn-reset logout-btn" @click="handleLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span></button>
         </div>
       </header>

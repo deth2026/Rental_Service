@@ -42,5 +42,18 @@ class DatabaseSeeder extends Seeder
             'role' => 'shop_owner',
             'is_verified' => true,
         ]);
+
+        // Create a test user if not exists (from feature/setting.user)
+        \App\Models\User::updateOrCreate(
+            ['email' => 'test2@example.com'],
+            [
+                'name' => 'Test User 2',
+                'phone' => '+1234567890',
+                'password' => Hash::make('password123'),
+                'role' => 'customer',
+                'is_verified' => true,
+            ]
+        );
     }
 }
+
