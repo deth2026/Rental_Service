@@ -3,7 +3,7 @@
     <header class="top-nav">
       <div class="brand">
         <img class="brand-icon" :src="brandIcon" alt="Chong Choul logo" />
-        <span class="brand-text">Chong Choul</span>
+
       </div>
 
       <div class="nav-auth">
@@ -51,7 +51,9 @@
 
     <section class="features">
       <div class="features-inner">
-        <h2 class="features-title">How it works</h2>
+        <div class="trending-head">
+          <h2>Browse by Category</h2>
+        </div>
         <div class="features-divider"></div>
         <div class="features-grid">
           <article
@@ -61,8 +63,7 @@
           >
             <div class="feature-content">
               <div class="feature-icon" aria-hidden="true">
-                <span class="feature-icon-box"></span>
-                <span class="feature-icon-letter">{{ feature.icon }}</span>
+                <span>{{ feature.icon }}</span>
               </div>
               <div class="feature-copy">
                 <h4>
@@ -91,7 +92,6 @@
               <span
                 ><strong>${{ ride.price }}</strong> /day</span
               >
-              <span class="rating">{{ ride.rating }}</span>
             </div>
           </div>
         </article>
@@ -106,7 +106,7 @@
             Join Cambodia's largest vehicle rental network and connect with more
             customers.
           </p>
-          <button type="button">Register Your Shop</button>
+          <RouterLink to="/register"><button type="button">Register Your Shop</button></RouterLink>
         </div>
         <div class="cta-device"></div>
       </div>
@@ -149,7 +149,7 @@
 
 <script setup>
 import { reactive } from 'vue'
-import brandIcon from '../assets/chongchoul-brand-icon.svg'
+const brandIcon = 'https://assets.grok.com/users/3eaabd2d-e536-46ac-a895-d7d0a98c809b/generated/a293c403-a50c-4f3e-9f39-e2b50f077872/image.jpg'
 
 const search = reactive({
   type: 'All Vehicles',
