@@ -274,7 +274,7 @@ onMounted(() => {
       <p class="confirm-text">Are you sure you want to logout from your account?</p>
       <div class="confirm-actions">
         <button class="confirm-cancel-btn" @click="cancelLogout">No</button>
-        <button class="confirm-logout-btn" @click="confirmLogout">Yes, Logout</button>
+        <button class="confirm-logout-btn" @click="confirmLogout">Yes,Logout</button>
       </div>
     </div>
   </div>
