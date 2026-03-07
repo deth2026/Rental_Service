@@ -4,7 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import ShopDashboard from '../views/shop/Dashboard.vue';
+import ShopDashboard from '../views/shop/DashboardLayout.vue';
 import UserDashboard from '../views/user/Dashboard.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';

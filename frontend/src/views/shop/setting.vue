@@ -373,6 +373,7 @@ const loadData = async () => {
       currentShopId.value = cachedShop.id || null;
       form.shop_name = cachedShop.name || '';
       form.shop_address = cachedShop.address || '';
+      form.phone = cachedShop.phone || storedUser.phone || '';
     }
 
     const [usersResult, shopsResult] = await Promise.allSettled([
@@ -403,7 +404,7 @@ const loadData = async () => {
 
     form.name = user.name || '';
     form.email = user.email || '';
-    form.phone = user.phone || '';
+    form.phone = selectedShop?.phone || user.phone || '';
     form.shop_name = selectedShop?.name || '';
     form.shop_address = selectedShop?.address || '';
     form.password = '';
@@ -600,6 +601,7 @@ const saveSettings = async () => {
       owner_id: user.id,
       name: form.shop_name,
       address: form.shop_address || '',
+      phone: form.phone || '',
       status: 'active'
     };
 
@@ -612,7 +614,8 @@ const saveSettings = async () => {
     setCachedShop(user.id, {
       id: currentShopId.value,
       name: form.shop_name,
-      address: form.shop_address
+      address: form.shop_address,
+      phone: form.phone
     });
 
     localStorage.setItem(`${NOTIFY_KEY_PREFIX}${user.id}`, form.notifications_enabled ? '1' : '0');
@@ -682,7 +685,7 @@ onBeforeUnmount(() => {
 }
 
 .lang-btn.active {
-  background: #1d4ed8;
+  background: #2054e4;
   color: #fff;
   border-color: #1d4ed8;
 }
