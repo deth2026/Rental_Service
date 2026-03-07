@@ -1,9 +1,5 @@
 <script setup>
-<<<<<<< HEAD
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-=======
-import { onMounted, reactive, ref, computed } from 'vue'
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
 import { shopApi } from '@/services/api'
 
 const shop = ref(null)
@@ -27,7 +23,6 @@ const createForm = reactive({
   phone: '',
   description: '',
   address: '',
-  phone: '',
   status: 'active',
   img_url: ''
 })
@@ -63,6 +58,7 @@ const onImageUpload = (event) => {
     reader.readAsDataURL(file)
   }
 }
+
 
 const onImageDrop = (event) => {
   const file = event.dataTransfer?.files?.[0]
@@ -208,23 +204,19 @@ const resetForm = () => {
   createForm.phone = ''
   createForm.description = ''
   createForm.address = ''
-  createForm.phone = ''
   createForm.status = 'active'
-<<<<<<< HEAD
+  createForm.img_url = ''
   fieldErrors.name = ''
   fieldErrors.status = ''
   fieldErrors.address = ''
   fieldErrors.phone = ''
   fieldErrors.description = ''
   shopImageFile.value = null
+  selectedImage.value = null
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value)
     shopImagePreview.value = ''
   }
-=======
-  createForm.img_url = ''
-  selectedImage.value = null
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
   error.value = ''
 }
 
@@ -323,15 +315,6 @@ const createShop = async () => {
   error.value = ''
 
   try {
-<<<<<<< HEAD
-    const payloadBase = {
-      owner_id: getUserId(),
-      name: createForm.name.trim(),
-      phone: createForm.phone.trim(),
-      description: createForm.description.trim(),
-      address: createForm.address.trim(),
-      status: createForm.status
-=======
     let payload
     // if an image file has been selected, use FormData to send multipart request
     if (selectedImage.value) {
@@ -354,20 +337,6 @@ const createShop = async () => {
         status: createForm.status,
         img_url: createForm.img_url || null
       }
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
-    }
-
-    let payload = payloadBase
-    if (shopImageFile.value) {
-      const formData = new FormData()
-      formData.append('owner_id', String(payloadBase.owner_id))
-      formData.append('name', payloadBase.name)
-      formData.append('phone', payloadBase.phone)
-      formData.append('description', payloadBase.description)
-      formData.append('address', payloadBase.address)
-      formData.append('status', payloadBase.status)
-      formData.append('image', shopImageFile.value)
-      payload = formData
     }
 
     const { data: created } = await shopApi.create(payload)
@@ -493,77 +462,6 @@ onBeforeUnmount(() => {
               <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
             </label>
 
-<<<<<<< HEAD
-            <label>
-              Phone Number *
-              <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
-              <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
-            </label>
-
-            <label>
-              Description *
-              <textarea v-model="createForm.description" rows="4" placeholder="Tell customers about your shop..." @input="clearFieldError('description')"></textarea>
-              <small v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</small>
-            </label>
-
-            <div class="wide">
-              <label class="upload-label">Shop Picture</label>
-              <input
-                ref="shopImageInputRef"
-                type="file"
-                accept="image/*"
-                class="hidden-file-input"
-                @change="onShopImageChange"
-              />
-              <div
-                class="shop-upload-dropzone"
-                :class="{ dragging: isShopImageDragOver }"
-                @click="triggerShopImagePicker"
-                @dragover.prevent="isShopImageDragOver = true"
-                @dragleave.prevent="isShopImageDragOver = false"
-                @drop.prevent="onShopImageDrop"
-              >
-                <p><strong>Drag and drop image here</strong> or click to upload</p>
-                <span>PNG, JPG, JPEG</span>
-              </div>
-            </div>
-
-            <div v-if="shopImagePreview" class="wide image-preview-wrap">
-              <img :src="shopImagePreview" alt="Shop preview" class="image-preview" />
-            </div>
-=======
-            <label class="wide">
-              Phone Number
-              <input v-model="createForm.phone" type="tel" placeholder="Enter phone number" />
-            </label>
-
-            <label class="wide">
-              Description
-              <textarea v-model="createForm.description" rows="4" placeholder="Tell customers about your shop..."></textarea>
-            </label>
-
-            <label class="wide">
-              Shop Image
-              <div class="image-upload-area" :class="{ 'has-preview': createForm.img_url }" @click="$refs.shopImageInput && $refs.shopImageInput.click()" @dragover.prevent @drop.prevent="onImageDrop">
-                <input ref="shopImageInput" type="file" accept="image/*" @change="onImageUpload" style="display:none" />
-                <div v-if="!createForm.img_url" class="upload-placeholder">
-                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#94a3b8" stroke-width="1.5">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 5 17 10"></polyline>
-                    <line x1="12" y1="5" x2="12" y2="16"></line>
-                  </svg>
-                  <p>Click to upload or drag and drop</p>
-                  <span>PNG, JPG up to 10MB</span>
-                </div>
-                <div v-else class="image-preview">
-                  <img :src="createForm.img_url" alt="Shop preview" />
-                  <div class="image-overlay">
-                    <span>Click to change</span>
-                  </div>
-                </div>
-              </div>
-            </label>
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
           </div>
 
           <p v-if="error" class="error-text">{{ error }}</p>
@@ -669,70 +567,6 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-}
-
-<<<<<<< HEAD
-.shop-image-wrap {
-  margin-bottom: 16px;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid #dbeafe;
-}
-
-.shop-image {
-  width: 100%;
-  max-height: 260px;
-  object-fit: cover;
-  display: block;
-=======
-.shop-image-section {
-  margin-bottom: 16px;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.shop-cover-image {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.shop-cover-placeholder {
-  width: 80px;
-  height: 80px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #f1f5f9;
-  border-radius: 50%;
-  color: #64748b;
-}
-
-.shop-cover-placeholder p {
-  margin-top: 8px;
-  font-size: 14px;
-}
-
-.shop-header-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.shop-title-row {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.shop-title-row h2 {
-  margin: 0;
-  font-size: 22px;
-  color: #0f172a;
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
 }
 
 .card-title-row {
@@ -847,12 +681,6 @@ onBeforeUnmount(() => {
 }
 
 .modal-card {
-<<<<<<< HEAD
-  width: min(820px, 100%);
-  max-height: 90vh;
-=======
-  width: min(500px, 95%);
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border-radius: 22px;
   overflow: hidden;

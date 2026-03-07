@@ -612,12 +612,8 @@ const saveSettings = async () => {
       owner_id: user.id,
       name: form.shop_name,
       address: form.shop_address || '',
-<<<<<<< HEAD
-      status: form.shop_status || 'active'
-=======
       phone: form.phone || '',
-      status: 'active'
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
+      status: form.shop_status || 'active'
     };
 
     if (currentShopId.value) {
@@ -629,13 +625,9 @@ const saveSettings = async () => {
     setCachedShop(user.id, {
       id: currentShopId.value,
       name: form.shop_name,
-<<<<<<< HEAD
       status: form.shop_status || 'active',
-      address: form.shop_address
-=======
       address: form.shop_address,
       phone: form.phone
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
     });
 
     localStorage.setItem(`${NOTIFY_KEY_PREFIX}${user.id}`, form.notifications_enabled ? '1' : '0');
