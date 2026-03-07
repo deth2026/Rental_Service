@@ -1,11 +1,6 @@
 <template>
   <div class="home-page">
     <header class="top-nav">
-<<<<<<< HEAD
-      <div class="brand">
-        <img class="brand-icon" :src="brandIcon" alt="Chong Choul logo" />
-
-=======
       <div class="brand-container">
         <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -30,7 +25,6 @@
           <div class="brand">Chong Choul</div>
           <div class="brand-tagline">Vehicle Rental</div>
         </div>
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
       </div>
 
       <div class="nav-auth">

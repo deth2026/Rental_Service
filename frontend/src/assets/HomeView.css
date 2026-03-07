@@ -37,38 +37,6 @@
 }
 
 .brand {
-<<<<<<< HEAD
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-logo-frame {
-  width: 520px;
-  height: 150px;
-  
-  border-radius: 8px;
-}
-
-.brand-icon {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
-  object-position: 3% center;
-  transform: scale(11.5);
-  transform-origin: left center;
-  mix-blend-mode: multiply;
-  background: transparent;
-}
-
-.brand-text {
-  font-size: 1.3rem;
-  font-weight: 700;
-  line-height: 1;
-  color: #1768dd;
-  text-shadow: 0 4px 10px rgba(45, 157, 237, 0.25);
-=======
   font-size: 1.5rem;
   font-weight: 700;
   color: #1e40af;
@@ -81,7 +49,6 @@
   font-weight: 500;
   color: #6b7280;
   letter-spacing: 0.3px;
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
 }
 
 .nav-auth {
@@ -552,29 +519,11 @@
   }
 
   .brand {
-<<<<<<< HEAD
-    gap: 10px;
-  }
-
-  .brand-logo-frame {
-    width: 380px;
-    height: 120px;
-  }
-
-  .brand-icon {
-    object-position: 10% center;
-    transform: scale(8.8);
-  }
-
-  .brand-text {
-    font-size: 1.1rem;
-=======
     font-size: 1.2rem;
   }
 
   .brand-tagline {
     font-size: 0.65rem;
->>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
   }
 
   .nav-links {
