@@ -1,4 +1,45 @@
+/* Global CSS Variables for Setting_user.vue */
+:root {
+  --color-bg: #f8fafc;
+  --color-primary: #2563eb;
+  --color-primary-light: #dbeafe;
+  --color-primary-mid: #93c5fd;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-card-bg: #ffffff;
+  --color-border: #e2e8f0;
+  --color-border-focus: #2563eb;
+  --color-input-bg: #f8fafc;
+  --color-input-icon: #94a3b8;
+  --color-text-muted: #94a3b8;
+  --color-danger: #dc2626;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --blue-900: #1e40af;
+  --blue-700: #1d4ed8;
+  --blue-600: #2563eb;
+  --blue-100: #dbeafe;
+  --blue-050: #eff6ff;
+  --line: #d1d5db;
+  --ink-800: #1f2937;
+  --ink-600: #4b5563;
+  --ok: #059669;
+  --err: #dc2626;
+}
+
 .setting-page {
+  /* CSS Variables for Setting_user.vue */
+  --color-bg: #f8fafc;
+  --color-primary: #2563eb;
+  --color-primary-light: #dbeafe;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #64748b;
+  --color-card-bg: #ffffff;
+  --color-border: #e2e8f0;
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
   --blue-900: #1e40af;
   --blue-700: #1d4ed8;
   --blue-600: #2563eb;

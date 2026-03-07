@@ -37,11 +37,17 @@ class LoyaltyPointController extends Controller
         return response()->json($loyaltyPoints);
     }
 
-    public function store(Request $_request)
+    public function store(Request $request)
     {
-        $record = LoyaltyPoint::create($_request->all());
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'points' => 'required|integer',
+            'description' => 'nullable|string',
+        ]);
 
-        return response()->json($record, 201);
+        $loyaltyPoint = LoyaltyPoint::create($validated);
+
+        return response()->json($loyaltyPoint, 201);
     }
 
     public function show(LoyaltyPoint $loyaltyPoint)
@@ -49,17 +55,22 @@ class LoyaltyPointController extends Controller
         return response()->json($loyaltyPoint);
     }
 
-    public function update(Request $_request, LoyaltyPoint $loyaltyPoint)
+    public function update(Request $request, LoyaltyPoint $loyaltyPoint)
     {
-        $loyaltyPoint->update($_request->all());
+        $validated = $request->validate([
+            'points' => 'sometimes|required|integer',
+            'description' => 'nullable|string',
+        ]);
 
-        return response()->json($loyaltyPoint->fresh());
+        $loyaltyPoint->update($validated);
+
+        return response()->json($loyaltyPoint);
     }
 
     public function destroy(LoyaltyPoint $loyaltyPoint)
     {
         $loyaltyPoint->delete();
 
-        return response()->json(['message' => 'LoyaltyPoint deleted successfully']);
+        return response()->json(['message' => 'Loyalty point deleted successfully']);
     }
 }

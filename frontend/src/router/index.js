@@ -6,7 +6,7 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
 import UserDashboard from '../views/user/Dashboard.vue';
-import UserSetting from '../views/user/UserSetting.vue';
+import SettingUser from '../views/user/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
 
@@ -71,8 +71,13 @@ const router = createRouter({
     {
       path: '/user/profile',
       name: 'user-profile',
-      component: UserSetting,
+      component: SettingUser,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingUser
     },
     {
       path: '/admin',
