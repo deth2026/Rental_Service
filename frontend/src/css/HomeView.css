@@ -38,11 +38,7 @@
   font-weight: 500;
   color: #6b7280;
   letter-spacing: 0.3px;
-<<<<<<< HEAD:frontend/src/assets/HomeView.css
 } */
-=======
-}
->>>>>>> c11146785d528fb185baedc53d0e81b957c927aa:frontend/src/css/HomeView.css
 
 .nav-auth {
   display: flex;
@@ -505,7 +501,6 @@
   
 
   .brand {
-<<<<<<< HEAD:frontend/src/assets/HomeView.css
     gap: 10px;
   }
 
@@ -521,14 +516,6 @@
     transform: scale(8.8);
   }
 
-=======
-    font-size: 1.2rem;
-  }
-
-  .brand-tagline {
-    font-size: 0.65rem;
-  }
->>>>>>> c11146785d528fb185baedc53d0e81b957c927aa:frontend/src/css/HomeView.css
 
   .nav-links {
     order: 3;
