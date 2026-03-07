@@ -3,6 +3,11 @@
 <template>
   <div class="home-page">
     <header class="top-nav">
+<<<<<<< HEAD
+      <div class="brand">
+        <img class="brand-icon" :src="brandIcon" alt="Chong Choul logo" />
+
+=======
       <div class="brand-container">
         <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -27,6 +32,7 @@
           <div class="brand">Chong Choul</div>
           <div class="brand-tagline">Vehicle Rental</div>
         </div>
+>>>>>>> bc106b3a5a8e8562032c80cf3b56202bc9b4de31
       </div>
 
       <div class="nav-auth">
@@ -39,43 +45,9 @@
       <div class="hero-overlay">
         <div class="hero-content">
           <h1>
-            Find Your Perfect Ride and Explore
-            <br />
-            <span>Cambodia</span> in Style!
-            <!-- <br/>
-             <span> Cambodia</span> -->
+            <span class="hero-line">Find Your Perfect Ride and Explore</span>
+            <span class="hero-line"><span>Cambodia</span> in Style!</span>
           </h1>
-          <p>
-            Choose from hundreds of cars, motorbikes, and bicycles from verified
-            local shops in Cambodia.
-          </p>
-
-          <form class="search-panel">
-            <div class="search-item">
-              <label>Vehicle Type</label>
-              <select v-model="search.type">
-                <option>All Vehicles</option>
-                <option>Cars</option>
-                <option>Motorbikes</option>
-                <option>Bicycles</option>
-              </select>
-            </div>
-            <div class="search-item">
-              <label>Location</label>
-              <select v-model="search.location">
-                <option>Siem Reap</option>
-              </select>
-            </div>
-            <div class="search-item">
-              <label>Pick-Up Date</label>
-              <input
-                v-model="search.pickupDate"
-                type="text"
-                placeholder="Select Date"
-              />
-            </div>
-            <button class="search-btn" type="button">Search</button>
-          </form>
         </div>
       </div>
     </section>
@@ -86,7 +58,7 @@
           <h2>Browse by Category</h2>
           <p>Find the right ride for your journey</p>
         </div>
-        <a href="#">View All</a>
+        
       </div>
 
       <div class="category-grid">
@@ -108,16 +80,28 @@
 
     <section class="features">
       <div class="features-inner">
-        <h2 class="features-title">How it works</h2>
+        <div class="trending-head">
+          <h2>Browse by Category</h2>
+        </div>
+        <div class="features-divider"></div>
         <div class="features-grid">
           <article
             v-for="feature in features"
             :key="feature.title"
             class="feature-item"
           >
-            <div class="feature-icon">{{ feature.icon }}</div>
-            <h4>{{ feature.title }}</h4>
-            <p>{{ feature.description }}</p>
+            <div class="feature-content">
+              <div class="feature-icon" aria-hidden="true">
+                <span>{{ feature.icon }}</span>
+              </div>
+              <div class="feature-copy">
+                <h4>
+                  <span class="feature-step">{{ feature.step }}</span>
+                  <span class="feature-title-text">{{ feature.title }}</span>
+                </h4>
+                <p>{{ feature.description }}</p>
+              </div>
+            </div>
           </article>
         </div>
       </div>
@@ -137,7 +121,6 @@
               <span
                 ><strong>${{ ride.price }}</strong> /day</span
               >
-              <span class="rating">{{ ride.rating }}</span>
             </div>
           </div>
         </article>
@@ -152,7 +135,7 @@
             Join Cambodia's largest vehicle rental network and connect with more
             customers.
           </p>
-          <button type="button">Register Your Shop</button>
+          <RouterLink to="/register"><button type="button">Register Your Shop</button></RouterLink>
         </div>
         <div class="cta-device"></div>
       </div>
@@ -194,7 +177,12 @@
 </template>
 
 <script setup>
+<<<<<<< HEAD
 import { reactive } from 'vue';
+=======
+import { reactive } from 'vue'
+const brandIcon = 'https://assets.grok.com/users/3eaabd2d-e536-46ac-a895-d7d0a98c809b/generated/a293c403-a50c-4f3e-9f39-e2b50f077872/image.jpg'
+>>>>>>> 854c0845954cd19808335793980a0a2c1526b63d
 
 const search = reactive({
   type: 'All Vehicles',
@@ -223,17 +211,20 @@ const categories = [
 const features = [
   {
     icon: 'Q',
-    title: '1. Browse & Select',
+    step: '1.',
+    title: 'Browse & Select',
     description: 'Filter by vehicle type, location, and your travel dates to find the best match.'
   },
   {
     icon: 'C',
-    title: '2. Secure Booking',
+    step: '2.',
+    title: 'Secure Booking',
     description: 'Book instantly using ABA, Wing, or international cards. No hidden fees.'
   },
   {
     icon: 'K',
-    title: '3. Pick Up & Go',
+    step: '3.',
+    title: 'Pick Up & Go',
     description: 'Meet your host at the shop or get the vehicle delivered to your hotel.'
   }
 ]
