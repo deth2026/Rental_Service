@@ -1279,19 +1279,20 @@ const iconSvg = (name) => {
 }
 
 .topbar {
-  height: 52px;
-  margin: 0 -18px 22px;
+  height: 70px;
+  margin: 0 -18px 10px;
   padding: 0 18px;
   border-bottom: 1px solid #dbe1ea;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: auto;
 }
 
 .topbar h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
 }
 

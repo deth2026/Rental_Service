@@ -5,6 +5,7 @@ const RESET_FLAG_KEY = 'auto_translate_reset_en_once';
 
 let googleScriptPromise = null;
 let googleWidgetReadyPromise = null;
+let bannerObserver = null;
 
 const languageMap = {
   en: 'en',
@@ -38,11 +39,59 @@ const ensureGoogleStyles = () => {
   style.id = GOOGLE_STYLE_ID;
   style.textContent = `
     .goog-te-banner-frame.skiptranslate { display: none !important; }
+    .goog-te-banner-frame { display: none !important; }
+    iframe.goog-te-banner-frame { display: none !important; visibility: hidden !important; }
+    .skiptranslate iframe { display: none !important; }
+    body > .skiptranslate { display: none !important; }
     body { top: 0 !important; }
+    html { top: 0 !important; }
     .goog-logo-link, .goog-te-gadget span { display: none !important; }
     .goog-te-gadget { font-size: 0 !important; }
   `;
   document.head.appendChild(style);
+};
+
+const hideGoogleBannerNow = () => {
+  if (typeof document === 'undefined') return;
+
+  const nodes = document.querySelectorAll(
+    '.goog-te-banner-frame, iframe.goog-te-banner-frame, body > .skiptranslate'
+  );
+
+  nodes.forEach((node) => {
+    node.style.setProperty('display', 'none', 'important');
+    node.style.setProperty('visibility', 'hidden', 'important');
+    node.style.setProperty('height', '0', 'important');
+    node.style.setProperty('min-height', '0', 'important');
+  });
+
+  if (document.body) {
+    document.body.style.setProperty('top', '0px', 'important');
+    document.body.style.removeProperty('margin-top');
+    document.body.style.removeProperty('padding-top');
+  }
+
+  if (document.documentElement) {
+    document.documentElement.style.setProperty('top', '0px', 'important');
+  }
+};
+
+const ensureBannerBlocker = () => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (bannerObserver) return;
+
+  hideGoogleBannerNow();
+
+  bannerObserver = new MutationObserver(() => {
+    hideGoogleBannerNow();
+  });
+
+  bannerObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style', 'class'],
+  });
 };
 
 const setGoogTransCookie = (targetLang) => {
@@ -109,6 +158,7 @@ const ensureGoogleWidget = async () => {
   googleWidgetReadyPromise = (async () => {
     ensureHiddenContainer();
     ensureGoogleStyles();
+    ensureBannerBlocker();
     await loadGoogleTranslateScript();
 
     if (!window.google?.translate?.TranslateElement) return;
@@ -167,6 +217,9 @@ export const applyAutoTranslate = async (lang) => {
   setGoogTransCookie(targetLangCode);
 
   try {
+    ensureGoogleStyles();
+    ensureBannerBlocker();
+    hideGoogleBannerNow();
     await ensureGoogleWidget();
 
     if (triggerLanguageSelection(targetLangCode)) return;
