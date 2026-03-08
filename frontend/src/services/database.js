@@ -271,8 +271,8 @@ export const shopService = {
 
       return shops
     } catch {
-      // Fallback to local seed data if API is unavailable.
-      return [...seedShops]
+      // Do not fallback to seeded images here; user view should reflect DB shops only.
+      return []
     }
   },
 }

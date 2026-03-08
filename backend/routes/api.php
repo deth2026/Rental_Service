@@ -66,11 +66,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::post('users/{id}/update-profile', [UserController::class, 'updateProfile']);
 Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
 
-// Shop routes (accessible by both shop and admin)
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/shops', [ShopController::class, 'index']);
-    Route::get('/shops/{shop}', [ShopController::class, 'show']);
-});
+// Public shop routes (for customer/user shop listing)
+Route::get('/shops', [ShopController::class, 'index']);
+Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
 // Shop owner routes
 Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
@@ -88,4 +86,3 @@ Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     // Add customer-specific routes here if needed
 });
-

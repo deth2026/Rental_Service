@@ -579,14 +579,6 @@ const iconSvg = (name) => {
           </svg>
         </span>
       </button>
-      <div class="brand">
-        <div class="brand-icon" v-html="iconSvg('brand')"></div>
-        <div class="brand-text">
-          <h2>Chong Choul</h2>
-          <p>Vehicle Rental</p>
-        </div>
-      </div>
-
 <div class="menu-area">
         <div class="menu-title">MENU</div>
         <button v-for="item in sections" :key="item.id" class="menu-item" :class="{ active: item.id === active }"
@@ -594,13 +586,12 @@ const iconSvg = (name) => {
           <span class="menu-icon" v-html="iconSvg(item.icon)"></span>
           <span class="menu-label">{{ item.label }}</span>
         </button>
-      </div>
-      
-      <div class="sidebar-footer">
+
         <button class="menu-item logout-item" @click="showLogoutModal = true">
           <span class="menu-icon logout-icon" v-html="iconSvg('logout')"></span>
           <span class="menu-label">Logout</span>
         </button>
+
       </div>
     </aside>
 
@@ -1413,7 +1404,8 @@ const iconSvg = (name) => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-right: 240px;
+  margin-left: auto;
+  margin-right: 0;
   flex-shrink: 0;
 }
 

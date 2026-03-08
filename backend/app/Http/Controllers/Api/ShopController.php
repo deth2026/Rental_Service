@@ -10,7 +10,7 @@ class ShopController extends Controller
 {
     public function index()
     {
-        $shops = Shop::with('owner:id,name,email')
+        $shops = Shop::with('owner')
             ->orderByDesc('id')
             ->get();
 
@@ -87,7 +87,7 @@ class ShopController extends Controller
 
     public function show(Shop $shop)
     {
-        return response()->json($shop->load('owner:id,name,email'));
+        return response()->json($shop->load('owner'));
     }
 
     public function update(Request $request, Shop $shop)

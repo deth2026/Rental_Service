@@ -35,7 +35,7 @@ const fieldErrors = reactive({
 })
 
 const shopImageSource = computed(() => {
-  const image = shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
+  const image = shop.value?.img_url || shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
   if (!image) return ''
   if (/^https?:\/\//.test(String(image)) || String(image).startsWith('data:')) return String(image)
   const normalized = String(image).replace(/^\/+/, '')
@@ -460,6 +460,43 @@ onBeforeUnmount(() => {
               Address *
               <input v-model="createForm.address" required type="text" placeholder="Enter address" @input="clearFieldError('address')" />
               <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
+            </label>
+
+            <label>
+              Phone *
+              <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
+              <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
+            </label>
+
+            <label class="wide">
+              Description *
+              <textarea v-model="createForm.description" rows="3" placeholder="Describe your shop" @input="clearFieldError('description')"></textarea>
+              <small v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</small>
+            </label>
+
+            <label class="wide">
+              Shop Image
+              <input
+                ref="shopImageInputRef"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="hidden-file-input"
+                @change="onShopImageChange"
+              />
+              <div
+                class="shop-upload-dropzone"
+                :class="{ dragging: isShopImageDragOver }"
+                @click="triggerShopImagePicker"
+                @dragover.prevent="isShopImageDragOver = true"
+                @dragleave.prevent="isShopImageDragOver = false"
+                @drop.prevent="onShopImageDrop"
+              >
+                <p>{{ shopImageFile ? 'Change shop image' : 'Click to upload or drag image here' }}</p>
+                <span>PNG / JPG / WEBP</span>
+              </div>
+              <div v-if="shopImagePreview" class="image-preview-wrap" style="margin-top:8px">
+                <img :src="shopImagePreview" alt="Shop preview" class="image-preview" />
+              </div>
             </label>
 
           </div>
