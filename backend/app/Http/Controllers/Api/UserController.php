@@ -220,38 +220,39 @@ class UserController extends Controller
 
     // ─── Settings: Update Profile ───────────────────────────────────────────
 
-    public function updateProfile(Request $request, $id)
+    public function updateProfile(Request $request, $id = null)
     {
-        $user = User::findOrFail($id);
+        // Use authenticated user if no ID provided, otherwise verify ownership
+        $authenticatedUser = $request->user();
+        
+        // If ID is provided, ensure it matches the authenticated user
+        if ($id && $id != $authenticatedUser->id) {
+            return response()->json(['message' => 'Unauthorized to update this profile'], 403);
+        }
+        
+        $user = $authenticatedUser;
 
+        // Use the authenticated user's ID for validation
+        $userId = $authenticatedUser->id;
+        
         $validationRules = [
             'name'            => 'sometimes|required|string|max:255',
-            'email'           => 'sometimes|required|email|unique:users,email,' . $id,
+            'email'           => 'sometimes|required|email|unique:users,email,' . $userId,
             'phone'           => 'nullable|string|max:30',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ];
-
-        // Only validate profile_picture if the column exists
-        try {
-            if (\Schema::hasColumn('users', 'profile_picture')) {
-                $validationRules['profile_picture'] = 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120';
-            }
-        } catch (\Exception $e) {
-            // Ignore schema errors
-        }
 
         $validated = $request->validate($validationRules);
 
-        // Handle file upload only if profile_picture column exists
+        // Handle file upload - store in profile_picture column
         if ($request->hasFile('profile_picture')) {
             try {
-                if (\Schema::hasColumn('users', 'profile_picture')) {
-                    // Remove old file from storage
-                    if ($user->profile_picture) {
-                        Storage::disk('public')->delete($user->profile_picture);
-                    }
-                    $path = $request->file('profile_picture')->store('profile_pictures', 'public');
-                    $validated['profile_picture'] = $path;
+                // Remove old file from storage
+                if ($user->profile_picture) {
+                    Storage::disk('public')->delete($user->profile_picture);
                 }
+                $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+                $validated['profile_picture'] = $path;
             } catch (\Exception $e) {
                 // Ignore storage errors, continue with other updates
             }
@@ -267,9 +268,17 @@ class UserController extends Controller
 
     // ─── Settings: Change Password ──────────────────────────────────────────
 
-    public function changePassword(Request $request, $id)
+    public function changePassword(Request $request, $id = null)
     {
-        $user = User::findOrFail($id);
+        // Use authenticated user if no ID provided, otherwise verify ownership
+        $authenticatedUser = $request->user();
+        
+        // If ID is provided, ensure it matches the authenticated user
+        if ($id && $id != $authenticatedUser->id) {
+            return response()->json(['message' => 'Unauthorized to change this password'], 403);
+        }
+        
+        $user = $authenticatedUser;
 
         $request->validate([
             'current_password'          => 'required|string',

@@ -199,6 +199,14 @@
   cursor: pointer;
   border: none;
   font-weight: 600;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .icon-btn {
@@ -369,13 +377,7 @@
 .avatar {
   font-weight: 800;
   color: #5a4b37;
-  background: linear-gradient(135deg, #f4d8a8, #e6c592);
-  border-color: #e6c592;
-  box-shadow: 0 2px 8px rgba(230, 197, 146, 0.4);
-}
-
-.avatar:hover {
-  box-shadow: 0 6px 16px rgba(230, 197, 146, 0.6);
+  
 }
 
 .logout-btn,

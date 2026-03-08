@@ -24,6 +24,7 @@ class User extends Authenticatable
         'role',
         'is_verified',
         'img_url',
+        'profile_picture',
     ];
 
     protected $hidden = [
@@ -42,7 +43,7 @@ class User extends Authenticatable
 
     public function getAvatarUrlAttribute(): ?string
     {
-        $path = $this->img_url;
+        $path = $this->profile_picture ?: $this->img_url;
         if (!$path) {
             return null;
         }
@@ -51,7 +52,7 @@ class User extends Authenticatable
             return $path;
         }
 
-        $normalized = ltrim($path, '/');
+        $normalized = ltrim(str_replace('\\', '/', (string) $path), '/');
 
         if (Str::startsWith($normalized, 'storage/')) {
             return asset($normalized);
@@ -68,4 +69,3 @@ class User extends Authenticatable
         return asset($normalized);
     }
 }
-
