@@ -63,8 +63,10 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Profile settings routes (from feature/setting.user)
-Route::post('users/{id}/update-profile', [UserController::class, 'updateProfile']);
-Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('users/{id}/update-profile', [UserController::class, 'updateProfile']);
+    Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
+});
 
 // Public shop routes (for customer/user shop listing)
 Route::get('/shops', [ShopController::class, 'index']);

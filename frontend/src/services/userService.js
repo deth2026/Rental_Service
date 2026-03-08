@@ -2,12 +2,35 @@ import axios from 'axios'
 
 // Use relative URL to go through Vite proxy (configured in vite.config.js)
 const API_BASE = ''
-const STORAGE_BASE = 'http://localhost:8000/storage'
 
 const http = axios.create({
   baseURL: `${API_BASE}/api`,
   headers: { 'Accept': 'application/json' },
 })
+
+// Add auth token to requests if it exists
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Handle auth errors
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear auth data
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      // Optionally redirect to login
+      window.location.href = '/login'
+    }
+    return Promise.reject(error)
+  }
+)
 
 const userService = {
   /**
@@ -32,11 +55,10 @@ const userService = {
   },
 
   /**
-   * Fetch a single user's profile.
-   * @param {number} id
+   * Get current authenticated user's profile.
    */
-  async getUser(id) {
-    const { data } = await http.get(`/users/${id}`)
+  async getAuthUser() {
+    const { data } = await http.get('/auth-user')
     return data
   },
 
@@ -69,7 +91,24 @@ const userService = {
    */
   getAvatarUrl(path) {
     if (!path) return null
-    return `${STORAGE_BASE}/${path}`
+    if (/^(https?:\/\/|data:|blob:)/i.test(path)) return path
+
+    const normalized = String(path)
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+
+    const origin = (() => {
+      try {
+        return new URL(http.defaults.baseURL, window.location.origin).origin
+      } catch {
+        return window.location.origin
+      }
+    })()
+
+    if (normalized.startsWith('storage/')) {
+      return `${origin}/${normalized}`
+    }
+    return `${origin}/storage/${normalized}`
   },
 }
 
