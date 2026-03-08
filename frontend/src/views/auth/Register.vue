@@ -100,10 +100,10 @@
         <!-- Error Message -->
         <div
           class="message-block error"
-          v-if="Object.keys(errors).length > 0 && !successMessage"
+          v-if="(Object.keys(errors).length > 0 || generalError) && !successMessage"
         >
           <span class="message-icon">✗</span>
-          <span class="message-text">Please fix errors below to continue.</span>
+          <span class="message-text">{{ generalError || 'Please fix errors below to continue.' }}</span>
         </div>
 
         <form @submit.prevent="handleRegister" novalidate>
@@ -317,6 +317,7 @@ const router = useRouter();
 const route = useRoute();
 const isLoading = ref(false);
 const errors = ref({});
+const generalError = ref("");
 const successMessage = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
@@ -371,6 +372,7 @@ const validateForm = () => {
 };
 
 const handleRegister = async () => {
+  generalError.value = "";
   if (!validateForm()) {
     return;
   }
@@ -378,6 +380,7 @@ const handleRegister = async () => {
   isLoading.value = true;
   successMessage.value = "";
   errors.value = {};
+  generalError.value = "";
 
   try {
     const payload = {
@@ -420,6 +423,7 @@ const handleRegister = async () => {
       form.phone = "";
       form.password = "";
       form.confirmPassword = "";
+      generalError.value = "";
 
       // Show success message and redirect to login
       successMessage.value = "Registration successful! Redirecting to login...";
@@ -438,12 +442,22 @@ const handleRegister = async () => {
         });
         errors.value = newErrors;
       } else {
-        errors.value.email = data.message || "Registration failed. Please try again.";
+        // More specific error messages
+        const errorMsg = data.message || "Registration failed. Please try again.";
+        if (errorMsg.includes("email")) {
+          errors.value.email = errorMsg;
+        } else if (errorMsg.includes("phone")) {
+          errors.value.phone = errorMsg;
+        } else if (errorMsg.includes("password")) {
+          errors.value.password = errorMsg;
+        } else {
+          generalError.value = errorMsg;
+        }
       }
     }
   } catch (error) {
     console.error("Registration error:", error);
-    errors.value.email = error.message || "Network error. Please check if backend is running.";
+    generalError.value = error.message || "Network error. Please check if backend is running.";
   } finally {
     isLoading.value = false;
   }
