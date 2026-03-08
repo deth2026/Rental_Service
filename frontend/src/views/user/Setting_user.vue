@@ -10,6 +10,7 @@ const getUserId = () => userService.getCurrentUserId()
 
 // ─── State ───────────────────────────────────────────────────────────────
 const profile = ref({ name: '', email: '', phone: '', profile_picture: null })
+const originalProfile = ref({ name: '', email: '', phone: '', profile_picture: null }) // Store original values
 const avatarPreview = ref(null)
 const profileFile = ref(null)
 const fileInput = ref(null)
@@ -96,11 +97,20 @@ async function fetchProfile() {
         return
     }
     try {
-        const data = await userService.getUser(userId)
+        // Use getAuthUser to get the current authenticated user's profile
+        const data = await userService.getAuthUser()
         profile.value.name = data.name || ''
         profile.value.email = data.email || ''
         profile.value.phone = data.phone || ''
-        profile.value.profile_picture = data.profile_picture || null
+        profile.value.profile_picture = data.avatar_url || data.profile_picture || data.img_url || null
+        
+        // Store original values for comparison
+        originalProfile.value = {
+            name: data.name || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            profile_picture: data.avatar_url || data.profile_picture || data.img_url || null
+        }
     } catch {
         showToast('Could not load profile data.', 'danger')
     }
@@ -111,17 +121,36 @@ function validateProfile() {
     profileErrors.value = { name: '', email: '', phone: '' }
     let hasError = false
     
-    if (!profile.value.name.trim()) {
-        profileErrors.value.name = 'Full name is required.'
+    // Only validate fields that have been changed from original values
+    // This allows users to update only specific fields without requiring all fields
+    const hasNameChange = profile.value.name.trim() !== originalProfile.value.name
+    const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
+    const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
+    const hasFileChange = profileFile.value !== null
+    
+    // If nothing changed, no validation needed
+    if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange) {
+        showToast('No changes detected.', 'info')
+        return 'No changes detected.'
+    }
+    
+    // Validate name only if it was changed
+    if (hasNameChange && !profile.value.name.trim()) {
+        profileErrors.value.name = 'Full name cannot be empty when changed.'
         hasError = true
     }
-    if (!profile.value.email.trim()) {
-        profileErrors.value.email = 'Email address is required.'
-        hasError = true
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.value.email)) {
-        profileErrors.value.email = 'Please enter a valid email address.'
-        hasError = true
+    
+    // Validate email only if it was changed
+    if (hasEmailChange) {
+        if (!profile.value.email.trim()) {
+            profileErrors.value.email = 'Email address cannot be empty when changed.'
+            hasError = true
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.value.email)) {
+            profileErrors.value.email = 'Please enter a valid email address.'
+            hasError = true
+        }
     }
+    
     return hasError ? 'Please fix the errors above.' : null
 }
 
@@ -138,13 +167,50 @@ async function saveProfile() {
     loading.value.profile = true
     try {
         const fd = new FormData()
-        fd.append('name', profile.value.name.trim())
-        fd.append('email', profile.value.email.trim())
-        fd.append('phone', profile.value.phone?.trim() || '')
-        if (profileFile.value) fd.append('profile_picture', profileFile.value)
+        
+        // Only append fields that have been changed
+        const hasNameChange = profile.value.name.trim() !== originalProfile.value.name
+        const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
+        const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
+        
+        if (hasNameChange) {
+            fd.append('name', profile.value.name.trim())
+        }
+        if (hasEmailChange) {
+            fd.append('email', profile.value.email.trim())
+        }
+        if (hasPhoneChange) {
+            fd.append('phone', profile.value.phone?.trim() || '')
+        }
+        if (profileFile.value) {
+            fd.append('profile_picture', profileFile.value)
+        }
 
         const res = await userService.updateProfile(userId, fd)
-        profile.value.profile_picture = res.user?.profile_picture || profile.value.profile_picture
+        
+        // Update original profile with new values after successful save
+        if (res.user) {
+            const resolvedProfilePicture = res.user.avatar_url || res.user.profile_picture || res.user.img_url || null
+            originalProfile.value = {
+                name: res.user.name || '',
+                email: res.user.email || '',
+                phone: res.user.phone || '',
+                profile_picture: resolvedProfilePicture
+            }
+            profile.value.profile_picture = resolvedProfilePicture || profile.value.profile_picture
+
+            // Keep local user snapshot in sync so header/profile components refresh immediately.
+            try {
+                const rawUser = localStorage.getItem('user')
+                const localUser = rawUser ? JSON.parse(rawUser) : {}
+                const nextUser = { ...localUser, ...res.user }
+                localStorage.setItem('user', JSON.stringify(nextUser))
+                window.dispatchEvent(new Event('user-updated'))
+            } catch {
+                // Ignore localStorage parse/write issues.
+            }
+        }
+        
         profileFile.value = null
         showToast('Profile updated successfully!', 'success')
     } catch (e) {

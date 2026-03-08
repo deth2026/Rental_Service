@@ -32,6 +32,26 @@ const notify = (message) => {
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const avatarLoadFailed = ref(false)
+
+const normalizeAvatarUrl = (url) => {
+  if (!url) return ''
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
+  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `/${normalized}`
+  return `/storage/${normalized}`
+}
+
+const userAvatarUrl = computed(() => {
+  if (avatarLoadFailed.value) return ''
+  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || ''
+  return normalizeAvatarUrl(src)
+})
+
+const onAvatarError = () => {
+  avatarLoadFailed.value = true
+}
+
 const userInitials = computed(() => {
   const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
   if (words.length === 0) return 'GU'
@@ -151,7 +171,10 @@ onMounted(() => {
 
         <div class="top-actions">
           <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">{{ userInitials }}</button>
+          <button class="btn-reset avatar" @click="openProfile">
+            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+            <span v-else>{{ userInitials }}</span>
+          </button>
           <button class="btn-reset logout-btn" @click="handleLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span></button>
         </div>
       </header>
