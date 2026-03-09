@@ -90,6 +90,15 @@ const onAvatarError = () => {
   avatarLoadFailed.value = true
 }
 
+// Helper function to get shop image URL
+const getShopImageUrl = (url) => {
+  if (!url) return ''
+  if (/^https?:\/\//.test(url)) return url
+  if (/^data:image/.test(url)) return url
+  const cleanUrl = url.replace(/^\/+/, '')
+  return `${apiOrigin.value}/storage/${cleanUrl}`
+}
+
 onMounted(() => {
   window.addEventListener('storage', refreshSessionUser)
   window.addEventListener('user-updated', refreshSessionUser)
@@ -167,9 +176,9 @@ const shop = ref(null)
 const shopModal = ref(false)
 const shopForm = reactive({
   name: '',
-  city_id: null,
   description: '',
-  address: ''
+  address: '',
+  phone: ''
 })
 const cities = ref([])
 const isLoadingShop = ref(false)
@@ -212,9 +221,9 @@ const fetchCities = async () => {
 // Open create shop modal
 const openShopModal = () => {
   shopForm.name = shop.value?.name || ''
-  shopForm.city_id = shop.value?.city_id || null
   shopForm.description = shop.value?.description || ''
   shopForm.address = shop.value?.address || ''
+  shopForm.phone = shop.value?.phone || ''
   shopModal.value = true
 }
 
@@ -231,9 +240,9 @@ const saveShop = async () => {
     const payload = {
       owner_id: ownerId,
       name: shopForm.name,
-      city_id: shopForm.city_id,
       description: shopForm.description,
       address: shopForm.address,
+      phone: shopForm.phone,
       status: 'active'
     }
     
@@ -579,14 +588,6 @@ const iconSvg = (name) => {
           </svg>
         </span>
       </button>
-      <div class="brand">
-        <div class="brand-icon" v-html="iconSvg('brand')"></div>
-        <div class="brand-text">
-          <h2>Chong Choul</h2>
-          <p>Vehicle Rental</p>
-        </div>
-      </div>
-
 <div class="menu-area">
         <div class="menu-title">MENU</div>
         <button v-for="item in sections" :key="item.id" class="menu-item" :class="{ active: item.id === active }"
@@ -594,13 +595,12 @@ const iconSvg = (name) => {
           <span class="menu-icon" v-html="iconSvg(item.icon)"></span>
           <span class="menu-label">{{ item.label }}</span>
         </button>
-      </div>
-      
-      <div class="sidebar-footer">
+
         <button class="menu-item logout-item" @click="showLogoutModal = true">
           <span class="menu-icon logout-icon" v-html="iconSvg('logout')"></span>
           <span class="menu-label">Logout</span>
         </button>
+
       </div>
     </aside>
 
@@ -667,6 +667,7 @@ const iconSvg = (name) => {
       <section v-if="active === 'dashboard'" class="dashboard-view">
         <h2>Dashboard</h2>
         <p class="sub">Welcome back! Here's your business overview.</p>
+
 
         <div class="stats dashboard-cards">
           <article class="card"><span>Total Bookings</span>
@@ -1413,7 +1414,8 @@ const iconSvg = (name) => {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-right: 240px;
+  margin-left: auto;
+  margin-right: 0;
   flex-shrink: 0;
 }
 
@@ -1672,6 +1674,7 @@ const iconSvg = (name) => {
   color: #64748b;
   font-size: 15px;
 }
+
 
 .stats {
   display: grid;

@@ -204,58 +204,16 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
-    const email = form.email.trim().toLowerCase();
-    const requestInit = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({
-        email,
-        password: form.password,
-      }),
-    };
-
-    // Try /api/login first (points to UserController)
-    let response = await fetch('/api/login', requestInit);
-    
-    // If 404, try /api/users/login as fallback
-    if (response.status === 404) {
-      response = await fetch('/api/users/login', requestInit);
-    }
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      // Handle Laravel validation error format
-      let errorMessage = 'Login failed. Please try again.';
-      
-      if (data.errors) {
-        // Get first field error
-        const firstField = Object.keys(data.errors)[0];
-        if (firstField && data.errors[firstField]) {
-          errorMessage = Array.isArray(data.errors[firstField]) 
-            ? data.errors[firstField][0] 
-            : data.errors[firstField];
-        }
-      } else if (data.message) {
-        errorMessage = data.message;
-      }
-      
-      throw new Error(errorMessage);
-    }
-
-    // Store the token - handle both response formats
-    const token = data.token || data.access_token;
-    const user = data.user || data.data?.user;
+    const data = await loginUser({
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+    });
+    const token = data?.token || data?.access_token;
+    const user = data?.user || data?.data?.user;
     
     if (!token) {
       throw new Error('Invalid response: missing token');
     }
-
-    localStorage.setItem('auth_token', token);
-    localStorage.setItem('user', JSON.stringify(user));
 
     console.log('Login successful:', { user, token });
 
@@ -270,8 +228,24 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('Login error:', error);
-    const apiMessage = error?.response?.data?.message;
-    generalError.value = apiMessage || error.message || 'Invalid email or password';
+    const responseData = error?.response?.data;
+    const responseText = typeof responseData === 'string' ? responseData : '';
+    const responseMessage = typeof responseData === 'object' ? responseData?.message || '' : '';
+    const firstField = responseData?.errors ? Object.keys(responseData.errors)[0] : null;
+    const fieldMessage = firstField ? responseData?.errors?.[firstField]?.[0] : null;
+    const proxyConnectionError =
+      responseText.includes('ECONNREFUSED') ||
+      responseText.includes('proxy error') ||
+      responseText.includes('connect ECONNREFUSED') ||
+      responseMessage.includes('ECONNREFUSED') ||
+      responseMessage.includes('proxy error') ||
+      responseMessage.includes('connect ECONNREFUSED') ||
+      error?.message === 'Failed to fetch';
+    generalError.value = fieldMessage
+      || responseData?.message
+      || (proxyConnectionError ? 'Cannot reach backend server. Start Laravel server on http://127.0.0.1:8000.' : '')
+      || error.message
+      || 'Invalid email or password';
   } finally {
     isLoading.value = false;
   }

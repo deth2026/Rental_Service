@@ -68,16 +68,34 @@ class UserController extends Controller
         $isValidPassword = false;
 
         if ($user) {
+            $storedPassword = (string) $user->password;
+            $passwordCandidates = [$plainPassword, $trimmedPassword];
+
+            // Hash::check can throw for malformed/legacy values. Keep auth flow
+            // resilient and fall back to compatibility checks below.
+            foreach ($passwordCandidates as $candidate) {
+                try {
+                    if (Hash::check($candidate, $storedPassword)) {
+                        $isValidPassword = true;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    // Ignore and continue checking other strategies.
+                }
+            }
+
             if (
-                Hash::check($plainPassword, (string) $user->password) ||
-                Hash::check($trimmedPassword, (string) $user->password) ||
-                password_verify($plainPassword, (string) $user->password) ||
-                password_verify($trimmedPassword, (string) $user->password)
+                !$isValidPassword && (
+                    password_verify($plainPassword, $storedPassword) ||
+                    password_verify($trimmedPassword, $storedPassword)
+                )
             ) {
                 $isValidPassword = true;
             } elseif (
-                hash_equals((string) $user->password, $plainPassword) ||
-                hash_equals((string) $user->password, $trimmedPassword)
+                !$isValidPassword && (
+                    hash_equals($storedPassword, $plainPassword) ||
+                    hash_equals($storedPassword, $trimmedPassword)
+                )
             ) {
                 // Backward compatibility: migrate legacy plain-text passwords to hashed format.
                 $isValidPassword = true;
@@ -315,4 +333,3 @@ class UserController extends Controller
         ]);
     }
 }
-

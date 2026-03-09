@@ -10,7 +10,7 @@ class ShopController extends Controller
 {
     public function index()
     {
-        $shops = Shop::with('owner:id,name,email')
+        $shops = Shop::with('owner')
             ->orderByDesc('id')
             ->get();
 
@@ -87,15 +87,15 @@ class ShopController extends Controller
 
     public function show(Shop $shop)
     {
-        return response()->json($shop->load('owner:id,name,email'));
+        return response()->json($shop->load('owner'));
     }
 
     public function update(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        if ($user && $user->role !== 'admin') {
             return response()->json([
-                'message' => 'Unauthorized. You can only update your own shops.',
+                'message' => 'Unauthorized. Shop owners cannot edit shops.',
             ], 403);
         }
 
@@ -176,9 +176,9 @@ class ShopController extends Controller
     public function destroy(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        if ($user && $user->role !== 'admin') {
             return response()->json([
-                'message' => 'Unauthorized. You can only delete your own shops.',
+                'message' => 'Unauthorized. Shop owners cannot delete shops.',
             ], 403);
         }
 

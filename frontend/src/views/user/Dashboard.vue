@@ -59,19 +59,22 @@ const userInitials = computed(() => {
   return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
 })
 
-const shopImages = [
-  'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1517445312882-bc9910d016b7?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&w=600&q=80',
-  'https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=600&q=80',
-]
-
 const withCacheBust = (url, version) => {
   if (!url || typeof url !== 'string') return url
   const separator = url.includes('?') ? '&' : '?'
   return `${url}${separator}v=${encodeURIComponent(String(version))}`
+}
+
+const getApiOrigin = () => {
+  try {
+    const currentOrigin = window.location.origin
+    if (currentOrigin.includes('5173')) {
+      return 'http://127.0.0.1:8000'
+    }
+    return currentOrigin
+  } catch {
+    return 'http://127.0.0.1:8000'
+  }
 }
 
 const resolveShopImageUrl = (value) => {
@@ -84,23 +87,38 @@ const resolveShopImageUrl = (value) => {
   ) {
     return value
   }
-  if (value.startsWith('/')) {
-    return value
+  const clean = value.replace(/^\/+/, '')
+  if (clean.startsWith('storage/')) {
+    return `${getApiOrigin()}/${clean}`
   }
-  return `/${value}`
+  return `${getApiOrigin()}/storage/${clean}`
 }
 
-const normalizeShop = (shop, index) => ({
+const getInitials = (text, fallback = 'S') => {
+  const value = String(text || '').trim()
+  if (!value) return fallback
+  const words = value.split(/\s+/).filter(Boolean)
+  if (!words.length) return fallback
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
+}
+
+const normalizeShop = (shop) => ({
   id: shop.id,
   name: shop.name || `Shop #${shop.id}`,
   address: shop.address || 'No address available',
   phone: shop.phone || 'N/A',
-  email: shop.email || 'N/A',
+  email: shop.email || shop.owner?.email || 'N/A',
+  ownerName: shop.owner?.name || '',
+  ownerAvatar: shop.owner?.img_url || shop.owner?.profile_picture || shop.owner?.avatar_url || '',
   rating: Number(shop.rating || 0),
   status: shop.status || 'active',
-  image: shop.image
-    ? withCacheBust(resolveShopImageUrl(shop.image), shop.updated_at || shop.id || Date.now())
-    : shopImages[index % shopImages.length],
+  image: (shop.img_url || shop.image_url || shop.image)
+    ? withCacheBust(
+        resolveShopImageUrl(shop.img_url || shop.image_url || shop.image),
+        shop.updated_at || shop.id || Date.now()
+      )
+    : '',
 })
 
 const loadShops = async () => {
@@ -109,7 +127,7 @@ const loadShops = async () => {
 
   try {
     const data = await shopService.getShops()
-    shops.value = Array.isArray(data) ? data.map((shop, index) => normalizeShop(shop, index)) : []
+    shops.value = Array.isArray(data) ? data.map((shop) => normalizeShop(shop)) : []
   } catch (error) {
     shopsError.value = error.message || 'Failed to load shops.'
   } finally {
@@ -194,42 +212,41 @@ onMounted(() => {
         <div v-else class="shops-grid">
           <article v-for="shop in shops" :key="shop.id" class="shop-card">
             <div class="shop-card-image">
-              <img
-                :src="shop.image"
-                :alt="shop.name"
-                @error="$event.target.src = 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=600&q=80'"
-              />
+              <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
+              <div v-else class="status-box" style="margin: 10px">No shop image</div>
               <span :class="'status-badge status-' + (shop.status || 'active')">
                 <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
                 {{ shop.status || 'active' }}
               </span>
             </div>
             <div class="shop-card-top">
-              <div class="shop-brand-mark">{{ (shop.name || 'S').charAt(0).toUpperCase() }}</div>
+              <div class="shop-brand-mark">
+                <img
+                  v-if="shop.ownerAvatar"
+                  :src="resolveShopImageUrl(shop.ownerAvatar)"
+                  :alt="shop.ownerName || shop.name"
+                  class="shop-owner-avatar-img"
+                />
+                <span v-else>{{ getInitials(shop.ownerName || shop.name, 'S') }}</span>
+              </div>
               <div class="shop-title-block">
                 <p class="shop-profile-eyebrow">Rental Shop</p>
                 <h3>{{ shop.name }}</h3>
-                <p>Shop ID #{{ shop.id }}</p>
               </div>
-            </div>
-
-            <div class="shop-chip-row">
-              <span class="shop-chip">📍 {{ shop.address.substring(0, 20) }}{{ shop.address.length > 20 ? '...' : '' }}</span>
-              <span class="shop-chip">⭐ {{ shop.rating.toFixed(1) }} Rating</span>
             </div>
 
             <div class="shop-contact-grid">
               <div class="shop-info">
-                <span>📍 Address</span>
-                <strong>{{ shop.address }}</strong>
+                <span>Email</span>
+                <strong>{{ shop.email }}</strong>
               </div>
               <div class="shop-info">
-                <span>📞 Phone</span>
+                <span> Phone</span>
                 <strong>{{ shop.phone }}</strong>
               </div>
               <div class="shop-info" style="grid-column: span 2">
-                <span>✉️ Email</span>
-                <strong>{{ shop.email }}</strong>
+                <span>Address</span>
+                <strong>{{ shop.address }}</strong>
               </div>
             </div>
 

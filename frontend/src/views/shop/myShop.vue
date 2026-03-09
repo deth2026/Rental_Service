@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { shopApi } from '@/services/api'
 
 const shop = ref(null)
@@ -17,6 +17,7 @@ const shopImageFile = ref(null)
 const shopImagePreview = ref('')
 const shopImageInputRef = ref(null)
 const isShopImageDragOver = ref(false)
+const isDisplayImageBroken = ref(false)
 
 const createForm = reactive({
   name: '',
@@ -35,12 +36,17 @@ const fieldErrors = reactive({
 })
 
 const shopImageSource = computed(() => {
-  const image = shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
+  const image = shop.value?.img_url || shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
   if (!image) return ''
   if (/^https?:\/\//.test(String(image)) || String(image).startsWith('data:')) return String(image)
   const normalized = String(image).replace(/^\/+/, '')
   if (normalized.startsWith('storage/')) return `/${normalized}`
   return `/storage/${normalized}`
+})
+
+const displayShopImage = computed(() => {
+  if (isDisplayImageBroken.value) return ''
+  return shopImageSource.value
 })
 
 // store the actual File object separately so we can send multipart data
@@ -127,31 +133,6 @@ const formatDateTime = (value) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleDateString()
-}
-
-// Normalize shop image URL
-const getApiOrigin = () => {
-  try {
-    // For production, use the current origin
-    // For development, we need to use the Laravel backend port (8000)
-    const currentOrigin = window.location.origin
-    if (currentOrigin.includes('5173')) {
-      return 'http://127.0.0.1:8000'
-    }
-    return currentOrigin
-  } catch {
-    return 'http://127.0.0.1:8000'
-  }
-}
-
-const getShopImageUrl = (url) => {
-  if (!url) return ''
-  // If it's already a data URL or full URL, return as-is
-  if (/^data:image/.test(url)) return url
-  if (/^https?:\/\//.test(url)) return url
-  // For relative paths, prepend the storage URL
-  const cleanUrl = url.replace(/^\/+/, '')
-  return `${getApiOrigin()}/storage/${cleanUrl}`
 }
 
 const loadMyShop = async () => {
@@ -259,8 +240,11 @@ const applyShopImageFile = (file) => {
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value)
   }
+  selectedImage.value = file
   shopImageFile.value = file
   shopImagePreview.value = URL.createObjectURL(file)
+  // File upload takes priority over manual URL input.
+  createForm.img_url = ''
   error.value = ''
 }
 
@@ -280,6 +264,10 @@ const onShopImageDrop = (event) => {
   isShopImageDragOver.value = false
   const file = event.dataTransfer?.files?.[0] || null
   applyShopImageFile(file)
+}
+
+const onDisplayShopImageError = () => {
+  isDisplayImageBroken.value = true
 }
 
 const openCreateModal = () => {
@@ -339,11 +327,12 @@ const createShop = async () => {
       }
     }
 
-    const { data: created } = await shopApi.create(payload)
-    const createdShop = created?.data || created || null
-    if (createdShop && typeof createdShop === 'object') {
-      shop.value = createdShop
-      setCachedShop(getUserId(), createdShop)
+    const response = await shopApi.create(payload)
+
+    const savedShop = response?.data?.data || response?.data || null
+    if (savedShop && typeof savedShop === 'object') {
+      shop.value = savedShop
+      setCachedShop(getUserId(), savedShop)
     }
     await loadMyShop()
 
@@ -364,6 +353,10 @@ const createShop = async () => {
 
 onMounted(async () => {
   await loadMyShop()
+})
+
+watch(shopImageSource, () => {
+  isDisplayImageBroken.value = false
 })
 
 onBeforeUnmount(() => {
@@ -390,8 +383,8 @@ onBeforeUnmount(() => {
     <div v-else class="shop-card">
       <!-- Shop Image - Small profile style -->
       <div class="shop-header-row">
-        <div class="shop-image-section" v-if="shop.img_url">
-          <img :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
+        <div class="shop-image-section" v-if="displayShopImage">
+          <img :src="displayShopImage" alt="Shop Image" class="shop-cover-image" @error="onDisplayShopImageError" />
         </div>
         <div class="shop-image-section" v-else>
           <div class="shop-cover-placeholder">
@@ -408,10 +401,6 @@ onBeforeUnmount(() => {
             {{ shop.status || 'inactive' }}
           </span>
         </div>
-      </div>
-
-      <div v-if="shopImageSource" class="shop-image-wrap">
-        <img :src="shopImageSource" alt="Shop" class="shop-image" />
       </div>
 
       <div class="shop-grid">
@@ -460,6 +449,43 @@ onBeforeUnmount(() => {
               Address *
               <input v-model="createForm.address" required type="text" placeholder="Enter address" @input="clearFieldError('address')" />
               <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
+            </label>
+
+            <label>
+              Phone *
+              <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
+              <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
+            </label>
+
+            <label class="wide">
+              Description *
+              <textarea v-model="createForm.description" rows="3" placeholder="Describe your shop" @input="clearFieldError('description')"></textarea>
+              <small v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</small>
+            </label>
+
+            <label class="wide">
+              Shop Image
+              <input
+                ref="shopImageInputRef"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="hidden-file-input"
+                @change="onShopImageChange"
+              />
+              <div
+                class="shop-upload-dropzone"
+                :class="{ dragging: isShopImageDragOver }"
+                @click="triggerShopImagePicker"
+                @dragover.prevent="isShopImageDragOver = true"
+                @dragleave.prevent="isShopImageDragOver = false"
+                @drop.prevent="onShopImageDrop"
+              >
+                <p>{{ shopImageFile ? 'Change shop image' : 'Click to upload or drag image here' }}</p>
+                <span>PNG / JPG / WEBP</span>
+              </div>
+              <div v-if="shopImagePreview" class="image-preview-wrap" style="margin-top:8px">
+                <img :src="shopImagePreview" alt="Shop preview" class="image-preview" />
+              </div>
             </label>
 
           </div>
@@ -537,6 +563,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(29, 78, 216, 0.25);
 }
+
 
 .create-btn:disabled {
   opacity: 0.65;
