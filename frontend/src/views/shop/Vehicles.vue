@@ -1,10 +1,10 @@
 ﻿<script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { vehicleApi } from '@/services/api'
+import { vehicleApi, shopApi, api } from '@/services/api'
+import { getSessionUser } from '@/services/auth'
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
-const shops = ['Main Shop - Phnom Penh', 'Branch Shop - Siem Reap']
 
 const search = ref('')
 const categoryFilter = ref('All Categories')
@@ -12,6 +12,13 @@ const statusFilter = ref('All Status')
 const modal = ref(false)
 const editId = ref(null)
 const loading = ref(false)
+
+// Current shop data
+const currentShop = ref(null)
+const currentShopId = ref(null)
+
+// Get current user
+const sessionUser = ref(getSessionUser() || {})
 
 // Delete confirmation modal
 const showDeleteModal = ref(false)
@@ -31,16 +38,10 @@ const cancelDelete = () => {
 }
 
 // Toast notification
-const showToast = (message, type = 'info') => {
-    const toast = document.createElement('div')
-    toast.className = `toast toast-${type}`
-    toast.textContent = message
-    document.body.appendChild(toast)
-    setTimeout(() => toast.classList.add('show'), 10)
-    setTimeout(() => {
-        toast.classList.remove('show')
-        setTimeout(() => document.body.removeChild(toast), 300)
-    }, 3000)
+const toast = ref({ show: false, message: '', type: 'success' })
+const showToast = (message, type = 'success') => {
+    toast.value = { show: true, message, type }
+    setTimeout(() => toast.value.show = false, 3000)
 }
 
 const khTime = () => {
@@ -73,13 +74,17 @@ const fetchVehicles = async () => {
                 parsedPhotos = []
             }
             
+            // Use image_url_full if available (new API response), otherwise fall back to image_url
+            const imageUrl = v.image_url_full || v.image_url || ''
+            
             return {
                 ...v,
                 plate: v.plate_number,
                 price: v.price_per_day,
-                createdAt: v.create_at,
+                createdAt: v.create_at || v.created_at,
                 updatedAt: v.updated_at,
-                previewUrl: v.image_url || (parsedPhotos.length > 0 ? parsedPhotos[0] : sampleThumb),
+                // Use the full URL from API or first photo URL
+                previewUrl: imageUrl || (parsedPhotos.length > 0 ? parsedPhotos[0] : sampleThumb),
                 photos: parsedPhotos,
                 base64Photos: parsedPhotos
             }
@@ -91,14 +96,41 @@ const fetchVehicles = async () => {
     }
 }
 
-// Load vehicles on mount
-onMounted(() => {
+// Load vehicles and shop on mount
+onMounted(async () => {
+    await fetchUserShop()
     fetchVehicles()
 })
 
 const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
 const photoPreview = ref(sampleThumb)
-const form = reactive({ name: '', brand: '', model: '', category: '', shop: 'Main Shop - Phnom Penh', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
+const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
+
+// Fetch user's shop
+const fetchUserShop = async () => {
+    try {
+        const ownerId = Number(sessionUser.value?.id || 0)
+        if (!ownerId) return
+        
+        const response = await api.get('/shops')
+        const shops = response.data.data || response.data || []
+        const myShops = shops.filter((s) => Number(s.owner_id) === ownerId)
+        
+        if (myShops.length > 0) {
+            // Sort by creation date, newest first
+            myShops.sort((a, b) => {
+                const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+                const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+                return bTime - aTime
+            })
+            currentShop.value = myShops[0]
+            currentShopId.value = myShops[0].id
+            form.shop = myShops[0].name
+        }
+    } catch (error) {
+        console.error('Error fetching shop:', error)
+    }
+}
 
 // Format date to show only day, month, year
 const formatDate = (dateStr) => {
@@ -154,9 +186,17 @@ const availableVehicles = computed(() => vehicles.value.filter(v => v.status ===
 const maintenanceVehicles = computed(() => vehicles.value.filter(v => v.status === 'Maintenance').length)
 const potentialPerDay = computed(() => vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0))
 
-const openCreate = () => {
+const openCreate = async () => {
     editId.value = null
-    Object.assign(form, { name: '', brand: '', model: '', category: '', shop: 'Main Shop - Phnom Penh', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: khTime(), photos: [], base64Photos: [] })
+    // Ensure we have the latest shop data
+    await fetchUserShop()
+    Object.assign(form, { 
+        name: '', brand: '', model: '', category: '', 
+        shop: currentShop.value?.name || '', 
+        plate: '', description: '', fuel: '', transmission: '', 
+        price: '', status: 'Available', updatedAt: khTime(), 
+        photos: [], base64Photos: [] 
+    })
     photoPreview.value = sampleThumb
     modal.value = true
 }
@@ -172,12 +212,16 @@ const openEdit = (v) => {
             photosData = []
         }
     }
+    
+    // Use image_url_full if available, otherwise fall back to previewUrl
+    const imageUrl = v.image_url_full || v.previewUrl || ''
+    
     Object.assign(form, {
         name: v.name || '',
         brand: v.brand || '',
         model: v.model || '',
         category: v.category || '',
-        shop: v.shop || 'Main Shop - Phnom Penh',
+        shop: v.shop || currentShop.value?.name || '',
         plate: v.plate || '',
         description: v.description || '',
         fuel: v.fuel || '',
@@ -188,21 +232,27 @@ const openEdit = (v) => {
         photos: Array.isArray(photosData) ? photosData.map((_, i) => `Photo ${i + 1}`) : [],
         base64Photos: photosData || []
     })
-    // Use the stored base64 image or the previewUrl
-    photoPreview.value = (photosData && photosData.length > 0) ? photosData[0] : (v.previewUrl || sampleThumb)
+    // Use the stored full URL or fall back to sampleThumb
+    photoPreview.value = imageUrl || sampleThumb
     modal.value = true
 }
 
 const saveVehicle = async () => {
     if (!form.name || !form.category || !form.price) {
-        alert('Please fill in all required fields: Name, Category, and Price')
+        showToast('Please fill in all required fields: Name, Category, and Price', 'error')
         return
     }
 
     // Validate price is a valid number
     const priceValue = Number(form.price)
     if (isNaN(priceValue) || priceValue <= 0) {
-        alert('Please enter a valid price per day')
+        showToast('Please enter a valid price per day', 'error')
+        return
+    }
+
+    // Ensure we have shop data
+    if (!currentShopId.value) {
+        showToast('Please create a shop first before adding vehicles', 'error')
         return
     }
 
@@ -215,17 +265,14 @@ const saveVehicle = async () => {
         price: priceValue,
         status: form.status,
         shop: form.shop,
+        shop_id: currentShopId.value,  // Include shop_id for proper association
         description: form.description,
         fuel: form.fuel,
         transmission: form.transmission,
         photos: form.base64Photos || [],
         previewUrl: photoPreview.value
     }
-    
-    // Close modal immediately and show success
-    modal.value = false
-    showToast('Vehicle saved successfully!', 'success')
-    
+
     try {
         if (editId.value) {
             // Update existing vehicle
@@ -233,6 +280,8 @@ const saveVehicle = async () => {
             const updatedData = response.data
             const index = vehicles.value.findIndex(v => v.id === editId.value)
             if (index >= 0) {
+                // Use image_url_full from API response if available
+                const imageUrl = updatedData.image_url_full || updatedData.image_url || ''
                 vehicles.value[index] = {
                     ...vehicles.value[index],
                     name: updatedData.name,
@@ -245,49 +294,72 @@ const saveVehicle = async () => {
                     description: updatedData.description,
                     fuel: updatedData.fuel_type,
                     transmission: updatedData.transmission,
-                    previewUrl: updatedData.image_url || (form.base64Photos && form.base64Photos[0]) || sampleThumb,
+                    previewUrl: imageUrl || (form.base64Photos && form.base64Photos[0]) || sampleThumb,
+                    image_url_full: updatedData.image_url_full,
                     photos: form.base64Photos || [],
                     base64Photos: form.base64Photos || [],
                     updatedAt: khTime()
                 }
             }
+            modal.value = false
+            showToast('Vehicle updated successfully!', 'success')
         } else {
-            // Create new vehicle - add immediately to list
+            // Create new vehicle - wait for API response first
+            const response = await vehicleApi.create(payload)
+            const newData = response.data
+            
+            // Add vehicle to list with real data from server
             const newVehicle = {
-                id: Date.now(),
-                name: form.name,
-                brand: form.brand,
-                model: form.model,
-                category: form.category,
-                plate: form.plate || `AUTO-${Date.now().toString().slice(-5)}`,
-                price: priceValue,
-                status: form.status,
-                description: form.description,
-                fuel: form.fuel,
-                transmission: form.transmission,
-                previewUrl: photoPreview.value,
+                id: newData.id,
+                name: newData.name,
+                brand: newData.brand,
+                model: newData.model,
+                category: newData.type,
+                plate: newData.plate_number,
+                price: newData.price_per_day,
+                status: newData.status,
+                description: newData.description,
+                fuel: newData.fuel_type,
+                transmission: newData.transmission,
+                // Use full image URL from API response
+                previewUrl: newData.image_url_full || newData.image_url || photoPreview.value,
+                image_url_full: newData.image_url_full,
                 photos: form.base64Photos || [],
                 base64Photos: form.base64Photos || [],
                 createdAt: khTime(),
                 updatedAt: khTime()
             }
             vehicles.value.unshift(newVehicle)
-            
-            // Save to backend in background
-            try {
-                const response = await vehicleApi.create(payload)
-                const newData = response.data
-                // Update with real ID from server
-                const idx = vehicles.value.findIndex(v => v.id === newVehicle.id)
-                if (idx >= 0) {
-                    vehicles.value[idx].id = newData.id
-                }
-            } catch (e) {
-                console.error('Background save error:', e)
-            }
+            modal.value = false
+            showToast('Vehicle created successfully!', 'success')
         }
     } catch (error) {
         console.error('Error saving vehicle:', error)
+        console.error('Error response:', error.response)
+        
+        let errorMessage = 'Failed to save vehicle. Please try again.'
+        
+        if (error.response) {
+            if (error.response.status === 401) {
+                errorMessage = 'You are not authenticated. Please login again.'
+            } else if (error.response.status === 403) {
+                errorMessage = error.response.data?.message || 'You do not have permission.'
+            } else if (error.response.status === 422) {
+                const errors = error.response.data?.errors
+                if (errors) {
+                    const firstError = Object.values(errors)[0]
+                    errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+                } else {
+                    errorMessage = error.response.data?.message || 'Validation failed.'
+                }
+            } else {
+                errorMessage = error.response.data?.message || errorMessage
+            }
+        } else if (error.request) {
+            errorMessage = 'No response from server. Please check your connection.'
+        }
+        
+        showToast(errorMessage, 'error')
     }
 }
 
@@ -542,8 +614,8 @@ const onPhotoDrop = async (e) => {
                                 <div class="form-group">
                                     <label>Shop Location</label>
                                     <select v-model="form.shop">
-                                        <option value="" disabled>Select Shop</option>
-                                        <option v-for="shop in shops" :key="shop">{{ shop }}</option>
+<option value="" disabled>Select Shop</option>
+                                        <option v-if="currentShop" :value="currentShop.name">{{ currentShop.name }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -668,7 +740,49 @@ const onPhotoDrop = async (e) => {
     </div>
 </template>
 
+<!-- Toast Notification -->
+<div v-if="toast.show" :class="['toast', toast.type]">
+    {{ toast.message }}
+</div>
+
 <style scoped>
+/* Toast Notification Styles */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 14px 20px;
+    border-radius: 8px;
+    color: #0f172a;
+    font-weight: 500;
+    font-size: 14px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+}
+
+.toast.success {
+    background: #d1fae5;
+    border-left: 4px solid #10b981;
+}
+
+.toast.error {
+    background: #fee2e2;
+    border-left: 4px solid #ef4444;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 .panel {
     background: #fff;
     border: 1px solid #e2e8f0;

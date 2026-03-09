@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\VehicleResource;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -128,9 +129,34 @@ class VehicleController extends Controller
         return (string) ($fallback ?? '');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Vehicle::paginate(15));
+        // If user is authenticated, filter vehicles by their shop
+        $user = $request->user();
+        
+        if ($user && $user->role === 'shop_owner') {
+            // Get all shops owned by this user
+            $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
+            
+            // If user has no shops, return empty result
+            if (empty($shopIds)) {
+                return response()->json([
+                    'data' => [],
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 15,
+                    'total' => 0
+                ]);
+            }
+            
+            // Return only vehicles from user's shops
+            $vehicles = Vehicle::whereIn('shop_id', $shopIds)->paginate(15);
+            return VehicleResource::collection($vehicles);
+        }
+        
+        // For admin or unauthenticated users, return all vehicles
+        $vehicles = Vehicle::paginate(15);
+        return VehicleResource::collection($vehicles);
     }
 
     public function store(Request $request)
@@ -151,12 +177,24 @@ class VehicleController extends Controller
 
         $data = $request->all();
         
+        // Get authenticated user's shop and automatically assign shop_id
+        $user = $request->user();
+        $shopId = $data['shop_id'] ?? null;
+        
+        // If no shop_id provided or user is authenticated, try to get their shop
+        if (!$shopId && $user) {
+            $userShop = \App\Models\Shop::where('owner_id', $user->id)->first();
+            if ($userShop) {
+                $shopId = $userShop->id;
+            }
+        }
+        
         // Persist base64 photos as files and store only lightweight paths/URLs.
         $photosData = $this->normalizePhotos($data['photos'] ?? []);
         
         // Map frontend fields to database fields
         $vehicleData = [
-            'shop_id' => $data['shop_id'] ?? null,
+            'shop_id' => $shopId,
             'name' => $data['name'] ?? '',
             'type' => $data['category'] ?? $data['type'] ?? '',
             'brand' => $data['brand'] ?? '',
@@ -183,7 +221,7 @@ class VehicleController extends Controller
         try {
             $record = Vehicle::create($vehicleData);
             \Log::info('Vehicle created successfully with ID:', ['id' => $record->id]);
-            return response()->json($record, 201);
+            return response()->json(new VehicleResource($record), 201);
         } catch (\Exception $e) {
             \Log::error('Error creating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to create vehicle. Please try again.'], 500);
@@ -192,11 +230,25 @@ class VehicleController extends Controller
 
     public function show(Vehicle $vehicle)
     {
-        return response()->json($vehicle);
+        return response()->json(new VehicleResource($vehicle));
     }
 
     public function update(Request $request, Vehicle $vehicle)
     {
+        // Check if user is authorized to update this vehicle
+        $user = $request->user();
+        if ($user && $user->role !== 'admin') {
+            // Get user's shop IDs
+            $userShopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
+            
+            // Check if vehicle belongs to user's shop
+            if (!in_array($vehicle->shop_id, $userShopIds)) {
+                return response()->json([
+                    'message' => 'Unauthorized. You can only update your own shop\'s vehicles.',
+                ], 403);
+            }
+        }
+        
         $request->validate([
             'name' => 'nullable|string|max:255',
             'category' => 'nullable|string|max:100',
@@ -243,15 +295,29 @@ class VehicleController extends Controller
 
         try {
             $vehicle->update($vehicleData);
-            return response()->json($vehicle->fresh());
+            return response()->json(new VehicleResource($vehicle->fresh()));
         } catch (\Exception $e) {
             \Log::error('Error updating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to update vehicle. Please try again.'], 500);
         }
     }
 
-    public function destroy(Vehicle $vehicle)
+    public function destroy(Request $request, Vehicle $vehicle)
     {
+        // Check if user is authorized to delete this vehicle
+        $user = $request->user();
+        if ($user && $user->role !== 'admin') {
+            // Get user's shop IDs
+            $userShopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
+            
+            // Check if vehicle belongs to user's shop
+            if (!in_array($vehicle->shop_id, $userShopIds)) {
+                return response()->json([
+                    'message' => 'Unauthorized. You can only delete your own shop\'s vehicles.',
+                ], 403);
+            }
+        }
+        
         $vehicle->delete();
 
         return response()->json(['message' => 'Vehicle deleted successfully']);

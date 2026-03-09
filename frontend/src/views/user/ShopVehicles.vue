@@ -99,7 +99,7 @@ const normalizeVehicle = (vehicle) => {
     parsedPhotos = []
   }
 
-  const imageUrl = vehicle.image_url || (parsedPhotos.length > 0 ? parsedPhotos[0] : '')
+  const imageUrl = vehicle.image_url_full || vehicle.image_url || (parsedPhotos.length > 0 ? (vehicle.photo_urls && vehicle.photo_urls[0] ? vehicle.photo_urls[0] : parsedPhotos[0]) : '')
 
   return {
     id: vehicle.id,

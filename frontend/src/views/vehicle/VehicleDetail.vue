@@ -82,7 +82,7 @@ export default {
     <div v-else class="vehicle-content">
       <div class="vehicle-image-section">
         <img 
-          :src="vehicle.image_url || 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800'" 
+          :src="vehicle.image_url_full || vehicle.image_url || 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800'" 
           :alt="vehicle.model" 
           class="vehicle-image"
         />

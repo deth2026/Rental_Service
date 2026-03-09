@@ -385,8 +385,8 @@ const fetchVehicles = async () => {
       transmission: v.transmission,
       createdAt: v.create_at,
       updatedAt: v.updated_at,
-      image: normalizeVehicleImageUrl(v.image_url || ''),
-      image_url: normalizeVehicleImageUrl(v.image_url || '')
+      image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ''),
+      image_url: v.image_url_full || normalizeVehicleImageUrl(v.image_url || '')
     }))
   } catch (error) {
     console.error('Error fetching vehicles:', error)
