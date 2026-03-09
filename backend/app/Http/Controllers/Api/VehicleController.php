@@ -15,6 +15,10 @@ class VehicleController extends Controller
 
     public function store(Request $request)
     {
+        // Log all request data for debugging
+        \Log::info('=== Vehicle Store Request ===');
+        \Log::info('Request all data:', $request->all());
+        
         $request->validate([
             'name' => 'required|string|max:255',
             'category' => 'nullable|string|max:100',
@@ -22,12 +26,14 @@ class VehicleController extends Controller
             'plate' => 'nullable|string|max:20',
             'price' => 'nullable|numeric|min:0',
             'status' => 'nullable|string|in:Available,Rented,Maintenance',
+            'shop_id' => 'nullable|integer',
         ]);
 
         $data = $request->all();
         
         // Handle photos - could be base64 array or regular array
         $photosData = $data['photos'] ?? [];
+        
         if (is_array($photosData)) {
             // Filter out non-base64 data (file names that may have been passed)
             $photosData = array_filter($photosData, function($photo) {
@@ -37,6 +43,7 @@ class VehicleController extends Controller
         
         // Map frontend fields to database fields
         $vehicleData = [
+            'shop_id' => $data['shop_id'] ?? null,
             'name' => $data['name'] ?? '',
             'type' => $data['category'] ?? $data['type'] ?? '',
             'brand' => $data['brand'] ?? '',
@@ -51,9 +58,16 @@ class VehicleController extends Controller
             'photos' => json_encode(array_values($photosData))
         ];
 
-        $record = Vehicle::create($vehicleData);
+        \Log::info('Vehicle data to create:', $vehicleData);
 
-        return response()->json($record, 201);
+        try {
+            $record = Vehicle::create($vehicleData);
+            \Log::info('Vehicle created successfully with ID:', ['id' => $record->id]);
+            return response()->json($record, 201);
+        } catch (\Exception $e) {
+            \Log::error('Error creating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function show(Vehicle $vehicle)
@@ -70,8 +84,9 @@ class VehicleController extends Controller
             'plate' => 'nullable|string|max:20',
             'price' => 'nullable|numeric|min:0',
             'status' => 'nullable|string|in:Available,Rented,Maintenance',
+            'shop_id' => 'nullable|integer',
         ]);
-
+        
         $data = $request->all();
         
         // Handle photos - could be base64 array or regular array
@@ -87,6 +102,7 @@ class VehicleController extends Controller
         
         // Map frontend fields to database fields
         $vehicleData = [
+            'shop_id' => $data['shop_id'] ?? $vehicle->shop_id,
             'name' => $data['name'] ?? $vehicle->name,
             'type' => $data['category'] ?? $data['type'] ?? $vehicle->type,
             'brand' => $data['brand'] ?? $vehicle->brand,

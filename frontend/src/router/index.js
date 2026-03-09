@@ -9,6 +9,7 @@ import UserDashboard from '../views/user/Dashboard.vue';
 import SettingUser from '../views/user/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -90,6 +91,12 @@ const router = createRouter({
       name: 'vehicle-detail',
       component: VehicleDetail,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
+    },
+    {
+      path: '/shop/:id/vehicles',
+      name: 'shop-vehicles',
+      component: ShopVehicles,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     }
   ]
 });

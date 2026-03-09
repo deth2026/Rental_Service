@@ -36,7 +36,11 @@ api.interceptors.request.use((config) => {
 
 // Vehicle API calls
 export const vehicleApi = {
-  getAll: () => api.get('/vehicles'),
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `/vehicles?${queryString}` : '/vehicles';
+    return api.get(url);
+  },
   getById: (id) => api.get(`/vehicles/${id}`),
   create: (data) => api.post('/vehicles', data),
   update: (id, data) => api.put(`/vehicles/${id}`, data),
