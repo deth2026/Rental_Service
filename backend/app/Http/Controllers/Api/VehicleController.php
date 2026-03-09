@@ -58,7 +58,7 @@ class VehicleController extends Controller
             'photos' => json_encode(array_values($photosData))
         ];
 
-        \Log::info('Vehicle data to create:', $vehicleData);
+        \Log::info('Vehicle data to create:', $vehicleData); 
 
         try {
             $record = Vehicle::create($vehicleData);
