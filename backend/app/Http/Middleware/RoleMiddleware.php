@@ -28,6 +28,13 @@ class RoleMiddleware
             if ($role === 'shop') {
                 $allowedRoles[] = 'shop_owner';
             }
+            // Backward-compatible aliases between owner and shop_owner.
+            if ($role === 'shop_owner') {
+                $allowedRoles[] = 'owner';
+            }
+            if ($role === 'owner') {
+                $allowedRoles[] = 'shop_owner';
+            }
         }
 
         if ($userRole !== 'admin' && !in_array($userRole, $allowedRoles, true)) {

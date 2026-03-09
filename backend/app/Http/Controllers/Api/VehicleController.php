@@ -5,9 +5,129 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class VehicleController extends Controller
 {
+    private function vehicleHasColumn(string $column): bool
+    {
+        static $columns = null;
+        if ($columns === null) {
+            $columns = Schema::getColumnListing('vehicles');
+        }
+
+        return in_array($column, $columns, true);
+    }
+
+    private function isBase64Image(?string $value): bool
+    {
+        return is_string($value) && preg_match('/^data:image\/(\w+);base64,/', $value) === 1;
+    }
+
+    private function saveBase64Image(string $dataUrl): ?string
+    {
+        if (!preg_match('/^data:image\/(\w+);base64,/', $dataUrl, $matches)) {
+            return null;
+        }
+
+        $extension = strtolower($matches[1]);
+        if ($extension === 'jpeg') {
+            $extension = 'jpg';
+        }
+
+        $raw = substr($dataUrl, strpos($dataUrl, ',') + 1);
+        $binary = base64_decode($raw, true);
+        if ($binary === false) {
+            return null;
+        }
+
+        $directory = storage_path('app/public/vehicles');
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $filename = time() . '_' . uniqid() . '.' . $extension;
+        $path = $directory . DIRECTORY_SEPARATOR . $filename;
+        file_put_contents($path, $binary);
+
+        return 'vehicles/' . $filename;
+    }
+
+    private function normalizePhotos($photosData): array
+    {
+        if (is_string($photosData)) {
+            $decoded = json_decode($photosData, true);
+            if (is_array($decoded)) {
+                $photosData = $decoded;
+            }
+        }
+
+        if (!is_array($photosData)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($photosData as $photo) {
+            if (!is_string($photo) || trim($photo) === '') {
+                continue;
+            }
+
+            $value = trim($photo);
+            if ($this->isBase64Image($value)) {
+                $stored = $this->saveBase64Image($value);
+                if ($stored) {
+                    $normalized[] = $stored;
+                }
+                continue;
+            }
+
+            $trimmed = ltrim($value, '/');
+            if (
+                filter_var($value, FILTER_VALIDATE_URL) ||
+                str_starts_with($trimmed, 'vehicles/') ||
+                str_starts_with($trimmed, 'storage/')
+            ) {
+                $normalized[] = $trimmed;
+            }
+        }
+
+        return array_values($normalized);
+    }
+
+    private function resolveSingleImageUrl(array $data, array $photosData, ?string $fallback = ''): string
+    {
+        if (!empty($photosData)) {
+            return $photosData[0];
+        }
+
+        foreach (['previewUrl', 'image', 'image_url'] as $key) {
+            $candidate = $data[$key] ?? null;
+            if (!is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
+
+            $candidate = trim($candidate);
+            if ($this->isBase64Image($candidate)) {
+                $stored = $this->saveBase64Image($candidate);
+                if ($stored) {
+                    return $stored;
+                }
+                continue;
+            }
+
+            $trimmed = ltrim($candidate, '/');
+            if (
+                filter_var($candidate, FILTER_VALIDATE_URL) ||
+                str_starts_with($trimmed, 'vehicles/') ||
+                str_starts_with($trimmed, 'storage/')
+            ) {
+                return $trimmed;
+            }
+        }
+
+        return (string) ($fallback ?? '');
+    }
+
     public function index()
     {
         return response()->json(Vehicle::paginate(15));
@@ -31,15 +151,8 @@ class VehicleController extends Controller
 
         $data = $request->all();
         
-        // Handle photos - could be base64 array or regular array
-        $photosData = $data['photos'] ?? [];
-        
-        if (is_array($photosData)) {
-            // Filter out non-base64 data (file names that may have been passed)
-            $photosData = array_filter($photosData, function($photo) {
-                return strpos($photo, 'data:') === 0 || strpos($photo, 'base64,') !== false;
-            });
-        }
+        // Persist base64 photos as files and store only lightweight paths/URLs.
+        $photosData = $this->normalizePhotos($data['photos'] ?? []);
         
         // Map frontend fields to database fields
         $vehicleData = [
@@ -54,9 +167,16 @@ class VehicleController extends Controller
             'fuel_type' => $data['fuel'] ?? '',
             'transmission' => $data['transmission'] ?? '',
             'description' => $data['description'] ?? '',
-            'image_url' => !empty($photosData) ? $photosData[0] : ($data['previewUrl'] ?? $data['image'] ?? ''),
-            'photos' => json_encode(array_values($photosData))
+            'image_url' => $this->resolveSingleImageUrl($data, $photosData, '')
         ];
+
+        if ($this->vehicleHasColumn('year')) {
+            $vehicleData['year'] = (int) ($data['year'] ?? date('Y'));
+        }
+
+        if ($this->vehicleHasColumn('photos')) {
+            $vehicleData['photos'] = json_encode(array_values($photosData));
+        }
 
         \Log::info('Vehicle data to create:', $vehicleData);
 
@@ -66,7 +186,7 @@ class VehicleController extends Controller
             return response()->json($record, 201);
         } catch (\Exception $e) {
             \Log::error('Error creating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json(['message' => 'Failed to create vehicle. Please try again.'], 500);
         }
     }
 
@@ -89,13 +209,10 @@ class VehicleController extends Controller
         
         $data = $request->all();
         
-        // Handle photos - could be base64 array or regular array
+        // Handle photos - persist base64 as files and keep path references
         $photosData = $data['photos'] ?? null;
         if ($photosData !== null && is_array($photosData)) {
-            // Filter out non-base64 data (file names that may have been passed)
-            $photosData = array_filter($photosData, function($photo) {
-                return strpos($photo, 'data:') === 0 || strpos($photo, 'base64,') !== false;
-            });
+            $photosData = $this->normalizePhotos($photosData);
         } else {
             $photosData = json_decode($vehicle->photos ?? '[]', true);
         }
@@ -113,13 +230,24 @@ class VehicleController extends Controller
             'fuel_type' => $data['fuel'] ?? $vehicle->fuel_type,
             'transmission' => $data['transmission'] ?? $vehicle->transmission,
             'description' => $data['description'] ?? $vehicle->description,
-            'image_url' => !empty($photosData) ? $photosData[0] : ($data['previewUrl'] ?? $vehicle->image_url),
-            'photos' => json_encode(array_values($photosData))
+            'image_url' => $this->resolveSingleImageUrl($data, $photosData, $vehicle->image_url)
         ];
 
-        $vehicle->update($vehicleData);
+        if ($this->vehicleHasColumn('year')) {
+            $vehicleData['year'] = (int) ($data['year'] ?? $vehicle->year ?? date('Y'));
+        }
 
-        return response()->json($vehicle->fresh());
+        if ($this->vehicleHasColumn('photos')) {
+            $vehicleData['photos'] = json_encode(array_values($photosData));
+        }
+
+        try {
+            $vehicle->update($vehicleData);
+            return response()->json($vehicle->fresh());
+        } catch (\Exception $e) {
+            \Log::error('Error updating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['message' => 'Failed to update vehicle. Please try again.'], 500);
+        }
     }
 
     public function destroy(Vehicle $vehicle)

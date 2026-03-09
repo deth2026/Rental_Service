@@ -4,13 +4,33 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Vehicle extends Model
 {
     use HasFactory;
 
-    const CREATED_AT = 'create_at';
-    const UPDATED_AT = 'updated_at';
+    public function getCreatedAtColumn()
+    {
+        static $createdColumn = null;
+        if ($createdColumn === null) {
+            $columns = Schema::getColumnListing($this->getTable());
+            $createdColumn = in_array('created_at', $columns, true) ? 'created_at' : 'create_at';
+        }
+
+        return $createdColumn;
+    }
+
+    public function getUpdatedAtColumn()
+    {
+        static $updatedColumn = null;
+        if ($updatedColumn === null) {
+            $columns = Schema::getColumnListing($this->getTable());
+            $updatedColumn = in_array('updated_at', $columns, true) ? 'updated_at' : 'update_at';
+        }
+
+        return $updatedColumn;
+    }
 
     protected $fillable = [
         'shop_id',
@@ -19,6 +39,7 @@ class Vehicle extends Model
         'brand',
         'model',
         'plate_number',
+        'year',
         'price_per_day',
         'fuel_type',
         'transmission',
