@@ -24,20 +24,7 @@
       <section class="hero-grid">
         <div class="left-panel">
           <div class="hero-image">
-            <img :src="selectedImage || primaryImage" :alt="vehicleTitle" />
-            <button class="photos-btn btn-reset">View All Photos</button>
-          </div>
-
-          <div class="thumbs">
-            <button
-              v-for="(img, idx) in galleryImages"
-              :key="`${img}-${idx}`"
-              class="btn-reset thumb-card"
-              :class="{ active: selectedImage === img }"
-              @click="selectedImage = img"
-            >
-              <img :src="img" :alt="`${vehicleTitle} ${idx + 1}`" />
-            </button>
+            <img :src="primaryImage" :alt="vehicleTitle" />
           </div>
 
           <article class="vehicle-card">
@@ -66,8 +53,8 @@
                 <strong>{{ vehicle.fuel_type }}</strong>
               </div>
               <div class="spec-item">
-                <span class="label">SEATS</span>
-                <strong>{{ vehicle.seats }}</strong>
+                <span class="label">STATUS</span>
+                <strong>{{ availabilityText }}</strong>
               </div>
             </div>
           </article>
@@ -104,19 +91,6 @@
             </div>
 
             <h4>OPTIONAL ADD-ONS</h4>
-            <div class="addon-item active">
-              <span class="addon-check-placeholder"></span>
-              <div class="addon-main">
-                <span>Helmets</span>
-                <div class="qty-control">
-                  <button class="btn-reset qty-btn" @click.stop.prevent="changeHelmetQty(-1)">-</button>
-                  <span>{{ helmetQty }}</span>
-                  <button class="btn-reset qty-btn" @click.stop.prevent="changeHelmetQty(1)">+</button>
-                </div>
-              </div>
-              <strong>+$1/helmet/day</strong>
-            </div>
-
             <label class="addon-item" :class="{ active: theftInsuranceSelected }">
               <input type="checkbox" v-model="theftInsuranceSelected" />
               <div class="addon-main">
@@ -143,24 +117,13 @@
             <button class="btn-reset request-btn">Request Booking</button>
           </aside>
 
-          <section class="guest-reviews">
-            <h3>Guest Reviews</h3>
-            <div class="reviews-score">
-              <strong>4.9</strong>
-              <div>
-                <p class="stars">*****</p>
-                <small>Based on 48 reviews</small>
-              </div>
-            </div>
-          </section>
         </div>
       </section>
 
       <section class="db-section">
         <h4>Vehicle Table Data</h4>
         <div class="db-grid">
-          <p><strong>id:</strong> {{ vehicle.id }}</p>
-          <p><strong>shop_id:</strong> {{ vehicle.shop_id ?? 'NULL' }}</p>
+          <p><strong>shop_name:</strong> {{ shopName }}</p>
           <p><strong>type:</strong> {{ vehicle.type }}</p>
           <p><strong>brand:</strong> {{ vehicle.brand }}</p>
           <p><strong>model:</strong> {{ vehicle.model }}</p>
@@ -170,9 +133,6 @@
           <p><strong>transmission:</strong> {{ vehicle.transmission }}</p>
           <p><strong>seats:</strong> {{ vehicle.seats }}</p>
           <p><strong>status:</strong> {{ vehicle.status }}</p>
-          <p><strong>created_at:</strong> {{ vehicle.created_at }}</p>
-          <p><strong>updated_at:</strong> {{ vehicle.updated_at }}</p>
-          <p><strong>image_url:</strong> {{ vehicle.image_url }}</p>
         </div>
       </section>
     </main>
@@ -280,34 +240,17 @@ const vehicleTitle = computed(() => {
   if (!vehicle.value) return '';
   return `${vehicle.value.brand} ${vehicle.value.model} ${vehicle.value.year}`;
 });
+const availabilityText = computed(() => {
+  const status = String(vehicle.value?.status || '').trim().toLowerCase();
+  return status === 'available' ? 'Available' : 'Unavailable';
+});
 const shopName = computed(() => (vehicle.value ? (shopNamesById.value[vehicle.value.shop_id] || 'Unknown Shop') : 'Unknown Shop'));
 const primaryImage = computed(() => (vehicle.value ? resolveImageUrl(vehicle.value.image_url) : fallbackImage));
-const selectedImage = ref('');
-const fallbackGallery = [
-  'https://i.pinimg.com/1200x/13/01/89/130189a5dec1b3e227bf564fd6538c63.jpg',
-  'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
-  'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
-  'https://i.pinimg.com/1200x/d9/9e/06/d99e06bd9dd77fb2581170af2063b3b5.jpg'
-];
-
-const galleryImages = computed(() => {
-  if (!vehicle.value) return [];
-  const seed = [primaryImage.value, ...fallbackGallery];
-  return [...new Set(seed)].slice(0, 4);
-});
 
 watch(
   routeId,
   (id) => {
     loadVehicle(id);
-  },
-  { immediate: true }
-);
-
-watch(
-  primaryImage,
-  (img) => {
-    selectedImage.value = img || fallbackImage;
   },
   { immediate: true }
 );
@@ -323,18 +266,10 @@ const rentalDays = computed(() => {
   return Math.max(1, diffDays);
 });
 
-const helmetQty = ref(0);
 const theftInsuranceSelected = ref(false);
 const gpsSelected = ref(false);
 
-const changeHelmetQty = (step) => {
-  const next = helmetQty.value + step;
-  if (next < 0 || next > 3) return;
-  helmetQty.value = next;
-};
-
 const addonRates = {
-  helmet: 1,
   insurance: 2,
   gps: 3
 };
@@ -342,14 +277,6 @@ const addonRates = {
 const baseTotal = computed(() => (vehicle.value ? Number(vehicle.value.price_per_day) * rentalDays.value : 0));
 const selectedAddonLines = computed(() => {
   const lines = [];
-  const helmetAmount = helmetQty.value * addonRates.helmet * rentalDays.value;
-  if (helmetQty.value > 0) {
-    lines.push({
-      key: 'helmet',
-      label: `Helmets (${helmetQty.value}x)`,
-      amount: helmetAmount
-    });
-  }
   if (theftInsuranceSelected.value) {
     lines.push({
       key: 'insurance',
@@ -502,41 +429,6 @@ const goBack = () => router.push({ name: 'vehicles-by-shop' });
   font-weight: 600;
 }
 
-.thumbs {
-  margin-top: 6px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-}
-
-.thumb-card {
-  height: 140px;
-  border-radius: 8px;
-  border: 1px solid #cfd8e6;
-  background: #eef2f7;
-  padding: 6px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-}
-
-.thumb-card.active {
-  border: 2px solid #1698f2;
-  background: #ffffff;
-  box-shadow: 0 0 0 2px rgba(22, 152, 242, 0.12);
-}
-
-.thumb-card img {
-  height: 88px;
-  width: 100%;
-  object-fit: contain;
-  border-radius: 6px;
-  border: 0;
-  background: transparent;
-}
-
-.thumb-card:hover {
-  border-color: #8ecdf7;
-}
-
 .vehicle-card {
   margin-top: 8px;
   border-radius: 8px;
@@ -548,7 +440,7 @@ const goBack = () => router.push({ name: 'vehicles-by-shop' });
 
 h1 {
   margin: 0;
-  font-size: 42px;
+  font-size: 32px;
 }
 
 .rating-line {
@@ -936,14 +828,6 @@ h1 {
 @media (max-width: 760px) {
   .spec-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .thumbs {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .thumb-card {
-    height: 120px;
   }
 
   .topbar {
