@@ -135,6 +135,10 @@ const loadShops = async () => {
   }
 }
 
+const viewShopVehicles = (shop) => {
+  router.push(`/shop/${shop.id}/vehicles`)
+}
+
 const handleLogout = () => {
   showLogoutConfirm.value = true
 }
@@ -261,7 +265,7 @@ onMounted(() => {
               </div>
             </div>
 
-            <button class="view-shop-btn" type="button">View Vehicles</button>
+            <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
           </article>
         </div>
       </section>

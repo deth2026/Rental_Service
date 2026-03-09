@@ -172,10 +172,59 @@ const shopForm = reactive({
   name: '',
   city_id: null,
   description: '',
-  address: ''
+  address: '',
+  img_url: ''
 })
 const cities = ref([])
 const isLoadingShop = ref(false)
+
+// Image upload handling for shop
+const shopImageFile = ref(null)
+const shopImagePreview = ref('')
+const shopImageInputRef = ref(null)
+const isShopImageDragOver = ref(false)
+
+// Handle image upload
+const onShopImageChange = (event) => {
+  const file = event.target.files?.[0]
+  if (file) {
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file', 'error')
+      return
+    }
+    shopImageFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      shopForm.img_url = e.target?.result || ''
+      shopImagePreview.value = e.target?.result || ''
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const onShopImageDrop = (event) => {
+  const file = event.dataTransfer?.files?.[0]
+  if (file && file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file', 'error')
+      return
+    }
+    shopImageFile.value = file
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      shopForm.img_url = e.target?.result || ''
+      shopImagePreview.value = e.target?.result || ''
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const triggerShopImagePicker = () => {
+  if (shopImageInputRef.value) {
+    shopImageInputRef.value.value = ''
+    shopImageInputRef.value.click()
+  }
+}
 
 // Fetch shop data
 const fetchShop = async () => {
@@ -218,6 +267,10 @@ const openShopModal = () => {
   shopForm.city_id = shop.value?.city_id || null
   shopForm.description = shop.value?.description || ''
   shopForm.address = shop.value?.address || ''
+  shopForm.img_url = shop.value?.img_url || ''
+  // Reset image fields
+  shopImageFile.value = null
+  shopImagePreview.value = ''
   shopModal.value = true
 }
 
@@ -231,27 +284,63 @@ const saveShop = async () => {
   isLoadingShop.value = true
   try {
     const ownerId = Number(sessionUser.value?.id || getUserId())
-    const payload = {
-      owner_id: ownerId,
-      name: shopForm.name,
-      city_id: shopForm.city_id,
-      description: shopForm.description,
-      address: shopForm.address,
-      status: 'active'
-    }
     
-    if (shop.value?.id) {
-      // Update existing shop
-      await api.put(`/shops/${shop.value.id}`, payload)
-      showToast('Shop updated successfully!', 'success')
+    // If an image file has been selected, use FormData to send multipart request
+    if (shopImageFile.value) {
+      const formData = new FormData()
+      formData.append('owner_id', ownerId)
+      formData.append('name', shopForm.name)
+      if (shopForm.city_id) {
+        formData.append('city_id', shopForm.city_id)
+      }
+      formData.append('description', shopForm.description)
+      formData.append('address', shopForm.address)
+      formData.append('status', 'active')
+      // the backend expects the field name img_url
+      formData.append('img_url', shopImageFile.value)
+      
+      if (shop.value?.id) {
+        // Update existing shop
+        await api.post(`/shops/${shop.value.id}?_method=PUT`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        showToast('Shop updated successfully!', 'success')
+      } else {
+        // Create new shop
+        const response = await api.post('/shops', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        shop.value = response.data
+        showToast('Shop created successfully!', 'success')
+      }
     } else {
-      // Create new shop
-      const response = await api.post('/shops', payload)
-      shop.value = response.data
-      showToast('Shop created successfully!', 'success')
+      // No image file - send as regular JSON payload
+      const payload = {
+        owner_id: ownerId,
+        name: shopForm.name,
+        city_id: shopForm.city_id || null,
+        description: shopForm.description,
+        address: shopForm.address,
+        status: 'active',
+        img_url: shopForm.img_url || null
+      }
+      
+      if (shop.value?.id) {
+        // Update existing shop
+        await api.put(`/shops/${shop.value.id}`, payload)
+        showToast('Shop updated successfully!', 'success')
+      } else {
+        // Create new shop
+        const response = await api.post('/shops', payload)
+        shop.value = response.data
+        showToast('Shop created successfully!', 'success')
+      }
     }
     
     shopModal.value = false
+    // Reset image related refs
+    shopImageFile.value = null
+    shopImagePreview.value = ''
     await fetchShop()
   } catch (error) {
     console.error('Error saving shop:', error)
@@ -465,6 +554,17 @@ const saveVehicle = async () => {
     showToast('Please fill in all required fields: Name, Type, and Price', 'error')
     return
   }
+
+  // Get shop_id from current shop
+  const shopId = shop.value?.id || null
+  console.log('Shop value:', shop.value)
+  console.log('Shop ID:', shopId)
+  
+  if (!shopId) {
+    showToast('Please create a shop first before adding vehicles', 'error')
+    return
+  }
+
   const payload = {
     name: form.name,
     category: form.type,
@@ -474,18 +574,18 @@ const saveVehicle = async () => {
     status: form.status,
     description: form.description,
     shop: form.shop,
+    shop_id: shopId,
     fuel: form.fuel,
     transmission: form.transmission,
     photos: form.image ? [form.image] : [],
     previewUrl: form.image
   }
 
-  // Close modal and show success immediately
-  modal.value = false
-  showToast('Vehicle saved successfully!', 'success')
-  
+  console.log('Vehicle payload:', payload)
+
   try {
     if (editId.value) {
+      // Update existing vehicle
       await vehicleApi.update(editId.value, payload)
       const index = vehicles.value.findIndex((v) => v.id === editId.value)
       if (index >= 0) {
@@ -496,30 +596,54 @@ const saveVehicle = async () => {
           updatedAt: khTime()
         }
       }
+      modal.value = false
+      showToast('Vehicle updated successfully!', 'success')
     } else {
-      // Add vehicle to list immediately with temp ID
-      const tempId = Date.now()
+      // Create new vehicle - wait for API response
+      const response = await vehicleApi.create(payload)
+      
+      // Add vehicle to list with real ID from server
       vehicles.value.unshift({
-        id: tempId,
+        id: response.data.id,
         ...payload,
         image: form.image,
         createdAt: khTime(),
         updatedAt: khTime()
       })
       
-      // Save to backend in background
-      try {
-        const response = await vehicleApi.create(payload)
-        const idx = vehicles.value.findIndex((v) => v.id === tempId)
-        if (idx >= 0) {
-          vehicles.value[idx].id = response.data.id
-        }
-      } catch (e) {
-        console.error('Background save error:', e)
-      }
+      modal.value = false
+      showToast('Vehicle created successfully!', 'success')
     }
   } catch (error) {
     console.error('Error saving vehicle:', error)
+    console.error('Error response:', error.response)
+    console.error('Error response data:', error.response?.data)
+    
+    let errorMessage = 'Failed to save vehicle. Please try again.'
+    
+    if (error.response) {
+      // Server responded with error
+      if (error.response.status === 401) {
+        errorMessage = 'You are not authenticated. Please login again.'
+      } else if (error.response.status === 403) {
+        errorMessage = error.response.data?.message || 'You do not have permission to perform this action.'
+      } else if (error.response.status === 422) {
+        // Validation error
+        const errors = error.response.data?.errors
+        if (errors) {
+          const firstError = Object.values(errors)[0]
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+        } else {
+          errorMessage = error.response.data?.message || 'Validation failed.'
+        }
+      } else {
+        errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`
+      }
+    } else if (error.request) {
+      errorMessage = 'No response from server. Please check your connection.'
+    }
+    
+    showToast(errorMessage, 'error')
   }
 }
 
@@ -671,6 +795,15 @@ const iconSvg = (name) => {
       <section v-if="active === 'dashboard'" class="dashboard-view">
         <h2>Dashboard</h2>
         <p class="sub">Welcome back! Here's your business overview.</p>
+
+        <!-- No Shop Warning -->
+        <div v-if="!shop" class="no-shop-warning" style="background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+          <h3 style="margin: 0 0 8px; color: #92400e;">No Shop Created Yet</h3>
+          <p style="margin: 0 0 16px; color: #78350f;">Create your shop to start adding vehicles and managing your rental business.</p>
+          <button class="primary" @click="openShopModal" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            Create Shop Now
+          </button>
+        </div>
 
         <div class="stats dashboard-cards">
           <article class="card"><span>Total Bookings</span>
@@ -1039,6 +1172,95 @@ const iconSvg = (name) => {
       <div class="delete-actions">
         <button class="delete-cancel-btn" @click="cancelLogout">No</button>
         <button class="delete-confirm-btn logout-confirm-btn" @click="confirmLogout">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Create/Edit Modal -->
+  <div v-if="shopModal" class="shop-modal-overlay" @click.self="shopModal = false">
+    <div class="shop-modal">
+      <div class="shop-modal-header">
+        <h2>{{ shop ? 'Edit Shop' : 'Create Shop' }}</h2>
+        <button class="close-btn" @click="shopModal = false">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="shop-modal-content">
+        <!-- Shop Image Upload -->
+        <div class="form-group">
+          <label>Shop Image</label>
+          <input
+            ref="shopImageInputRef"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            style="display: none"
+            @change="onShopImageChange"
+          />
+          <div
+            class="shop-image-upload"
+            :class="{ 'has-image': shopImagePreview || shopForm.img_url }"
+            @click="triggerShopImagePicker"
+            @dragover.prevent="isShopImageDragOver = true"
+            @dragleave.prevent="isShopImageDragOver = false"
+            @drop.prevent="onShopImageDrop"
+          >
+            <div v-if="shopImagePreview || shopForm.img_url" class="image-preview-container">
+              <img :src="shopImagePreview || shopForm.img_url" alt="Shop preview" />
+              <div class="image-overlay">
+                <span>Click to change</span>
+              </div>
+            </div>
+            <div v-else class="upload-placeholder">
+              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 5 17 10"></polyline>
+                <line x1="12" y1="5" x2="12" y2="16"></line>
+              </svg>
+              <p>Click to upload or drag image here</p>
+              <span>PNG / JPG / WEBP</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shop Name -->
+        <div class="form-group">
+          <label>Shop Name *</label>
+          <input v-model="shopForm.name" type="text" placeholder="Enter shop name" />
+        </div>
+
+        <!-- City -->
+        <div class="form-group">
+          <label>City</label>
+          <select v-model="shopForm.city_id">
+            <option :value="null">Select City</option>
+            <option v-for="city in cities" :key="city.id" :value="city.id">
+              {{ city.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Address -->
+        <div class="form-group">
+          <label>Address *</label>
+          <input v-model="shopForm.address" type="text" placeholder="Enter address" />
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label>Description</label>
+          <textarea v-model="shopForm.description" rows="3" placeholder="Describe your shop"></textarea>
+        </div>
+      </div>
+      <div class="shop-modal-footer">
+        <button class="cancel-btn-modal" @click="shopModal = false">
+          Cancel
+        </button>
+        <button class="save-shop-btn" @click="saveShop" :disabled="isLoadingShop">
+          {{ isLoadingShop ? 'Saving...' : (shop ? 'Update Shop' : 'Create Shop') }}
+        </button>
       </div>
     </div>
   </div>
@@ -3410,5 +3632,203 @@ textarea {
 .vehicle-row-icon :deep(svg) {
   width: 18px;
   height: 18px;
+}
+
+/* Shop Modal Styles */
+.shop-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.shop-modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.shop-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.shop-modal-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.shop-modal-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.shop-image-upload {
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 16px;
+}
+
+.shop-image-upload:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.shop-image-upload.has-image {
+  padding: 12px;
+}
+
+.image-preview-container {
+  position: relative;
+  width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.image-preview-container img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.image-preview-container .image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-preview-container:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-overlay span {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.shop-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.save-shop-btn {
+  padding: 10px 24px;
+  border: none;
+  background: #3b82f6;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-shop-btn:hover {
+  background: #2563eb;
+}
+
+.save-shop-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.shop-modal .form-group {
+  margin-bottom: 16px;
+}
+
+.shop-modal .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.shop-modal .form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.shop-modal .form-group input,
+.shop-modal .form-group select,
+.shop-modal .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: white;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.shop-modal .form-group input:focus,
+.shop-modal .form-group select:focus,
+.shop-modal .form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.shop-modal .form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+@media (max-width: 640px) {
+  .shop-modal {
+    max-height: 95vh;
+  }
+  
+  .shop-modal-content {
+    padding: 16px;
+  }
+  
+  .shop-modal-footer {
+    flex-direction: column;
+    padding: 16px;
+  }
+  
+  .save-shop-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

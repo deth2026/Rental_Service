@@ -44,8 +44,11 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('users', UserController::class)->except(['create', 'edit']);
     Route::apiResource('categories', CategoryController::class);
-    Route::apiResource('cities', CityController::class);
+    Route::apiResource('cities', CityController::class)->except(['index']);
 });
+
+// Public cities endpoint - needed for dropdowns in shop creation forms
+Route::get('/cities', [CityController::class, 'index']);
 
 // Admin + Shop Owner shared routes (coupons & loyalty points management)
 Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () {
@@ -72,9 +75,15 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
-// Shop owner routes
+// Public vehicle routes (for customers to view vehicles)
+Route::get('/vehicles', [VehicleController::class, 'index']);
+Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
+
+// Shop owner routes - only protect write operations (POST, PUT, DELETE)
 Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
-    Route::apiResource('vehicles', VehicleController::class);
+    Route::post('/vehicles', [VehicleController::class, 'store']);
+    Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update']);
+    Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
     Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
     Route::apiResource('bookings', BookingController::class);
     Route::apiResource('booking-status-logs', BookingStatusLogController::class);
