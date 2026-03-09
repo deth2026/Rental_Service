@@ -13,11 +13,61 @@ class VehicleController extends Controller
         return response()->json(Vehicle::paginate(15));
     }
 
-    public function store(Request $_request)
+    public function store(Request $request)
     {
-        $record = Vehicle::create($_request->all());
+        // Log all request data for debugging
+        \Log::info('=== Vehicle Store Request ===');
+        \Log::info('Request all data:', $request->all());
+        
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'category' => 'nullable|string|max:100',
+            'type' => 'nullable|string|max:100',
+            'plate' => 'nullable|string|max:20',
+            'price' => 'nullable|numeric|min:0',
+            'status' => 'nullable|string|in:Available,Rented,Maintenance',
+            'shop_id' => 'nullable|integer',
+        ]);
 
-        return response()->json($record, 201);
+        $data = $request->all();
+        
+        // Handle photos - could be base64 array or regular array
+        $photosData = $data['photos'] ?? [];
+        
+        if (is_array($photosData)) {
+            // Filter out non-base64 data (file names that may have been passed)
+            $photosData = array_filter($photosData, function($photo) {
+                return strpos($photo, 'data:') === 0 || strpos($photo, 'base64,') !== false;
+            });
+        }
+        
+        // Map frontend fields to database fields
+        $vehicleData = [
+            'shop_id' => $data['shop_id'] ?? null,
+            'name' => $data['name'] ?? '',
+            'type' => $data['category'] ?? $data['type'] ?? '',
+            'brand' => $data['brand'] ?? '',
+            'model' => $data['model'] ?? '',
+            'plate_number' => $data['plate'] ?? '',
+            'price_per_day' => $data['price'] ?? 0,
+            'status' => $data['status'] ?? 'Available',
+            'fuel_type' => $data['fuel'] ?? '',
+            'transmission' => $data['transmission'] ?? '',
+            'description' => $data['description'] ?? '',
+            'image_url' => !empty($photosData) ? $photosData[0] : ($data['previewUrl'] ?? $data['image'] ?? ''),
+            'photos' => json_encode(array_values($photosData))
+        ];
+
+        \Log::info('Vehicle data to create:', $vehicleData);
+
+        try {
+            $record = Vehicle::create($vehicleData);
+            \Log::info('Vehicle created successfully with ID:', ['id' => $record->id]);
+            return response()->json($record, 201);
+        } catch (\Exception $e) {
+            \Log::error('Error creating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     public function show(Vehicle $vehicle)
@@ -25,9 +75,49 @@ class VehicleController extends Controller
         return response()->json($vehicle);
     }
 
-    public function update(Request $_request, Vehicle $vehicle)
+    public function update(Request $request, Vehicle $vehicle)
     {
-        $vehicle->update($_request->all());
+        $request->validate([
+            'name' => 'nullable|string|max:255',
+            'category' => 'nullable|string|max:100',
+            'type' => 'nullable|string|max:100',
+            'plate' => 'nullable|string|max:20',
+            'price' => 'nullable|numeric|min:0',
+            'status' => 'nullable|string|in:Available,Rented,Maintenance',
+            'shop_id' => 'nullable|integer',
+        ]);
+        
+        $data = $request->all();
+        
+        // Handle photos - could be base64 array or regular array
+        $photosData = $data['photos'] ?? null;
+        if ($photosData !== null && is_array($photosData)) {
+            // Filter out non-base64 data (file names that may have been passed)
+            $photosData = array_filter($photosData, function($photo) {
+                return strpos($photo, 'data:') === 0 || strpos($photo, 'base64,') !== false;
+            });
+        } else {
+            $photosData = json_decode($vehicle->photos ?? '[]', true);
+        }
+        
+        // Map frontend fields to database fields
+        $vehicleData = [
+            'shop_id' => $data['shop_id'] ?? $vehicle->shop_id,
+            'name' => $data['name'] ?? $vehicle->name,
+            'type' => $data['category'] ?? $data['type'] ?? $vehicle->type,
+            'brand' => $data['brand'] ?? $vehicle->brand,
+            'model' => $data['model'] ?? $vehicle->model,
+            'plate_number' => $data['plate'] ?? $vehicle->plate_number,
+            'price_per_day' => $data['price'] ?? $vehicle->price_per_day,
+            'status' => $data['status'] ?? $vehicle->status,
+            'fuel_type' => $data['fuel'] ?? $vehicle->fuel_type,
+            'transmission' => $data['transmission'] ?? $vehicle->transmission,
+            'description' => $data['description'] ?? $vehicle->description,
+            'image_url' => !empty($photosData) ? $photosData[0] : ($data['previewUrl'] ?? $vehicle->image_url),
+            'photos' => json_encode(array_values($photosData))
+        ];
+
+        $vehicle->update($vehicleData);
 
         return response()->json($vehicle->fresh());
     }

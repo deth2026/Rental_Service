@@ -4,7 +4,12 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import Booking from '../views/user/Booking.vue';
+import ShopDashboard from '../views/shop/DashboardLayout.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
+import SettingUser from '../views/user/Setting_user.vue';
+import AdminDashboard from '../views/admin/Dashboard.vue';
+import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -31,6 +36,10 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/home',
+      redirect: '/'
+    },
+    {
       path: '/chooserole',
       name: 'chooserole',
       component: ChooseRole,
@@ -49,14 +58,48 @@ const router = createRouter({
       meta: { guest: true, allowAuthenticated: true }
     },
     {
-      path: '/booking',
-      name: 'booking',
-      component: Booking,
-      meta: { requiresAuth: false }
+      path: '/dashboard',
+      name: 'dashboard',
+      component: ShopDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
-   
+    {
+      path: '/view_shop',
+      name: 'view_shop',
+      component: UserDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/user/profile',
+      name: 'user-profile',
+      component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingUser
+    },
+    {
+      path: '/admin',
+      name: 'admin',
+      component: AdminDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['admin'] }
+    },
+    {
+      path: '/vehicles/:id',
+      name: 'vehicle-detail',
+      component: VehicleDetail,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
+    },
+    {
+      path: '/shop/:id/vehicles',
+      name: 'shop-vehicles',
+      component: ShopVehicles,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    }
   ]
-})
+});
 
 // Navigation guard to check authentication and authorization
 router.beforeEach((to, from, next) => {
@@ -86,7 +129,7 @@ router.beforeEach((to, from, next) => {
     } else if (userRole === 'shop_owner') {
       next('/dashboard');
     } else {
-      next('/');
+      next('/view_shop');
     }
     return;
   }
@@ -100,7 +143,7 @@ router.beforeEach((to, from, next) => {
       } else if (userRole === 'shop_owner') {
         next('/dashboard');
       } else {
-        next('/');
+        next('/view_shop');
       }
       return;
     }
@@ -110,3 +153,4 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
+

@@ -4,20 +4,50 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\LoyaltyPoint;
+use App\Models\Booking;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class LoyaltyPointController extends Controller
 {
     public function index()
     {
-        return response()->json(LoyaltyPoint::paginate(15));
+        $loyaltyPoints = LoyaltyPoint::with('user')->get()->map(function ($lp) {
+            $user = $lp->user;
+            $bookingsCount = Booking::where('user_id', $lp->user_id)->count();
+            
+            // Determine status based on points
+            $status = 'Silver';
+            if ($lp->points >= 400) {
+                $status = 'Gold';
+            }
+            
+            return [
+                'id' => $lp->id,
+                'user_id' => $lp->user_id,
+                'name' => $user ? $user->name : 'Unknown',
+                'email' => $user ? $user->email : 'N/A',
+                'points' => $lp->points,
+                'bookings' => $bookingsCount,
+                'status' => $status,
+                'updated_at' => $lp->updated_at
+            ];
+        });
+        
+        return response()->json($loyaltyPoints);
     }
 
-    public function store(Request $_request)
+    public function store(Request $request)
     {
-        $record = LoyaltyPoint::create($_request->all());
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'points' => 'required|integer',
+            'description' => 'nullable|string',
+        ]);
 
-        return response()->json($record, 201);
+        $loyaltyPoint = LoyaltyPoint::create($validated);
+
+        return response()->json($loyaltyPoint, 201);
     }
 
     public function show(LoyaltyPoint $loyaltyPoint)
@@ -25,17 +55,22 @@ class LoyaltyPointController extends Controller
         return response()->json($loyaltyPoint);
     }
 
-    public function update(Request $_request, LoyaltyPoint $loyaltyPoint)
+    public function update(Request $request, LoyaltyPoint $loyaltyPoint)
     {
-        $loyaltyPoint->update($_request->all());
+        $validated = $request->validate([
+            'points' => 'sometimes|required|integer',
+            'description' => 'nullable|string',
+        ]);
 
-        return response()->json($loyaltyPoint->fresh());
+        $loyaltyPoint->update($validated);
+
+        return response()->json($loyaltyPoint);
     }
 
     public function destroy(LoyaltyPoint $loyaltyPoint)
     {
         $loyaltyPoint->delete();
 
-        return response()->json(['message' => 'LoyaltyPoint deleted successfully']);
+        return response()->json(['message' => 'Loyalty point deleted successfully']);
     }
 }

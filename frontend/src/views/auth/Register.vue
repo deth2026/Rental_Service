@@ -1,26 +1,65 @@
-<<<<<<< HEAD
-<script>
-=======
 <template>
-  <div class="container" style="min-height: 150vh">
+  <div class="container" style="min-height: 100vh">
     <!-- LEFT SIDE -->
     <div class="left">
       <div class="overlay">
         <div class="logo">
-          <div class="logo-pic"></div>
+          <div class="logo-icon-wrap">
+            <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Location Pin -->
+              <path d="M30 2C23.37 2 17 7.37 17 14C17 21.5 30 30 30 30C30 30 43 21.5 43 14C43 7.37 36.63 2 30 2Z" fill="white"/>
+              <circle cx="30" cy="14" r="5" fill="rgba(25,100,210,0.6)"/>
+              <!-- Car Cabin -->
+              <path d="M18 42L21 33Q23 30 27 30H33Q37 30 39 33L42 42Z" fill="white"/>
+              <!-- Car Body -->
+              <rect x="6" y="42" width="48" height="15" rx="4" fill="white"/>
+              <!-- Windshield -->
+              <path d="M23 41L25 32H35L37 41Z" fill="rgba(25,100,210,0.45)"/>
+              <!-- Left Wheel -->
+              <circle cx="16" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
+              <!-- Right Wheel -->
+              <circle cx="44" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
+            </svg>
+          </div>
           <span>GoRent</span>
         </div>
->>>>>>> 171e7d9c0bf0bc9904c7e3d2d0dffddd0252564f
 
-import '../../assets/register.css'
+        <div class="left-content">
+          <div class="hero-badge">
+            <span class="hero-badge-dot"></span>
+            Premium Car Rental
+          </div>
+          <h1>Start your journey<br /><span class="journey-highlight">in minutes.</span></h1>
+          <p>
+            Access a fleet of premium vehicles at your fingertips. Rent for an
+            hour, drive for a lifetime.
+          </p>
+        </div>
 
-export default {
+        <div class="review-card">
+          <div class="stars">★★★★★</div>
+          <p class="review-text">
+            "The easiest rental experience I've ever had. No paperwork, just
+            pure driving pleasure."
+          </p>
+          <div class="review-user">
+            <strong>Alex Rivera</strong>
+            <span>Platinum Member</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<<<<<<< HEAD
-  name: 'register'
-=======
     <!-- RIGHT SIDE -->
     <div class="right">
+      <!-- Back to Home -->
+      <router-link to="/" class="back-home-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Back to Home
+      </router-link>
+
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
         <div class="decor-circle circle-1"></div>
@@ -33,34 +72,25 @@ export default {
       </div>
       <div class="form-box">
         <div class="form-header">
-          <div class="header-top" style="display: flex">
-            <h2 style="margin-right: 31vh">Register</h2>
-            <button type="button" @click="goHome" class="back-home-btn">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                <polyline points="9 22 9 12 15 12 15 22"></polyline>
-              </svg>
-              Home
-            </button>
-          </div>
+          <h2>Register</h2>
           <p class="subtitle">Please enter your details to sign up</p>
         </div>
->>>>>>> 171e7d9c0bf0bc9904c7e3d2d0dffddd0252564f
 
-}
+        <!-- Selected Role Display -->
+        <div class="selected-role" v-if="selectedRole">
+          <span class="role-label">Selected Role:</span>
+          <span class="role-badge" :data-role="selectedRole">{{
+            selectedRole === "customer"
+              ? "Customer"
+              : selectedRole === "shop_owner"
+              ? "Shop Owner"
+              : "Admin"
+          }}</span>
+          <button type="button" @click="changeRole" class="change-role-btn">
+            Change
+          </button>
+        </div>
 
-<<<<<<< HEAD
-=======
         <!-- Success Message -->
         <div class="message-block success" v-if="successMessage">
           <span class="message-icon">✓</span>
@@ -76,7 +106,7 @@ export default {
           <span class="message-text">Please fix errors below to continue.</span>
         </div>
 
-        <form @submit.prevent="handleRegister">
+        <form @submit.prevent="handleRegister" novalidate>
           <div class="form-group">
             <label><span class="required-star">*</span> Full Name</label>
             <input
@@ -280,6 +310,8 @@ export default {
 <script setup>
 import { reactive, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import { registerUser } from "../../services/auth";
+import "../../css/login.css";
 
 const router = useRouter();
 const route = useRoute();
@@ -348,28 +380,40 @@ const handleRegister = async () => {
   errors.value = {};
 
   try {
-    const response = await fetch("/api/register", {
+    const payload = {
+      name: form.fullName.trim(),
+      email: form.email.trim().toLowerCase(),
+      phone: form.phone.trim(),
+      password: form.password,
+      password_confirmation: form.confirmPassword,
+      role: selectedRole.value || 'customer',
+    };
+
+    console.log("Registering with payload:", payload);
+
+    const requestInit = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        name: form.fullName,
-        email: form.email,
-        phone: form.phone,
-        password: form.password,
-        password_confirmation: form.confirmPassword,
-        role: selectedRole.value,
-      }),
-    });
+      body: JSON.stringify(payload),
+    };
 
-    const data = await response.json();
+    // Try /api/register first (points to AuthController)
+    let response = await fetch("/api/register", requestInit);
+    console.log("Response status:", response.status);
+    
+    // If 404, try /api/users/register as fallback
+    if (response.status === 404) {
+      response = await fetch("/api/users/register", requestInit);
+      console.log("Fallback response status:", response.status);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    console.log("Response data:", data);
 
     if (response.ok) {
-      successMessage.value =
-        "Registration successful! Please check your email to verify your account.";
-
       // Reset form
       form.fullName = "";
       form.email = "";
@@ -377,28 +421,29 @@ const handleRegister = async () => {
       form.password = "";
       form.confirmPassword = "";
 
-      // Redirect to login after successful registration
+      // Show success message and redirect to login
+      successMessage.value = "Registration successful! Redirecting to login...";
       setTimeout(() => {
         router.push("/login");
-      }, 100);
+      }, 1500);
     } else {
       // Handle validation errors from backend
       if (data.errors) {
         const newErrors = {};
         Object.keys(data.errors).forEach((field) => {
           newErrors[field === "name" ? "fullName" : field] =
-            data.errors[field][0];
+            Array.isArray(data.errors[field]) 
+              ? data.errors[field][0] 
+              : data.errors[field];
         });
         errors.value = newErrors;
       } else {
-        errors.value.email =
-          data.message || "Registration failed. Please try again.";
+        errors.value.email = data.message || "Registration failed. Please try again.";
       }
     }
   } catch (error) {
     console.error("Registration error:", error);
-    errors.value.email =
-      "Network error. Please check your connection and try again.";
+    errors.value.email = error.message || "Network error. Please check if backend is running.";
   } finally {
     isLoading.value = false;
   }
@@ -421,221 +466,8 @@ const toggleConfirmPassword = () => {
 const changeRole = () => {
   router.push("/chooserole");
 };
-
-const goHome = () => {
-  router.push("/");
-};
->>>>>>> 171e7d9c0bf0bc9904c7e3d2d0dffddd0252564f
 </script>
 
-<template>
-
-  <div class="register-container">
-
-    <div class="hero-section">
-
-      <div class="hero-content">
-
-        <div class="logo">
-
-          <!-- <img src="/logo-icon.png" alt="Logo" class="logo-img" /> -->
-
-          <span>MOTOPREMIUM</span>
-
-        </div>
-
-        
-
-        <h1 class="hero-title">
-
-          Ride the Ride of <br />
-
-          <span class="highlight">Your Dreams</span>
-
-        </h1>
-
-        
-
-        <p class="hero-subtitle">
-
-          Join our exclusive community of riders and explore the most iconic routes with our premium motorbike rentals.
-
-        </p>
-
-
-
-        <div class="social-proof">
-
-          <div class="avatar-group">
-
-            <img src="https://i.pravatar.cc/40?u=1" alt="user" />
-
-            <img src="https://i.pravatar.cc/40?u=2" alt="user" />
-
-            <img src="https://i.pravatar.cc/40?u=3" alt="user" />
-
-          </div>
-
-          <p>Join 50k+ riders worldwide</p>
-
-        </div>
-
-      </div>
-
-    </div>
-
-
-
-    <div class="form-section">
-
-      <div class="form-wrapper">
-
-        <h2>Welcom to Register</h2>
-
-        <p class="form-intro">Enter your details to get started with your adventure.</p>
-
-
-
-        <form @submit.prevent="handleRegister">
-
-
-
-          <div class="input-group">
-
-            <label>Username</label>
-
-            <div class="input-wrapper">
-
-              <i class="icon-at"></i>
-
-              <input type="text" v-model="form.username" placeholder="john" />
-
-            </div>
-
-          </div>
-
-
-
-          <div class="input-group">
-
-            <label>Email</label>
-
-            <div class="input-wrapper">
-
-              <i class="icon-mail"></i>
-
-              <input type="email" v-model="form.email" placeholder="john@example.com" />
-
-            </div>
-
-          </div>
-
-
-
-          <div class="row">
-
-            <div class="input-group">
-
-              <label>Password</label>
-
-              <div class="input-wrapper">
-
-                <i class="icon-lock"></i>
-
-                <input type="password" v-model="form.password" placeholder="••••••••" />
-
-              </div>
-
-            </div>
-
-          </div>
-
-
-
-          <button type="submit" class="btn-register">Register</button>
-
-        </form>
-
-
-
-        <p class="login-link">Already have an account? <a href="/login">Login</a></p>
-
-        <p class="login-link">Already have an account? <a href="/home">Come Back</a></p>
-
-
-
-        <div class="divider">
-
-          <span>Or sign up with</span>
-
-        </div>
-
-
-
-        <div class="social-btns">
-
-          <!-- <button class="social-btn"><img src="/google.png" /> Google</button> -->
-
-          <!-- <button class="social-btn"><img src="/facebook.png" /> Facebook</button> -->
-
-        </div>
-
-
-
-        <footer class="form-footer">
-
-          <a href="#">Privacy Policy</a>
-
-          <a href="#">Terms of Service</a>
-
-          <a href="#">Support</a>
-
-        </footer>
-
-      </div>
-
-      
-
-      <button class="theme-toggle">
-
-        <i class="icon-moon"></i>
-
-      </button>
-
-    </div>
-
-  </div>
-
-</template>
-
-
-
-<script setup>
-
-import { reactive } from 'vue';
-
-
-
-const form = reactive({
-
-  fullName: '',
-
-  username: '',
-
-  email: '',
-
-  password: '',
-
-  confirmPassword: ''
-
-});
-
-
-
-const handleRegister = () => {
-
-  console.log('Form Submitted:', form);
-
-};
-
-</script>
+<style>
+@import "../../css/register.css";
+</style>

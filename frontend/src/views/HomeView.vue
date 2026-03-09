@@ -1,270 +1,258 @@
-<script>
 
-import '../assets/main.css'
-
-
-
-export default {
-
-  name: 'home'
-
-}
-
-</script>
 
 <template>
-
-  <div class="landing-container">
-
-    <nav class="navbar">
-
-      <div class="nav-logo">
-
-        <div class="logo-icon"></div>
-
-        <span class="logo-text">ChongChoul</span>
-
-      </div>
-
-      <div class="nav-links">
-
-        <a href="#">How it works</a>
-
-        <a href="#">Vehicles</a>
-
-        <a href="#">Top Shops</a>
-
-        <a href="#" class="partner-link">Become a Partner</a>
-
+  <div class="home-page">
+    <header class="top-nav">
+      <div class="brand-container">
+        <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect width="120" height="120" rx="20" fill="url(#bgGrad)"/>
+          <g transform="translate(30, 45)">
+            <path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/>
+            <path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/>
+            <g transform="translate(15, -5)">
+              <rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/>
+              <circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/>
+              <circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/>
+              <path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/>
+            </g>
+          </g>
+        </svg>
+        <div class="brand-text">
+          <div class="brand">Chong Choul</div>
+          <div class="brand-tagline">Vehicle Rental</div>
+        </div>
       </div>
 
       <div class="nav-auth">
-
-        <button class="btn-login"><a href="/login">Login</a></button>
-
-        <button class="btn-signup"><a href="/register">Sign Up</a></button>
-
+        <RouterLink class="link-login" to="/login">Login</RouterLink>
+        <RouterLink class="btn-signup" to="/chooserole">Sign Up</RouterLink>
       </div>
-
-    </nav>
-
-
-
-    <header class="hero">
-
-      <div class="hero-overlay">
-
-        <div class="hero-content">
-
-          <h1>Explore Cambodia at your <span class="italic-text">own pace</span></h1>
-
-          <p>Connecting travelers with local trusted rental partners.</p>
-
-          
-
-          <div class="search-bar">
-
-            <div class="search-field">
-
-              <label>LOCATION</label>
-
-              <input type="text" v-model="search.location" placeholder="Siem Reap, Phnom Penh">
-
-            </div>
-
-            <div class="search-field">
-
-              <label>VEHICLE TYPE</label>
-
-              <select v-model="search.type">
-
-                <option>Motorbike</option>
-
-                <option>Car/SUV</option>
-
-                <option>Bicycle</option>
-
-              </select>
-
-            </div>
-
-            <div class="search-field">
-
-              <label>DATES</label>
-
-              <input type="text" placeholder="Select dates">
-
-            </div>
-
-            <button class="search-btn">
-
-              <span class="search-icon">🔍</span>
-
-            </button>
-
-          </div>
-
-        </div>
-
-      </div>
-
     </header>
 
-
-
-    <section class="section-padding">
-
-      <div class="section-header">
-
-        <div>
-
-          <p class="tagline">CATEGORIES</p>
-
-          <h2>What are you looking for?</h2>
-
+    <section class="hero">
+      <div class="hero-overlay">
+        <div class="hero-content">
+          <h1>
+            <span class="hero-line">Find Your Perfect Ride and Explore</span>
+            <span class="hero-line"><span>Cambodia</span> in Style!</span>
+          </h1>
         </div>
-
-        <a href="#" class="view-all">View All ></a>
-
       </div>
+    </section>
 
-      
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Browse by Category</h2>
+          <p>Find the right ride for your journey</p>
+        </div>
+        
+      </div>
 
       <div class="category-grid">
-
-        <div v-for="cat in categories" :key="cat.title" class="category-card">
-
-          <img :src="cat.image" :alt="cat.title">
-
-          <div class="card-info">
-
-            <span class="availability">{{ cat.avail }}</span>
-
-            <h3>{{ cat.title }}</h3>
-
-            <p>{{ cat.desc }}</p>
-
+        <article
+          v-for="item in categories"
+          :key="item.title"
+          class="category-card"
+        >
+          <img :src="item.image" :alt="item.title" />
+          <div class="card-overlay"></div>
+          <div class="card-text">
+            <span>{{ item.tag }}</span>
+            <h3>{{ item.title }}</h3>
+            <p>{{ item.availability }}</p>
           </div>
-
-        </div>
-
+        </article>
       </div>
-
     </section>
 
-
-
-    <section class="section-padding bg-light">
-
-      <div class="section-header">
-
-        <div>
-
-          <p class="tagline">TRUSTED PARTNERS</p>
-
-          <h2>Top-Rated Local Shops</h2>
-
+    <section class="features">
+      <div class="features-inner">
+        <div class="trending-head">
+          <h2>Browse by Category</h2>
         </div>
-
-      </div>
-
-
-
-      <div class="shop-grid">
-
-        <div v-for="shop in shops" :key="shop.name" class="shop-card">
-
-          <img :src="shop.image" :alt="shop.name">
-
-          <div class="shop-details">
-
-            <div class="rating">⭐⭐⭐⭐⭐ <span>({{ shop.reviews }})</span></div>
-
-            <h4>{{ shop.name }}</h4>
-
-            <p class="location">📍 {{ shop.location }}</p>
-
-            <div class="shop-footer">
-
-              <span class="verified">✓ Verified</span>
-
-              <a href="#" class="view-shop">View Shop</a>
-
+        <div class="features-divider"></div>
+        <div class="features-grid">
+          <article
+            v-for="feature in features"
+            :key="feature.title"
+            class="feature-item"
+          >
+            <div class="feature-content">
+              <div class="feature-icon" aria-hidden="true">
+                <span>{{ feature.icon }}</span>
+              </div>
+              <div class="feature-copy">
+                <h4>
+                  <span class="feature-step">{{ feature.step }}</span>
+                  <span class="feature-title-text">{{ feature.title }}</span>
+                </h4>
+                <p>{{ feature.description }}</p>
+              </div>
             </div>
+          </article>
+        </div>
+      </div>
+    </section>
 
+    <section class="section">
+      <div class="trending-head">
+        <h2>Trending Rides</h2>
+      </div>
+      <div class="ride-grid">
+        <article v-for="ride in rides" :key="ride.name" class="ride-card">
+          <img :src="ride.image" :alt="ride.name" />
+          <div class="ride-body">
+            <h4>{{ ride.name }}</h4>
+            <p>{{ ride.detail }}</p>
+            <div class="ride-bottom">
+              <span
+                ><strong>${{ ride.price }}</strong> /day</span
+              >
+            </div>
           </div>
-
-        </div>
-
+        </article>
       </div>
-
     </section>
 
-
-
-    <section class="cta-section">
-
+    <section class="section cta-wrap">
       <div class="cta-card">
-
-        <h2>Ready to start your adventure?</h2>
-
-        <p>Join thousands of travelers who discovered Cambodia's hidden gems.</p>
-
-        <div class="cta-buttons">
-
-          <button class="btn-white">Search Vehicles</button>
-
-          <button class="btn-outline">Become a Partner</button>
-
+        <div class="cta-text">
+          <h2>List Your Shop &amp; Start Earning Today</h2>
+          <p>
+            Join Cambodia's largest vehicle rental network and connect with more
+            customers.
+          </p>
+          <RouterLink to="/register"><button type="button">Register Your Shop</button></RouterLink>
         </div>
-
+        <div class="cta-device"></div>
       </div>
-
     </section>
 
-  </div>
 
+    <footer class="footer">
+      <div class="footer-main">
+        <div>
+          <h4>Chong Choul</h4>
+          <p>The premier vehicle rental marketplace in Cambodia.</p>
+        </div>
+        <div>
+          <h5>Company</h5>
+          <a href="#">About Us</a>
+          <a href="#">How it Works</a>
+          <a href="#">Press</a>
+        </div>
+        <div>
+          <h5>Support</h5>
+          <a href="#">Help Center</a>
+          <a href="#">Safety Information</a>
+          <a href="#">Contact Us</a>
+        </div>
+        <div>
+          <h5>Newsletter</h5>
+          <p>Stay updated with latest offers.</p>
+          <div class="newsletter">
+            <input type="text" placeholder="Your email" />
+            <button type="button">Send</button>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <small> 2026 Chong Choul. All rights reserved.</small>
+      </div>
+    </footer>
+  </div>
 </template>
 
-
-
 <script setup>
+import { reactive } from 'vue'
 
-import { ref } from 'vue'
-
-
-
-const search = ref({
-
-  location: '',
-
-  type: 'Motorbike'
-
+const search = reactive({
+  type: 'All Vehicles',
+  location: 'Phnom Penh',
+  pickupDate: ''
 })
 
+const categories = [
+  {
+    title: 'Cars',
+    availability: '120+ Vehicles Available',
+    image: 'https://i.pinimg.com/1200x/76/4d/1e/764d1e19a2fb69a9046e53ceb4381391.jpg'
+  },
+  {
+    title: 'Motorbikes',
+    availability: '450+ Vehicles Available',
+    image: 'https://i.pinimg.com/1200x/b3/a3/84/b3a384d5a8624aba2943bf7d41edd5e2.jpg'
+  },
+  {
+    title: 'Bicycles',
+    availability: '85+ Vehicles Available',
+    image: 'https://i.pinimg.com/1200x/9d/a8/87/9da8873b9c5bfdc2ac0dd4915e594d02.jpg'
+  }
+]
 
+const features = [
+  {
+    icon: 'Q',
+    step: '1.',
+    title: 'Browse & Select',
+    description: 'Filter by vehicle type, location, and your travel dates to find the best match.'
+  },
+  {
+    icon: 'C',
+    step: '2.',
+    title: 'Secure Booking',
+    description: 'Book instantly using ABA, Wing, or international cards. No hidden fees.'
+  },
+  {
+    icon: 'K',
+    step: '3.',
+    title: 'Pick Up & Go',
+    description: 'Meet your host at the shop or get the vehicle delivered to your hotel.'
+  }
+]
 
-const categories = ref([
-
-  { title: 'Motorbikes', desc: 'Perfect for city navigation', avail: '450+ Available', image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=400' },
-
-  { title: 'Cars & SUVs', desc: 'Spacious comfort for groups', avail: '120+ Available', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=500' },
-
-  { title: 'Bicycles', desc: 'Eco-friendly garden paths', avail: '200+ Available', image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=500' }
-
-])
-
-
-
-const shops = ref([
-
-  { name: 'Siem Reap Moto Plus', reviews: '350+', location: 'Old Market, Siem Reap', image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=400' },
-
-  { name: 'Kampot Green Tours', reviews: '180+', location: 'Riverside, Kampot', image: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=500' },
-
-  { name: 'Phnom Penh Auto Hub', reviews: '210+', location: 'BKK1, Phnom Penh', image: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=400' }
-
-])
-
+const rides = [
+  {
+    name: 'Small Camper Van/RV',
+    detail: 'Small Camper Van/RV - Siem Reap',
+    rating: '4.9',
+    price: 120,
+    image: 'https://i.pinimg.com/1200x/aa/4f/54/aa4f548f44f2ad9a5917c99bb85ad06a.jpg'
+  },
+  {
+    name: 'Adventure Touring Motorcycle',
+    detail: 'Motorbike - Siem Reap',
+    rating: '4.8',
+    price: 12,
+    image: 'https://i.pinimg.com/1200x/29/d1/13/29d11367c93335cdd7232c6f0594c344.jpg'
+  },
+  {
+    name: 'Road Bicycle',
+    detail: 'Bicycle - Siem Reap',
+    rating: '4.7',
+    price: 5,
+    image: 'https://i.pinimg.com/1200x/02/32/61/0232617f4158002b9f542b15f113cd9b.jpg'
+  },
+  {
+    name: 'Step-through City Bicycle',
+    detail: 'Bicycle - Siem Reap',
+    rating: '5.0',
+    price: 25,
+    image: 'https://i.pinimg.com/1200x/26/88/ba/2688ba0b802e2a168450e8f598ddc8d9.jpg'
+  }
+]
 </script>
+
+<style>
+@import "../css/HomeView.css";
+</style>
+
+
 

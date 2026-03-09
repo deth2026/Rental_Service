@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter } from "vue-router";
-import "../assets/ChooseRole.css";
+import "../css/chooserole.css";
 
 const router = useRouter();
 
