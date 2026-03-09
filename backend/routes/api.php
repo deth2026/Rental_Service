@@ -23,6 +23,12 @@ Route::post('/login', [UserController::class, 'login']);
 Route::post('/users/register', [AuthController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
 
+// Auth routes with /auth prefix
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/logout', [AuthController::class, 'logout']);
+Route::get('/auth/me', [AuthController::class, 'me']);
+
 Route::middleware('auth:sanctum')->get('/auth-user', function (Request $request) {
     return $request->user();
 });
@@ -36,8 +42,6 @@ Route::get('/test', function () {
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 // Admin only routes

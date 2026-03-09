@@ -27,15 +27,16 @@
   --page-gutter: 20px;
   min-height: 100vh;
   color: var(--text-main);
-  padding: 0 20px 20px;
+  padding: 0 40px;
   font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
   background: #e8ebf0;
 }
 
 .rides-shell {
   width: 100%;
-  max-width: 100%;
+  max-width: 100% !important;
   margin: 0 auto;
+  padding: 0;
 }
 
 /* New Navbar Styles */
@@ -50,9 +51,9 @@
   padding: 14px 24px;
   background: #fff;
   border-bottom: 1px solid var(--line);
-  width: 100%;
-  margin-left: 0;
-  margin-right: 0;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
   box-sizing: border-box;
 }
 
@@ -253,9 +254,9 @@
   gap: 14px;
   align-items: center;
   padding: 14px 24px;
-  width: 100%;
-  margin-left: 0;
-  margin-right: 0;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
   border-radius: 0;
   /* Glassmorphism Effect */
   background: rgba(255, 255, 255, 0.75);
@@ -1433,9 +1434,9 @@
 
 .page-footer {
   margin-top: 28px;
-  width: 100%;
-  margin-left: 0;
-  margin-right: 0;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
   border-radius: 0;
   padding: 34px 36px 26px;
   border-top: 1px solid #d5deea;
