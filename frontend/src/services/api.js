@@ -48,7 +48,13 @@ export const shopApi = {
   getAll: () => api.get('/shops'),
   getById: (id) => api.get(`/shops/${id}`),
   create: (data) => api.post('/shops', data),
-  update: (id, data) => api.put(`/shops/${id}`, data),
+  update: (id, data) => {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      data.append('_method', 'PUT');
+      return api.post(`/shops/${id}`, data);
+    }
+    return api.put(`/shops/${id}`, data);
+  },
   delete: (id) => api.delete(`/shops/${id}`)
 };
 

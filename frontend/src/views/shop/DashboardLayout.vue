@@ -131,6 +131,9 @@ const onMenuClick = (item) => {
     return
   }
   active.value = item.id
+  if (item.id === 'vehicles') {
+    loadOwnerShopName()
+  }
 }
 
 const cancelLogout = () => {
@@ -310,6 +313,9 @@ const form = reactive({
 const currentShopName = ref('No Shop Found')
 
 const getUserId = () => {
+  const sessionId = Number(sessionUser.value?.id || 0)
+  if (sessionId) return sessionId
+
   const rawUser = localStorage.getItem('user')
   if (!rawUser) return 1
   try {
@@ -322,6 +328,12 @@ const getUserId = () => {
 
 const loadOwnerShopName = async () => {
   try {
+    if (shop.value?.name) {
+      currentShopName.value = shop.value.name
+      form.shop = currentShopName.value
+      return
+    }
+
     const ownerId = getUserId()
     const response = await shopApi.getAll()
     const shops = response.data?.data || response.data || []
@@ -426,7 +438,8 @@ const averageRating = computed(() => feedback.value.length ? (feedback.value.red
 const potentialPerDay = computed(() => vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0))
 const latestVehicles = computed(() => vehicles.value.slice(0, 8))
 
-const openCreate = () => {
+const openCreate = async () => {
+  await loadOwnerShopName()
   editId.value = null
   Object.assign(form, {
     name: '', type: '', brand: '', plate: '', price: '', fuel: '', transmission: '',
