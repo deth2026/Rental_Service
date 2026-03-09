@@ -25,7 +25,7 @@
         </svg>
         <div class="brand-text">
           <div class="brand">Chong Choul</div>
-          <div class="brand-tagline">Vehicle Rental</div>
+          <!-- <div class="brand-tagline">Vehicle Rental</div> -->
         </div>
       </div>
 
@@ -143,16 +143,16 @@
           <p>The premier vehicle rental marketplace in Cambodia.</p>
         </div>
         <div>
-          <h5>Company</h5>
-          <a href="#">About Us</a>
-          <a href="#">How it Works</a>
-          <a href="#">Press</a>
+          <h5>Payment Methods</h5>
+          <a href="#">Visa </a>
+          <a href="#">Mastercard</a>
+          <a href="#">Bank Transfer</a>
         </div>
         <div>
-          <h5>Support</h5>
-          <a href="#">Help Center</a>
-          <a href="#">Safety Information</a>
-          <a href="#">Contact Us</a>
+          <h5>Social Medias</h5>
+          <a href="#">Facebook</a>
+          <a href="#">Instagram</a>
+          <a href="#">TikTok</a>
         </div>
         <div>
           <h5>Newsletter</h5>

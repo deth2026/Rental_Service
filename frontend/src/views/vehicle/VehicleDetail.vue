@@ -58,9 +58,9 @@ export default {
         <span class="logo-text">ChongChoul</span>
       </div>
       <div class="nav-links">
-        <a href="#">How it works</a>
-        <a href="#">Vehicles</a>
-        <a href="#">Top Shops</a>
+        <a href="#">Home</a>
+        <a href="#">MY Booking</a>
+        <a href="#">Promotions</a>
         <a href="#" class="partner-link">Become a Partner</a>
       </div>
       <div class="nav-auth">

@@ -282,9 +282,9 @@ onMounted(() => {
 
           <div class="footer-col">
             <h5>Quick Links</h5>
-            <a href="#">How it works</a>
-            <a href="#">Trust & Safety</a>
-            <a href="#">Rental Policies</a>
+            <a href="#">Home</a>
+            <a href="#">My booking</a>
+            <a href="#">Promotions</a>
           </div>
 
           <div class="footer-col">
@@ -296,7 +296,7 @@ onMounted(() => {
         </div>
 
         <div class="footer-bottom">
-          <p class="footer-copy">&copy; 2023 Chong Choul Rides. Made with ❤️ in Phnom Penh.</p>
+          <p class="footer-copy">&copy; 2026 Chong Choul Rides. Made with ❤️ in Phnom Penh.</p>
           <div class="footer-legal">
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>

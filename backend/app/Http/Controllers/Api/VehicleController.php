@@ -131,6 +131,15 @@ class VehicleController extends Controller
 
     public function index(Request $request)
     {
+        // Check if shop_id is provided in the query parameters
+        $shopId = $request->query('shop_id');
+        
+        // If shop_id is provided, filter vehicles by that shop
+        if ($shopId) {
+            $vehicles = Vehicle::where('shop_id', $shopId)->paginate(15);
+            return VehicleResource::collection($vehicles);
+        }
+        
         // If user is authenticated, filter vehicles by their shop
         $user = $request->user();
         
