@@ -17,6 +17,8 @@ const bookings = ref([
     vehicle_name: 'BOO COO 2008',
     booking_code: 'BK-20260307-0008',
     shop_name: 'City Bike & Car Rental',
+    customer_name: 'Main Shop Owner',
+    customer_email: 'owner@example.com',
     start_date: '2026-03-07',
     end_date: '2026-03-08',
     total_price: 20,
@@ -29,6 +31,8 @@ const bookings = ref([
     vehicle_name: 'Toyota Corolla Cross 2023',
     booking_code: 'BK-20260307-0007',
     shop_name: 'City Bike & Car Rental',
+    customer_name: 'Main Shop Owner',
+    customer_email: 'owner@example.com',
     start_date: '2026-03-08',
     end_date: '2026-03-14',
     total_price: 525,
@@ -47,7 +51,8 @@ const filteredBookings = computed(() => {
     const haystack = [
       b.vehicle_name,
       b.booking_code,
-      b.shop_name,
+      b.customer_name,
+      b.customer_email,
       b.status,
       formatDate(b.start_date),
       formatDate(b.end_date),
@@ -107,6 +112,11 @@ const getTotalDays = (start, end) => {
   const diffTime = Math.abs(endDate - startDate)
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1
 }
+
+const canAcceptReject = (status) => status?.toLowerCase() === 'pending'
+const canComplete = (status) => status?.toLowerCase() === 'confirmed'
+const getViewBtnClass = (status) =>
+  status?.toLowerCase() === 'confirmed' ? 'action-btn btn-complete' : 'action-btn btn-accept'
 
 const getBookingImage = (booking) => {
   if (!booking) return ''
@@ -252,14 +262,20 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
           </div>
 
           <p><span class="meta-label">Booking ID:</span> {{ booking.booking_code }}</p>
-          <p><span class="meta-label">Shop:</span> {{ booking.shop_name }}</p>
+          <p><span class="meta-label">Customer:</span> {{ booking.customer_name }}</p>
+          <p><span class="meta-label">Customer Email:</span> {{ booking.customer_email }}</p>
           <p>
             <span class="meta-label">Date:</span>
             {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
 
-          <button class="details-btn" @click="openDetails(booking)">View Details</button>
+          <div class="action-row">
+            <button :class="getViewBtnClass(booking.status)" @click="openDetails(booking)">View</button>
+            <button v-if="canAcceptReject(booking.status)" class="action-btn btn-accept">✓ Accept</button>
+            <button v-if="canAcceptReject(booking.status)" class="action-btn btn-reject">✕ Reject</button>
+            <button v-if="canComplete(booking.status)" class="action-btn btn-complete">★ Complete</button>
+          </div>
         </div>
 
         <div class="booking-price">
@@ -570,17 +586,40 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
   font-weight: 500;
 }
 
-.details-btn {
-  margin-top: 3px;
+.action-row {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.action-btn {
   align-self: flex-start;
   border: none;
-  border-radius: 12px;
-  background: #2f6eea;
+  border-radius: 16px;
   color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1;
   padding: 8px 16px;
   cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.action-btn:hover {
+  filter: brightness(0.96);
+}
+
+.btn-accept {
+  background: #22c55e;
+}
+
+.btn-reject {
+  background: #ef4444;
+}
+
+.btn-complete {
+  background: #f59e0b;
 }
 
 .booking-price {
