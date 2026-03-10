@@ -337,7 +337,7 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
           <div class="detail-section">
             <h3>Payment Summary</h3>
             <div class="detail-rows">
-              <div class="detail-row"><span>Price per day</span><strong>{{ formatCurrency(detailPricePerDay) }}</strong></div>
+              <div class="detail-row"><span>Price Per day</span><strong>{{ formatCurrency(detailPricePerDay) }}</strong></div>
               <div class="detail-row"><span>Days</span><strong>x {{ detailDays }}</strong></div>
             </div>
             <div class="detail-total-row">
