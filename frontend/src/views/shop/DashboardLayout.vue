@@ -1682,7 +1682,7 @@ const iconSvg = (name) => {
   align-items: center;
   gap: 12px;
   margin-left: auto;
-  margin-right: 0;
+  margin-right: 80px;
   flex-shrink: 0;
 }
 
@@ -2773,6 +2773,7 @@ textarea {
 
   .topbar-right {
     display: none;
+    
   }
 
   .user-box {
