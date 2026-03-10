@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('role')->default('customer');
             $table->boolean('is_verified')->default(false);
-            $table->timestamp('create_at')->useCurrent();
+            $table->timestamp('created_at')->useCurrent();
             $table->timestamp('updated_at')->nullable()->useCurrentOnUpdate();
             $table->rememberToken();
         });

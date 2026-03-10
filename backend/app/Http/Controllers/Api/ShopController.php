@@ -119,8 +119,18 @@ class ShopController extends Controller
             $request->validate(['img_url' => 'string']);
         }
 
+        $shouldRemoveImage = $request->boolean('remove_img');
+
         // Handle image upload or URL
-        if ($request->hasFile('img_url')) {
+        if ($shouldRemoveImage) {
+            if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
+                $oldPath = storage_path('app/public/' . $shop->img_url);
+                if (file_exists($oldPath)) {
+                    unlink($oldPath);
+                }
+            }
+            $payload['img_url'] = null;
+        } elseif ($request->hasFile('img_url')) {
             // Delete old image if exists
             if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
                 $oldPath = storage_path('app/public/' . $shop->img_url);

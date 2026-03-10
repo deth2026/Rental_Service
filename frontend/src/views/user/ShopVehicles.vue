@@ -99,7 +99,7 @@ const normalizeVehicle = (vehicle) => {
     parsedPhotos = []
   }
 
-  const imageUrl = vehicle.image_url || (parsedPhotos.length > 0 ? parsedPhotos[0] : '')
+  const imageUrl = vehicle.image_url_full || vehicle.image_url || (parsedPhotos.length > 0 ? (vehicle.photo_urls && vehicle.photo_urls[0] ? vehicle.photo_urls[0] : parsedPhotos[0]) : '')
 
   return {
     id: vehicle.id,
@@ -263,7 +263,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 1rem 4rem;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: sticky;
@@ -314,6 +314,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+  /* margin-right: 40px; */
 }
 
 .user-display-name {
@@ -517,7 +518,7 @@ onMounted(() => {
 .view-details-btn {
   width: 100%;
   padding: 0.75rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;;
   color: white;
   border: none;
   border-radius: 8px;

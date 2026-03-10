@@ -20,6 +20,7 @@
 - [x] 8. Enable EnsureFrontendRequestsAreStateful middleware (Kernel.php)
 - [x] 9. Fix custom CorsMiddleware to support credentials
 - [x] 10. Clear config cache
+- [x] 11. Fix standalone Vehicles.vue page - Add shop_id, proper error handling, wait for API response
 
 ## Fix Details:
 
@@ -28,6 +29,13 @@
 - Add shop_id to payload
 - Show error toast when API fails
 - Wait for API response before showing success
+
+### Frontend Fix (Vehicles.vue - standalone page):
+- Added shop fetching on mount
+- Added shop_id to vehicle creation payload
+- Changed to wait for API response before showing success
+- Added proper error handling with toast notifications
+- Added toast notification UI
 
 ### Backend Fix (VehicleController.php):
 - Accept shop_id in request validation

@@ -23,6 +23,12 @@ Route::post('/login', [UserController::class, 'login']);
 Route::post('/users/register', [AuthController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
 
+// Auth routes with /auth prefix
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/logout', [AuthController::class, 'logout']);
+Route::get('/auth/me', [AuthController::class, 'me']);
+
 Route::middleware('auth:sanctum')->get('/auth-user', function (Request $request) {
     return $request->user();
 });
@@ -36,8 +42,6 @@ Route::get('/test', function () {
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 // Admin only routes
@@ -76,11 +80,13 @@ Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
 // Public vehicle routes (for customers to view vehicles)
-Route::get('/vehicles', [VehicleController::class, 'index']);
 Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
 
-// Shop owner routes - only protect write operations (POST, PUT, DELETE)
-Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
+// Protected vehicle routes - require authentication for listing vehicles
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/vehicles', [VehicleController::class, 'index']);
+    
+    // Shop owner can create, update, delete their own vehicles
     Route::post('/vehicles', [VehicleController::class, 'store']);
     Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update']);
     Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);

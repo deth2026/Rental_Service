@@ -68,6 +68,15 @@ const normalizeAvatarUrl = (url) => {
   return `${apiOrigin.value}/storage/avatars/${normalized}`
 }
 
+const normalizeVehicleImageUrl = (url) => {
+  if (!url) return ''
+  if (/^https?:\/\//.test(url) || /^data:image\//.test(url)) return url
+  const normalized = String(url).replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `/${normalized}`
+  if (normalized.startsWith('vehicles/')) return `/storage/${normalized}`
+  return `/${normalized}`
+}
+
 const displayAvatarUrl = computed(() => {
   if (avatarLoadFailed.value) return ''
   return normalizeAvatarUrl(sessionUser.value?.avatar_url || sessionUser.value?.img_url || '')
@@ -131,6 +140,9 @@ const onMenuClick = (item) => {
     return
   }
   active.value = item.id
+  if (item.id === 'vehicles') {
+    loadOwnerShopName()
+  }
 }
 
 const cancelLogout = () => {
@@ -373,8 +385,8 @@ const fetchVehicles = async () => {
       transmission: v.transmission,
       createdAt: v.create_at,
       updatedAt: v.updated_at,
-      image: v.image_url || '',
-      image_url: v.image_url
+      image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ''),
+      image_url: v.image_url_full || normalizeVehicleImageUrl(v.image_url || '')
     }))
   } catch (error) {
     console.error('Error fetching vehicles:', error)
@@ -399,6 +411,9 @@ const form = reactive({
 const currentShopName = ref('No Shop Found')
 
 const getUserId = () => {
+  const sessionId = Number(sessionUser.value?.id || 0)
+  if (sessionId) return sessionId
+
   const rawUser = localStorage.getItem('user')
   if (!rawUser) return 1
   try {
@@ -411,6 +426,12 @@ const getUserId = () => {
 
 const loadOwnerShopName = async () => {
   try {
+    if (shop.value?.name) {
+      currentShopName.value = shop.value.name
+      form.shop = currentShopName.value
+      return
+    }
+
     const ownerId = getUserId()
     const response = await shopApi.getAll()
     const shops = response.data?.data || response.data || []
@@ -436,6 +457,29 @@ const loadOwnerShopName = async () => {
     currentShopName.value = 'No Shop Found'
     form.shop = currentShopName.value
   }
+}
+
+const resolveOwnerShop = async () => {
+  if (shop.value?.id) return shop.value
+
+  const ownerId = getUserId()
+  const response = await shopApi.getAll()
+  const shops = response.data?.data || response.data || []
+  const myShops = shops.filter((s) => Number(s.owner_id) === Number(ownerId))
+
+  if (!myShops.length) return null
+
+  myShops.sort((a, b) => {
+    const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+    const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+    if (bTime !== aTime) return bTime - aTime
+    return Number(b.id || 0) - Number(a.id || 0)
+  })
+
+  shop.value = myShops[0]
+  currentShopName.value = shop.value?.name || 'No Shop Name'
+  form.shop = currentShopName.value
+  return shop.value
 }
 
 loadOwnerShopName()
@@ -515,7 +559,20 @@ const averageRating = computed(() => feedback.value.length ? (feedback.value.red
 const potentialPerDay = computed(() => vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0))
 const latestVehicles = computed(() => vehicles.value.slice(0, 8))
 
-const openCreate = () => {
+const openCreate = async () => {
+  await loadOwnerShopName()
+  let ownerShop = null
+  try {
+    ownerShop = await resolveOwnerShop()
+  } catch (error) {
+    console.error('Error resolving owner shop:', error)
+  }
+  if (!ownerShop?.id) {
+    openShopModal()
+    showToast('Create your shop first, then add vehicles.', 'error')
+    return
+  }
+
   editId.value = null
   Object.assign(form, {
     name: '', type: '', brand: '', plate: '', price: '', fuel: '', transmission: '',
@@ -542,13 +599,17 @@ const saveVehicle = async () => {
     return
   }
 
-  // Get shop_id from current shop
-  const shopId = shop.value?.id || null
-  console.log('Shop value:', shop.value)
-  console.log('Shop ID:', shopId)
+  let ownerShop = null
+  try {
+    ownerShop = await resolveOwnerShop()
+  } catch (error) {
+    console.error('Error resolving owner shop:', error)
+  }
+  const shopId = ownerShop?.id || null
   
   if (!shopId) {
-    showToast('Please create a shop first before adding vehicles', 'error')
+    openShopModal()
+    showToast('Create your shop first, then add vehicles.', 'error')
     return
   }
 
@@ -567,8 +628,6 @@ const saveVehicle = async () => {
     photos: form.image ? [form.image] : [],
     previewUrl: form.image
   }
-
-  console.log('Vehicle payload:', payload)
 
   try {
     if (editId.value) {
@@ -624,7 +683,12 @@ const saveVehicle = async () => {
           errorMessage = error.response.data?.message || 'Validation failed.'
         }
       } else {
-        errorMessage = error.response.data?.message || error.response.data?.error || `Server error: ${error.response.status}`
+        const serverMessage = error.response.data?.message || error.response.data?.error || ''
+        if (typeof serverMessage === 'string' && serverMessage.length > 180) {
+          errorMessage = 'Failed to save vehicle. Please try again.'
+        } else {
+          errorMessage = serverMessage || `Server error: ${error.response.status}`
+        }
       }
     } else if (error.request) {
       errorMessage = 'No response from server. Please check your connection.'
@@ -782,15 +846,6 @@ const iconSvg = (name) => {
       <section v-if="active === 'dashboard'" class="dashboard-view">
         <h2>Dashboard</h2>
         <p class="sub">Welcome back! Here's your business overview.</p>
-
-        <!-- No Shop Warning -->
-        <div v-if="!shop" class="no-shop-warning" style="background: #fef3c7; border: 1px dashed #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
-          <h3 style="margin: 0 0 8px; color: #92400e;">No Shop Created Yet</h3>
-          <p style="margin: 0 0 16px; color: #78350f;">Create your shop to start adding vehicles and managing your rental business.</p>
-          <button class="primary" @click="openShopModal" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
-            Create Shop Now
-          </button>
-        </div>
 
         <div class="stats dashboard-cards">
           <article class="card"><span>Total Bookings</span>

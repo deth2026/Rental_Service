@@ -17,6 +17,8 @@ const shopImageFile = ref(null)
 const shopImagePreview = ref('')
 const shopImageInputRef = ref(null)
 const isShopImageDragOver = ref(false)
+const changeImageInputRef = ref(null)
+const isUpdatingImage = ref(false)
 
 const createForm = reactive({
   name: '',
@@ -33,44 +35,6 @@ const fieldErrors = reactive({
   phone: '',
   description: ''
 })
-
-const shopImageSource = computed(() => {
-  const image = shop.value?.img_url || shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
-  if (!image) return ''
-  if (/^https?:\/\//.test(String(image)) || String(image).startsWith('data:')) return String(image)
-  const normalized = String(image).replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
-})
-
-// store the actual File object separately so we can send multipart data
-const selectedImage = ref(null)
-
-// Handle image upload
-const onImageUpload = (event) => {
-  const file = event.target.files?.[0]
-  if (file) {
-    selectedImage.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      createForm.img_url = e.target?.result || ''
-    }
-    reader.readAsDataURL(file)
-  }
-}
-
-
-const onImageDrop = (event) => {
-  const file = event.dataTransfer?.files?.[0]
-  if (file && file.type.startsWith('image/')) {
-    selectedImage.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      createForm.img_url = e.target?.result || ''
-    }
-    reader.readAsDataURL(file)
-  }
-}
 
 const getCachedShop = (ownerId) => {
   if (!ownerId) return null
@@ -212,7 +176,6 @@ const resetForm = () => {
   fieldErrors.phone = ''
   fieldErrors.description = ''
   shopImageFile.value = null
-  selectedImage.value = null
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value)
     shopImagePreview.value = ''
@@ -260,6 +223,7 @@ const applyShopImageFile = (file) => {
     URL.revokeObjectURL(shopImagePreview.value)
   }
   shopImageFile.value = file
+  createForm.img_url = ''
   shopImagePreview.value = URL.createObjectURL(file)
   error.value = ''
 }
@@ -305,6 +269,71 @@ const closeCreateModal = () => {
   error.value = ''
 }
 
+const triggerChangeImagePicker = () => {
+  if (changeImageInputRef.value) {
+    changeImageInputRef.value.value = ''
+    changeImageInputRef.value.click()
+  }
+}
+
+const updateShopImage = async (file) => {
+  if (!shop.value?.id) return
+  if (!file || !file.type.startsWith('image/')) {
+    error.value = 'Please select a valid image file.'
+    return
+  }
+
+  isUpdatingImage.value = true
+  error.value = ''
+
+  try {
+    const payload = new FormData()
+    payload.append('img_url', file)
+
+    const { data } = await shopApi.update(shop.value.id, payload)
+    const updatedShop = data?.data || data || null
+    if (updatedShop && typeof updatedShop === 'object') {
+      shop.value = updatedShop
+      setCachedShop(getUserId(), updatedShop)
+    }
+    await loadMyShop()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Failed to update shop image.'
+    console.error('Update shop image error', e)
+  } finally {
+    isUpdatingImage.value = false
+  }
+}
+
+const onChangeShopImage = async (event) => {
+  const file = event.target.files?.[0] || null
+  await updateShopImage(file)
+}
+
+const removeShopImage = async () => {
+  if (!shop.value?.id) return
+
+  isUpdatingImage.value = true
+  error.value = ''
+
+  try {
+    const payload = new FormData()
+    payload.append('remove_img', '1')
+    const { data } = await shopApi.update(shop.value.id, payload)
+    const updatedShop = data?.data || data || null
+    if (updatedShop && typeof updatedShop === 'object') {
+      shop.value = updatedShop
+      setCachedShop(getUserId(), updatedShop)
+    }
+    await loadMyShop()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Failed to delete shop image.'
+    console.error('Delete shop image error', e)
+  } finally {
+    isUpdatingImage.value = false
+  }
+}
+
 const createShop = async () => {
   if (!validateCreateForm()) {
     error.value = 'Please fill all required fields correctly.'
@@ -317,7 +346,7 @@ const createShop = async () => {
   try {
     let payload
     // if an image file has been selected, use FormData to send multipart request
-    if (selectedImage.value) {
+    if (shopImageFile.value) {
       payload = new FormData()
       payload.append('owner_id', getUserId())
       payload.append('name', createForm.name.trim())
@@ -326,7 +355,7 @@ const createShop = async () => {
       payload.append('phone', createForm.phone.trim())
       payload.append('status', createForm.status)
       // the backend expects the field name img_url
-      payload.append('img_url', selectedImage.value)
+      payload.append('img_url', shopImageFile.value)
     } else {
       payload = {
         owner_id: getUserId(),
@@ -390,29 +419,52 @@ onBeforeUnmount(() => {
     <div v-else class="shop-card">
       <!-- Shop Image - Small profile style -->
       <div class="shop-header-row">
-        <div class="shop-image-section" v-if="shop.img_url">
-          <img :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
-        </div>
-        <div class="shop-image-section" v-else>
-          <div class="shop-cover-placeholder">
+        <div class="shop-image-section">
+          <img v-if="shop.img_url" :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
+          <div v-else class="shop-cover-placeholder">
             <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
               <circle cx="8.5" cy="8.5" r="1.5"></circle>
               <polyline points="21 15 16 10 5 21"></polyline>
             </svg>
           </div>
+          <span class="shop-image-status" :class="(shop.status || 'inactive').toLowerCase()">
+            {{ shop.status || 'inactive' }}
+          </span>
+          <input
+            ref="changeImageInputRef"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            class="hidden-file-input"
+            @change="onChangeShopImage"
+          />
+          <div class="shop-image-actions">
+            <button
+              type="button"
+              class="change-image-btn"
+              :disabled="isUpdatingImage"
+              @click="triggerChangeImagePicker"
+            >
+              {{ isUpdatingImage ? 'Updating...' : 'Change Image' }}
+            </button>
+            <button
+              v-if="shop.img_url"
+              type="button"
+              class="delete-image-btn"
+              :disabled="isUpdatingImage"
+              @click="removeShopImage"
+            >
+              Delete Image
+            </button>
+          </div>
         </div>
         <div class="shop-title-row">
           <h2>{{ shop.name || 'My Shop' }}</h2>
-          <span :class="['status-badge', (shop.status || 'inactive').toLowerCase()]">
-            {{ shop.status || 'inactive' }}
-          </span>
         </div>
       </div>
-
-      <div v-if="shopImageSource" class="shop-image-wrap">
-        <img :src="shopImageSource" alt="Shop" class="shop-image" />
-      </div>
+      <p v-if="error && !showCreateModal" class="error-text" style="margin: 10px 0 0">
+        {{ error }}
+      </p>
 
       <div class="shop-grid">
         <div class="field"><b>Shop Name</b><span>{{ shop.name || 'N/A' }}</span></div>
@@ -604,6 +656,81 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.shop-header-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.shop-image-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.shop-cover-image,
+.shop-cover-placeholder {
+  width: 100%;
+  min-height: 340px;
+  max-height: 560px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.shop-cover-image {
+  object-fit: cover;
+}
+
+.shop-cover-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shop-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.shop-title-row h2 {
+  margin: 0;
+  font-size: 54px;
+  line-height: 1.05;
+  color: #1f1f23;
+  font-weight: 800;
+}
+
+.shop-image-status {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  text-transform: capitalize;
+  border-radius: 999px;
+  padding: 7px 14px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.shop-image-status.active {
+  background: #d1fae5;
+  color: #166534;
+  border-color: #a7f3d0;
+}
+
+.shop-image-status.inactive {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
 }
 
 .card-title-row {
@@ -846,6 +973,45 @@ onBeforeUnmount(() => {
 .shop-upload-dropzone.dragging {
   border-color: #22d3ee;
   background: #ecfeff;
+}
+
+.shop-image-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.change-image-btn {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.change-image-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.delete-image-btn {
+  border: 1px solid #cbd5e1;
+  background: #e2e8f0;
+  color: #334155;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-image-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .form-grid input,
@@ -1191,6 +1357,15 @@ onBeforeUnmount(() => {
 
   .modal-header h2 {
     font-size: 28px;
+  }
+
+  .shop-cover-image,
+  .shop-cover-placeholder {
+    min-height: 220px;
+  }
+
+  .shop-title-row h2 {
+    font-size: 40px;
   }
 }
 </style>

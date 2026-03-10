@@ -15,10 +15,12 @@ return new class extends Migration
             $table->string('type');
             $table->string('brand')->nullable();
             $table->string('model')->nullable();
+            $table->unsignedSmallInteger('year')->nullable();
             $table->string('plate_number')->nullable();
             $table->decimal('price_per_day', 10, 2);
             $table->string('fuel_type')->nullable();
             $table->string('transmission')->nullable();
+            $table->unsignedTinyInteger('seats')->default(5);
             $table->string('status')->default('Available');
             $table->text('description')->nullable();
             $table->text('image_url')->nullable();  // Changed to TEXT for base64 images

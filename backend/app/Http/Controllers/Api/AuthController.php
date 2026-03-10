@@ -56,12 +56,19 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $normalizedEmail = strtolower(trim((string) $request->email));
+        $plainPassword = (string) $request->password;
+        $trimmedPassword = trim($plainPassword);
+        $user = User::whereRaw('LOWER(email) = ?', [$normalizedEmail])->first();
         $passwordMatches = false;
 
         if ($user) {
             $storedPassword = (string) $user->password;
-            $passwordMatches = Hash::check($request->password, $storedPassword);
+            $passwordMatches =
+                Hash::check($plainPassword, $storedPassword) ||
+                Hash::check($trimmedPassword, $storedPassword) ||
+                password_verify($plainPassword, $storedPassword) ||
+                password_verify($trimmedPassword, $storedPassword);
 
             // Fallback for legacy plaintext passwords and auto-upgrade to hashed.
             if (!$passwordMatches) {
@@ -72,9 +79,15 @@ class AuthController extends Controller
                     str_starts_with($storedPassword, '$argon2i$') ||
                     str_starts_with($storedPassword, '$argon2id$');
 
-                if (!$looksHashed && hash_equals($storedPassword, (string) $request->password)) {
+                if (
+                    !$looksHashed &&
+                    (
+                        hash_equals($storedPassword, $plainPassword) ||
+                        hash_equals($storedPassword, $trimmedPassword)
+                    )
+                ) {
                     $passwordMatches = true;
-                    $user->password = Hash::make($request->password);
+                    $user->password = Hash::make($trimmedPassword !== '' ? $trimmedPassword : $plainPassword);
                     $user->save();
                 }
             }
