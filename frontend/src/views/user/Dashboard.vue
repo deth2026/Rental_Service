@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
 
 const router = useRouter()
+const route = useRoute()
 
 const shops = ref([])
 const isLoadingShops = ref(false)
@@ -15,11 +16,26 @@ const showLogoutConfirm = ref(false)
 // Navbar state
 const location = ref('Phnom Penh')
 const dateRange = ref('Mar 15 - Mar 18')
-const navItems = ref(['Home', 'My Bookings', 'About'])
-const activeNav = ref('Home')
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Bookings', route: '' },
+  { label: 'Promotions', route: '/promotions' }
+]
+
+const activeNav = computed(() => {
+  const currentPath = route.path
+  const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
+  return matchedItem?.label || 'Home'
+})
 
 const setActiveNav = (item) => {
-  activeNav.value = item
+  if (item.route) {
+    router.push(item.route)
+    closeMobileMenu()
+    return
+  }
+
+  notify('My Bookings page is not available yet.')
 }
 
 const handleSearch = () => {
@@ -182,12 +198,12 @@ onMounted(() => {
         <nav class="nav-links">
           <button
             v-for="item in navItems"
-            :key="item"
+            :key="item.label"
             class="btn-reset nav-link"
-            :class="{ active: activeNav === item }"
+            :class="{ active: activeNav === item.label }"
             @click="setActiveNav(item)"
           >
-            {{ item }}
+            {{ item.label }}
           </button>
         </nav>
 

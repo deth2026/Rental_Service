@@ -54,9 +54,12 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
 // Public cities endpoint - needed for dropdowns in shop creation forms
 Route::get('/cities', [CityController::class, 'index']);
 
+// Public coupons listing for customer promotions page
+Route::get('/coupons', [CouponController::class, 'index']);
+
 // Admin + Shop Owner shared routes (coupons & loyalty points management)
 Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () {
-    Route::apiResource('coupons', CouponController::class);
+    Route::apiResource('coupons', CouponController::class)->except(['index']);
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
