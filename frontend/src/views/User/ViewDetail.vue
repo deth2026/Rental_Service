@@ -9,7 +9,7 @@
       <nav class="nav-links">
         <button class="btn-reset nav-link active" @click="goHome">Home</button>
         <button class="btn-reset nav-link">My Bookings</button>
-        <button class="btn-reset nav-link">About</button>
+        <button class="btn-reset nav-link">Promotion</button>
       </nav>
 
       <div class="top-actions">

@@ -161,7 +161,7 @@ let dateRangeTimer = null;
 const mapEmbedUrl = `https://maps.google.com/maps?hl=en&q=${encodeURIComponent('Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia')}&t=k&z=18&output=embed`;
 
 const route = useRoute();
-const navItems = ['Home', 'My Bookings', 'About'];
+const navItems = ['Home', 'My Bookings', 'Promotion'];
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
