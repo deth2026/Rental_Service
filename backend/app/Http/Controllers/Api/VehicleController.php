@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\Schema;
 
 class VehicleController extends Controller
 {
+    private function filterVehicleDataBySchema(array $data): array
+    {
+        $allowed = Schema::getColumnListing('vehicles');
+        return array_intersect_key($data, array_flip($allowed));
+    }
+
     private function vehicleHasColumn(string $column): bool
     {
         static $columns = null;
@@ -201,14 +207,19 @@ class VehicleController extends Controller
         // Persist base64 photos as files and store only lightweight paths/URLs.
         $photosData = $this->normalizePhotos($data['photos'] ?? []);
         
+        $resolvedModel = $data['model'] ?? '';
+        if ($resolvedModel === '' && !$this->vehicleHasColumn('name')) {
+            $resolvedModel = $data['name'] ?? '';
+        }
+
+        $plateValue = $data['plate'] ?? '';
+
         // Map frontend fields to database fields
         $vehicleData = [
             'shop_id' => $shopId,
-            'name' => $data['name'] ?? '',
             'type' => $data['category'] ?? $data['type'] ?? '',
             'brand' => $data['brand'] ?? '',
-            'model' => $data['model'] ?? '',
-            'plate_number' => $data['plate'] ?? '',
+            'model' => $resolvedModel,
             'price_per_day' => $data['price'] ?? 0,
             'status' => $data['status'] ?? 'Available',
             'fuel_type' => $data['fuel'] ?? '',
@@ -216,6 +227,16 @@ class VehicleController extends Controller
             'description' => $data['description'] ?? '',
             'image_url' => $this->resolveSingleImageUrl($data, $photosData, '')
         ];
+
+        if ($this->vehicleHasColumn('name')) {
+            $vehicleData['name'] = $data['name'] ?? '';
+        }
+
+        if ($this->vehicleHasColumn('plate_number')) {
+            $vehicleData['plate_number'] = $plateValue;
+        } elseif ($this->vehicleHasColumn('plate')) {
+            $vehicleData['plate'] = $plateValue;
+        }
 
         if ($this->vehicleHasColumn('year')) {
             $vehicleData['year'] = (int) ($data['year'] ?? date('Y'));
@@ -226,6 +247,8 @@ class VehicleController extends Controller
         }
 
         \Log::info('Vehicle data to create:', $vehicleData);
+
+        $vehicleData = $this->filterVehicleDataBySchema($vehicleData);
 
         try {
             $record = Vehicle::create($vehicleData);
@@ -278,14 +301,20 @@ class VehicleController extends Controller
             $photosData = json_decode($vehicle->photos ?? '[]', true);
         }
         
+        $resolvedModel = $data['model'] ?? $vehicle->model;
+        if (($resolvedModel === null || $resolvedModel === '') && !$this->vehicleHasColumn('name')) {
+            $resolvedModel = $data['name'] ?? $vehicle->model;
+        }
+
+        $existingPlate = $vehicle->plate_number ?? ($vehicle->plate ?? '');
+        $plateValue = $data['plate'] ?? $existingPlate;
+
         // Map frontend fields to database fields
         $vehicleData = [
             'shop_id' => $data['shop_id'] ?? $vehicle->shop_id,
-            'name' => $data['name'] ?? $vehicle->name,
             'type' => $data['category'] ?? $data['type'] ?? $vehicle->type,
             'brand' => $data['brand'] ?? $vehicle->brand,
-            'model' => $data['model'] ?? $vehicle->model,
-            'plate_number' => $data['plate'] ?? $vehicle->plate_number,
+            'model' => $resolvedModel,
             'price_per_day' => $data['price'] ?? $vehicle->price_per_day,
             'status' => $data['status'] ?? $vehicle->status,
             'fuel_type' => $data['fuel'] ?? $vehicle->fuel_type,
@@ -294,6 +323,16 @@ class VehicleController extends Controller
             'image_url' => $this->resolveSingleImageUrl($data, $photosData, $vehicle->image_url)
         ];
 
+        if ($this->vehicleHasColumn('name')) {
+            $vehicleData['name'] = $data['name'] ?? $vehicle->name;
+        }
+
+        if ($this->vehicleHasColumn('plate_number')) {
+            $vehicleData['plate_number'] = $plateValue;
+        } elseif ($this->vehicleHasColumn('plate')) {
+            $vehicleData['plate'] = $plateValue;
+        }
+
         if ($this->vehicleHasColumn('year')) {
             $vehicleData['year'] = (int) ($data['year'] ?? $vehicle->year ?? date('Y'));
         }
@@ -301,6 +340,8 @@ class VehicleController extends Controller
         if ($this->vehicleHasColumn('photos')) {
             $vehicleData['photos'] = json_encode(array_values($photosData));
         }
+
+        $vehicleData = $this->filterVehicleDataBySchema($vehicleData);
 
         try {
             $vehicle->update($vehicleData);

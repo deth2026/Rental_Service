@@ -15,6 +15,9 @@ class VehicleResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $name = $this->name ?: ($this->model ?: '');
+        $plateNumber = $this->plate_number ?: ($this->plate ?: '');
+
         // Build full image URL
         $imageUrl = null;
         if ($this->image_url) {
@@ -50,11 +53,11 @@ class VehicleResource extends JsonResource
         return [
             'id' => $this->id,
             'shop_id' => $this->shop_id,
-            'name' => $this->name,
+            'name' => $name,
             'type' => $this->type,
             'brand' => $this->brand,
             'model' => $this->model,
-            'plate_number' => $this->plate_number,
+            'plate_number' => $plateNumber,
             'year' => $this->year,
             'price_per_day' => $this->price_per_day,
             'fuel_type' => $this->fuel_type,
@@ -76,4 +79,3 @@ class VehicleResource extends JsonResource
         ];
     }
 }
-
