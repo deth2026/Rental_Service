@@ -136,7 +136,7 @@ const loadShops = async () => {
 }
 
 const viewShopVehicles = (shop) => {
-  router.push(`/shop/${shop.id}/vehicles`)
+  router.push({ name: 'vehicles-by-shop', query: { shop_id: String(shop.id) } })
 }
 
 const handleLogout = () => {

@@ -91,7 +91,6 @@ class Vehicle extends Model
 
         return $urls;
     }
-
     protected $fillable = [
         'shop_id',
         'name',
@@ -103,6 +102,7 @@ class Vehicle extends Model
         'price_per_day',
         'fuel_type',
         'transmission',
+        'seats',
         'status',
         'description',
         'image_url',
