@@ -32,38 +32,11 @@
     </header>
 
     <main class="content">
-<<<<<<< HEAD
-      <div class="results-head">
-        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || selectedShopLocation }}</h1>
-        <p>Available for your selected dates ({{ dateRange }})</p>
-      </div>
-
-      <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
-      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
-      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
-
-      <section class="grid">
-        <article class="card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
-          <span v-if="vehicle.bestValue" class="badge">BEST VALUE</span>
-
-          <button
-            class="btn-reset fav-btn"
-            :class="{ active: favoriteIds.has(vehicle.id) }"
-            @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
-            :aria-label="`Save ${getVehicleName(vehicle)}`"
-          >
-            <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
-          </button>
-
-          <div class="card-image">
-            <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
-=======
       <section class="deals-section">
         <div class="section-header">
           <div class="section-badge">
             <i class="fa-solid fa-car"></i>
             <span>AVAILABLE VEHICLES</span>
->>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
           </div>
 
           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>

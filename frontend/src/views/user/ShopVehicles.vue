@@ -397,7 +397,7 @@ const openMap = () => {
 </template>
 
 
-<<<<<<< HEAD
+<style>
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -758,5 +758,3 @@ const openMap = () => {
   }
 }
 </style>
-=======
->>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
