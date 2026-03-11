@@ -86,7 +86,8 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
-      component: SettingUser
+      component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/admin',

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import Logo from '@/components/Logo.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -294,7 +295,8 @@ onMounted(fetchPromotions)
 </script>
 
 <template>
-  <div class="promotion-page">
+  <div class="promotions">
+    <Logo />
     <header class="topbar">
       <div class="brand">
         <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>

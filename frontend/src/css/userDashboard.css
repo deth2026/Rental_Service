@@ -46,14 +46,11 @@
   z-index: 5;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 32px;
+  gap: 2px;
   align-items: center;
   padding: 14px 24px;
   background: #fff;
   border-bottom: 1px solid var(--line);
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
   box-sizing: border-box;
 }
 
@@ -139,18 +136,18 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 8px;
-  background: #2563eb;
+  /* background: #2563eb; */
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  /* box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); */
 }
 
-.top-actions .logout-btn:hover {
+/* .top-actions .logout-btn:hover {
   background: #1d4ed8;
   transform: translateY(-1px);
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-}
+} */
 
 .user-display-name {
   font-size: 16px;
@@ -470,6 +467,103 @@
 .back-btn {
   color: #1d4f57;
   background: #e7f4f8;
+}
+
+/* Profile Menu Styles */
+.profile-menu {
+  position: relative;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 280px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--line);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.dropdown-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-user-email {
+  font-size: 12px;
+  color: var(--text-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-menu-items {
+  padding: 8px 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.dropdown-item i {
+  width: 16px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.dropdown-divider {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--line);
+}
+
+.logout-item {
+  color: var(--danger) !important;
+}
+
+.logout-item i {
+  color: var(--danger) !important;
+}
+
+.logout-item:hover {
+  background: #fef2f2;
 }
 
 .results-head {

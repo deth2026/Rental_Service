@@ -1,5 +1,6 @@
 <template>
-  <div class="detail-page">
+  <section class="vehicle-detail">
+    <Logo />
     <header class="topbar">
       <div class="brand" @click="goHome">
         <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
@@ -176,10 +177,11 @@
         <p>Contact Us</p>
       </div>
     </footer>
-  </div>
+  </section>
 </template>
 
 <script setup>
+import Logo from '@/components/Logo.vue';
 import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -767,7 +769,7 @@ h1 {
   gap: 8px;
 }
 
-.qty-control {
+ qty-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -778,7 +780,7 @@ h1 {
   font-size: 11px;
 }
 
-.qty-btn {
+ qty-btn {
   width: 18px;
   height: 18px;
   border-radius: 50%;

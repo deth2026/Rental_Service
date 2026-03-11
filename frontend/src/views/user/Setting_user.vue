@@ -1,19 +1,44 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
+import { useRouter } from 'vue-router'
 import userService from '@/services/userService.js'
 
 const styles = useCssModule()
+const router = useRouter()
 
 // Get current logged-in user's ID
 const getUserId = () => userService.getCurrentUserId()
 
 // ─── State ───────────────────────────────────────────────────────────────
-const profile = ref({ name: '', email: '', phone: '', profile_picture: null })
-const originalProfile = ref({ name: '', email: '', phone: '', profile_picture: null }) // Store original values
+const profile = ref({ 
+    name: '', 
+    email: '', 
+    phone: '', 
+    profile_picture: null,
+    background_picture: null,
+    first_name: '',
+    last_name: '',
+    status: 'Active',
+    role: 'User'
+})
+const originalProfile = ref({ 
+    name: '', 
+    email: '', 
+    phone: '', 
+    profile_picture: null,
+    background_picture: null,
+    first_name: '',
+    last_name: '',
+    status: 'Active',
+    role: 'User'
+})
 const avatarPreview = ref(null)
+const backgroundPreview = ref(null)
 const profileFile = ref(null)
+const backgroundFile = ref(null)
 const fileInput = ref(null)
+const backgroundInput = ref(null)
 
 const passwordForm = ref({
     current_password: '',
@@ -26,7 +51,7 @@ const loading = ref({ profile: false, password: false })
 const touched = ref({ newPassword: false })
 
 const toast = ref({ show: false, message: '', type: 'success' })
-const profileErrors = ref({ name: '', email: '', phone: '' })
+const profileErrors = ref({ name: '', email: '', phone: '', first_name: '', last_name: '' })
 const passwordErrors = ref({ current_password: '', new_password: '', new_password_confirmation: '' })
 let toastTimer = null
 
@@ -45,6 +70,20 @@ const avatarSrc = computed(() => {
     if (avatarPreview.value) return avatarPreview.value
     if (profile.value.profile_picture) return userService.getAvatarUrl(profile.value.profile_picture)
     return null
+})
+
+const backgroundSrc = computed(() => {
+    if (backgroundPreview.value) return backgroundPreview.value
+    if (profile.value.background_picture) return userService.getBackgroundUrl(profile.value.background_picture)
+    if (profile.value.background_picture_url) return profile.value.background_picture_url
+    return null
+})
+
+// Default avatar based on user initials
+const defaultAvatarColor = computed(() => {
+    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444'];
+    const hash = profile.value.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
 })
 
 const pwdStrength = computed(() => {
@@ -85,8 +124,38 @@ function handleFileChange(event) {
     const reader = new FileReader()
     reader.onload = e => { avatarPreview.value = e.target.result }
     reader.readAsDataURL(file)
-    // Reset input so the same file can be re-selected
     event.target.value = ''
+}
+
+function removeProfilePicture() {
+    profileFile.value = null
+    avatarPreview.value = null
+    profile.value.profile_picture = null
+}
+
+// ─── Background picture ─────────────────────────────────────────────────
+function triggerBackgroundInput() {
+    backgroundInput.value.click()
+}
+
+function handleBackgroundChange(event) {
+    const file = event.target.files[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be less than 5 MB.', 'danger')
+        return
+    }
+    backgroundFile.value = file
+    const reader = new FileReader()
+    reader.onload = e => { backgroundPreview.value = e.target.result }
+    reader.readAsDataURL(file)
+    event.target.value = ''
+}
+
+function removeBackgroundPicture() {
+    backgroundFile.value = null
+    backgroundPreview.value = null
+    profile.value.background_picture = null
 }
 
 // ─── Fetch profile ────────────────────────────────────────────────────────
@@ -97,19 +166,30 @@ async function fetchProfile() {
         return
     }
     try {
-        // Use getAuthUser to get the current authenticated user's profile
         const data = await userService.getAuthUser()
         profile.value.name = data.name || ''
         profile.value.email = data.email || ''
         profile.value.phone = data.phone || ''
         profile.value.profile_picture = data.avatar_url || data.profile_picture || data.img_url || null
+        profile.value.background_picture = data.background_picture_url || data.background_picture || null
         
-        // Store original values for comparison
+        const nameParts = (data.name || '').split(' ')
+        profile.value.first_name = nameParts[0] || ''
+        profile.value.last_name = nameParts.slice(1).join(' ') || ''
+        
+        profile.value.status = data.status || 'Active'
+        profile.value.role = data.role || 'User'
+        
         originalProfile.value = {
             name: data.name || '',
             email: data.email || '',
             phone: data.phone || '',
-            profile_picture: data.avatar_url || data.profile_picture || data.img_url || null
+            profile_picture: data.avatar_url || data.profile_picture || data.img_url || null,
+            background_picture: data.background_picture_url || data.background_picture || null,
+            first_name: profile.value.first_name,
+            last_name: profile.value.last_name,
+            status: profile.value.status,
+            role: profile.value.role
         }
     } catch {
         showToast('Could not load profile data.', 'danger')
@@ -118,29 +198,25 @@ async function fetchProfile() {
 
 // ─── Save profile ─────────────────────────────────────────────────────────
 function validateProfile() {
-    profileErrors.value = { name: '', email: '', phone: '' }
+    profileErrors.value = { name: '', email: '', phone: '', first_name: '', last_name: '' }
     let hasError = false
     
-    // Only validate fields that have been changed from original values
-    // This allows users to update only specific fields without requiring all fields
     const hasNameChange = profile.value.name.trim() !== originalProfile.value.name
     const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
     const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
     const hasFileChange = profileFile.value !== null
+    const hasBackgroundChange = backgroundFile.value !== null
     
-    // If nothing changed, no validation needed
-    if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange) {
+    if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange && !hasBackgroundChange) {
         showToast('No changes detected.', 'info')
         return 'No changes detected.'
     }
     
-    // Validate name only if it was changed
     if (hasNameChange && !profile.value.name.trim()) {
         profileErrors.value.name = 'Full name cannot be empty when changed.'
         hasError = true
     }
     
-    // Validate email only if it was changed
     if (hasEmailChange) {
         if (!profile.value.email.trim()) {
             profileErrors.value.email = 'Email address cannot be empty when changed.'
@@ -168,10 +244,11 @@ async function saveProfile() {
     try {
         const fd = new FormData()
         
-        // Only append fields that have been changed
         const hasNameChange = profile.value.name.trim() !== originalProfile.value.name
         const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
         const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
+        const hasProfilePictureRemoved = originalProfile.value.profile_picture && !profile.value.profile_picture
+        const hasBackgroundPictureRemoved = originalProfile.value.background_picture && !profile.value.background_picture
         
         if (hasNameChange) {
             fd.append('name', profile.value.name.trim())
@@ -185,21 +262,35 @@ async function saveProfile() {
         if (profileFile.value) {
             fd.append('profile_picture', profileFile.value)
         }
+        if (backgroundFile.value) {
+            fd.append('background_picture', backgroundFile.value)
+        }
+        if (hasProfilePictureRemoved) {
+            fd.append('remove_profile_picture', 'true')
+        }
+        if (hasBackgroundPictureRemoved) {
+            fd.append('remove_background_picture', 'true')
+        }
 
         const res = await userService.updateProfile(userId, fd)
         
-        // Update original profile with new values after successful save
         if (res.user) {
             const resolvedProfilePicture = res.user.avatar_url || res.user.profile_picture || res.user.img_url || null
+            const resolvedBackgroundPicture = res.user.background_picture_url || res.user.background_picture || null
             originalProfile.value = {
                 name: res.user.name || '',
                 email: res.user.email || '',
                 phone: res.user.phone || '',
-                profile_picture: resolvedProfilePicture
+                profile_picture: resolvedProfilePicture,
+                background_picture: resolvedBackgroundPicture,
+                first_name: profile.value.first_name,
+                last_name: profile.value.last_name,
+                status: profile.value.status,
+                role: profile.value.role
             }
             profile.value.profile_picture = resolvedProfilePicture || profile.value.profile_picture
+            profile.value.background_picture = resolvedBackgroundPicture || profile.value.background_picture
 
-            // Keep local user snapshot in sync so header/profile components refresh immediately.
             try {
                 const rawUser = localStorage.getItem('user')
                 const localUser = rawUser ? JSON.parse(rawUser) : {}
@@ -212,6 +303,7 @@ async function saveProfile() {
         }
         
         profileFile.value = null
+        backgroundFile.value = null
         showToast('Profile updated successfully!', 'success')
     } catch (e) {
         showToast(e.response?.data?.message || 'Failed to update profile.', 'danger')
@@ -288,6 +380,21 @@ async function changePassword() {
     }
 }
 
+// ─── Navigation ────────────────────────────────────────────────────────────
+function goBack() {
+    router.back()
+}
+
+function cancelChanges() {
+    profile.value = { ...originalProfile.value }
+    avatarPreview.value = null
+    backgroundPreview.value = null
+    profileFile.value = null
+    backgroundFile.value = null
+    passwordForm.value = { current_password: '', new_password: '', new_password_confirmation: '' }
+    showToast('Changes discarded.', 'info')
+}
+
 onMounted(fetchProfile)
 </script>
 
@@ -312,50 +419,56 @@ onMounted(fetchProfile)
             </div>
         </transition>
 
-        <!-- ── Page Header ── -->
-        <div :class="styles['page-header']">
-            <div :class="styles['page-header__icon']">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path
-                        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-                    <circle cx="12" cy="12" r="3" />
-                </svg>
-            </div>
-            <div>
-                <h1 :class="styles['page-header__title']">Account Settings</h1>
-                <p :class="styles['page-header__sub']">Manage your personal information and security preferences.</p>
-            </div>
-        </div>
-
         <!-- ═══════════════════════════════════════════════════════════
-         CARD 1 – Personal Information
+         PROFILE HEADER SECTION - Full Width with Background
     ═══════════════════════════════════════════════════════════ -->
-        <div :class="styles['card']">
-            <!-- Card Header -->
-            <div :class="styles['section-header']">
-                <div :class="styles['section-header__icon']">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
-                    </svg>
-                </div>
-                <div>
-                    <h2 :class="styles['section-header__title']">Personal Information</h2>
-                    <p :class="styles['section-header__sub']">Update your name, email address, and phone number.</p>
+        <div :class="styles['profile-header']">
+            <!-- Background Image -->
+            <div :class="styles['profile-background']">
+                <img v-if="backgroundSrc" :src="backgroundSrc" :class="styles['profile-background__img']" alt="Background" />
+                <div v-else :class="styles['profile-background__default']"></div>
+                <div :class="styles['profile-background__overlay']"></div>
+                
+                <!-- Background Upload Controls -->
+                <div :class="styles['background-controls']">
+                    <button :class="styles['bg-btn']" type="button" @click="triggerBackgroundInput">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        Upload Background
+                    </button>
+                    <button v-if="backgroundSrc || backgroundPreview" :class="styles['bg-btn-remove']" type="button" @click="removeBackgroundPicture">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Remove
+                    </button>
                 </div>
             </div>
+            
+            <!-- Back Button -->
+            <button :class="styles['back-btn']" type="button" @click="goBack">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+                Back
+            </button>
 
-            <!-- Profile Picture Row -->
-            <div :class="styles['avatar-row']">
-                <div :class="styles['avatar']" @click="triggerFileInput" role="button" tabindex="0"
+            <!-- Profile Avatar Section -->
+            <div :class="styles['profile-avatar-section']">
+                <div :class="styles['profile-avatar']" @click="triggerFileInput" role="button" tabindex="0"
                     aria-label="Upload profile picture" @keydown.enter="triggerFileInput"
                     @keydown.space.prevent="triggerFileInput">
-                    <img v-if="avatarSrc" :src="avatarSrc" :class="styles['avatar__img']" alt="Profile photo" />
-                    <span v-else :class="styles['avatar__initials']">{{ initials }}</span>
-                    <div :class="styles['avatar__overlay']">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    <img v-if="avatarSrc" :src="avatarSrc" :class="styles['profile-avatar__img']" alt="Profile photo" />
+                    <div v-else :class="styles['profile-avatar__initials']" :style="{ backgroundColor: defaultAvatarColor }">
+                        {{ initials }}
+                    </div>
+                    <div :class="styles['profile-avatar__overlay']">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                             <polyline points="17 8 12 3 7 8" />
@@ -364,202 +477,306 @@ onMounted(fetchProfile)
                     </div>
                 </div>
 
-                <div :class="styles['avatar-info']">
-                    <p :class="styles['avatar-info__label']">Profile Picture</p>
-                    <p :class="styles['avatar-info__hint']">Click the avatar to upload a new photo. Max 5MB.</p>
-                    <button :class="styles['btn-outline']" type="button" @click="triggerFileInput">Upload Photo</button>
-                </div>
-
-                <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp"
-                    style="display:none" @change="handleFileChange" />
+                <!-- User Name -->
+                <h1 :class="styles['profile-name']">{{ profile.name || 'Your Name' }}</h1>
             </div>
 
-            <!-- Fields -->
-            <div :class="styles['field-group']">
-                <label :class="styles['field-label']">Full Name</label>
-                <div :class="styles['input-wrap']">
-                    <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                        <circle cx="12" cy="7" r="4" />
+            <!-- Profile Action Buttons -->
+            <div :class="styles['profile-actions']">
+                <button :class="styles['btn-upload']" type="button" @click="triggerFileInput">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
-                    <input v-model="profile.name" :class="[styles['input'], profileErrors.name && styles['input--error']]" type="text"
-                        placeholder="Enter your full name" autocomplete="name" />
-                </div>
-                <p v-if="profileErrors.name" :class="styles['field-error']">{{ profileErrors.name }}</p>
-            </div>
-
-            <div :class="styles['field-group']">
-                <label :class="styles['field-label']">Email Address</label>
-                <div :class="styles['input-wrap']">
-                    <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="20" height="16" x="2" y="4" rx="2" />
-                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    Upload Image
+                </button>
+                <button v-if="avatarSrc || avatarPreview" :class="styles['btn-remove']" type="button" @click="removeProfilePicture">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
-                    <input v-model="profile.email" :class="[styles['input'], profileErrors.email && styles['input--error']]" type="email"
-                        placeholder="Enter your email address" autocomplete="email" />
-                </div>
-                <p v-if="profileErrors.email" :class="styles['field-error']">{{ profileErrors.email }}</p>
+                    Remove
+                </button>
             </div>
 
-            <div :class="styles['field-group']">
-                <label :class="styles['field-label']">Phone Number</label>
-                <div :class="styles['input-wrap']">
-                    <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 5.91 5.91l.82-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                    </svg>
-                    <input v-model="profile.phone" :class="styles['input']" type="tel" placeholder="+1 (555) 123-4567"
-                        autocomplete="tel" />
-                </div>
-            </div>
-
-            <button :class="[styles['btn-primary'], loading.profile && styles['btn-primary--loading']]" type="button"
-                :disabled="loading.profile" @click="saveProfile">
-                <svg v-if="!loading.profile" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span :class="styles['spinner']" v-if="loading.profile"></span>
-                {{ loading.profile ? 'Saving…' : 'Save Changes' }}
-            </button>
+            <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                style="display:none" @change="handleFileChange" />
+            <input ref="backgroundInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp"
+                style="display:none" @change="handleBackgroundChange" />
         </div>
 
         <!-- ═══════════════════════════════════════════════════════════
-         CARD 2 – Change Password
+         CONTENT CONTAINER
     ═══════════════════════════════════════════════════════════ -->
-        <div :class="styles['card']">
-            <!-- Card Header -->
-            <div :class="styles['section-header']">
-                <div :class="styles['section-header__icon']">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                </div>
-                <div>
-                    <h2 :class="styles['section-header__title']">Change Password</h2>
-                    <p :class="styles['section-header__sub']">
-                        Keep <span :class="styles['text-blue']">your account secure</span> by using a strong password.
-                    </p>
-                </div>
-            </div>
+        <div :class="styles['content-container']">
 
-            <!-- Current Password -->
-            <div :class="styles['field-group']">
-                <label :class="[styles['field-label'], styles['field-label--danger']]">Current Password</label>
-                <div :class="styles['input-wrap']">
-                    <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <input v-model="passwordForm.current_password" :class="[styles['input'], passwordErrors.current_password && styles['input--error']]"
-                        :type="showPwd.current ? 'text' : 'password'" placeholder="Enter current password"
-                        autocomplete="current-password" />
-                    <button :class="styles['eye-btn']" type="button" @click="showPwd.current = !showPwd.current"
-                        :aria-label="showPwd.current ? 'Hide' : 'Show'">
-                        <!-- eye -->
-                        <svg v-if="showPwd.current" width="17" height="17" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
+            <!-- ═══════════════════════════════════════════════════════════
+             CARD 1 – Store Information
+        ═══════════════════════════════════════════════════════════ -->
+            <div :class="styles['card']">
+                <!-- Card Header -->
+                <div :class="styles['section-header']">
+                    <div :class="styles['section-header__icon']">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
                         </svg>
-                        <!-- eye-off -->
-                        <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                    </button>
-                </div>
-                <p v-if="passwordErrors.current_password" :class="styles['field-error']">{{ passwordErrors.current_password }}</p>
-            </div>
-
-            <!-- New Password -->
-            <div :class="styles['field-group']">
-                <label :class="[styles['field-label'], styles['field-label--danger']]">New Password</label>
-                <div :class="styles['input-wrap']">
-                    <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <input v-model="passwordForm.new_password" :class="styles['input']"
-                        :type="showPwd.newPwd ? 'text' : 'password'" placeholder="Enter new password"
-                        @blur="touched.newPassword = true" autocomplete="new-password" />
-                    <button :class="styles['eye-btn']" type="button" @click="showPwd.newPwd = !showPwd.newPwd"
-                        :aria-label="showPwd.newPwd ? 'Hide' : 'Show'">
-                        <svg v-if="showPwd.newPwd" width="17" height="17" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Strength indicator -->
-                <div v-if="pwdStrength" :class="styles['strength']">
-                    <div :class="styles['strength__bars']">
-                        <span :class="[styles['strength__bar'], styles[`strength__bar--${pwdStrength.level}`]]"></span>
-                        <span
-                            :class="[styles['strength__bar'], (pwdStrength.level === 'medium' || pwdStrength.level === 'strong') && styles[`strength__bar--${pwdStrength.level}`]]"></span>
-                        <span
-                            :class="[styles['strength__bar'], pwdStrength.level === 'strong' && styles['strength__bar--strong']]"></span>
                     </div>
-                    <span :class="[styles['strength__label'], styles[`strength__label--${pwdStrength.level}`]]">{{
-                        pwdStrength.label }}</span>
+                    <div>
+                        <h2 :class="styles['section-header__title']">Store Information</h2>
+                        <p :class="styles['section-header__sub']">Manage your personal information and account details.</p>
+                    </div>
                 </div>
-                <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars · Uppercase · Lowercase · Number · Special character</p>
-                <p v-if="passwordErrors.new_password" :class="styles['field-error']">{{ passwordErrors.new_password }}</p>
+
+                <!-- Store Info Grid -->
+                <div :class="styles['info-grid']">
+                    <div :class="styles['info-item']">
+                        <label :class="styles['info-label']">First Name</label>
+                        <div :class="styles['info-value']">{{ profile.first_name || '-' }}</div>
+                    </div>
+                    <div :class="styles['info-item']">
+                        <label :class="styles['info-label']">Last Name</label>
+                        <div :class="styles['info-value']">{{ profile.last_name || '-' }}</div>
+                    </div>
+                    <div :class="styles['info-item']">
+                        <label :class="styles['info-label']">Status</label>
+                        <div :class="[styles['info-value'], styles['info-value--status']]">
+                            <span :class="styles['status-badge']">{{ profile.status }}</span>
+                        </div>
+                    </div>
+                    <div :class="styles['info-item']">
+                        <label :class="styles['info-label']">Role</label>
+                        <div :class="styles['info-value']">{{ profile.role }}</div>
+                    </div>
+                    <div :class="styles['info-item']">
+                        <label :class="styles['info-label']">Contact</label>
+                        <div :class="styles['info-value']">{{ profile.phone || '-' }}</div>
+                    </div>
+                    <div :class="styles['info-item']">
+                        <label :class="styles['info-label']">Email</label>
+                        <div :class="styles['info-value']">{{ profile.email || '-' }}</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Confirm New Password -->
-            <div :class="styles['field-group']">
-                <label :class="[styles['field-label'], styles['field-label--danger']]">Confirm New Password</label>
-                <div :class="styles['input-wrap']">
-                    <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <input v-model="passwordForm.new_password_confirmation" :class="styles['input']"
-                        :type="showPwd.confirm ? 'text' : 'password'" placeholder="Confirm new password"
-                        autocomplete="new-password" />
-                    <button :class="styles['eye-btn']" type="button" @click="showPwd.confirm = !showPwd.confirm"
-                        :aria-label="showPwd.confirm ? 'Hide' : 'Show'">
-                        <svg v-if="showPwd.confirm" width="17" height="17" viewBox="0 0 24 24" fill="none"
+            <!-- ═══════════════════════════════════════════════════════════
+             CARD 2 – Edit Profile Information
+        ═══════════════════════════════════════════════════════════ -->
+            <div :class="styles['card']">
+                <!-- Card Header -->
+                <div :class="styles['section-header']">
+                    <div :class="styles['section-header__icon']">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 :class="styles['section-header__title']">Edit Profile Information</h2>
+                        <p :class="styles['section-header__sub']">Update your personal details below.</p>
+                    </div>
+                </div>
+
+                <!-- Fields -->
+                <div :class="styles['field-group']">
+                    <label :class="styles['field-label']">Full Name</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
                         </svg>
-                        <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path
-                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                            <line x1="1" y1="1" x2="23" y2="23" />
-                        </svg>
-                    </button>
+                        <input v-model="profile.name" :class="[styles['input'], profileErrors.name && styles['input--error']]" type="text"
+                            placeholder="Enter your full name" autocomplete="name" />
+                    </div>
+                    <p v-if="profileErrors.name" :class="styles['field-error']">{{ profileErrors.name }}</p>
                 </div>
-                <p v-if="passwordErrors.new_password_confirmation" :class="styles['field-error']">{{ passwordErrors.new_password_confirmation }}</p>
+
+                <div :class="styles['field-group']">
+                    <label :class="styles['field-label']">Email Address</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="20" height="16" x="2" y="4" rx="2" />
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                        <input v-model="profile.email" :class="[styles['input'], profileErrors.email && styles['input--error']]" type="email"
+                            placeholder="Enter your email address" autocomplete="email" />
+                    </div>
+                    <p v-if="profileErrors.email" :class="styles['field-error']">{{ profileErrors.email }}</p>
+                </div>
+
+                <div :class="styles['field-group']">
+                    <label :class="styles['field-label']">Phone Number</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path
+                                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.77 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 5.91 5.91l.82-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
+                        <input v-model="profile.phone" :class="styles['input']" type="tel" placeholder="+1 (555) 123-4567"
+                            autocomplete="tel" />
+                    </div>
+                </div>
             </div>
 
-            <button :class="[styles['btn-primary'], loading.password && styles['btn-primary--loading']]" type="button"
-                :disabled="loading.password" @click="changePassword">
-                <span :class="styles['spinner']" v-if="loading.password"></span>
-                {{ loading.password ? 'Updating…' : 'Update Password' }}
-            </button>
-        </div>
+            <!-- ═══════════════════════════════════════════════════════════
+             CARD 3 – Change Password
+        ═══════════════════════════════════════════════════════════ -->
+            <div :class="styles['card']">
+                <!-- Card Header -->
+                <div :class="styles['section-header']">
+                    <div :class="styles['section-header__icon']">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 :class="styles['section-header__title']">Change Password</h2>
+                        <p :class="styles['section-header__sub']">
+                            Keep <span :class="styles['text-blue']">your account secure</span> by using a strong password.
+                        </p>
+                    </div>
+                </div>
 
+                <!-- Current Password -->
+                <div :class="styles['field-group']">
+                    <label :class="[styles['field-label'], styles['field-label--danger']]">Current Password</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input v-model="passwordForm.current_password" :class="[styles['input'], passwordErrors.current_password && styles['input--error']]"
+                            :type="showPwd.current ? 'text' : 'password'" placeholder="Enter current password"
+                            autocomplete="current-password" />
+                        <button :class="styles['eye-btn']" type="button" @click="showPwd.current = !showPwd.current"
+                            :aria-label="showPwd.current ? 'Hide' : 'Show'">
+                            <svg v-if="showPwd.current" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p v-if="passwordErrors.current_password" :class="styles['field-error']">{{ passwordErrors.current_password }}</p>
+                </div>
+
+                <!-- New Password -->
+                <div :class="styles['field-group']">
+                    <label :class="[styles['field-label'], styles['field-label--danger']]">New Password</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input v-model="passwordForm.new_password" :class="styles['input']"
+                            :type="showPwd.newPwd ? 'text' : 'password'" placeholder="Enter new password"
+                            @blur="touched.newPassword = true" autocomplete="new-password" />
+                        <button :class="styles['eye-btn']" type="button" @click="showPwd.newPwd = !showPwd.newPwd"
+                            :aria-label="showPwd.newPwd ? 'Hide' : 'Show'">
+                            <svg v-if="showPwd.newPwd" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Strength indicator -->
+                    <div v-if="pwdStrength" :class="styles['strength']">
+                        <div :class="styles['strength__bars']">
+                            <span :class="[styles['strength__bar'], styles[`strength__bar--${pwdStrength.level}`]]"></span>
+                            <span
+                                :class="[styles['strength__bar'], (pwdStrength.level === 'medium' || pwdStrength.level === 'strong') && styles[`strength__bar--${pwdStrength.level}`]]"></span>
+                            <span
+                                :class="[styles['strength__bar'], pwdStrength.level === 'strong' && styles['strength__bar--strong']]"></span>
+                        </div>
+                        <span :class="[styles['strength__label'], styles[`strength__label--${pwdStrength.level}`]]">{{
+                            pwdStrength.label }}</span>
+                    </div>
+                    <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars · Uppercase · Lowercase · Number · Special character</p>
+                    <p v-if="passwordErrors.new_password" :class="styles['field-error']">{{ passwordErrors.new_password }}</p>
+                </div>
+
+                <!-- Confirm New Password -->
+                <div :class="styles['field-group']">
+                    <label :class="[styles['field-label'], styles['field-label--danger']]">Confirm New Password</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input v-model="passwordForm.new_password_confirmation" :class="styles['input']"
+                            :type="showPwd.confirm ? 'text' : 'password'" placeholder="Confirm new password"
+                            autocomplete="new-password" />
+                        <button :class="styles['eye-btn']" type="button" @click="showPwd.confirm = !showPwd.confirm"
+                            :aria-label="showPwd.confirm ? 'Hide' : 'Show'">
+                            <svg v-if="showPwd.confirm" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p v-if="passwordErrors.new_password_confirmation" :class="styles['field-error']">{{ passwordErrors.new_password_confirmation }}</p>
+                </div>
+
+                <button :class="[styles['btn-primary'], loading.password && styles['btn-primary--loading']]" type="button"
+                    :disabled="loading.password" @click="changePassword">
+                    <span :class="styles['spinner']" v-if="loading.password"></span>
+                    {{ loading.password ? 'Updating…' : 'Change Password' }}
+                </button>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+             ACTION BUTTONS - Cancel and Save
+        ═══════════════════════════════════════════════════════════ -->
+            <div :class="styles['action-buttons']">
+                <button :class="styles['btn-cancel']" type="button" @click="cancelChanges">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                    Cancel
+                </button>
+                <button :class="[styles['btn-save'], loading.profile && styles['btn-save--loading']]" type="button"
+                    :disabled="loading.profile" @click="saveProfile">
+                    <svg v-if="!loading.profile" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span :class="styles['spinner']" v-if="loading.profile"></span>
+                    {{ loading.profile ? 'Saving…' : 'Save Changes' }}
+                </button>
+            </div>
+
+        </div>
     </div>
 </template>
 
@@ -568,10 +785,246 @@ onMounted(fetchProfile)
 .page {
     min-height: 100vh;
     background: var(--color-bg);
-    padding: 32px 24px 60px;
-    max-width: 560px;
-    margin: 0 auto;
+    padding-bottom: 60px;
     position: relative;
+}
+
+/* ─── Profile Header ──────────────────────────────────────────── */
+.profile-header {
+    position: relative;
+    padding-bottom: 30px;
+}
+
+.profile-background {
+    position: relative;
+    height: 240px;
+    overflow: hidden;
+}
+
+.profile-background__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-background__default {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.profile-background__overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 50%);
+}
+
+.background-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.bg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bg-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    border-color: #fff;
+}
+
+.bg-btn-remove {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(220, 38, 38, 0.9);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.bg-btn-remove:hover {
+    background: #dc2626;
+}
+
+/* Back Button */
+.back-btn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.5);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+}
+
+.back-btn:hover {
+    background: rgba(0, 0, 0, 0.7);
+    border-color: #fff;
+}
+
+/* Profile Avatar Section */
+.profile-avatar-section {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: -70px;
+}
+
+.profile-avatar {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    border: 5px solid #fff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.profile-avatar:hover {
+    transform: scale(1.05);
+}
+
+.profile-avatar__img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.profile-avatar__initials {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    letter-spacing: 1px;
+}
+
+.profile-avatar__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(37, 99, 235, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+}
+
+.profile-avatar:hover .profile-avatar__overlay {
+    opacity: 1;
+}
+
+.profile-name {
+    margin-top: 14px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
+}
+
+.profile-actions {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.btn-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn-upload:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-remove {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #fff;
+    color: #dc2626;
+    border: 1.5px solid #dc2626;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+    background: #fef2f2;
+}
+
+/* ─── Content Container ──────────────────────────────────────────── */
+.content-container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 5;
 }
 
 /* ─── Right Side Notification ───────────────────────────────── */
@@ -631,46 +1084,13 @@ onMounted(fetchProfile)
     }
 }
 
-/* ─── Page Header ──────────────────────────────────────────── */
-.page-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 24px;
-}
-
-.page-header__icon {
-    width: 44px;
-    height: 44px;
-    background: var(--color-primary-light);
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-primary);
-    flex-shrink: 0;
-}
-
-.page-header__title {
-    font-size: 1.45rem;
-    font-weight: 700;
-    color: var(--color-text-primary);
-    line-height: 1.2;
-}
-
-.page-header__sub {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    margin-top: 3px;
-}
-
 /* ─── Card ─────────────────────────────────────────────────── */
 .card {
     background: var(--color-card-bg);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-card);
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     border: 1px solid var(--color-border);
-    padding: 28px;
+    padding: 26px;
     margin-bottom: 20px;
 }
 
@@ -678,19 +1098,19 @@ onMounted(fetchProfile)
 .section-header {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
+    gap: 14px;
     margin-bottom: 24px;
-    padding-bottom: 20px;
+    padding-bottom: 18px;
     border-bottom: 1px solid var(--color-border);
 }
 
 .section-header__icon {
-    width: 38px;
-    height: 38px;
-    border-radius: var(--radius-md);
-    background: var(--color-primary-light);
-    border: 1px solid var(--color-primary-mid);
-    color: var(--color-primary);
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    border: none;
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -698,104 +1118,70 @@ onMounted(fetchProfile)
 }
 
 .section-header__title {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: var(--color-text-primary);
 }
 
 .section-header__sub {
-    font-size: 0.82rem;
+    font-size: 0.85rem;
     color: var(--color-text-secondary);
-    margin-top: 3px;
+    margin-top: 4px;
 }
 
 .text-blue {
-    /* color: var(--color-primary); */
+    color: #3b82f6;
+    font-weight: 600;
 }
 
-/* ─── Avatar Row ───────────────────────────────────────────── */
-.avatar-row {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    margin-bottom: 24px;
+/* ─── Info Grid ─────────────────────────────────────────────── */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
 }
 
-/* The avatar circle – fixed dimensions; image never changes its size */
-.avatar {
-    width: 72px;
-    height: 72px;
-    min-width: 72px;
-    border-radius: 50%;
-    background: var(--color-avatar-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.35rem;
-    font-weight: 700;
-    color: var(--color-avatar-text);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    border: 3px solid var(--color-primary-mid);
-    transition: border-color 0.2s;
+@media (max-width: 600px) {
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
-.avatar:hover {
-    border-color: var(--color-primary);
+.info-item {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 16px;
 }
 
-.avatar:focus-visible {
-    outline: 3px solid var(--color-primary);
-    outline-offset: 2px;
-}
-
-/* Image fills the circle; object-fit keeps it clean regardless of dimensions */
-.avatar__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
+.info-label {
     display: block;
-}
-
-.avatar__initials {
-    user-select: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-bottom: 6px;
 }
 
-.avatar__overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(37, 99, 235, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    opacity: 0;
-    transition: opacity 0.2s;
-    border-radius: 50%;
-}
-
-.avatar:hover .avatar__overlay {
-    opacity: 1;
-}
-
-.avatar-info {
-    flex: 1;
-}
-
-.avatar-info__label {
-    font-size: 0.9rem;
+.info-value {
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 3px;
 }
 
-.avatar-info__hint {
-    font-size: 0.78rem;
-    color: var(--color-text-secondary);
-    margin-bottom: 10px;
+.info-value--status {
+    display: flex;
+    align-items: center;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #10b981;
+    color: #fff;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
 }
 
 /* ─── Form Fields ──────────────────────────────────────────── */
@@ -805,10 +1191,10 @@ onMounted(fetchProfile)
 
 .field-label {
     display: block;
-    font-size: 0.84rem;
+    font-size: 0.85rem;
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 7px;
+    margin-bottom: 8px;
 }
 
 .field-label--danger {
@@ -819,18 +1205,18 @@ onMounted(fetchProfile)
     display: flex;
     align-items: center;
     gap: 0;
-    /* background: var(--color-input-bg); */
-    /* border: 1.5px solid var(--color-border); */
-    border-radius: var(--radius-md);
+    border-radius: 10px;
     padding: 0 14px;
     transition: border-color 0.18s, box-shadow 0.18s;
+    border: 1.5px solid var(--color-border);
+    background: #fff;
 }
 
-/* .input-wrap:focus-within {
-    border-color: var(--color-border-focus);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+.input-wrap:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     background: #fff;
-} */
+}
 
 .input-icon {
     color: var(--color-input-icon);
@@ -838,16 +1224,16 @@ onMounted(fetchProfile)
     margin-right: 10px;
 }
 
-/* .input {
+.input {
     flex: 1;
     border: none;
     outline: none;
     background: transparent;
-    padding: 11px 0;
+    padding: 12px 0;
     font-size: 0.9rem;
     color: var(--color-text-primary);
     min-width: 0;
-} */
+}
 
 .input::placeholder {
     color: var(--color-text-muted);
@@ -947,19 +1333,22 @@ onMounted(fetchProfile)
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 11px 24px;
-    background: var(--color-primary);
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: #fff;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.18s, transform 0.12s, box-shadow 0.18s;
-    margin-top: 6px;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
 }
 
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.45);
+}
 
 .btn-primary:active:not(:disabled) {
     transform: scale(0.98);
@@ -974,25 +1363,65 @@ onMounted(fetchProfile)
     pointer-events: none;
 }
 
-.btn-outline {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 14px;
-    background: #fff;
-    color: var(--color-text-primary);
-    border: 1.5px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: border-color 0.18s, background 0.18s;
+/* Action Buttons - Cancel and Save */
+.action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid var(--color-border);
 }
 
-.btn-outline:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-    background: var(--color-primary-light);
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: #fff;
+    color: #64748b;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 36px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-save:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
+}
+
+.btn-save:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.btn-save--loading {
+    pointer-events: none;
 }
 
 /* Spinner */
@@ -1010,76 +1439,6 @@ onMounted(fetchProfile)
     to {
         transform: rotate(360deg);
     }
-}
-
-/* ─── Toast Notification ───────────────────────────────────── */
-.toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 9999;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 14px 16px;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-toast);
-    border: 1px solid transparent;
-    min-width: 280px;
-    max-width: 360px;
-    background: #fff;
-}
-
-.toast--success {
-    border-color: var(--color-success-border);
-    border-left: 4px solid var(--color-success);
-    background: var(--color-success-light);
-}
-
-.toast--danger {
-    border-color: var(--color-danger-border);
-    border-left: 4px solid var(--color-danger);
-    background: var(--color-danger-light);
-}
-
-.toast__icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.toast--success .toast__icon {
-    color: var(--color-success);
-}
-
-.toast--danger .toast__icon {
-    color: var(--color-danger);
-}
-
-.toast__msg {
-    flex: 1;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--color-text-primary);
-    line-height: 1.45;
-}
-
-.toast__close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--color-text-muted);
-    display: flex;
-    align-items: center;
-    padding: 2px;
-    margin-top: 1px;
-    border-radius: 4px;
-    transition: color 0.15s;
-}
-
-.toast__close:hover {
-    color: var(--color-text-primary);
 }
 </style>
 

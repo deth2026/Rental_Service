@@ -110,6 +110,33 @@ const userService = {
     }
     return `${origin}/storage/${normalized}`
   },
+
+  /**
+   * Build the full URL for a stored background picture.
+   * @param {string|null} path  e.g. "background_pictures/abc.jpg"
+   * @returns {string|null}
+   */
+  getBackgroundUrl(path) {
+    if (!path) return null
+    if (/^(https?:\/\/|data:|blob:)/i.test(path)) return path
+
+    const normalized = String(path)
+      .replace(/\\/g, '/')
+      .replace(/^\/+/, '')
+
+    const origin = (() => {
+      try {
+        return new URL(http.defaults.baseURL, window.location.origin).origin
+      } catch {
+        return window.location.origin
+      }
+    })()
+
+    if (normalized.startsWith('storage/')) {
+      return `${origin}/${normalized}`
+    }
+    return `${origin}/storage/${normalized}`
+  },
 }
 
 export default userService

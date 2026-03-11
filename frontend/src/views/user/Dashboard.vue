@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
+import Logo from '../../components/Logo.vue'
 import '../../css/userDashboard.css'
 
 const router = useRouter()
@@ -12,6 +13,7 @@ const isLoadingShops = ref(false)
 const shopsError = ref('')
 const isMobileMenuOpen = ref(false)
 const showLogoutConfirm = ref(false)
+const isProfileDropdownOpen = ref(false)
 
 // Navbar state
 const location = ref('Phnom Penh')
@@ -169,8 +171,18 @@ const cancelLogout = () => {
   showLogoutConfirm.value = false
 }
 
+const toggleProfileDropdown = () => {
+  isProfileDropdownOpen.value = !isProfileDropdownOpen.value
+}
+
 const openProfile = () => {
   router.push('/user/profile')
+  isProfileDropdownOpen.value = false
+}
+
+const openSettings = () => {
+  router.push('/user/settings')
+  isProfileDropdownOpen.value = false
 }
 
 const toggleMobileMenu = () => {
@@ -187,139 +199,161 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="rides-page">
-    <div class="rides-shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-          <span>Chong Choul</span>
-        </div>
+  <div class="user-dashboard">
+    <Logo />
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <span>Chong Choul</span>
+      </div>
 
-        <nav class="nav-links">
-          <button
-            v-for="item in navItems"
-            :key="item.label"
-            class="btn-reset nav-link"
-            :class="{ active: activeNav === item.label }"
-            @click="setActiveNav(item)"
-          >
-            {{ item.label }}
-          </button>
-        </nav>
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item.label"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item.label }"
+          @click="setActiveNav(item)"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
 
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">
+      <div class="top-actions">
+        <div class="profile-menu" @click.outside="isProfileDropdownOpen = false">
+          <button class="btn-reset avatar" @click="toggleProfileDropdown">
             <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
             <span v-else>{{ userInitials }}</span>
           </button>
-          <button class="btn-reset logout-btn" @click="handleLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span></button>
-        </div>
-      </header>
-
-      <section class="shops-section">
-        <div class="results-head">
-          <div class="choose-shop-box">
-            <h2>Choose a Shop</h2>
-            <p>Select one shop to view its vehicles.</p>
-          </div>
-        </div>
-
-        <div v-if="isLoadingShops" class="status-box">Loading shops...</div>
-        <div v-else-if="shopsError" class="status-box error">{{ shopsError }}</div>
-        <div v-else-if="shops.length === 0" class="status-box">No shops found in the system.</div>
-
-        <div v-else class="shops-grid">
-          <article v-for="shop in shops" :key="shop.id" class="shop-card">
-            <div class="shop-card-image">
-              <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
-              <div v-else class="status-box" style="margin: 10px">No shop image</div>
-              <span :class="'status-badge status-' + (shop.status || 'active')">
-                <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
-                {{ shop.status || 'active' }}
-              </span>
-            </div>
-            <div class="shop-card-top">
-              <div class="shop-brand-mark">
-                <img
-                  v-if="shop.ownerAvatar"
-                  :src="resolveShopImageUrl(shop.ownerAvatar)"
-                  :alt="shop.ownerName || shop.name"
-                  class="shop-owner-avatar-img"
-                />
-                <span v-else>{{ getInitials(shop.ownerName || shop.name, 'S') }}</span>
-              </div>
-              <div class="shop-title-block">
-                <p class="shop-profile-eyebrow">Rental Shop</p>
-                <h3>{{ shop.name }}</h3>
+          <div v-if="isProfileDropdownOpen" class="profile-dropdown">
+            <div class="dropdown-header">
+              <div class="dropdown-user-info">
+                <span class="dropdown-user-name">{{ userDisplayName }}</span>
+                <span class="dropdown-user-email">{{ currentUser?.email }}</span>
               </div>
             </div>
-
-            <div class="shop-contact-grid">
-              <div class="shop-info">
-                <span>Email</span>
-                <strong>{{ shop.email }}</strong>
-              </div>
-              <div class="shop-info">
-                <span> Phone</span>
-                <strong>{{ shop.phone }}</strong>
-              </div>
-              <div class="shop-info" style="grid-column: span 2">
-                <span>Address</span>
-                <strong>{{ shop.address }}</strong>
-              </div>
+            <div class="dropdown-menu-items">
+              <button class="dropdown-item" @click="openProfile">
+                <i class="fa-solid fa-user"></i>
+                <span>Your Profile</span>
+              </button>
+              <button class="dropdown-item" @click="openSettings">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+              </button>
+              <hr class="dropdown-divider">
+              <button class="dropdown-item logout-item" @click="handleLogout">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Logout</span>
+              </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </header>
 
-            <div class="shop-kpi-row">
-              <div class="shop-kpi">
-                <span>Customer Rating</span>
-                <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
-              </div>
-              <div class="shop-kpi">
-                <span>Shop Status</span>
-                <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
-              </div>
+    <section class="shops-section">
+      <div class="results-head">
+        <div class="choose-shop-box">
+          <h2>Choose a Shop</h2>
+          <p>Select one shop to view its vehicles.</p>
+        </div>
+      </div>
+
+      <div v-if="isLoadingShops" class="status-box">Loading shops...</div>
+      <div v-else-if="shopsError" class="status-box error">{{ shopsError }}</div>
+      <div v-else-if="shops.length === 0" class="status-box">No shops found in the system.</div>
+
+      <div v-else class="shops-grid">
+        <article v-for="shop in shops" :key="shop.id" class="shop-card">
+          <div class="shop-card-image">
+            <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
+            <div v-else class="status-box" style="margin: 10px">No shop image</div>
+            <span :class="'status-badge status-' + (shop.status || 'active')">
+              <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
+              {{ shop.status || 'active' }}
+            </span>
+          </div>
+          <div class="shop-card-top">
+            <div class="shop-brand-mark">
+              <img
+                v-if="shop.ownerAvatar"
+                :src="resolveShopImageUrl(shop.ownerAvatar)"
+                :alt="shop.ownerName || shop.name"
+                class="shop-owner-avatar-img"
+              />
+              <span v-else>{{ getInitials(shop.ownerName || shop.name, 'S') }}</span>
             </div>
+            <div class="shop-title-block">
+              <p class="shop-profile-eyebrow">Rental Shop</p>
+              <h3>{{ shop.name }}</h3>
+            </div>
+          </div>
 
-            <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
-          </article>
+          <div class="shop-contact-grid">
+            <div class="shop-info">
+              <span>Email</span>
+              <strong>{{ shop.email }}</strong>
+            </div>
+            <div class="shop-info">
+              <span> Phone</span>
+              <strong>{{ shop.phone }}</strong>
+            </div>
+            <div class="shop-info" style="grid-column: span 2">
+              <span>Address</span>
+              <strong>{{ shop.address }}</strong>
+            </div>
+          </div>
+
+          <div class="shop-kpi-row">
+            <div class="shop-kpi">
+              <span>Customer Rating</span>
+              <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
+            </div>
+            <div class="shop-kpi">
+              <span>Shop Status</span>
+              <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
+            </div>
+          </div>
+
+          <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
+        </article>
+      </div>
+    </section>
+
+    <footer class="page-footer">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <h4>Chong Choul<span>Rides</span></h4>
+          <p>
+            Connecting adventurous travelers with the best local vehicle rentals across the
+            Kingdom of Wonder. Explore Cambodia on your own terms.
+          </p>
         </div>
-      </section>
 
-      <footer class="page-footer">
-        <div class="footer-top">
-          <div class="footer-brand">
-            <h4>Chong Choul<span>Rides</span></h4>
-            <p>
-              Connecting adventurous travelers with the best local vehicle rentals across the
-              Kingdom of Wonder. Explore Cambodia on your own terms.
-            </p>
-          </div>
-
-          <div class="footer-col">
-            <h5>Quick Links</h5>
-            <a href="#">Home</a>
-            <a href="#">My booking</a>
-            <a href="#">Promotions</a>
-          </div>
-
-          <div class="footer-col">
-            <h5>Support</h5>
-            <a href="#">Help Center</a>
-            <a href="#">Become a Partner</a>
-            <a href="#">Contact Us</a>
-          </div>
+        <div class="footer-col">
+          <h5>Quick Links</h5>
+          <a href="#">Home</a>
+          <a href="#">My booking</a>
+          <a href="#">Promotions</a>
         </div>
 
-        <div class="footer-bottom">
-          <p class="footer-copy">&copy; 2026 Chong Choul Rides. Made with ❤️ in Phnom Penh.</p>
-          <div class="footer-legal">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-          </div>
+        <div class="footer-col">
+          <h5>Support</h5>
+          <a href="#">Help Center</a>
+          <a href="#">Become a Partner</a>
+          <a href="#">Contact Us</a>
         </div>
-      </footer>
-    </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p class="footer-copy">&copy; 2026 Chong Choul Rides. Made with ❤️ in Phnom Penh.</p>
+        <div class="footer-legal">
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <!-- Logout Confirmation Modal -->
