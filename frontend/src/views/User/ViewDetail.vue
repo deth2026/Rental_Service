@@ -1,185 +1,3 @@
-<template>
-  <section class="vehicle-detail">
-    <Logo />
-    <header class="topbar">
-      <div class="brand" @click="goHome">
-        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button class="btn-reset nav-link active" @click="goHome">Home</button>
-        <button class="btn-reset nav-link">My Bookings</button>
-        <button class="btn-reset nav-link">About</button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">customer</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Logout</span>
-        </button>
-      </div>
-    </header>
-
-    <main class="content" v-if="vehicle">
-      <p class="breadcrumbs">
-        HOME <i class="fa-solid fa-angle-right"></i> SIEM REAP <i class="fa-solid fa-angle-right"></i> {{ vehicleTitle.toUpperCase() }}
-      </p>
-
-      <section class="hero-grid">
-        <div class="left-panel">
-          <div class="hero-image">
-            <img :src="primaryImage" :alt="vehicleTitle" />
-          </div>
-
-          <article class="vehicle-card">
-            <div class="vehicle-head">
-              <div>
-                <h1>{{ vehicleTitle }}</h1>
-                <p class="rating-line">
-                  <i class="fa-solid fa-star"></i> {{ vehicle.rating ?? 4.8 }}
-                  <span class="dot">|</span> 128 Bookings
-                  <span class="verified">Verified Shop</span>
-                </p>
-              </div>
-            </div>
-
-            <div class="spec-grid">
-              <div class="spec-item">
-                <span class="label">YEAR</span>
-                <strong>{{ vehicle.year }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">TRANS.</span>
-                <strong>{{ vehicle.transmission }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">FUEL</span>
-                <strong>{{ vehicle.fuel_type }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">STATUS</span>
-                <strong>{{ availabilityText }}</strong>
-              </div>
-            </div>
-          </article>
-
-          <section class="managed-by">
-            <h3>Managed by</h3>
-            <div class="shop-card">
-              <img class="shop-avatar" :src="primaryImage" alt="Shop" />
-              <div>
-                <h4>{{ shopName }}</h4>
-                <p><span class="verified-text">Verified</span> | Member since 2019</p>
-              </div>
-              <button class="btn-reset contact-btn">Contact Shop</button>
-            </div>
-          </section>
-        </div>
-
-        <div class="side-stack">
-          <aside class="booking-panel">
-            <div class="price-box">
-              <h2>${{ formatPrice(vehicle.price_per_day) }} <small>/ day</small></h2>
-              <span class="instant">Instant Book</span>
-            </div>
-
-            <div class="date-grid">
-              <div>
-                <span>PICK-UP</span>
-                <strong>{{ formatDisplayDate(pickupDate) }}</strong>
-              </div>
-              <div>
-                <span>DROP-OFF</span>
-                <strong>{{ formatDisplayDate(dropoffDate) }}</strong>
-              </div>
-            </div>
-
-            <h4>OPTIONAL ADD-ONS</h4>
-            <label class="addon-item" :class="{ active: theftInsuranceSelected }">
-              <input type="checkbox" v-model="theftInsuranceSelected" />
-              <div class="addon-main">
-                <span>Theft Insurance</span>
-              </div>
-              <strong>+$2/day</strong>
-            </label>
-
-            <label class="addon-item" :class="{ active: gpsSelected }">
-              <input type="checkbox" v-model="gpsSelected" />
-              <div class="addon-main">
-                <span>GPS Navigation Tablet</span>
-              </div>
-              <strong>+$3/day</strong>
-            </label>
-
-            <div class="bill">
-              <p><span>${{ formatPrice(vehicle.price_per_day) }} x {{ rentalDays }} day{{ rentalDays > 1 ? 's' : '' }}</span><strong>${{ baseTotal.toFixed(2) }}</strong></p>
-              <p v-for="line in selectedAddonLines" :key="line.key"><span>{{ line.label }}</span><strong>${{ line.amount.toFixed(2) }}</strong></p>
-              <p v-if="fee > 0"><span>Marketplace Fee</span><strong>${{ fee.toFixed(2) }}</strong></p>
-            </div>
-
-            <p class="total"><span>Total (USD)</span><strong>${{ grandTotal.toFixed(2) }}</strong></p>
-            <button class="btn-reset request-btn">Request Booking</button>
-          </aside>
-
-        </div>
-      </section>
-
-      <section class="db-section">
-        <h4>Vehicle Table Data</h4>
-        <div class="db-grid">
-          <p><strong>shop_name:</strong> {{ shopName }}</p>
-          <p><strong>type:</strong> {{ vehicle.type }}</p>
-          <p><strong>brand:</strong> {{ vehicle.brand }}</p>
-          <p><strong>model:</strong> {{ vehicle.model }}</p>
-          <p><strong>year:</strong> {{ vehicle.year }}</p>
-          <p><strong>price_per_day:</strong> {{ vehicle.price_per_day }}</p>
-          <p><strong>fuel_type:</strong> {{ vehicle.fuel_type }}</p>
-          <p><strong>transmission:</strong> {{ vehicle.transmission }}</p>
-          <p><strong>seats:</strong> {{ vehicle.seats }}</p>
-          <p><strong>status:</strong> {{ vehicle.status }}</p>
-        </div>
-      </section>
-    </main>
-
-    <main v-else-if="isLoading" class="not-found">
-      <h2>Loading vehicle...</h2>
-    </main>
-
-    <main v-else class="not-found">
-      <h2>Vehicle not found</h2>
-      <p v-if="loadError">{{ loadError }}</p>
-      <button class="btn-reset back-btn" @click="goBack">Back to Vehicles</button>
-    </main>
-
-    <footer class="page-footer">
-      <div class="footer-col brand-col">
-        <h4>Cambodia<span>Rides</span></h4>
-        <p>
-          Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
-        </p>
-      </div>
-      <div class="footer-col">
-        <h5>QUICK LINKS</h5>
-        <p>How it works</p>
-        <p>Trust & Safety</p>
-        <p>Rental Policies</p>
-      </div>
-      <div class="footer-col">
-        <h5>SUPPORT</h5>
-        <p>Help Center</p>
-        <p>Become a Partner</p>
-        <p>Contact Us</p>
-      </div>
-    </footer>
-  </section>
-</template>
-
 <script setup>
 import Logo from '@/components/Logo.vue';
 import axios from 'axios';
@@ -240,6 +58,26 @@ const normalizeVehicle = (data) => ({
   rating: data?.rating ?? 4.8
 });
 
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Bookings', route: '' },
+  { label: 'Promotions', route: '/promotions' }
+];
+
+const activeNav = computed(() => {
+  const currentPath = route.path;
+  const matched = navItems.find((item) => item.route && currentPath.startsWith(item.route));
+  return matched?.label || 'Home';
+});
+
+const setActiveNav = (item) => {
+  if (item.route) {
+    router.push(item.route);
+    return;
+  }
+  console.log('My Bookings page is not available yet.');
+};
+
 const routeId = computed(() => Number(route.params.id));
 
 const loadShopName = async (shopId) => {
@@ -286,6 +124,11 @@ const availabilityText = computed(() => {
 });
 const shopName = computed(() => (vehicle.value ? (shopNamesById.value[vehicle.value.shop_id] || 'Unknown Shop') : 'Unknown Shop'));
 const primaryImage = computed(() => (vehicle.value ? resolveImageUrl(vehicle.value.image_url) : fallbackImage));
+const pickupLocation = computed(() => shopName.value || 'Selected Shop');
+const dropoffLocation = computed(() => (shopName.value ? `${shopName.value} Return` : 'Drop-Off Location'));
+const pickupTime = ref('10:00 AM');
+const dropoffTime = ref('10:00 AM');
+const shopAddress = computed(() => vehicle.value?.address || shopName.value);
 
 watch(
   routeId,
@@ -342,6 +185,72 @@ const formatDisplayDate = (isoDate) => {
   const [year, month, day] = isoDate.split('-');
   return `${month}/${day}/${year}`;
 };
+
+const toFeatureList = (value, fallback = []) => {
+  if (!value) return fallback;
+  if (Array.isArray(value) && value.length) return value;
+  if (typeof value === 'string') {
+    const entries = value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (entries.length) return entries;
+  }
+  return fallback;
+};
+
+const featureSections = computed(() => {
+  if (!vehicle.value) return [];
+  return [
+    {
+      title: 'Safety',
+      caption: 'Stability & alerts',
+      items: toFeatureList(vehicle.value.safety_features, ['ABS', 'Airbags', 'Lane keep assist', 'Parking sensors'])
+    },
+    {
+      title: 'Connectivity',
+      caption: 'Always connected',
+      items: toFeatureList(vehicle.value.connectivity_features, ['Bluetooth', 'USB-C fast charge', 'Apple CarPlay', 'Wireless charging'])
+    },
+    {
+      title: 'Comfort',
+      caption: 'Relaxed driving',
+      items: toFeatureList(vehicle.value.comfort_features, ['Dual-zone climate', 'Heated seats', 'Ambient lighting', 'Cruise control'])
+    }
+  ];
+});
+
+const journeySteps = computed(() => {
+  if (!vehicle.value) return [];
+  return [
+    { label: 'Pick-Up Location', value: pickupLocation.value },
+    { label: 'Pick-Up Date', value: formatDisplayDate(pickupDate.value) },
+    { label: 'Pick-Up Time', value: pickupTime.value },
+    { label: 'Drop-Off Location', value: dropoffLocation.value },
+    { label: 'Drop-Off Date', value: formatDisplayDate(dropoffDate.value) },
+    { label: 'Drop-Off Time', value: dropoffTime.value }
+  ];
+});
+
+const priceRows = computed(() => {
+  if (!vehicle.value) return [];
+  const rows = [
+    {
+      label: `Car Rental (${rentalDays.value} day${rentalDays.value > 1 ? 's' : ''})`,
+      value: `$${baseTotal.value.toFixed(2)}`
+    }
+  ];
+  selectedAddonLines.value.forEach((line) => {
+    rows.push({ label: line.label, value: `$${line.amount.toFixed(2)}` });
+  });
+  if (fee.value > 0) {
+    rows.push({ label: 'Marketplace Fee', value: `$${fee.value.toFixed(2)}` });
+  }
+  return rows;
+});
+
+const totalPayment = computed(() => grandTotal.value.toFixed(2));
+const vehicleLocation = computed(() => pickupLocation.value || shopAddress.value || 'Siem Reap, Cambodia');
 const goBack = () => {
   const shopId = route.query.shop_id || vehicle.value?.shop_id;
   router.push({
@@ -362,22 +271,235 @@ const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
 };
-
 </script>
+
+<template>
+  <div class="detail-page">
+    <header class="topbar">
+      <div class="brand" @click="goHome">
+        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
+        <span>Chong Choul</span>
+      </div>
+
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item.label"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item.label }"
+          @click="setActiveNav(item)"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <button class="btn-reset avatar" @click="openProfile">
+          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+          <span v-else>{{ userInitials }}</span>
+        </button>
+        <button class="btn-reset logout-btn" @click="handleLogout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="detail-wrapper">
+      <div v-if="isLoading" class="status-card">
+        <div class="loading-spinner"></div>
+        <p>Loading vehicle details...</p>
+      </div>
+
+      <div v-else-if="loadError" class="status-card status-card--error">
+        <p>{{ loadError }}</p>
+        <button class="btn-reset text-btn" type="button" @click="goBack">Back to Vehicles</button>
+      </div>
+
+      <section v-else-if="vehicle" class="detail-card">
+        <div class="detail-card__hero">
+          <div>
+            <p class="hero-eyebrow">DriveMatch</p>
+            <h1>{{ vehicleTitle }}</h1>
+            <p class="hero-subtitle">{{ shopName }}</p>
+          </div>
+          <div class="hero-price">
+            <span class="hero-price__value">${{ formatPrice(vehicle.price_per_day) }}</span>
+            <span class="hero-price__unit">per day</span>
+            <small>Premium auto selection</small>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-left">
+            <div class="image-panel">
+              <img :src="primaryImage" :alt="vehicleTitle" />
+              <span class="status-pill">{{ availabilityText }}</span>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn-ghost" type="button" @click="goBack">Back to vehicles</button>
+              <button class="btn-solid" type="button" @click="goBack">Rent now</button>
+            </div>
+
+            <div class="feature-sections">
+              <article v-for="section in featureSections" :key="section.title" class="feature-card">
+                <div class="feature-card__head">
+                  <h3>{{ section.title }}</h3>
+                  <span>{{ section.caption }}</span>
+                </div>
+                <ul>
+                  <li v-for="item in section.items.slice(0, 4)" :key="item">{{ item }}</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+
+          <aside class="detail-right">
+            <article class="panel journey-panel">
+              <div class="panel-head">
+                <h3>Your Journey</h3>
+                <span class="pill">Ready</span>
+              </div>
+              <ul>
+                <li v-for="step in journeySteps" :key="step.label">
+                  <span>{{ step.label }}</span>
+                  <strong>{{ step.value }}</strong>
+                </li>
+              </ul>
+            </article>
+
+            <article class="panel price-panel">
+              <div class="panel-head">
+                <h3>Price Breakdown</h3>
+                <span class="pill pill--muted">{{ rentalDays }} day{{ rentalDays > 1 ? 's' : '' }}</span>
+              </div>
+              <ul>
+                <li v-for="row in priceRows" :key="row.label">
+                  <span>{{ row.label }}</span>
+                  <strong>{{ row.value }}</strong>
+                </li>
+              </ul>
+              <div class="panel-total">
+                <span>Total Payment</span>
+                <strong>${{ totalPayment }}</strong>
+              </div>
+            </article>
+
+            <article class="panel location-panel">
+              <div class="panel-head">
+                <h3>My Location</h3>
+                <button class="btn-link" type="button">
+                  Open map <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </button>
+              </div>
+              <p>{{ vehicleLocation }}</p>
+              <p class="small-text">Pick-up at Trip Zone Motorbike and Scooter Rental</p>
+            </article>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      <div class="footer-col brand-col">
+        <h4>Cambodia<span>Rides</span></h4>
+        <p>
+          Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
+        </p>
+      </div>
+      <div class="footer-col">
+        <h5>QUICK LINKS</h5>
+        <p>How it works</p>
+        <p>Trust & Safety</p>
+        <p>Rental Policies</p>
+      </div>
+      <div class="footer-col">
+        <h5>SUPPORT</h5>
+        <p>Help Center</p>
+        <p>Become a Partner</p>
+        <p>Contact Us</p>
+      </div>
+    </footer>
+  </div>
+</template>
 
 <style scoped>
 .detail-page {
-  --line: #d9e0ea;
   min-height: 100vh;
-  padding: 0 40px;
-  background: #f2f4f7;
-  color: #1b2940;
+  background: linear-gradient(180deg, #f7f8fc 0%, #ecf2ff 100%);
   font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  color: #111a2c;
 }
 
-.detail-page,
-.detail-page * {
-  box-sizing: border-box;
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: center;
+  padding: 14px 24px;
+  background: #fff;
+  border-bottom: 1px solid rgba(20, 33, 61, 0.08);
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.09);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2563eb;
+  cursor: pointer;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+}
+
+.brand-icon i {
+  color: #2563eb;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-self: center;
+}
+
+.nav-link {
+  padding: 10px 28px;
+  border-radius: 999px;
+  color: #4b5563;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: 0.2s ease;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .btn-reset {
@@ -388,87 +510,11 @@ const handleLogout = async () => {
   font: inherit;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  min-height: 0;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 14px 24px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 32px;
-  background: #ffffff;
-  color: #1a2437;
-  border-bottom: 1px solid var(--line);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 700;
-  cursor: pointer;
-  color: #2563eb;
-  white-space: nowrap;
-  background: none;
-  -webkit-text-fill-color: #2563eb;
-}
-
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 34px;
-  background: #dbeafe;
-}
-
-.brand i {
-  color: #2563eb;
-}
-
-.nav-links {
-  display: flex;
-  font-size: 16px;
-  font-weight: 800;
-  gap: 24px;
-  justify-self: center;
-}
-
-.nav-link {
-  padding: 8px 16px;
-  border-radius: 8px;
-  color: #4a556b;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.nav-link.active,
-.nav-link:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  white-space: nowrap;
-  justify-self: end;
-}
-
 .user-display-name {
   font-size: 16px;
   font-weight: 800;
   color: #33435d;
-  order: 1;
+  white-space: nowrap;
 }
 
 .avatar {
@@ -478,18 +524,15 @@ const handleLogout = async () => {
   display: grid;
   place-items: center;
   background: #f4f8fc;
-  border: none;
   color: #9a6a32;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  order: 2;
 }
 
 .avatar-image {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
   display: block;
 }
@@ -505,8 +548,6 @@ const handleLogout = async () => {
   font-size: 14px;
   font-weight: 600;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-  white-space: nowrap;
-  order: 3;
 }
 
 .logout-btn:hover {
@@ -515,493 +556,380 @@ const handleLogout = async () => {
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
-.content {
-  max-width: 1220px;
+.detail-wrapper {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 14px 10px 34px;
+  padding: 0 24px 56px;
 }
 
-.breadcrumbs {
-  color: #96a6ba;
-  font-size: 11px;
-  margin-bottom: 10px;
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 14px;
-}
-
-.left-panel {
-  min-width: 0;
-}
-
-.hero-image {
-  position: relative;
-  height: 420px;
-  border-radius: 9px;
-  overflow: hidden;
-  border: 1px solid #d8e1ed;
-  background: #eef3f9;
-}
-
-.hero-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photos-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  background: #ffffff;
-  color: #22395a;
-  border-radius: 8px;
-  padding: 6px 10px;
-  border: 1px solid #d7e1ed;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.vehicle-card {
-  margin-top: 8px;
-  border-radius: 8px;
-  border: 1px solid #d8e1ec;
+.status-card {
+  margin: 24px 0;
   background: #fff;
-  color: #13213f;
-  padding: 14px;
+  border-radius: 28px;
+  padding: 36px;
+  text-align: center;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
 }
 
-h1 {
-  margin: 0;
-  font-size: 32px;
+.status-card--error {
+  background: #fff0f0;
 }
 
-.rating-line {
-  margin-top: 6px;
-  color: #5b6d8f;
-  font-size: 14px;
-}
-
-.rating-line i {
-  color: #f59e0b;
-}
-
-.dot {
-  margin: 0 8px;
-}
-
-.verified {
-  margin-left: 8px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  background: #e7f4ff;
-  color: #0f89de;
-  font-weight: 600;
-}
-
-.spec-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.spec-item {
-  background: #f5f8fc;
-  border: 1px solid #e0e7f0;
-  border-radius: 8px;
-  padding: 9px;
-}
-
-.spec-item .label {
-  display: block;
-  font-size: 12px;
-  color: #6780a3;
-}
-
-.spec-item strong {
-  font-size: 13px;
-}
-
-.managed-by {
-  margin-top: 12px;
-}
-
-.managed-by h3 {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.shop-card {
-  display: grid;
-  grid-template-columns: 50px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #d8e1ec;
-  padding: 10px;
-  color: #0e1e39;
-}
-
-.shop-avatar {
-  width: 50px;
-  height: 50px;
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #1e88e5;
   border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.detail-card {
+  background: #fff;
+  border-radius: 32px;
+  padding: 32px;
+  margin-top: 24px;
+  box-shadow: 0 40px 90px rgba(15, 23, 42, 0.18);
+  border: 1px solid rgba(19, 29, 58, 0.06);
+}
+
+.detail-card__hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-bottom: 28px;
+}
+
+.hero-eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: #7c849c;
+}
+
+.detail-card__hero h1 {
+  margin: 6px 0;
+  font-size: clamp(2.3rem, 3vw, 3rem);
+  color: #0f1422;
+}
+
+.hero-subtitle {
+  margin: 0;
+  color: #56607e;
+}
+
+.hero-price {
+  text-align: right;
+}
+
+.hero-price__value {
+  display: block;
+  font-size: 2.7rem;
+  font-weight: 700;
+  color: #111a2c;
+}
+
+.hero-price__unit {
+  display: block;
+  color: #71809c;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 0.95fr;
+  gap: 32px;
+}
+
+.detail-left {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.image-panel {
+  position: relative;
+  border-radius: 26px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #eef3ff, #d8e5ff);
+  border: 1px solid #e1e7f4;
+  box-shadow: inset 0 -30px 60px rgba(18, 45, 110, 0.08);
+}
+
+.image-panel img {
+  width: 100%;
+  height: auto;
+  display: block;
   object-fit: cover;
 }
 
-.shop-card h4 {
-  margin: 0 0 2px;
-  font-size: 12px;
-}
-
-.shop-card p {
-  margin: 0;
-  color: #61789b;
-  font-size: 11px;
-}
-
-.verified-text {
-  color: #0d88df;
-  font-weight: 700;
-}
-
-.contact-btn {
-  border: 1px solid #4ca9e6;
-  border-radius: 8px;
+.status-pill {
+  position: absolute;
+  top: 18px;
+  right: 18px;
   padding: 8px 14px;
-  color: #1386de;
+  border-radius: 30px;
+  font-size: 0.75rem;
   font-weight: 700;
-  font-size: 11px;
-}
-
-.side-stack {
-  display: grid;
-  gap: 10px;
-  align-self: start;
-}
-
-.booking-panel {
   background: #fff;
-  color: #1d2c4a;
-  border-radius: 10px;
-  border: 1px solid #d8e1ec;
-  padding: 14px;
+  color: #1d4ed8;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
 }
 
-.price-box {
+.detail-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 10px;
 }
 
-.price-box h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.price-box small {
-  color: #7083a3;
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.instant {
-  color: #1394ea;
+.btn-ghost,
+.btn-solid {
+  flex: 1;
+  padding: 14px 0;
+  border-radius: 14px;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 0.95rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease;
 }
 
-.date-grid {
-  margin-top: 10px;
+.btn-ghost {
+  background: #f5f7ff;
+  color: #111a2c;
+}
+
+.btn-ghost:hover,
+.btn-solid:hover {
+  transform: translateY(-2px);
+}
+
+.btn-solid {
+  background: linear-gradient(135deg, #ffd54f, #ffb300);
+  color: #1b1730;
+  box-shadow: 0 15px 35px rgba(255, 181, 0, 0.4);
+}
+
+.feature-sections {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid #dbe3f0;
-  border-radius: 10px;
-  overflow: hidden;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
 }
 
-.date-grid > div {
-  padding: 8px;
+.feature-card {
+  background: #f7f8fd;
+  border-radius: 22px;
+  padding: 18px;
+  border: 1px solid rgba(17, 23, 40, 0.08);
 }
 
-.date-grid > div:first-child {
-  border-right: 1px solid #dbe3f0;
-}
-
-.date-grid span {
-  display: block;
-  color: #7c8fac;
-  font-size: 10px;
-}
-
-.date-grid strong {
-  font-size: 16px;
-}
-
-.booking-panel h4 {
-  margin: 12px 0 7px;
-  font-size: 11px;
-  letter-spacing: .06em;
-  color: #7789a7;
-}
-
-.addon-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid #d6dfec;
-  border-radius: 8px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-
-.addon-main {
+.feature-card__head {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
- qty-control {
+.feature-card__head h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #0f1422;
+}
+
+.feature-card__head span {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.feature-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feature-card li {
+  font-size: 0.9rem;
+  color: #2a3150;
+  font-weight: 600;
+}
+
+.detail-right {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.panel {
+  background: #fff;
+  border-radius: 26px;
+  padding: 20px 24px;
+  border: 1px solid rgba(28, 36, 74, 0.08);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.12);
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-head h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #0f1422;
+}
+
+.pill {
+  font-size: 0.75rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f0f3ff;
+  color: #1e3a8a;
+  font-weight: 600;
+}
+
+.pill--muted {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panel li {
+  display: flex;
+  justify-content: space-between;
+  color: #4c5469;
+  font-size: 0.95rem;
+}
+
+.panel li strong {
+  color: #151b2e;
+}
+
+.panel-total {
+  margin-top: 14px;
+  border-top: 1px solid #e6ebf4;
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111a2c;
+}
+
+.location-panel p {
+  margin: 0;
+  color: #4e557f;
+  font-size: 1rem;
+}
+
+.small-text {
+  font-size: 0.85rem;
+  color: #7b849d;
+  margin-top: 6px;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #1d4ed8;
+  font-weight: 600;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #d1dceb;
-  border-radius: 14px;
-  padding: 2px 6px;
-  background: #fff;
-  font-size: 11px;
-}
-
- qty-btn {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid #c8d4e5;
-  background: #f4f8fc;
-  color: #1c446f;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.addon-check-placeholder {
-  width: 13px;
-  height: 13px;
-  border: 1px solid #d6dfec;
-  border-radius: 3px;
-}
-
-.addon-item.active {
-  border-color: #2aa0f5;
-  background: #eef7ff;
-}
-
-.bill {
-  border-top: 1px solid #dae3ef;
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
-.bill p {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 0;
-  font-size: 12px;
-}
-
-.total {
-  display: flex;
-  justify-content: space-between;
-  font-size: 22px;
-  font-weight: 700;
-  margin: 8px 0 10px;
-}
-
-.total strong {
-  color: #1193e8;
-}
-
-.request-btn {
-  width: 100%;
-  background: #1ca0ef;
-  color: #fff;
-  border-radius: 8px;
-  padding: 10px;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.guest-reviews {
-  background: #fff;
-  border: 1px solid #d8e1ec;
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.guest-reviews h3 {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.reviews-score {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reviews-score strong {
-  font-size: 52px;
-  line-height: 1;
-}
-
-.stars {
-  margin: 0;
-  color: #f59e0b;
-  font-size: 14px;
-}
-
-.reviews-score small {
-  color: #6d84a1;
-  font-size: 11px;
-}
-
-.db-section {
-  margin-top: 12px;
-  background: #fff;
-  border: 1px solid #d8e1ec;
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.db-section h4 {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: #6f84a2;
-}
-
-.db-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
-}
-
-.db-grid p {
-  margin: 0;
-  font-size: 12px;
-  color: #294364;
+  gap: 4px;
 }
 
 .page-footer {
-  margin-top: 24px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  border-top: 1px solid #d8e1ed;
-  background: #f7f9fc;
-  padding: 24px 16px;
+  margin-top: 32px;
+  padding: 32px 48px 48px;
+  border-top: 1px solid #e1e6f0;
+  background: #fff;
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 24px;
+  color: #4f5676;
 }
 
 .footer-col h4 {
-  margin: 0;
-  font-size: 32px;
+  margin: 0 0 6px;
+  font-size: 1.5rem;
 }
 
 .footer-col h4 span {
-  color: #1ea8ff;
+  color: #1d4ed8;
 }
 
 .footer-col h5 {
   margin: 0 0 8px;
-  font-size: 11px;
-  letter-spacing: .1em;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.75rem;
+  color: #7b859b;
 }
 
 .footer-col p {
-  margin: 0 0 6px;
-  font-size: 12px;
-  color: #6a7f9a;
+  margin: 4px 0;
+  font-size: 0.95rem;
 }
 
 .brand-col p {
-  max-width: 300px;
+  max-width: 320px;
 }
 
-.not-found {
-  max-width: 560px;
-  margin: 120px auto;
-  text-align: center;
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-.back-btn {
-  margin-top: 10px;
-  background: #1ca0ef;
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 8px;
-}
-
-@media (max-width: 1100px) {
-  .hero-grid {
-    grid-template-columns: 1fr;
+@media (max-width: 1024px) {
+  .detail-card {
+    padding: 28px 24px;
   }
 
-  .hero-image {
-    height: 320px;
-  }
-
-  .page-footer {
+  .detail-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 760px) {
-  .detail-page {
-    padding: 0 12px;
-  }
-
-  .spec-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
+@media (max-width: 640px) {
   .topbar {
-    grid-template-columns: 1fr;
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-    padding: 12px;
-    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
-  .db-grid {
+  .detail-wrapper {
+    padding: 0 16px 40px;
+  }
+
+  .detail-card {
+    padding: 24px;
+  }
+
+  .feature-sections {
     grid-template-columns: 1fr;
   }
 
   .nav-links {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    justify-self: start;
-  }
-
-  .top-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    justify-self: start;
-  }
-
-  .page-footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
+    display: none;
   }
 }
 </style>

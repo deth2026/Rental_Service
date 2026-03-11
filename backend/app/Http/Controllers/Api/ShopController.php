@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Shop;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class ShopController extends Controller
 {
@@ -26,6 +27,7 @@ class ShopController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'address' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -80,6 +82,15 @@ class ShopController extends Controller
             }
         }
 
+        // If no coordinates provided, attempt to geocode from address
+        if (!isset($payload['latitude']) && !isset($payload['longitude'])) {
+            [$lat, $lng] = $this->geocodeAddress($payload['address'] ?? null);
+            if ($lat && $lng) {
+                $payload['latitude'] = $lat;
+                $payload['longitude'] = $lng;
+            }
+        }
+
         $record = Shop::create($payload);
 
         return response()->json($record, 201);
@@ -105,6 +116,7 @@ class ShopController extends Controller
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'address' => 'sometimes|string|max:255',
+            'location' => 'nullable|string|max:255',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -178,6 +190,17 @@ class ShopController extends Controller
             unset($payload['img_url']);
         }
 
+        // If latitude/longitude not provided, refresh from the (possibly updated) address
+        $addressForGeocode = $payload['address'] ?? $shop->address;
+        $coordsMissing = !$request->filled('latitude') && !$request->filled('longitude');
+        if ($coordsMissing && $addressForGeocode) {
+            [$lat, $lng] = $this->geocodeAddress($addressForGeocode);
+            if ($lat && $lng) {
+                $payload['latitude'] = $lat;
+                $payload['longitude'] = $lng;
+            }
+        }
+
         $shop->update($payload);
 
         return response()->json($shop->fresh());
@@ -195,5 +218,37 @@ class ShopController extends Controller
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
+    }
+
+    /**
+     * Resolve an address to latitude/longitude using Google Geocoding API.
+     * Returns [lat, lng] or [null, null] on failure.
+     */
+    private function geocodeAddress(?string $address): array
+    {
+        if (!$address) {
+            return [null, null];
+        }
+
+        $apiKey = config('services.google_maps.key') ?? env('GEOCODING_API_KEY');
+        if (!$apiKey) {
+            return [null, null];
+        }
+
+        $response = Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+            'address' => $address,
+            'key' => $apiKey,
+        ]);
+
+        if (!$response->successful()) {
+            return [null, null];
+        }
+
+        $result = $response->json('results.0.geometry.location');
+        if (!is_array($result) || !isset($result['lat'], $result['lng'])) {
+            return [null, null];
+        }
+
+        return [$result['lat'], $result['lng']];
     }
 }

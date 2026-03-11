@@ -1,19 +1,21 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { vehicleApi } from '@/services/api'
+import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import '../../css/ShopVehicle.css'
 
 const route = useRoute()
 const router = useRouter()
 
 const shopId = computed(() => route.params.id)
 const vehicles = ref([])
+const selectedCategory = ref('all')
 const shop = ref(null)
 const isLoading = ref(true)
 const error = ref('')
+const isLoadingShop = ref(false)
 
-// Get shop from localStorage or use default
 const getShopFromStorage = () => {
   try {
     const shopsData = localStorage.getItem('rental_shops')
@@ -70,12 +72,7 @@ const getApiOrigin = () => {
 
 const resolveVehicleImageUrl = (value) => {
   if (!value || typeof value !== 'string') return value
-  if (
-    value.startsWith('http://') ||
-    value.startsWith('https://') ||
-    value.startsWith('blob:') ||
-    value.startsWith('data:')
-  ) {
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('blob:') || value.startsWith('data:')) {
     return value
   }
   const clean = value.replace(/^\/+/, '')
@@ -83,6 +80,17 @@ const resolveVehicleImageUrl = (value) => {
     return `${getApiOrigin()}/${clean}`
   }
   return `${getApiOrigin()}/storage/${clean}`
+}
+
+const normalizeType = (raw) => {
+  const t = String(raw || '').trim().toLowerCase()
+  if (!t) return ''
+  if (['motorbike', 'motorbikes', 'motor', 'moto', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some(k => t.includes(k))) {
+    return 'motorbike'
+  }
+  if (t.includes('bicy')) return 'bicycle'
+  if (t.includes('car') || t.includes('suv')) return 'car'
+  return t
 }
 
 const normalizeVehicle = (vehicle) => {
@@ -100,13 +108,14 @@ const normalizeVehicle = (vehicle) => {
   }
 
   const imageUrl = vehicle.image_url_full || vehicle.image_url || (parsedPhotos.length > 0 ? (vehicle.photo_urls && vehicle.photo_urls[0] ? vehicle.photo_urls[0] : parsedPhotos[0]) : '')
+  const normalizedType = normalizeType(vehicle.type || vehicle.category || vehicle.vehicle_type || vehicle.kind || vehicle.name)
 
   return {
     id: vehicle.id,
     name: vehicle.name || 'Unnamed Vehicle',
     brand: vehicle.brand || '',
     model: vehicle.model || '',
-    type: vehicle.type || vehicle.category || '',
+    type: normalizedType,
     plate_number: vehicle.plate_number || vehicle.plate || '',
     price_per_day: Number(vehicle.price_per_day || vehicle.price || 0),
     fuel_type: vehicle.fuel_type || vehicle.fuel || '',
@@ -121,7 +130,6 @@ const normalizeVehicle = (vehicle) => {
 const fetchVehicles = async () => {
   isLoading.value = true
   error.value = ''
-
   try {
     const response = await vehicleApi.getAll({ shop_id: shopId.value })
     const data = response.data.data || response.data || []
@@ -134,13 +142,21 @@ const fetchVehicles = async () => {
   }
 }
 
-const goBack = () => {
-  router.push('/view_shop')
+const fetchShop = async () => {
+  isLoadingShop.value = true
+  try {
+    const response = await shopApi.getById(shopId.value)
+    shop.value = response.data?.data || response.data || null
+  } catch (err) {
+    console.error('Error fetching shop:', err)
+    shop.value = getShopFromStorage()
+  } finally {
+    isLoadingShop.value = false
+  }
 }
 
-const openProfile = () => {
-  router.push('/user/profile')
-}
+const goBack = () => router.push('/view_shop')
+const openProfile = () => router.push('/user/profile')
 
 const handleLogout = async () => {
   await userService.logout()
@@ -150,9 +166,7 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-const viewVehicleDetails = (vehicle) => {
-  router.push(`/vehicles/${vehicle.id}`)
-}
+const viewVehicleDetails = (vehicle) => router.push(`/vehicles/${vehicle.id}`)
 
 const getStatusClass = (status) => {
   const s = String(status).toLowerCase()
@@ -162,9 +176,80 @@ const getStatusClass = (status) => {
   return 'status-available'
 }
 
+const filteredVehicles = computed(() => {
+  if (selectedCategory.value === 'all') return vehicles.value
+  return vehicles.value.filter((v) => {
+    const type = normalizeType(v.type || v.category || v.vehicle_type || v.kind || v.name)
+    if (type === selectedCategory.value) return true
+    const text = `${v.name || ''} ${v.brand || ''} ${v.model || ''} ${v.description || ''}`.toLowerCase()
+    if (selectedCategory.value === 'motorbike') {
+      return ['motor', 'moto', 'bike', 'scooter'].some((k) => type.includes(k) || text.includes(k))
+    }
+    if (selectedCategory.value === 'bicycle') {
+      return ['bicy', 'cycle', 'bike'].some((k) => type.includes(k) || text.includes(k))
+    }
+    if (selectedCategory.value === 'car') {
+      return ['car', 'suv', 'auto', 'sedan', 'truck'].some((k) => type.includes(k) || text.includes(k))
+    }
+    return false
+  })
+})
+
+const categoryButtons = [
+  { label: 'All', value: 'all' },
+  { label: 'Motorbikes', value: 'motorbike' },
+  { label: 'Bicycles', value: 'bicycle' },
+  { label: 'Cars', value: 'car' }
+]
+
 onMounted(() => {
   fetchVehicles()
+  fetchShop()
 })
+
+const selectedShopCoords = computed(() => {
+  if (!shop.value) return null
+  const lat = shop.value.latitude ?? shop.value.lat
+  const lng = shop.value.longitude ?? shop.value.lng
+  if (lat == null || lng == null) return null
+  const parsedLat = Number(lat)
+  const parsedLng = Number(lng)
+  if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null
+  return { lat: parsedLat, lng: parsedLng }
+})
+
+const googleMapsEmbedKey = import.meta.env?.VITE_GOOGLE_MAPS_EMBED_KEY || ''
+
+const mapEmbedUrl = computed(() => {
+  const coords = selectedShopCoords.value
+  const name = shop.value?.name || 'Shop'
+  const address = shop.value?.address || ''
+  const fallback = 'Siem Reap, Cambodia'
+  const queryParts = []
+  if (name) queryParts.push(name)
+  if (address) queryParts.push(address)
+  const baseQuery = queryParts.join(', ') || fallback
+
+  if (googleMapsEmbedKey) {
+    const placeTarget = coords ? `${coords.lat},${coords.lng}` : baseQuery
+    return `https://www.google.com/maps/embed/v1/place?key=${googleMapsEmbedKey}&q=${encodeURIComponent(placeTarget)}&maptype=satellite`
+  }
+
+  if (coords) {
+    return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&ll=${coords.lat},${coords.lng}&t=k&z=19&output=embed`
+  }
+  return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&t=k&z=19&output=embed`
+})
+
+const openMap = () => {
+  const coords = selectedShopCoords.value
+  const name = shop.value?.name || ''
+  const address = shop.value?.address || ''
+  const fallback = 'Siem Reap, Cambodia'
+  const destination = `${name ? `${name}, ` : ''}${address || ''}`.trim() || fallback
+  const destWithCoords = coords ? `${destination} (${coords.lat},${coords.lng})` : destination
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destWithCoords)}`, '_blank')
+}
 </script>
 
 <template>
@@ -177,11 +262,11 @@ onMounted(() => {
         <div class="brand-icon"><i class="fa-solid fa-car" aria-hidden="true"></i></div>
         <span>Shop Vehicles</span>
       </div>
-
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
         <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image"
+            @error="onAvatarError" />
           <span v-else>{{ userInitials }}</span>
         </button>
         <button class="btn-reset logout-btn" @click="handleLogout">
@@ -196,69 +281,61 @@ onMounted(() => {
         <p>Browse vehicles from this shop</p>
       </div>
 
-      <div v-if="isLoading" class="status-box">Loading vehicles...</div>
-      <div v-else-if="error" class="status-box error">{{ error }}</div>
-      <div v-else-if="vehicles.length === 0" class="status-box">
-        No vehicles available at this shop yet.
+      <div class="filters-row" v-if="vehicles.length">
+        <div class="filter-chips">
+          <button v-for="category in categoryButtons" :key="category.value" class="chip"
+            :class="{ active: selectedCategory === category.value }" @click="selectedCategory = category.value">
+            {{ category.label }}
+          </button>
+        </div>
+        <p class="results-text">{{ filteredVehicles.length }} vehicles found <span v-if="shop?.name">in {{ shop.name
+            }}</span></p>
       </div>
 
+      <div v-if="isLoading" class="status-box">Loading vehicles...</div>
+      <div v-else-if="error" class="status-box error">{{ error }}</div>
+      <div v-else-if="vehicles.length === 0" class="status-box">No vehicles available at this shop yet.</div>
+      <div v-else-if="filteredVehicles.length === 0" class="status-box">No vehicles match this category.</div>
+
       <div v-else class="vehicles-grid">
-        <article v-for="vehicle in vehicles" :key="vehicle.id" class="vehicle-card">
+        <article v-for="vehicle in filteredVehicles" :key="vehicle.id" class="vehicle-card">
           <div class="vehicle-card-image">
-            <img 
-              v-if="vehicle.imageUrl" 
-              :src="vehicle.imageUrl" 
-              :alt="vehicle.name" 
-              @error="vehicle.imageUrl = ''" 
-            />
-            <div v-else class="no-image">
-              <i class="fa-solid fa-car"></i>
-            </div>
-            <span :class="'status-badge ' + getStatusClass(vehicle.status)">
-              {{ vehicle.status }}
-            </span>
+            <img v-if="vehicle.imageUrl" :src="vehicle.imageUrl" :alt="vehicle.name" @error="vehicle.imageUrl = ''" />
+            <div v-else class="no-image"><i class="fa-solid fa-car"></i></div>
+            <span :class="'status-badge ' + getStatusClass(vehicle.status)">{{ vehicle.status }}</span>
           </div>
-          
           <div class="vehicle-card-content">
             <h3>{{ vehicle.name }}</h3>
             <p class="vehicle-type">{{ vehicle.type }} - {{ vehicle.brand }} {{ vehicle.model }}</p>
-            
             <div class="vehicle-details">
-              <div class="detail-item" v-if="vehicle.plate_number">
-                <i class="fa-solid fa-tag"></i>
-                <span>{{ vehicle.plate_number }}</span>
-              </div>
-              <div class="detail-item" v-if="vehicle.fuel_type">
-                <i class="fa-solid fa-gas-pump"></i>
-                <span>{{ vehicle.fuel_type }}</span>
-              </div>
-              <div class="detail-item" v-if="vehicle.transmission">
-                <i class="fa-solid fa-gear"></i>
-                <span>{{ vehicle.transmission }}</span>
-              </div>
+              <div class="detail-item" v-if="vehicle.plate_number"><i class="fa-solid fa-tag"></i><span>{{
+                vehicle.plate_number }}</span></div>
+              <div class="detail-item" v-if="vehicle.fuel_type"><i class="fa-solid fa-gas-pump"></i><span>{{
+                  vehicle.fuel_type }}</span></div>
+              <div class="detail-item" v-if="vehicle.transmission"><i class="fa-solid fa-gear"></i><span>{{
+                vehicle.transmission }}</span></div>
             </div>
-
             <div class="vehicle-price">
               <span class="price-amount">${{ vehicle.price_per_day }}</span>
               <span class="price-period">/day</span>
             </div>
-
-            <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">
-              View Details
-            </button>
+            <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">View Details</button>
           </div>
         </article>
       </div>
+
+      <section class="map-section" v-if="shop">
+        <div class="map">
+          <iframe class="map-frame" :src="mapEmbedUrl" title="Google map location" loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <button class="btn-reset open-map-btn" @click="openMap">Open in Google Maps</button>
+        </div>
+      </section>
     </main>
   </div>
 </template>
 
 <style scoped>
-.shop-vehicles-page {
-  min-height: 100vh;
-  background-color: #f5f7fa;
-}
-
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -314,7 +391,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  /* margin-right: 40px; */
 }
 
 .user-display-name {
@@ -381,6 +457,49 @@ onMounted(() => {
   color: #666;
 }
 
+.filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 1px solid #d8dee7;
+  background: white;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.chip.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+
+.results-text {
+  color: #475569;
+  font-weight: 600;
+}
+
 .status-box {
   text-align: center;
   padding: 3rem;
@@ -397,7 +516,7 @@ onMounted(() => {
 
 .vehicles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, minmax(260px, 1fr));
   gap: 1.5rem;
 }
 
@@ -518,7 +637,7 @@ onMounted(() => {
 .view-details-btn {
   width: 100%;
   padding: 0.75rem;
-  background: #2563eb;;
+  background: #2563eb;
   color: white;
   border: none;
   border-radius: 8px;
@@ -531,6 +650,37 @@ onMounted(() => {
   opacity: 0.9;
 }
 
+.map-section {
+  margin-top: 2rem;
+}
+
+.map {
+  position: relative;
+  height: 340px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d8dee7;
+}
+
+.map-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.open-map-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8dee7;
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   .topbar {
     padding: 1rem;
@@ -541,7 +691,7 @@ onMounted(() => {
   }
 
   .vehicles-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
 </style>

@@ -10,8 +10,8 @@ import PromotionView from '../views/user/Promotion.vue';
 import SettingUser from '../views/user/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import ShopVehicles from '../views/user/ShopVehicles.vue';
-import VehiclesByShop from '../views/User/VehiclesByShop.vue';
-import ViewDetail from '../views/User/ViewDetail.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -69,7 +69,7 @@ const router = createRouter({
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/user/profile',
