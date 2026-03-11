@@ -417,52 +417,51 @@ onBeforeUnmount(() => {
       <p>Click Create Shop and fill in your shop information.</p>
     </div>
 
-    <div v-else class="shop-card">
-      <!-- Shop Image - Small profile style -->
-      <div class="shop-header-row">
-        <div class="shop-image-section">
-          <img v-if="shop.img_url" :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
-          <div v-else class="shop-cover-placeholder">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <polyline points="21 15 16 10 5 21"></polyline>
-            </svg>
+      <div v-else class="shop-card">
+        <!-- Shop Image - Small profile style -->
+        <div class="shop-header-row">
+          <div class="shop-image-section">
+            <div class="shop-avatar-stack">
+              <img v-if="shop.img_url" :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
+              <div v-else class="shop-cover-placeholder">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+            </div>
+            <input
+              ref="changeImageInputRef"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden-file-input"
+              @change="onChangeShopImage"
+            />
+            <div class="shop-image-actions">
+              <button
+                type="button"
+                class="change-image-btn"
+                :disabled="isUpdatingImage"
+                @click="triggerChangeImagePicker"
+              >
+                {{ isUpdatingImage ? 'Updating...' : 'Change Image' }}
+              </button>
+              <button
+                v-if="shop.img_url"
+                type="button"
+                class="delete-image-btn"
+                :disabled="isUpdatingImage"
+                @click="removeShopImage"
+              >
+                Delete Image
+              </button>
+            </div>
           </div>
-          <span class="shop-image-status" :class="(shop.status || 'inactive').toLowerCase()">
+          <span class="shop-status-pill" :class="(shop.status || 'inactive').toLowerCase()">
             {{ shop.status || 'inactive' }}
           </span>
-          <input
-            ref="changeImageInputRef"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            class="hidden-file-input"
-            @change="onChangeShopImage"
-          />
-          <div class="shop-image-actions">
-            <button
-              type="button"
-              class="change-image-btn"
-              :disabled="isUpdatingImage"
-              @click="triggerChangeImagePicker"
-            >
-              {{ isUpdatingImage ? 'Updating...' : 'Change Image' }}
-            </button>
-            <button
-              v-if="shop.img_url"
-              type="button"
-              class="delete-image-btn"
-              :disabled="isUpdatingImage"
-              @click="removeShopImage"
-            >
-              Delete Image
-            </button>
-          </div>
         </div>
-        <div class="shop-title-row">
-          <h2>{{ shop.name || 'My Shop' }}</h2>
-        </div>
-      </div>
       <p v-if="error && !showCreateModal" class="error-text" style="margin: 10px 0 0">
         {{ error }}
       </p>

@@ -66,7 +66,7 @@
   align-items: center;
   gap: 16px;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 800;
   color: #2563eb;
 }
 
@@ -1480,12 +1480,13 @@
 }
 
 .footer-top {
-  display: grid;
-  grid-template-columns: 1.5fr 0.75fr 0.75fr;
-  gap: 44px;
-  align-items: start;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
   padding-bottom: 32px;
   border-bottom: 1px solid #dbe3ee;
+  flex-wrap: wrap;
 }
 
 .page-footer h4,
@@ -1497,30 +1498,24 @@
 .footer-brand h4 {
   position: relative;
   padding-left: 52px;
-  font-size: 2.05rem;
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  color: #0c5cc3;
 }
 
 .footer-brand h4::before {
-  content: '⚜';
-  position: absolute;
-  left: 0;
-  top: -2px;
-  font-size: 1.6rem;
-  color: #2798e7;
+  display: none;
 }
 
-.page-footer h4 span {
-  color: #2563eb;
-}
 
 .footer-brand p {
   margin-top: 24px;
   max-width: 680px;
-  font-size: 0.98rem;
-  line-height: 1.45;
-  color: #5c6f88;
+  font-size: 1.1rem;
+  line-height: 1.65;
+  color: #4a5b73;
 }
 
 .footer-col h5 {
@@ -1538,6 +1533,9 @@
   font-size: 0.98rem;
   line-height: 1.9;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .page-footer a:hover {
@@ -1549,6 +1547,8 @@
   display: grid;
   gap: 2px;
   align-content: start;
+  flex: 1;
+  min-width: 160px;
 }
 
 .footer-bottom {

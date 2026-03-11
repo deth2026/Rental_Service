@@ -61,7 +61,6 @@ const fetchVehicles = async () => {
         vehicles.value = response.data.data || response.data || []
         // Map database fields to frontend fields
         vehicles.value = vehicles.value.map(v => {
-            // Parse photos - could be base64 array or JSON string
             let parsedPhotos = []
             try {
                 if (v.photos) {
@@ -71,21 +70,24 @@ const fetchVehicles = async () => {
                         parsedPhotos = JSON.parse(v.photos)
                     }
                 }
-            } catch (e) {
+            } catch {
                 parsedPhotos = []
             }
-            
-            // Use image_url_full if available (new API response), otherwise fall back to image_url
-            const imageUrl = v.image_url_full || v.image_url || ''
-            
+
+            const source = v?.data?.attributes ? v.data.attributes : v
+            const imageUrl = source.image_url_full || source.image_url || ''
+            const baseUrl = api.defaults.baseURL?.replace(/\\/api\\/?$/, '') || ''
+            const resolvedPreview = imageUrl ? `${baseUrl}/${imageUrl}`.replace(/\\/\\/+/g, '/') : (parsedPhotos[0] || sampleThumb)
+
             return {
-                ...v,
-                plate: v.plate_number,
-                price: v.price_per_day,
-                createdAt: v.create_at || v.created_at,
-                updatedAt: v.updated_at,
-                // Use the full URL from API or first photo URL
-                previewUrl: imageUrl || (parsedPhotos.length > 0 ? parsedPhotos[0] : sampleThumb),
+                ...source,
+                category: source.category || source.type,
+                plate: source.plate_number || source.plate,
+                price: Number(source.price_per_day ?? source.price) || 0,
+                status: (source.status || 'Available').trim(),
+                createdAt: source.created_at || source.create_at,
+                updatedAt: source.updated_at,
+                previewUrl: resolvedPreview,
                 photos: parsedPhotos,
                 base64Photos: parsedPhotos
             }
@@ -157,6 +159,18 @@ const getStatusIcon = (status) => {
     return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'
   }
   return ''
+}
+
+const categoryIconMap = {
+  car: 'fa-solid fa-car-side',
+  moto: 'fa-solid fa-motorcycle',
+  bike: 'fa-solid fa-bicycle',
+  default: 'fa-solid fa-car'
+}
+
+const getCategoryIcon = (category) => {
+  const key = (category || '').toString().trim().toLowerCase()
+  return categoryIconMap[key] || categoryIconMap.default
 }
 
 // Get status badge class
@@ -540,7 +554,10 @@ const onPhotoDrop = async (e) => {
                         <td>
                             <img :src="v.previewUrl || sampleThumb" alt="Vehicle" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" />
                         </td>
-                        <td>{{ v.name }}</td>
+                        <td class="vehicle-name-cell">
+                            <i :class="['vehicle-category-icon', getCategoryIcon(v.category)]" aria-hidden="true"></i>
+                            <span>{{ v.name }}</span>
+                        </td>
                         <td>{{ v.brand }} / {{ v.model }}</td>
                         <td>{{ v.plate }}</td>
                         <td>${{ v.price }}</td>
