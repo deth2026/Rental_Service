@@ -31,73 +31,73 @@
       </div>
     </header>
 
-    <section class="filters">
-      <div class="type-filters">
-        <button
-          v-for="type in vehicleTypes"
-          :key="type.key"
-          class="btn-reset chip"
-          :class="{ active: selectedType === type.key }"
-          @click="selectedType = type.key"
-        >
-          {{ type.label }}
-        </button>
-      </div>
-
-      <div class="option-filters">
-        <button class="btn-reset select-chip search-filter-btn" @click="runFilterSearch">
-          Search
-        </button>
-      </div>
-    </section>
-
     <main class="content">
-      <div class="results-head">
-        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h1>
-        <p>Available for your selected dates ({{ dateRange }})</p>
-      </div>
-
-      <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
-      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
-      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
-
-      <section class="grid">
-        <article class="card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
-          <span v-if="vehicle.bestValue" class="badge">BEST VALUE</span>
-
-          <button
-            class="btn-reset fav-btn"
-            :class="{ active: favoriteIds.has(vehicle.id) }"
-            @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
-            :aria-label="`Save ${getVehicleName(vehicle)}`"
-          >
-            <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
-          </button>
-
-          <div class="card-image">
-            <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+      <section class="deals-section">
+        <div class="section-header">
+          <div class="section-badge">
+            <i class="fa-solid fa-car"></i>
+            <span>AVAILABLE VEHICLES</span>
           </div>
 
-          <div class="card-body">
-            <div class="card-top">
+          <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
+          <p>Available for your selected dates ({{ dateRange }})</p>
+
+          <div class="filter-row">
+            <button
+              v-for="type in vehicleTypes"
+              :key="type.key"
+              class="filter-pill"
+              :class="{ active: selectedType === type.key }"
+              @click="selectedType = type.key"
+            >
+              <i :class="type.icon"></i>
+              <span>{{ type.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
+        <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+
+        <section class="grid">
+          <article class="promo-card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
+            <div class="promo-media">
+              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+              <span v-if="vehicle.bestValue" class="promo-ribbon">BEST VALUE</span>
+              <!-- <span class="promo-type">{{ vehicle.type || 'vehicle' }}</span> -->
+              
+              <button
+                class="btn-reset fav-btn"
+                :class="{ active: favoriteIds.has(vehicle.id) }"
+                @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
+                :aria-label="`Save ${getVehicleName(vehicle)}`"
+              >
+                <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="promo-body">
               <h3>{{ getVehicleName(vehicle) }}</h3>
-              <div class="price">
-                <strong>${{ vehicle.price_per_day }}</strong>
-                <span>per day</span>
+              
+              <div class="vehicle-meta">
+                <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
+                <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
+                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
+              </div>
+
+              <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
+
+              <div class="promo-meta">
+                <div class="promo-value">
+                  <strong>${{ vehicle.price_per_day }}</strong>
+                  <span>per day</span>
+                </div>
+                <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
               </div>
             </div>
-
-            <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
-
-            <div class="meta">
-              <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
-              <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
-              <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
-            </div>
-
-            <button class="btn-reset book" @click="bookNow(vehicle)">Book Now</button>
-          </div>
-        </article>
+          </article>
+        </section>
       </section>
 
       <section class="map-section">
@@ -146,6 +146,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
+import '../../css/VehicleByShop.css'
 
 const location = 'Siem Reap';
 const formatDate = (date) =>
@@ -168,10 +169,10 @@ const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
 const selectedType = ref('all');
 const vehicleTypes = [
-  { key: 'all', label: 'All' },
-  { key: 'motorbike', label: 'Motorbikes' },
-  { key: 'bicycle', label: 'Bicycles' },
-  { key: 'car', label: 'Cars' }
+  { key: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
+  { key: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
+  { key: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
+  { key: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
 ];
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
@@ -365,464 +366,6 @@ onUnmounted(() => {
 
 </script>
 
-<style scoped>
-.vehicles-page {
-  --brand: #1d4ed8;
-  --brand-dark: #1e40af;
-  --bg: #eff1f4;
-  --card: #ffffff;
-  --line: #d8dee7;
-  --text: #1e2430;
-  --muted: #c4ccda;
-  min-height: 100vh;
-  padding: 0 40px;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
 
-.btn-reset {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 32px;
-  align-items: center;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 14px 20px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-  box-sizing: border-box;
-}
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #2563eb;
-  white-space: nowrap;
-}
-
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: #dbeafe;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-self: end;
-  white-space: nowrap;
-}
-
-.nav-links {
-  display: flex;
-  gap: 24px;
-  justify-self: center;
-}
-
-.nav-link {
-  padding: 8px 16px;
-  border-radius: 8px;
-  color: #4a556b;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.nav-link.active,
-.nav-link:hover {
-  background: #eef7ff;
-  color: #2563eb;
-}
-
-.brand-icon i {
-  color: #2563eb;
-}
-
-.user-display-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: #33435d;
-}
-
-.avatar {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: #f4f8fc;
-  color: #9a6a32;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-}
-
-.logout-btn:hover {
-  background: #1d4ed8;
-}
-
-.fav-btn i {
-  font-size: 16px;
-}
-
-.shop i,
-.meta i {
-  margin-right: 4px;
-}
-
-.meta .fa-star {
-  color: #f6b200;
-}
-
-.filters {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 20px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-}
-
-.type-filters,
-.option-filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chip,
-.select-chip {
-  padding: 8px 14px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: #f5f7fa;
-  font-size: 14px;
-}
-
-.chip.active {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
-}
-
-.select-chip {
-  background: #fff;
-}
-
-.search-filter-btn {
-  min-width: 92px;
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
-  font-weight: 600;
-}
-
-.search-filter-btn:hover {
-  background: var(--brand-dark);
-  border-color: var(--brand-dark);
-}
-
-.content {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 22px 20px 36px;
-}
-
-.results-head h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.results-head p {
-  margin: 4px 0 12px;
-  color: var(--muted);
-}
-
-.action-message {
-  margin: 0 0 12px;
-  color: #0f74ab;
-  font-size: 14px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.card {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card);
-  overflow: hidden;
-  background-color:#eaf7fa;
-  
-}
-
-.badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 2;
-  border-radius: 6px;
-  padding: 3px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  background: var(--brand);
-}
-
-.fav-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  background: #f8f6f6;
-  border: 1px solid var(--line);
-}
-
-.fav-btn.active {
-  color: #ef4f68;
-}
-
-.card-image {
-  height: 172px;
-  background: #ffffff;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  /* padding: 0px; */
-}
-
-.card-image img {
-  width: 100%;
-  max-height: 152px;
-  object-fit: contain;
-}
-
-.card-body {
-  padding: 12px;
-  background-color:#eaf7fa;
-}
-
-.card-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.card-top h3 {
-  margin: 0;
-  font-size: 24px;
-  line-height: 1.3;
-}
-
-.price {
-  text-align: right;
-}
-
-.price strong {
-  color: var(--brand);
-  font-size: 20px;
-}
-
-.price span {
-  display: block;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.shop {
-  margin: 4px 0 10px;
-  font-size: 16px;
-  color: #617086;
-}
-
-.meta {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  color: #59667b;
-  margin-bottom: 12px;
-}
-
-.book {
-  width: 100%;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: var(--brand);
-  color: #fff;
-  font-weight: 600;
-}
-
-.book:hover {
-  background: var(--brand-dark);
-}
-
-.map-section {
-  margin-top: 26px;
-}
-
-.map {
-  position: relative;
-  height: 330px;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-}
-
-.map-frame {
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-.open-map-btn {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  color: var(--brand-dark);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.footer {
-  margin-top: 28px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 24px 20px;
-  background: #fff;
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 28px;
-}
-
-.footer-brand strong {
-  font-size: 24px;
-}
-
-.footer-brand strong span {
-  color: var(--brand);
-}
-
-.footer-brand p {
-  margin: 8px 0 0;
-  max-width: 420px;
-  color: #66758d;
-}
-
-.footer-links h4 {
-  margin: 2px 0 10px;
-  font-size: 15px;
-}
-
-.footer-links button {
-  display: block;
-  margin: 0 0 8px;
-  color: #52627b;
-}
-
-@media (max-width: 1080px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    width: 100%;
-    margin-left: 0;
-    margin-right: 0;
-    gap: 10px;
-  }
-
-  .nav-links,
-  .top-actions {
-    justify-self: start;
-  }
-
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .footer {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .vehicles-page {
-    padding: 0 12px;
-  }
-
-  .topbar {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-    padding: 12px;
-  }
-
-  .nav-links {
-    flex-wrap: wrap;
-  }
-
-  .filters {
-    flex-direction: column;
-  }
-
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-  }
-}
-</style>

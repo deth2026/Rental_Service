@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <template>
   <div class="detail-page">
     <header class="topbar">
@@ -178,6 +179,8 @@
     </footer>
   </div>
 </template>
+=======
+>>>>>>> 6872ab9feb851672fce916cfa87fcc7cf4357b30
 
 <script setup>
 import axios from 'axios';
@@ -362,8 +365,187 @@ const handleLogout = async () => {
 };
 
 </script>
+<template>
+  <div class="detail-page">
+    <header class="topbar">
+      <div class="brand" @click="goHome">
+        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
+        <span>Chong Choul</span>
+      </div>
 
-<style scoped>
+      <nav class="nav-links">
+        <button class="btn-reset nav-link active" @click="goHome">Home</button>
+        <button class="btn-reset nav-link">My Bookings</button>
+        <button class="btn-reset nav-link">promotions</button>
+      </nav>
+
+      <div class="top-actions">
+        <span class="user-display-name">customer</span>
+        <button class="btn-reset avatar" @click="openProfile">
+          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+          <span v-else>{{ userInitials }}</span>
+        </button>
+        <button class="btn-reset logout-btn" @click="handleLogout">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="content" v-if="vehicle">
+      <p class="breadcrumbs">
+        HOME <i class="fa-solid fa-angle-right"></i> SIEM REAP <i class="fa-solid fa-angle-right"></i> {{ vehicleTitle.toUpperCase() }}
+      </p>
+
+      <section class="hero-grid">
+        <div class="left-panel">
+          <div class="hero-image">
+            <img :src="primaryImage" :alt="vehicleTitle" />
+          </div>
+
+          <article class="vehicle-card">
+            <div class="vehicle-head">
+              <div>
+                <h1>{{ vehicleTitle }}</h1>
+                <p class="rating-line">
+                  <i class="fa-solid fa-star"></i> {{ vehicle.rating ?? 4.8 }}
+                  <span class="dot">|</span> 128 Bookings
+                  <span class="verified">Verified Shop</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="spec-grid">
+              <div class="spec-item">
+                <span class="label">YEAR</span>
+                <strong>{{ vehicle.year }}</strong>
+              </div>
+              <div class="spec-item">
+                <span class="label">TRANS.</span>
+                <strong>{{ vehicle.transmission }}</strong>
+              </div>
+              <div class="spec-item">
+                <span class="label">FUEL</span>
+                <strong>{{ vehicle.fuel_type }}</strong>
+              </div>
+              <div class="spec-item">
+                <span class="label">STATUS</span>
+                <strong>{{ availabilityText }}</strong>
+              </div>
+            </div>
+          </article>
+
+          <section class="managed-by">
+            <h3>Managed by</h3>
+            <div class="shop-card">
+              <img class="shop-avatar" :src="primaryImage" alt="Shop" />
+              <div>
+                <h4>{{ shopName }}</h4>
+                <p><span class="verified-text">Verified</span> | Member since 2025</p>
+              </div>
+              <button class="btn-reset contact-btn">Contact Shop</button>
+            </div>
+          </section>
+        </div>
+
+        <div class="side-stack">
+          <aside class="booking-panel">
+            <div class="price-box">
+              <h2>${{ formatPrice(vehicle.price_per_day) }} <small>/ day</small></h2>
+              <span class="instant">Instant Book</span>
+            </div>
+
+            <div class="date-grid">
+              <div>
+                <span>PICK-UP</span>
+                <strong>{{ formatDisplayDate(pickupDate) }}</strong>
+              </div>
+              <div>
+                <span>DROP-OFF</span>
+                <strong>{{ formatDisplayDate(dropoffDate) }}</strong>
+              </div>
+            </div>
+
+            <h4>OPTIONAL ADD-ONS</h4>
+            <label class="addon-item" :class="{ active: theftInsuranceSelected }">
+              <input type="checkbox" v-model="theftInsuranceSelected" />
+              <div class="addon-main">
+                <span>Theft Insurance</span>
+              </div>
+              <strong>+$2/day</strong>
+            </label>
+
+            <label class="addon-item" :class="{ active: gpsSelected }">
+              <input type="checkbox" v-model="gpsSelected" />
+              <div class="addon-main">
+                <span>GPS Navigation Tablet</span>
+              </div>
+              <strong>+$3/day</strong>
+            </label>
+
+            <div class="bill">
+              <p><span>${{ formatPrice(vehicle.price_per_day) }} x {{ rentalDays }} day{{ rentalDays > 1 ? 's' : '' }}</span><strong>${{ baseTotal.toFixed(2) }}</strong></p>
+              <p v-for="line in selectedAddonLines" :key="line.key"><span>{{ line.label }}</span><strong>${{ line.amount.toFixed(2) }}</strong></p>
+              <p v-if="fee > 0"><span>Marketplace Fee</span><strong>${{ fee.toFixed(2) }}</strong></p>
+            </div>
+
+            <p class="total"><span>Total (USD)</span><strong>${{ grandTotal.toFixed(2) }}</strong></p>
+            <button class="btn-reset request-btn">Request Booking</button>
+          </aside>
+
+        </div>
+      </section>
+
+      <section class="db-section">
+        <h4>Vehicle Table Data</h4>
+        <div class="db-grid">
+          <p><strong>shop_name:</strong> {{ shopName }}</p>
+          <p><strong>type:</strong> {{ vehicle.type }}</p>
+          <p><strong>brand:</strong> {{ vehicle.brand }}</p>
+          <p><strong>model:</strong> {{ vehicle.model }}</p>
+          <p><strong>year:</strong> {{ vehicle.year }}</p>
+          <p><strong>price_per_day:</strong> {{ vehicle.price_per_day }}</p>
+          <p><strong>fuel_type:</strong> {{ vehicle.fuel_type }}</p>
+          <p><strong>transmission:</strong> {{ vehicle.transmission }}</p>
+          <p><strong>seats:</strong> {{ vehicle.seats }}</p>
+          <p><strong>status:</strong> {{ vehicle.status }}</p>
+        </div>
+      </section>
+    </main>
+
+    <main v-else-if="isLoading" class="not-found">
+      <h2>Loading vehicle...</h2>
+    </main>
+
+    <main v-else class="not-found">
+      <h2>Vehicle not found</h2>
+      <p v-if="loadError">{{ loadError }}</p>
+      <button class="btn-reset back-btn" @click="goBack">Back to Vehicles</button>
+    </main>
+
+    <footer class="page-footer">
+      <div class="footer-col brand-col">
+        <h4>Cambodia<span>Rides</span></h4>
+        <p>
+          Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
+        </p>
+      </div>
+      <div class="footer-col">
+        <h5>QUICK LINKS</h5>
+        <p>How it works</p>
+        <p>Trust & Safety</p>
+        <p>Rental Policies</p>
+      </div>
+      <div class="footer-col">
+        <h5>SUPPORT</h5>
+        <p>Help Center</p>
+        <p>Become a Partner</p>
+        <p>Contact Us</p>
+      </div>
+    </footer>
+  </div>
+</template>
+<style module>
 .detail-page {
   --line: #d9e0ea;
   min-height: 100vh;
@@ -1003,3 +1185,5 @@ h1 {
   }
 }
 </style>
+
+
