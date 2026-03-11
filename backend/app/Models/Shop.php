@@ -16,6 +16,7 @@ class Shop extends Model
         'name',
         'description',
         'address',
+        'location',
         'phone',
         'img_url',
         'latitude',

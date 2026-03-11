@@ -53,7 +53,7 @@
 
     <main class="content">
       <div class="results-head">
-        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h1>
+        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || selectedShopLocation }}</h1>
         <p>Available for your selected dates ({{ dateRange }})</p>
       </div>
 
@@ -112,6 +112,9 @@
           <button class="btn-reset open-map-btn" @click="openMainLocation">
             Open in Google Maps
           </button>
+          <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
+            Open Saved Location
+          </button>
         </div>
       </section>
     </main>
@@ -147,7 +150,7 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 
-const location = 'Siem Reap';
+const location = ref('Siem Reap');
 const formatDate = (date) =>
   `${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date)}/${date.getDate()}/${date.getFullYear()}`;
 
@@ -158,7 +161,6 @@ const buildRollingDateRange = () => {
 
 const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
-const mapEmbedUrl = `https://maps.google.com/maps?hl=en&q=${encodeURIComponent('Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia')}&t=k&z=18&output=embed`;
 
 const route = useRoute();
 const navItems = ['Home', 'My Bookings', 'About'];
@@ -173,6 +175,17 @@ const vehicleTypes = [
   { key: 'bicycle', label: 'Bicycles' },
   { key: 'car', label: 'Cars' }
 ];
+
+const normalizeType = (raw, fallback = '') => {
+  const t = String(raw || fallback || '').trim().toLowerCase();
+  if (!t) return '';
+  if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
+    return 'motorbike';
+  }
+  if (t.includes('bicy')) return 'bicycle';
+  if (t.includes('car') || t.includes('suv')) return 'car';
+  return t;
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -192,7 +205,63 @@ const selectedShopId = computed(() => {
 });
 const selectedShopName = computed(() => {
   if (!selectedShopId.value) return '';
-  return shopNamesById.value[selectedShopId.value] || '';
+  const shop = shopNamesById.value[selectedShopId.value];
+  return typeof shop === 'object' ? shop.name : shop;
+});
+
+const selectedShopLocation = computed(() => {
+  if (!selectedShopId.value) return location.value;
+  const shop = shopNamesById.value[selectedShopId.value];
+  if (typeof shop === 'object' && shop.address) {
+    return shop.address;
+  }
+  return location.value;
+});
+
+const selectedShopAddress = computed(() => {
+  if (!selectedShopId.value) return '';
+  const shop = shopNamesById.value[selectedShopId.value];
+  return typeof shop === 'object' ? shop.address : '';
+});
+const selectedShopLocationLink = computed(() => {
+  if (!selectedShopId.value) return '';
+  const shop = shopNamesById.value[selectedShopId.value];
+  if (!shop || typeof shop !== 'object') return '';
+  const loc = shop.location || '';
+  if (typeof loc !== 'string') return '';
+  return loc.trim();
+});
+const selectedShopCoords = computed(() => {
+  if (!selectedShopId.value) return null;
+  const shop = shopNamesById.value[selectedShopId.value];
+  if (!shop) return null;
+  const lat = shop.latitude ?? shop.lat;
+  const lng = shop.longitude ?? shop.lng;
+  if (lat === null || lng === null || typeof lat === 'undefined' || typeof lng === 'undefined') return null;
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
+  if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null;
+  return { lat: parsedLat, lng: parsedLng };
+});
+const mapEmbedUrl = computed(() => {
+  const coords = selectedShopCoords.value;
+  const shopAddress = selectedShopAddress.value;
+  const shopName = selectedShopName.value || 'Shop';
+  const fallback = 'Siem Reap, Cambodia';
+
+  // Build a clean query without "undefined"
+  const queryParts = [];
+  if (shopName) queryParts.push(shopName);
+  if (shopAddress) queryParts.push(shopAddress);
+  if (coords) queryParts.push(`${coords.lat},${coords.lng}`);
+  const query = queryParts.join(' - ') || fallback;
+
+  // When we have coordinates, also set ll (map center) to avoid the world view
+  if (coords) {
+    return `https://maps.google.com/maps?hl=en&ll=${coords.lat},${coords.lng}&q=${encodeURIComponent(query)}&t=k&z=18&output=embed`;
+  }
+
+  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=k&z=16&output=embed`;
 });
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -223,7 +292,12 @@ const userInitials = computed(() => {
 });
 
 const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
-const getVehicleShop = (vehicle) => (vehicle.shop_id ? (shopNamesById.value[vehicle.shop_id] || 'Unknown Shop') : 'Unknown Shop');
+const getVehicleShop = (vehicle) => {
+  if (!vehicle.shop_id) return 'Unknown Shop';
+  const shop = shopNamesById.value[vehicle.shop_id];
+  if (!shop) return 'Unknown Shop';
+  return typeof shop === 'object' ? shop.name : shop;
+};
 
 const favoriteIds = reactive(new Set());
 
@@ -235,7 +309,9 @@ const filteredVehicles = computed(() => {
   if (selectedType.value === 'all') {
     return source;
   }
-  return source.filter((v) => String(v.type || '').toLowerCase() === selectedType.value);
+  return source.filter(
+    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === selectedType.value
+  );
 });
 
 const displayedVehicles = computed(() => {
@@ -250,7 +326,7 @@ const getVehicleImage = (vehicle) => {
     if (image.startsWith('/')) return `${API_ROOT}${image}`;
     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
   }
-  const normalizedType = String(vehicle.type || '').toLowerCase();
+  const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
 };
 
@@ -263,7 +339,13 @@ const loadAllPages = async (resource) => {
     const response = await api.get(`/${resource}`, { params: { page } });
     const payload = response.data;
     const data = Array.isArray(payload) ? payload : payload?.data || [];
-    results.push(...data);
+    // Normalize types up front so filters work even if API returns "Motorbikes" etc.
+    results.push(
+      ...data.map((item) => ({
+        ...item,
+        type: normalizeType(item.type || item.category, `${item.name} ${item.brand} ${item.model}`)
+      }))
+    );
     lastPage = payload?.last_page || 1;
     page += 1;
   }
@@ -285,7 +367,7 @@ const loadVehiclesAndShops = async () => {
       rating: vehicle.rating ?? 4.8
     }));
     shopNamesById.value = shopList.reduce((acc, shop) => {
-      acc[shop.id] = shop.name;
+      acc[shop.id] = shop;
       return acc;
     }, {});
   } catch (error) {
@@ -310,7 +392,27 @@ const handleSearch = () => {
 };
 
 const openMainLocation = () => {
-  window.open('https://maps.google.com/?q=Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia', '_blank');
+  const coords = selectedShopCoords.value;
+  const shopAddress = selectedShopAddress.value;
+  const shopName = selectedShopName.value || '';
+  if (coords) {
+    // Open directions to the exact coordinates; include address for clarity if available
+    const destination = shopAddress
+      ? `${shopName ? `${shopName}, ` : ''}${shopAddress} (${coords.lat},${coords.lng})`
+      : `${shopName ? `${shopName}, ` : ''}${coords.lat},${coords.lng}`;
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`, '_blank');
+    return;
+  }
+  // Use address first, then shop name, then Trip Zone as fallback
+  const query = shopAddress || shopName || 'Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia';
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`, '_blank');
+};
+
+const openCustomLocation = () => {
+  const link = selectedShopLocationLink.value;
+  if (!link) return;
+  const target = link.startsWith('http') ? link : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(link)}`;
+  window.open(target, '_blank');
 };
 
 const notify = (message) => {
@@ -732,6 +834,10 @@ onUnmounted(() => {
   color: var(--brand-dark);
   font-size: 13px;
   font-weight: 600;
+}
+.open-map-btn.secondary {
+  left: auto;
+  right: 12px;
 }
 
 .footer {

@@ -182,6 +182,9 @@ const shopForm = reactive({
   city_id: null,
   description: '',
   address: '',
+  location: '',
+  latitude: '',
+  longitude: '',
   img_url: ''
 })
 const cities = ref([])
@@ -276,6 +279,9 @@ const openShopModal = () => {
   shopForm.city_id = shop.value?.city_id || null
   shopForm.description = shop.value?.description || ''
   shopForm.address = shop.value?.address || ''
+  shopForm.location = shop.value?.location || ''
+  shopForm.latitude = shop.value?.latitude || ''
+  shopForm.longitude = shop.value?.longitude || ''
   shopForm.img_url = shop.value?.img_url || ''
   // Reset image fields
   shopImageFile.value = null
@@ -304,6 +310,9 @@ const saveShop = async () => {
       }
       formData.append('description', shopForm.description)
       formData.append('address', shopForm.address)
+      if (shopForm.location) formData.append('location', shopForm.location)
+      if (shopForm.latitude) formData.append('latitude', shopForm.latitude)
+      if (shopForm.longitude) formData.append('longitude', shopForm.longitude)
       formData.append('status', 'active')
       // the backend expects the field name img_url
       formData.append('img_url', shopImageFile.value)
@@ -330,6 +339,9 @@ const saveShop = async () => {
         city_id: shopForm.city_id || null,
         description: shopForm.description,
         address: shopForm.address,
+        location: shopForm.location || null,
+        latitude: shopForm.latitude || null,
+        longitude: shopForm.longitude || null,
         status: 'active',
         img_url: shopForm.img_url || null
       }
@@ -1289,7 +1301,6 @@ const iconSvg = (name) => {
           <label>Address *</label>
           <input v-model="shopForm.address" type="text" placeholder="Enter address" />
         </div>
-
         <!-- Description -->
         <div class="form-group">
           <label>Description</label>
