@@ -45,6 +45,7 @@ class User extends Authenticatable
         'is_verified',
         'img_url',
         'profile_picture',
+        'background_picture',
     ];
 
     protected $hidden = [
@@ -54,6 +55,7 @@ class User extends Authenticatable
 
     protected $appends = [
         'avatar_url',
+        'background_picture_url',
     ];
 
     protected $casts = [
@@ -84,6 +86,34 @@ class User extends Authenticatable
 
         if (Storage::disk('public')->exists('avatars/' . $normalized)) {
             return asset('storage/avatars/' . $normalized);
+        }
+
+        return asset($normalized);
+    }
+
+    public function getBackgroundPictureUrlAttribute(): ?string
+    {
+        $path = $this->background_picture;
+        if (!$path) {
+            return null;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        $normalized = ltrim(str_replace('\\', '/', (string) $path), '/');
+
+        if (Str::startsWith($normalized, 'storage/')) {
+            return asset($normalized);
+        }
+
+        if (Storage::disk('public')->exists($normalized)) {
+            return asset('storage/' . $normalized);
+        }
+
+        if (Storage::disk('public')->exists('background_pictures/' . $normalized)) {
+            return asset('storage/background_pictures/' . $normalized);
         }
 
         return asset($normalized);

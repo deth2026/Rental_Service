@@ -240,11 +240,32 @@ class UserController extends Controller
             'email'           => 'sometimes|required|email|unique:users,email,' . $userId,
             'phone'           => 'nullable|string|max:30',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'background_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'remove_profile_picture' => 'nullable|boolean',
+            'remove_background_picture' => 'nullable|boolean',
         ];
 
         $validated = $request->validate($validationRules);
 
-        // Handle file upload - store in profile_picture column
+        // Handle profile picture removal
+        if (isset($validated['remove_profile_picture']) && $validated['remove_profile_picture']) {
+            if ($user->profile_picture) {
+                Storage::disk('public')->delete($user->profile_picture);
+            }
+            $validated['profile_picture'] = null;
+            unset($validated['remove_profile_picture']);
+        }
+
+        // Handle background picture removal
+        if (isset($validated['remove_background_picture']) && $validated['remove_background_picture']) {
+            if ($user->background_picture) {
+                Storage::disk('public')->delete($user->background_picture);
+            }
+            $validated['background_picture'] = null;
+            unset($validated['remove_background_picture']);
+        }
+
+        // Handle profile picture upload
         if ($request->hasFile('profile_picture')) {
             try {
                 // Remove old file from storage
@@ -253,6 +274,20 @@ class UserController extends Controller
                 }
                 $path = $request->file('profile_picture')->store('profile_pictures', 'public');
                 $validated['profile_picture'] = $path;
+            } catch (\Exception $e) {
+                // Ignore storage errors, continue with other updates
+            }
+        }
+
+        // Handle background picture upload
+        if ($request->hasFile('background_picture')) {
+            try {
+                // Remove old file from storage
+                if ($user->background_picture) {
+                    Storage::disk('public')->delete($user->background_picture);
+                }
+                $path = $request->file('background_picture')->store('background_pictures', 'public');
+                $validated['background_picture'] = $path;
             } catch (\Exception $e) {
                 // Ignore storage errors, continue with other updates
             }

@@ -3,6 +3,8 @@
   "login": "Login",
   "register": "Register",
   "dashboard": "Dashboard",
+  "profile": "Profile",
+  "settings": "Settings",
   "setting": "Setting",
   "settingOwnership": "Setting OwnerShip",
   "logout": "Logout",
