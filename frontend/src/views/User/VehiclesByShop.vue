@@ -31,27 +31,8 @@
       </div>
     </header>
 
-    <section class="filters">
-      <div class="type-filters">
-        <button
-          v-for="type in vehicleTypes"
-          :key="type.key"
-          class="btn-reset chip"
-          :class="{ active: selectedType === type.key }"
-          @click="selectedType = type.key"
-        >
-          {{ type.label }}
-        </button>
-      </div>
-
-      <div class="option-filters">
-        <button class="btn-reset select-chip search-filter-btn" @click="runFilterSearch">
-          Search
-        </button>
-      </div>
-    </section>
-
     <main class="content">
+<<<<<<< HEAD
       <div class="results-head">
         <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || selectedShopLocation }}</h1>
         <p>Available for your selected dates ({{ dateRange }})</p>
@@ -76,28 +57,67 @@
 
           <div class="card-image">
             <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+=======
+      <section class="deals-section">
+        <div class="section-header">
+          <div class="section-badge">
+            <i class="fa-solid fa-car"></i>
+            <span>AVAILABLE VEHICLES</span>
+>>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
           </div>
 
-          <div class="card-body">
-            <div class="card-top">
+          <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
+          <p>Available for your selected dates ({{ dateRange }})</p>
+
+          <div class="filter-row">
+            <button
+              v-for="type in vehicleTypes"
+              :key="type.key"
+              class="filter-pill"
+              :class="{ active: selectedType === type.key }"
+              @click="selectedType = type.key"
+            >
+              <i :class="type.icon"></i>
+              <span>{{ type.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
+        <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+
+        <div class="promo-grid">
+          <article class="promo-card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
+            <div class="promo-media">
+              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+              <span v-if="vehicle.bestValue" class="promo-ribbon">BEST VALUE</span>
+              <span class="promo-type" @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))" style="cursor: pointer;">
+                <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+              </span>
+            </div>
+
+            <div class="promo-body">
               <h3>{{ getVehicleName(vehicle) }}</h3>
-              <div class="price">
-                <strong>${{ vehicle.price_per_day }}</strong>
-                <span>per day</span>
+              
+              <div class="vehicle-meta">
+                <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
+                <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
+                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
+              </div>
+
+              <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
+
+              <div class="promo-meta">
+                <div class="promo-value">
+                  <strong>${{ vehicle.price_per_day }}</strong>
+                  <span>per day</span>
+                </div>
+                <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
               </div>
             </div>
-
-            <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
-
-            <div class="meta">
-              <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
-              <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
-              <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
-            </div>
-
-            <button class="btn-reset book" @click="bookNow(vehicle)">Book Now</button>
-          </div>
-        </article>
+          </article>
+        </div>
       </section>
 
       <section class="map-section">
@@ -149,6 +169,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
+import '../../css/VehicleByShop.css'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -163,17 +184,17 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const navItems = ['Home', 'My Bookings', 'About'];
+const navItems = ['Home', 'My Bookings', 'Promotion'];
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
 const selectedType = ref('all');
 const vehicleTypes = [
-  { key: 'all', label: 'All' },
-  { key: 'motorbike', label: 'Motorbikes' },
-  { key: 'bicycle', label: 'Bicycles' },
-  { key: 'car', label: 'Cars' }
+  { key: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
+  { key: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
+  { key: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
+  { key: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
 ];
 
 const normalizeType = (raw, fallback = '') => {
@@ -384,6 +405,10 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
+  if (item === 'Promotion') {
+    router.push('/promotions');
+    return;
+  }
   actionMessage.value = `${item} opened.`;
 };
 
@@ -466,6 +491,7 @@ onUnmounted(() => {
 });
 
 </script>
+<<<<<<< HEAD
 
 <style scoped>
 .vehicles-page {
@@ -932,3 +958,5 @@ onUnmounted(() => {
   }
 }
 </style>
+=======
+>>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0

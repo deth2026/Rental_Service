@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import '../../css/ShopVehicle.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -395,12 +396,8 @@ const openMap = () => {
   </div>
 </template>
 
-<style scoped>
-.shop-vehicles-page {
-  min-height: 100vh;
-  background-color: #f5f7fa;
-}
 
+<<<<<<< HEAD
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -761,3 +758,5 @@ const openMap = () => {
   }
 }
 </style>
+=======
+>>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
