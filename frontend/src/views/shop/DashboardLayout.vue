@@ -367,27 +367,31 @@ fetchCities()
 const fetchVehicles = async () => {
   try {
     const response = await vehicleApi.getAll()
-    vehicles.value = (response.data.data || response.data || []).map(v => ({
-      ...v,
-      name: v.name,
-      type: v.type,
-      category: v.type || v.category,
-      brand: v.brand,
-      model: v.model,
-      plate: v.plate_number,
-      plate_number: v.plate_number,
-      price: v.price_per_day,
-      price_per_day: v.price_per_day,
-      status: v.status,
-      description: v.description,
-      fuel: v.fuel_type,
-      fuel_type: v.fuel_type,
-      transmission: v.transmission,
-      createdAt: v.create_at,
-      updatedAt: v.updated_at,
-      image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ''),
-      image_url: v.image_url_full || normalizeVehicleImageUrl(v.image_url || '')
-    }))
+    vehicles.value = (response.data.data || response.data || []).map((v) => {
+      const normalizedStatus = typeof v.status === 'string' ? v.status.trim() : v.status
+      const createdAtValue = v.created_at || v.create_at || v.createdAt || ''
+      return {
+        ...v,
+        name: v.name,
+        type: v.type,
+        category: v.type || v.category,
+        brand: v.brand,
+        model: v.model,
+        plate: v.plate_number,
+        plate_number: v.plate_number,
+        price: v.price_per_day,
+        price_per_day: v.price_per_day,
+        status: normalizedStatus || 'Available',
+        description: v.description,
+        fuel: v.fuel_type,
+        fuel_type: v.fuel_type,
+        transmission: v.transmission,
+        createdAt: createdAtValue,
+        updatedAt: v.updated_at,
+        image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ''),
+        image_url: v.image_url_full || normalizeVehicleImageUrl(v.image_url || '')
+      }
+    })
   } catch (error) {
     console.error('Error fetching vehicles:', error)
   }
