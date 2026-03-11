@@ -32,11 +32,38 @@
     </header>
 
     <main class="content">
+<<<<<<< HEAD
+      <div class="results-head">
+        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || selectedShopLocation }}</h1>
+        <p>Available for your selected dates ({{ dateRange }})</p>
+      </div>
+
+      <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
+      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+
+      <section class="grid">
+        <article class="card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
+          <span v-if="vehicle.bestValue" class="badge">BEST VALUE</span>
+
+          <button
+            class="btn-reset fav-btn"
+            :class="{ active: favoriteIds.has(vehicle.id) }"
+            @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
+            :aria-label="`Save ${getVehicleName(vehicle)}`"
+          >
+            <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+          </button>
+
+          <div class="card-image">
+            <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+=======
       <section class="deals-section">
         <div class="section-header">
           <div class="section-badge">
             <i class="fa-solid fa-car"></i>
             <span>AVAILABLE VEHICLES</span>
+>>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
           </div>
 
           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
@@ -105,6 +132,9 @@
           <button class="btn-reset open-map-btn" @click="openMainLocation">
             Open in Google Maps
           </button>
+          <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
+            Open Saved Location
+          </button>
         </div>
       </section>
     </main>
@@ -141,7 +171,7 @@ import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import '../../css/VehicleByShop.css'
 
-const location = 'Siem Reap';
+const location = ref('Siem Reap');
 const formatDate = (date) =>
   `${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date)}/${date.getDate()}/${date.getFullYear()}`;
 
@@ -152,7 +182,6 @@ const buildRollingDateRange = () => {
 
 const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
-const mapEmbedUrl = `https://maps.google.com/maps?hl=en&q=${encodeURIComponent('Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia')}&t=k&z=18&output=embed`;
 
 const route = useRoute();
 const navItems = ['Home', 'My Bookings', 'Promotion'];
@@ -167,6 +196,17 @@ const vehicleTypes = [
   { key: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
   { key: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
 ];
+
+const normalizeType = (raw, fallback = '') => {
+  const t = String(raw || fallback || '').trim().toLowerCase();
+  if (!t) return '';
+  if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
+    return 'motorbike';
+  }
+  if (t.includes('bicy')) return 'bicycle';
+  if (t.includes('car') || t.includes('suv')) return 'car';
+  return t;
+};
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -186,7 +226,63 @@ const selectedShopId = computed(() => {
 });
 const selectedShopName = computed(() => {
   if (!selectedShopId.value) return '';
-  return shopNamesById.value[selectedShopId.value] || '';
+  const shop = shopNamesById.value[selectedShopId.value];
+  return typeof shop === 'object' ? shop.name : shop;
+});
+
+const selectedShopLocation = computed(() => {
+  if (!selectedShopId.value) return location.value;
+  const shop = shopNamesById.value[selectedShopId.value];
+  if (typeof shop === 'object' && shop.address) {
+    return shop.address;
+  }
+  return location.value;
+});
+
+const selectedShopAddress = computed(() => {
+  if (!selectedShopId.value) return '';
+  const shop = shopNamesById.value[selectedShopId.value];
+  return typeof shop === 'object' ? shop.address : '';
+});
+const selectedShopLocationLink = computed(() => {
+  if (!selectedShopId.value) return '';
+  const shop = shopNamesById.value[selectedShopId.value];
+  if (!shop || typeof shop !== 'object') return '';
+  const loc = shop.location || '';
+  if (typeof loc !== 'string') return '';
+  return loc.trim();
+});
+const selectedShopCoords = computed(() => {
+  if (!selectedShopId.value) return null;
+  const shop = shopNamesById.value[selectedShopId.value];
+  if (!shop) return null;
+  const lat = shop.latitude ?? shop.lat;
+  const lng = shop.longitude ?? shop.lng;
+  if (lat === null || lng === null || typeof lat === 'undefined' || typeof lng === 'undefined') return null;
+  const parsedLat = Number(lat);
+  const parsedLng = Number(lng);
+  if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null;
+  return { lat: parsedLat, lng: parsedLng };
+});
+const mapEmbedUrl = computed(() => {
+  const coords = selectedShopCoords.value;
+  const shopAddress = selectedShopAddress.value;
+  const shopName = selectedShopName.value || 'Shop';
+  const fallback = 'Siem Reap, Cambodia';
+
+  // Build a clean query without "undefined"
+  const queryParts = [];
+  if (shopName) queryParts.push(shopName);
+  if (shopAddress) queryParts.push(shopAddress);
+  if (coords) queryParts.push(`${coords.lat},${coords.lng}`);
+  const query = queryParts.join(' - ') || fallback;
+
+  // When we have coordinates, also set ll (map center) to avoid the world view
+  if (coords) {
+    return `https://maps.google.com/maps?hl=en&ll=${coords.lat},${coords.lng}&q=${encodeURIComponent(query)}&t=k&z=18&output=embed`;
+  }
+
+  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=k&z=16&output=embed`;
 });
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -217,7 +313,12 @@ const userInitials = computed(() => {
 });
 
 const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
-const getVehicleShop = (vehicle) => (vehicle.shop_id ? (shopNamesById.value[vehicle.shop_id] || 'Unknown Shop') : 'Unknown Shop');
+const getVehicleShop = (vehicle) => {
+  if (!vehicle.shop_id) return 'Unknown Shop';
+  const shop = shopNamesById.value[vehicle.shop_id];
+  if (!shop) return 'Unknown Shop';
+  return typeof shop === 'object' ? shop.name : shop;
+};
 
 const favoriteIds = reactive(new Set());
 
@@ -229,7 +330,9 @@ const filteredVehicles = computed(() => {
   if (selectedType.value === 'all') {
     return source;
   }
-  return source.filter((v) => String(v.type || '').toLowerCase() === selectedType.value);
+  return source.filter(
+    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === selectedType.value
+  );
 });
 
 const displayedVehicles = computed(() => {
@@ -244,7 +347,7 @@ const getVehicleImage = (vehicle) => {
     if (image.startsWith('/')) return `${API_ROOT}${image}`;
     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
   }
-  const normalizedType = String(vehicle.type || '').toLowerCase();
+  const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
 };
 
@@ -257,7 +360,13 @@ const loadAllPages = async (resource) => {
     const response = await api.get(`/${resource}`, { params: { page } });
     const payload = response.data;
     const data = Array.isArray(payload) ? payload : payload?.data || [];
-    results.push(...data);
+    // Normalize types up front so filters work even if API returns "Motorbikes" etc.
+    results.push(
+      ...data.map((item) => ({
+        ...item,
+        type: normalizeType(item.type || item.category, `${item.name} ${item.brand} ${item.model}`)
+      }))
+    );
     lastPage = payload?.last_page || 1;
     page += 1;
   }
@@ -279,7 +388,7 @@ const loadVehiclesAndShops = async () => {
       rating: vehicle.rating ?? 4.8
     }));
     shopNamesById.value = shopList.reduce((acc, shop) => {
-      acc[shop.id] = shop.name;
+      acc[shop.id] = shop;
       return acc;
     }, {});
   } catch (error) {
@@ -308,7 +417,27 @@ const handleSearch = () => {
 };
 
 const openMainLocation = () => {
-  window.open('https://maps.google.com/?q=Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia', '_blank');
+  const coords = selectedShopCoords.value;
+  const shopAddress = selectedShopAddress.value;
+  const shopName = selectedShopName.value || '';
+  if (coords) {
+    // Open directions to the exact coordinates; include address for clarity if available
+    const destination = shopAddress
+      ? `${shopName ? `${shopName}, ` : ''}${shopAddress} (${coords.lat},${coords.lng})`
+      : `${shopName ? `${shopName}, ` : ''}${coords.lat},${coords.lng}`;
+    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`, '_blank');
+    return;
+  }
+  // Use address first, then shop name, then Trip Zone as fallback
+  const query = shopAddress || shopName || 'Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia';
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`, '_blank');
+};
+
+const openCustomLocation = () => {
+  const link = selectedShopLocationLink.value;
+  if (!link) return;
+  const target = link.startsWith('http') ? link : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(link)}`;
+  window.open(target, '_blank');
 };
 
 const notify = (message) => {
@@ -362,3 +491,472 @@ onUnmounted(() => {
 });
 
 </script>
+<<<<<<< HEAD
+
+<style scoped>
+.vehicles-page {
+  --brand: #1d4ed8;
+  --brand-dark: #1e40af;
+  --bg: #eff1f4;
+  --card: #ffffff;
+  --line: #d8dee7;
+  --text: #1e2430;
+  --muted: #c4ccda;
+  min-height: 100vh;
+  padding: 0 40px;
+  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.btn-reset {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: center;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
+  padding: 14px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+  justify-self: center;
+}
+
+.nav-link {
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: #4a556b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.nav-link.active,
+.nav-link:hover {
+  background: #eef7ff;
+  color: #2563eb;
+}
+
+.brand-icon i {
+  color: #2563eb;
+}
+
+.user-display-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #33435d;
+}
+
+.avatar {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f4f8fc;
+  color: #9a6a32;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.logout-btn:hover {
+  background: #1d4ed8;
+}
+
+.fav-btn i {
+  font-size: 16px;
+}
+
+.shop i,
+.meta i {
+  margin-right: 4px;
+}
+
+.meta .fa-star {
+  color: #f6b200;
+}
+
+.filters {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.type-filters,
+.option-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip,
+.select-chip {
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #f5f7fa;
+  font-size: 14px;
+}
+
+.chip.active {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+
+.select-chip {
+  background: #fff;
+}
+
+.search-filter-btn {
+  min-width: 92px;
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+  font-weight: 600;
+}
+
+.search-filter-btn:hover {
+  background: var(--brand-dark);
+  border-color: var(--brand-dark);
+}
+
+.content {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 22px 20px 36px;
+}
+
+.results-head h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.results-head p {
+  margin: 4px 0 12px;
+  color: var(--muted);
+}
+
+.action-message {
+  margin: 0 0 12px;
+  color: #0f74ab;
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  overflow: hidden;
+  background-color:#eaf7fa;
+  
+}
+
+.badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand);
+}
+
+.fav-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: #f8f6f6;
+  border: 1px solid var(--line);
+}
+
+.fav-btn.active {
+  color: #ef4f68;
+}
+
+.card-image {
+  height: 172px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  /* padding: 0px; */
+}
+
+.card-image img {
+  width: 100%;
+  max-height: 152px;
+  object-fit: contain;
+}
+
+.card-body {
+  padding: 12px;
+  background-color:#eaf7fa;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-top h3 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.price {
+  text-align: right;
+}
+
+.price strong {
+  color: var(--brand);
+  font-size: 20px;
+}
+
+.price span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.shop {
+  margin: 4px 0 10px;
+  font-size: 16px;
+  color: #617086;
+}
+
+.meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #59667b;
+  margin-bottom: 12px;
+}
+
+.book {
+  width: 100%;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+.book:hover {
+  background: var(--brand-dark);
+}
+
+.map-section {
+  margin-top: 26px;
+}
+
+.map {
+  position: relative;
+  height: 330px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.map-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.open-map-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: var(--brand-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+.open-map-btn.secondary {
+  left: auto;
+  right: 12px;
+}
+
+.footer {
+  margin-top: 28px;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
+  padding: 24px 20px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 28px;
+}
+
+.footer-brand strong {
+  font-size: 24px;
+}
+
+.footer-brand strong span {
+  color: var(--brand);
+}
+
+.footer-brand p {
+  margin: 8px 0 0;
+  max-width: 420px;
+  color: #66758d;
+}
+
+.footer-links h4 {
+  margin: 2px 0 10px;
+  font-size: 15px;
+}
+
+.footer-links button {
+  display: block;
+  margin: 0 0 8px;
+  color: #52627b;
+}
+
+@media (max-width: 1080px) {
+  .topbar {
+    grid-template-columns: 1fr;
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 10px;
+  }
+
+  .nav-links,
+  .top-actions {
+    justify-self: start;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .vehicles-page {
+    padding: 0 12px;
+  }
+
+  .topbar {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 12px;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+  }
+
+  .filters {
+    flex-direction: column;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .footer {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}
+</style>
+=======
+>>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0

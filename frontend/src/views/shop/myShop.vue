@@ -26,6 +26,9 @@ const createForm = reactive({
   phone: '',
   description: '',
   address: '',
+  location: '',
+  latitude: '',
+  longitude: '',
   status: 'active',
   img_url: ''
 })
@@ -169,6 +172,9 @@ const resetForm = () => {
   createForm.phone = ''
   createForm.description = ''
   createForm.address = ''
+  createForm.location = ''
+  createForm.latitude = ''
+  createForm.longitude = ''
   createForm.status = 'active'
   createForm.img_url = ''
   fieldErrors.name = ''
@@ -353,6 +359,9 @@ const createShop = async () => {
       payload.append('name', createForm.name.trim())
       payload.append('description', createForm.description.trim())
       payload.append('address', createForm.address.trim())
+      if (createForm.location) payload.append('location', createForm.location.trim())
+      if (createForm.latitude) payload.append('latitude', createForm.latitude)
+      if (createForm.longitude) payload.append('longitude', createForm.longitude)
       payload.append('phone', createForm.phone.trim())
       payload.append('status', createForm.status)
       // the backend expects the field name img_url
@@ -363,6 +372,9 @@ const createShop = async () => {
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
+        location: createForm.location.trim() || null,
+        latitude: createForm.latitude || null,
+        longitude: createForm.longitude || null,
         phone: createForm.phone.trim(),
         status: createForm.status,
         img_url: createForm.img_url || null
@@ -508,16 +520,16 @@ onBeforeUnmount(() => {
               <small v-if="fieldErrors.status" class="field-error">{{ fieldErrors.status }}</small>
             </label>
 
-            <label class="wide">
-              Address *
-              <input v-model="createForm.address" required type="text" placeholder="Enter address" @input="clearFieldError('address')" />
-              <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
-            </label>
+              <label class="wide">
+                Address *
+                <input v-model="createForm.address" required type="text" placeholder="Enter address" @input="clearFieldError('address')" />
+                <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
+              </label>
 
-            <label>
-              Phone *
-              <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
-              <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
+              <label>
+                Phone *
+                <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
+                <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
             </label>
 
             <label class="wide">
