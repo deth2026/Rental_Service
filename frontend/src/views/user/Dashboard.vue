@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
@@ -12,6 +12,8 @@ const isLoadingShops = ref(false)
 const shopsError = ref('')
 const isMobileMenuOpen = ref(false)
 const showLogoutConfirm = ref(false)
+const showAllShops = ref(false)
+const expandedShops = ref(new Set())
 
 // Navbar state
 const location = ref('Phnom Penh')
@@ -151,9 +153,37 @@ const loadShops = async () => {
   }
 }
 
+const visibleShops = computed(() => {
+  if (showAllShops.value) return shops.value
+  return shops.value.slice(0, 8)
+})
+
+const hasMoreShops = computed(() => shops.value.length > 8)
+
+const toggleShopGrid = () => {
+  showAllShops.value = !showAllShops.value
+}
+
+const toggleShopDetails = (shopId) => {
+  const nextSet = new Set(expandedShops.value)
+  if (nextSet.has(shopId)) {
+    nextSet.delete(shopId)
+  } else {
+    nextSet.add(shopId)
+  }
+  expandedShops.value = nextSet
+}
+
+const isShopExpanded = (shopId) => expandedShops.value.has(shopId)
+
 const viewShopVehicles = (shop) => {
   router.push({ name: 'vehicles-by-shop', query: { shop_id: String(shop.id) } })
 }
+
+watch(shops, () => {
+  expandedShops.value = new Set()
+  showAllShops.value = false
+})
 
 const handleLogout = () => {
   showLogoutConfirm.value = true
@@ -173,6 +203,96 @@ const openProfile = () => {
   router.push('/user/profile')
 }
 
+const goToShopExplorer = () => {
+  router.push('/view_shop')
+}
+
+const slides = ref([
+  {
+    id: 1,
+    title: 'Rent Your Perfect Ride',
+    description: 'Choose from our wide selection of quality vehicles for your journey.',
+    image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1920&q=80'
+  },
+  {
+    id: 2,
+    title: 'Explore New Places',
+    description: 'Adventure awaits! Rent a car and discover amazing destinations.',
+    image: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1920&q=80'
+  },
+  {
+    id: 3,
+    title: 'Premium Vehicles',
+    description: 'Experience comfort and style with our premium rental fleet.',
+    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=1920&q=80'
+  },
+  {
+    id: 4,
+    title: 'Easy Booking',
+    description: 'Simple and fast rental process - book your vehicle in minutes.',
+    image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1920&q=80'
+  },
+  {
+    id: 5,
+    title: 'Affordable Rates',
+    description: 'Get the best deals on quality vehicle rentals.',
+    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1920&q=80'
+  },
+  {
+    id: 6,
+    title: '24/7 Support',
+    description: 'We are here to help you anytime, anywhere.',
+    image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=1920&q=80'
+  }
+])
+
+const activeSlideIndex = ref(0)
+const orderedSlides = computed(() => {
+  if (!slides.value.length) return []
+  const start = activeSlideIndex.value
+  return slides.value.map((_, index) => slides.value[(start + index) % slides.value.length])
+})
+
+const goToNextSlide = () => {
+  if (!slides.value.length) return
+  activeSlideIndex.value = (activeSlideIndex.value + 1) % slides.value.length
+}
+
+const goToPrevSlide = () => {
+  if (!slides.value.length) return
+  activeSlideIndex.value =
+    (activeSlideIndex.value - 1 + slides.value.length) % slides.value.length
+}
+
+const handleNextSlide = () => {
+  goToNextSlide()
+  restartSlideTimer()
+}
+
+const handlePrevSlide = () => {
+  goToPrevSlide()
+  restartSlideTimer()
+}
+
+let slideIntervalId = null
+
+const stopSlideTimer = () => {
+  if (slideIntervalId) {
+    clearInterval(slideIntervalId)
+    slideIntervalId = null
+  }
+}
+
+const startSlideTimer = () => {
+  if (typeof window === 'undefined') return
+  stopSlideTimer()
+  slideIntervalId = window.setInterval(goToNextSlide, 5000)
+}
+
+const restartSlideTimer = () => {
+  startSlideTimer()
+}
+
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
@@ -183,6 +303,11 @@ const closeMobileMenu = () => {
 
 onMounted(() => {
   loadShops()
+  startSlideTimer()
+})
+
+onBeforeUnmount(() => {
+  stopSlideTimer()
 })
 </script>
 
@@ -217,6 +342,34 @@ onMounted(() => {
         </div>
       </header>
 
+      <section class="slideshow-section">
+        <div class="containers">
+          <div class="slide">
+          <article
+            v-for="(slide, index) in orderedSlides"
+            :key="slide.id"
+            class="item"
+            :class="`item-${index + 1}`"
+            :style="`background-image: url('${slide.image}')`"
+          >
+              <div class="content">
+                <div class="name">{{ slide.title }}</div>
+                <div class="des">{{ slide.description }}</div>
+                <button type="button">See More</button>
+              </div>
+            </article>
+          </div>
+          <div class="button">
+            <button class="btn-reset prev" type="button" aria-label="Previous slide" @click="handlePrevSlide">
+              <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button class="btn-reset next" type="button" aria-label="Next slide" @click="handleNextSlide">
+              <i class="fa-solid fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section class="shops-section">
         <div class="results-head">
           <div class="choose-shop-box">
@@ -230,7 +383,11 @@ onMounted(() => {
         <div v-else-if="shops.length === 0" class="status-box">No shops found in the system.</div>
 
         <div v-else class="shops-grid">
-          <article v-for="shop in shops" :key="shop.id" class="shop-card">
+          <article
+            v-for="shop in visibleShops"
+            :key="shop.id"
+            :class="['shop-card', { 'shop-card--collapsed': !isShopExpanded(shop.id) }]"
+          >
             <div class="shop-card-image">
               <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
               <div v-else class="status-box" style="margin: 10px">No shop image</div>
@@ -255,34 +412,50 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="shop-contact-grid">
-              <div class="shop-info">
-                <span>Email</span>
-                <strong>{{ shop.email }}</strong>
+            <div
+              class="shop-card-details"
+              :class="{ 'shop-card-details--collapsed': !isShopExpanded(shop.id) }"
+            >
+              <div class="shop-contact-grid">
+                <div class="shop-info">
+                  <span>Email</span>
+                  <strong>{{ shop.email }}</strong>
+                </div>
+                <div class="shop-info">
+                  <span> Phone</span>
+                  <strong>{{ shop.phone }}</strong>
+                </div>
+                <div class="shop-info" style="grid-column: span 2">
+                  <span>Address</span>
+                  <strong>{{ shop.address }}</strong>
+                </div>
               </div>
-              <div class="shop-info">
-                <span> Phone</span>
-                <strong>{{ shop.phone }}</strong>
-              </div>
-              <div class="shop-info" style="grid-column: span 2">
-                <span>Address</span>
-                <strong>{{ shop.address }}</strong>
+
+              <div class="shop-kpi-row">
+                <div class="shop-kpi">
+                  <span>Customer Rating</span>
+                  <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
+                </div>
+                <div class="shop-kpi">
+                  <span>Shop Status</span>
+                  <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
+                </div>
               </div>
             </div>
 
-            <div class="shop-kpi-row">
-              <div class="shop-kpi">
-                <span>Customer Rating</span>
-                <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
-              </div>
-              <div class="shop-kpi">
-                <span>Shop Status</span>
-                <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
-              </div>
+            <div class="shop-card-footer">
+              <button class="shop-card-toggle" type="button" @click="toggleShopDetails(shop.id)">
+                {{ isShopExpanded(shop.id) ? 'Hide information' : 'See more' }}
+              </button>
+              <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
             </div>
-
-            <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
           </article>
+        </div>
+
+        <div v-if="hasMoreShops" class="shops-grid-footer">
+          <button class="btn-reset see-more-shops" type="button" @click="toggleShopGrid">
+            {{ showAllShops ? 'Show less shops' : 'See more shops' }}
+          </button>
         </div>
       </section>
 

@@ -69,7 +69,7 @@ const router = createRouter({
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/user/profile',

@@ -60,21 +60,14 @@
         <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
         <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
 
-        <section class="grid">
+        <div class="promo-grid">
           <article class="promo-card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
             <div class="promo-media">
               <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
               <span v-if="vehicle.bestValue" class="promo-ribbon">BEST VALUE</span>
-              <!-- <span class="promo-type">{{ vehicle.type || 'vehicle' }}</span> -->
-              
-              <button
-                class="btn-reset fav-btn"
-                :class="{ active: favoriteIds.has(vehicle.id) }"
-                @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
-                :aria-label="`Save ${getVehicleName(vehicle)}`"
-              >
+              <span class="promo-type" @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))" style="cursor: pointer;">
                 <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
-              </button>
+              </span>
             </div>
 
             <div class="promo-body">
@@ -97,7 +90,7 @@
               </div>
             </div>
           </article>
-        </section>
+        </div>
       </section>
 
       <section class="map-section">
@@ -303,6 +296,10 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
+  if (item === 'Promotion') {
+    router.push('/promotions');
+    return;
+  }
   actionMessage.value = `${item} opened.`;
 };
 
@@ -365,7 +362,3 @@ onUnmounted(() => {
 });
 
 </script>
-
-
-
-
