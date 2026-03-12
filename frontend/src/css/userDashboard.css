@@ -696,21 +696,12 @@
 }
 
 .shops-grid {
-<<<<<<< HEAD
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
   justify-content: flex-start;
   align-items: stretch;
   margin-bottom: -20px;
-=======
-  display: grid;
-  grid-template-columns: repeat(3, minmax(260px, 1fr));
-  gap: 20px;
-  justify-content: stretch;
-  width: 100%;
-  margin-top: 40px;
->>>>>>> d9e7426d2ad61e95ce8e61d567caedbd5cc98485
 }
 
 .shop-card {
