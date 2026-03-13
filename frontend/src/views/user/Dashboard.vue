@@ -155,10 +155,10 @@ const loadShops = async () => {
 
 const visibleShops = computed(() => {
   if (showAllShops.value) return shops.value
-  return shops.value.slice(0, 8)
+  return shops.value.slice(0, 6)
 })
 
-const hasMoreShops = computed(() => shops.value.length > 8)
+const hasMoreShops = computed(() => shops.value.length > 6)
 
 const toggleShopGrid = () => {
   showAllShops.value = !showAllShops.value
@@ -458,48 +458,6 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </section>
-
-      <footer class="page-footer">
-        <div class="footer-top">
-          <div class="footer-brand">
-            <div class="brand">
-              <span>Chong Choul</span>
-          </div>
-            <p>
-              Connecting adventurous travelers with the best local vehicle rentals across the
-              Kingdom of Wonder
-            </p>
-          </div>
-
-          <div class="footer-col">
-            <h5>Quick Links</h5>
-            <a href="#">Home</a>
-            <a href="#">My booking</a>
-            <a href="#">Promotions</a>
-          </div>
-
-          <div class="footer-col">
-            <h5>Payment Methods</h5>
-            <a href="#">Visa</a>
-            <a href="#">Mastercard</a>
-            <a href="#">Bank Transfer</a>
-          </div>
-          <div class="footer-col">
-            <h5>Social Medias</h5>
-            <a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</a>
-            <a href="#"><i class="fa-brands fa-instagram" aria-hidden="true"></i> Instagram</a>
-            <a href="#"><i class="fa-brands fa-tiktok" aria-hidden="true"></i> TikTok</a>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <p class="footer-copy">&copy; 2026 Chong Choul Rides. Made with ❤️ in SiemReap.</p>
-          <div class="footer-legal">
-            <i>Privacy Policy</i>
-            <i>Terms of Service</i>
-          </div>
-        </div>
-      </footer>
     </div>
   </div>
 

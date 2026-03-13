@@ -111,29 +111,6 @@
         </div>
       </section>
     </main>
-
-    <footer class="footer">
-      <div class="footer-brand">
-        <strong>Cambodia<span>Rides</span></strong>
-        <p>
-          Connecting adventurous travelers with the best local rentals across Cambodia.
-        </p>
-      </div>
-
-      <div class="footer-links">
-        <h4>Quick Links</h4>
-        <button class="btn-reset" @click="notify('How it works clicked')">How it works</button>
-        <button class="btn-reset" @click="notify('Trust & Safety clicked')">Trust & Safety</button>
-        <button class="btn-reset" @click="notify('Rental Policies clicked')">Rental Policies</button>
-      </div>
-
-      <div class="footer-links">
-        <h4>Support</h4>
-        <button class="btn-reset" @click="notify('Help Center clicked')">Help Center</button>
-        <button class="btn-reset" @click="notify('Become a Partner clicked')">Become a Partner</button>
-        <button class="btn-reset" @click="notify('Contact Us clicked')">Contact Us</button>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -839,44 +816,6 @@ onUnmounted(() => {
   right: 12px;
 }
 
-.footer {
-  margin-top: 28px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 24px 20px;
-  background: #fff;
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 28px;
-}
-
-.footer-brand strong {
-  font-size: 24px;
-}
-
-.footer-brand strong span {
-  color: var(--brand);
-}
-
-.footer-brand p {
-  margin: 8px 0 0;
-  max-width: 420px;
-  color: #66758d;
-}
-
-.footer-links h4 {
-  margin: 2px 0 10px;
-  font-size: 15px;
-}
-
-.footer-links button {
-  display: block;
-  margin: 0 0 8px;
-  color: #52627b;
-}
-
 @media (max-width: 1080px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -893,10 +832,6 @@ onUnmounted(() => {
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .footer {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -922,12 +857,6 @@ onUnmounted(() => {
 
   .grid {
     grid-template-columns: 1fr;
-  }
-
-  .footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
   }
 }
 </style>

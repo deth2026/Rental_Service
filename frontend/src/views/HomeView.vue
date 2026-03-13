@@ -136,37 +136,6 @@
     </section>
 
 
-    <footer class="footer">
-      <div class="footer-main">
-        <div>
-          <h4>Chong Choul</h4>
-          <p>The premier vehicle rental marketplace in Cambodia.</p>
-        </div>
-        <div>
-          <h5>Payment Methods</h5>
-          <a href="#">Visa </a>
-          <a href="#">Mastercard</a>
-          <a href="#">Bank Transfer</a>
-        </div>
-        <div>
-          <h5>Social Medias</h5>
-          <a href="#">Facebook</a>
-          <a href="#">Instagram</a>
-          <a href="#">TikTok</a>
-        </div>
-        <div>
-          <h5>Newsletter</h5>
-          <p>Stay updated with latest offers.</p>
-          <div class="newsletter">
-            <input type="text" placeholder="Your email" />
-            <button type="button">Send</button>
-          </div>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <small> 2026 Chong Choul. All rights reserved.</small>
-      </div>
-    </footer>
   </div>
 </template>
 

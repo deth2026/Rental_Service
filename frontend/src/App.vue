@@ -1,6 +1,28 @@
+<script setup>
+import { computed } from 'vue'
+import CommonFooter from './components/CommonFooter.vue'
+
+const getUserRole = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.role || null
+  } catch {
+    return null
+  }
+}
+
+const showFooter = computed(() => {
+  const role = getUserRole()
+  return role === 'customer' || !role
+})
+</script>
+
 <template>
   <div id="app">
-    <router-view/>
+    <router-view />
+    <CommonFooter v-if="showFooter" />
   </div>
 </template>
 

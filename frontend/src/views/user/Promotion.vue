@@ -412,11 +412,6 @@ onMounted(fetchPromotions)
           </article>
           </div>
         </div>
-
-        <div class="section-footer">
-          <p>&copy; 2026 RideRent. All rights reserved.</p>
-          <p>{{ activePromotionCount }} active coupon{{ activePromotionCount === 1 ? '' : 's' }} from database</p>
-        </div>
       </section>
     </main>
   </div>
@@ -811,15 +806,6 @@ onMounted(fetchPromotions)
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.section-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 36px 6px 0;
-  color: #64748b;
-  font-size: 0.95rem;
 }
 
 @media (max-width: 1100px) {

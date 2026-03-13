@@ -96,7 +96,6 @@ const currentYear = new Date().getFullYear()
   align-items: flex-start;
 }
 
-
 .common-footer__brand h4 {
   margin: 0 0 6px;
   font-size: 1.5rem;
@@ -108,7 +107,6 @@ const currentYear = new Date().getFullYear()
   margin: 0;
   color: #4e5c79;
   line-height: 1.6;
-
 }
 
 .common-footer__col h5 {
