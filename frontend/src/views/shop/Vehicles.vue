@@ -80,9 +80,18 @@ const fetchVehicles = async () => {
             
             return {
                 ...v,
-                plate: v.plate_number,
-                price: v.price_per_day,
-                createdAt: v.create_at || v.created_at,
+                // Normalize names and categories so table cells are never blank
+                name: v.name || v.vehicle_name || v.title || 'Untitled',
+                brand: v.brand || v.make || '',
+                model: v.model || v.variant || '',
+                category: v.category || v.type || v.vehicle_type || v.kind || '',
+                // Normalize plate value from different API keys
+                plate: v.plate_number || v.plate || '',
+                price: v.price_per_day || v.price || 0,
+                // Default to Available if backend didn’t send a status (protect against empty string/null)
+                status: (v.status ?? v.state ?? 'Available') || 'Available',
+                // Created at: handle multiple keys and fall back to existing updatedAt/now to avoid blanks
+                createdAt: v.create_at || v.created_at || v.createdAt || v.updated_at || khTime(),
                 updatedAt: v.updated_at,
                 // Use the full URL from API or first photo URL
                 previewUrl: imageUrl || (parsedPhotos.length > 0 ? parsedPhotos[0] : sampleThumb),
@@ -137,7 +146,9 @@ const fetchUserShop = async () => {
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   try {
-    const date = new Date(dateStr)
+    // Normalize common DB format "YYYY-MM-DD HH:mm:ss" so Date can parse reliably
+    const safeStr = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr
+    const date = new Date(safeStr)
     const day = String(date.getDate()).padStart(2, '0')
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const year = date.getFullYear()
@@ -262,14 +273,17 @@ const saveVehicle = async () => {
         brand: form.brand,
         model: form.model,
         category: form.category,
+        // Send both keys to satisfy different backend expectations
         plate: form.plate || `AUTO-${Date.now().toString().slice(-5)}`,
+        plate_number: form.plate || `AUTO-${Date.now().toString().slice(-5)}`,
         price: priceValue,
-        status: form.status,
+        status: form.status || 'Available',
         shop: form.shop,
         shop_id: currentShopId.value,  // Include shop_id for proper association
         description: form.description,
         fuel: form.fuel,
         transmission: form.transmission,
+        created_at: khTime(),
         photos: form.base64Photos || [],
         previewUrl: photoPreview.value
     }
@@ -289,9 +303,9 @@ const saveVehicle = async () => {
                     brand: updatedData.brand,
                     model: updatedData.model,
                     category: updatedData.type,
-                    plate: updatedData.plate_number,
+                    plate: updatedData.plate_number || updatedData.plate || form.plate,
                     price: updatedData.price_per_day,
-                    status: updatedData.status,
+                    status: updatedData.status || form.status || 'Available',
                     description: updatedData.description,
                     fuel: updatedData.fuel_type,
                     transmission: updatedData.transmission,
@@ -316,9 +330,9 @@ const saveVehicle = async () => {
                 brand: newData.brand,
                 model: newData.model,
                 category: newData.type,
-                plate: newData.plate_number,
+                plate: newData.plate_number || newData.plate || form.plate,
                 price: newData.price_per_day,
-                status: newData.status,
+                status: newData.status || form.status || 'Available',
                 description: newData.description,
                 fuel: newData.fuel_type,
                 transmission: newData.transmission,
@@ -327,7 +341,7 @@ const saveVehicle = async () => {
                 image_url_full: newData.image_url_full,
                 photos: form.base64Photos || [],
                 base64Photos: form.base64Photos || [],
-                createdAt: khTime(),
+                createdAt: newData.create_at || newData.created_at || khTime(),
                 updatedAt: khTime()
             }
             vehicles.value.unshift(newVehicle)

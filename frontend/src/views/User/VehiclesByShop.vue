@@ -21,7 +21,13 @@
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
         <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+          <img
+            v-if="userAvatarUrl"
+            :src="userAvatarUrl"
+            alt="Profile photo"
+            class="avatar-image"
+            @error="onAvatarError"
+          />
           <span v-else>{{ userInitials }}</span>
         </button>
         <button class="btn-reset logout-btn" @click="handleLogout">
@@ -32,38 +38,11 @@
     </header>
 
     <main class="content">
-<<<<<<< HEAD
-      <div class="results-head">
-        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || selectedShopLocation }}</h1>
-        <p>Available for your selected dates ({{ dateRange }})</p>
-      </div>
-
-      <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
-      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
-      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
-
-      <section class="grid">
-        <article class="card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
-          <span v-if="vehicle.bestValue" class="badge">BEST VALUE</span>
-
-          <button
-            class="btn-reset fav-btn"
-            :class="{ active: favoriteIds.has(vehicle.id) }"
-            @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
-            :aria-label="`Save ${getVehicleName(vehicle)}`"
-          >
-            <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
-          </button>
-
-          <div class="card-image">
-            <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
-=======
       <section class="deals-section">
         <div class="section-header">
           <div class="section-badge">
             <i class="fa-solid fa-car"></i>
             <span>AVAILABLE VEHICLES</span>
->>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
           </div>
 
           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
@@ -99,7 +78,7 @@
 
             <div class="promo-body">
               <h3>{{ getVehicleName(vehicle) }}</h3>
-              
+
               <div class="vehicle-meta">
                 <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
                 <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
@@ -491,7 +470,6 @@ onUnmounted(() => {
 });
 
 </script>
-<<<<<<< HEAD
 
 <style scoped>
 .vehicles-page {
@@ -958,5 +936,3 @@ onUnmounted(() => {
   }
 }
 </style>
-=======
->>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0

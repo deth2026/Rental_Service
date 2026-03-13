@@ -127,7 +127,8 @@ const normalizeVehicle = (vehicle) => {
     price_per_day: Number(vehicle.price_per_day || vehicle.price || 0),
     fuel_type: vehicle.fuel_type || vehicle.fuel || '',
     transmission: vehicle.transmission || '',
-    status: vehicle.status || 'Available',
+    status: vehicle.status || vehicle.state || 'Available',
+    created_at: vehicle.created_at || vehicle.create_at || vehicle.createdAt || '',
     description: vehicle.description || '',
     imageUrl: resolveVehicleImageUrl(imageUrl),
     photos: parsedPhotos
@@ -271,6 +272,16 @@ const openMap = () => {
   const destWithCoords = coords ? `${destination} (${coords.lat},${coords.lng})` : destination
   window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destWithCoords)}`, '_blank')
 }
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return ''
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
+}
 </script>
 
 <template>
@@ -356,6 +367,10 @@ const openMap = () => {
                 <i class="fa-solid fa-tag"></i>
                 <span>{{ vehicle.plate_number }}</span>
               </div>
+              <div class="detail-item">
+                <i class="fa-solid fa-circle"></i>
+                <span>Status: {{ vehicle.status }}</span>
+              </div>
               <div class="detail-item" v-if="vehicle.fuel_type">
                 <i class="fa-solid fa-gas-pump"></i>
                 <span>{{ vehicle.fuel_type }}</span>
@@ -363,6 +378,10 @@ const openMap = () => {
               <div class="detail-item" v-if="vehicle.transmission">
                 <i class="fa-solid fa-gear"></i>
                 <span>{{ vehicle.transmission }}</span>
+              </div>
+              <div class="detail-item" v-if="vehicle.created_at">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Created: {{ formatDate(vehicle.created_at) }}</span>
               </div>
             </div>
 
@@ -397,366 +416,3 @@ const openMap = () => {
 </template>
 
 
-<<<<<<< HEAD
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 4rem;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  font-size: 1.25rem;
-  cursor: pointer;
-  color: #333;
-  padding: 0.5rem;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-}
-
-.back-btn:hover {
-  background-color: #f0f0f0;
-}
-
-.brand-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 1.25rem;
-}
-
-.brand span {
-  font-weight: 700;
-  font-size: 1.25rem;
-  color: #333;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  /* margin-right: 40px; */
-}
-
-.user-display-name {
-  font-weight: 500;
-  color: #333;
-}
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 600;
-  overflow: hidden;
-  border: none;
-  cursor: pointer;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.logout-btn:hover {
-  background: #fecaca;
-}
-
-.vehicles-content {
-  padding: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.page-header {
-  margin-bottom: 2rem;
-}
-
-.page-header h1 {
-  font-size: 1.75rem;
-  color: #333;
-  margin-bottom: 0.5rem;
-}
-
-.page-header p {
-  color: #666;
-}
-
-.filters-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.filter-chips {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.chip {
-  padding: 0.55rem 1rem;
-  border-radius: 999px;
-  border: 1px solid #d8dee7;
-  background: white;
-  color: #334155;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.chip:hover {
-  border-color: #2563eb;
-  color: #2563eb;
-}
-
-.chip.active {
-  background: #2563eb;
-  color: #ffffff;
-  border-color: #2563eb;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
-}
-
-.results-text {
-  color: #475569;
-  font-weight: 600;
-}
-
-.status-box {
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 12px;
-  color: #666;
-  font-size: 1.1rem;
-}
-
-.status-box.error {
-  color: #dc2626;
-  background: #fee2e2;
-}
-
-.vehicles-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-.map-section {
-  margin-top: 2rem;
-}
-
-.map {
-  position: relative;
-  height: 340px;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid #d8dee7;
-}
-
-.map-frame {
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-.open-map-btn {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid #d8dee7;
-  color: #1e40af;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.vehicle-card {
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.vehicle-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.vehicle-card-image {
-  position: relative;
-  height: 200px;
-  background: #f8f9fa;
-}
-
-.vehicle-card-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.vehicle-card-image .no-image {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 3rem;
-  color: #ccc;
-}
-
-.status-badge {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.status-available {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-rented {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.status-maintenance {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.vehicle-card-content {
-  padding: 1.25rem;
-}
-
-.vehicle-card-content h3 {
-  font-size: 1.1rem;
-  color: #333;
-  margin-bottom: 0.25rem;
-}
-
-.vehicle-type {
-  color: #666;
-  font-size: 0.875rem;
-  margin-bottom: 1rem;
-}
-
-.vehicle-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.detail-item {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.8rem;
-  color: #666;
-  background: #f3f4f6;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-}
-
-.detail-item i {
-  font-size: 0.75rem;
-}
-
-.vehicle-price {
-  margin-bottom: 1rem;
-}
-
-.price-amount {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #667eea;
-}
-
-.price-period {
-  font-size: 0.875rem;
-  color: #666;
-}
-
-.view-details-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background: #2563eb;;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.view-details-btn:hover {
-  opacity: 0.9;
-}
-
-@media (max-width: 768px) {
-  .topbar {
-    padding: 1rem;
-  }
-
-  .vehicles-content {
-    padding: 1rem;
-  }
-
-  .vehicles-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
-=======
->>>>>>> a2cb04ca4f9ab9c73f11601f9d8a44c24d4611c0
