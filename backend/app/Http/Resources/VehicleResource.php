@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Str;
 
 class VehicleResource extends JsonResource
 {
@@ -15,67 +14,28 @@ class VehicleResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $name = $this->name ?: ($this->model ?: '');
-        $plateNumber = $this->plate_number ?: ($this->plate ?: '');
-
-        // Build full image URL
-        $imageUrl = null;
-        if ($this->image_url) {
-            $path = $this->image_url;
-            if (Str::startsWith($path, ['http://', 'https://', 'data:'])) {
-                $imageUrl = $path;
-            } else {
-                $cleanPath = ltrim(str_replace('\\', '/', (string) $path), '/');
-                $imageUrl = asset('storage/' . $cleanPath);
-            }
-        }
-
-        // Build full photo URLs
-        $photoUrls = [];
-        $photos = $this->photos;
-        if (is_string($photos)) {
-            $photos = json_decode($photos, true);
-        }
-        
-        if (is_array($photos)) {
-            foreach ($photos as $photo) {
-                if (!$photo) continue;
-                
-                if (Str::startsWith($photo, ['http://', 'https://', 'data:'])) {
-                    $photoUrls[] = $photo;
-                } else {
-                    $cleanPath = ltrim(str_replace('\\', '/', (string) $photo), '/');
-                    $photoUrls[] = asset('storage/' . $cleanPath);
-                }
-            }
-        }
-
         return [
             'id' => $this->id,
             'shop_id' => $this->shop_id,
-            'name' => $name,
             'type' => $this->type,
             'brand' => $this->brand,
             'model' => $this->model,
-            'plate_number' => $plateNumber,
-            'year' => $this->year,
+            'name' => $this->name ?? ($this->brand . ' ' . $this->model),
             'price_per_day' => $this->price_per_day,
+            'price' => $this->price_per_day,
+            'status' => $this->status,
             'fuel_type' => $this->fuel_type,
             'transmission' => $this->transmission,
-            'status' => $this->status,
             'description' => $this->description,
-            // Original image_url field
             'image_url' => $this->image_url,
-            // Full image URL for display
-            'image_url_full' => $imageUrl,
-            // Original photos field
-            'photos' => $photos ?? [],
-            // Full photo URLs for display
-            'photo_urls' => $photoUrls,
+            'photos' => $this->photos,
+            'year' => $this->year,
+            'plate_number' => $this->plate_number ?? ($this->plate ?? null),
+            'plate' => $this->plate ?? ($this->plate_number ?? null),
+            'rating' => $this->rating ?? 4.8,
+            'reviews' => $this->reviews ?? 0,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            // Include shop relationship if loaded
-            'shop' => $this->whenLoaded('shop'),
         ];
     }
 }

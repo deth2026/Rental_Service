@@ -75,12 +75,26 @@
           </button>
 
           <div class="card-image">
-            <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+            <button
+              class="btn-reset card-image-btn"
+              @click="viewDetails(vehicle)"
+              :aria-label="`View details for ${getVehicleName(vehicle)}`"
+            >
+              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+            </button>
           </div>
 
           <div class="card-body">
             <div class="card-top">
-              <h3>{{ getVehicleName(vehicle) }}</h3>
+              <h3>
+                <button
+                  class="btn-reset card-title-btn"
+                  @click="viewDetails(vehicle)"
+                  :aria-label="`View details for ${getVehicleName(vehicle)}`"
+                >
+                  {{ getVehicleName(vehicle) }}
+                </button>
+              </h3>
               <div class="price">
                 <strong>${{ vehicle.price_per_day }}</strong>
                 <span>per day</span>
@@ -289,8 +303,17 @@ const loadVehiclesAndShops = async () => {
       return acc;
     }, {});
   } catch (error) {
-    loadingError.value = 'Could not load vehicles from database. Check backend server and API URL.';
-    console.error(error);
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || error.message;
+    console.error('API Error:', status, message);
+    
+    if (status === 401) {
+      loadingError.value = 'Authentication required. Please log in.';
+    } else if (status === 500) {
+      loadingError.value = 'Server error. Please try again later.';
+    } else {
+      loadingError.value = `Could not load vehicles (${status || 'network error'}). Check backend server.`;
+    }
   } finally {
     isLoading.value = false;
   }
@@ -330,6 +353,21 @@ const runFilterSearch = () => {
   actionMessage.value = `Search clicked for ${selectedType.value === 'all' ? 'all vehicles' : selectedType.value}.`;
 };
 
+const buildVehicleDetailRoute = (vehicle) => {
+  if (!vehicle || !vehicle.id) return null;
+  return {
+    name: 'vehicle-detail',
+    params: { id: vehicle.id },
+    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
+  };
+};
+
+const viewDetails = (vehicle) => {
+  const routeTarget = buildVehicleDetailRoute(vehicle);
+  if (!routeTarget) return;
+  router.push(routeTarget);
+};
+
 const toggleFavorite = (id, name) => {
   if (favoriteIds.has(id)) {
     favoriteIds.delete(id);
@@ -343,11 +381,9 @@ const toggleFavorite = (id, name) => {
 const bookNow = (vehicle) => {
   const vehicleName = getVehicleName(vehicle);
   actionMessage.value = `Booking started for ${vehicleName}.`;
-  router.push({
-    name: 'vehicle-detail',
-    params: { id: vehicle.id },
-    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
-  });
+  const routeTarget = buildVehicleDetailRoute(vehicle);
+  if (!routeTarget) return;
+  router.push(routeTarget);
 };
 
 onMounted(() => {
@@ -637,6 +673,13 @@ onUnmounted(() => {
   /* padding: 0px; */
 }
 
+.card-image-btn {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
 .card-image img {
   width: 100%;
   max-height: 152px;
@@ -658,6 +701,17 @@ onUnmounted(() => {
   margin: 0;
   font-size: 24px;
   line-height: 1.3;
+}
+
+.card-title-btn {
+  text-align: left;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.card-title-btn:hover {
+  text-decoration: underline;
 }
 
 .price {

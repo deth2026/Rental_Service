@@ -1,1005 +1,742 @@
 <template>
-  <div class="detail-page">
-    <header class="topbar">
-      <div class="brand" @click="goHome">
-        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
-        <span>Chong Choul</span>
-      </div>
+  <div class="motoride-container">
+    <header class="main-header">
+      <div class="header-content">
+        <div class="brand-wrap">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-text">Moto Rental</span>
+        </div>
 
-      <nav class="nav-links">
-        <button class="btn-reset nav-link active" @click="goHome">Home</button>
-        <button class="btn-reset nav-link">My Bookings</button>
-        <button class="btn-reset nav-link">About</button>
-      </nav>
+        <nav class="top-nav" aria-label="Primary">
+          <a href="#">Browse Motorcycles</a>
+          <a href="#">My Bookings</a>
+          <a href="#">Support</a>
+        </nav>
 
-      <div class="top-actions">
-        <span class="user-display-name">customer</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Logout</span>
-        </button>
+        <div class="top-actions">
+          <button class="icon-btn" type="button" aria-label="Notifications">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M9 17a3 3 0 006 0"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+          <div class="avatar">JD</div>
+        </div>
       </div>
     </header>
 
-    <main class="content" v-if="vehicle">
-      <p class="breadcrumbs">
-        HOME <i class="fa-solid fa-angle-right"></i> SIEM REAP <i class="fa-solid fa-angle-right"></i> {{ vehicleTitle.toUpperCase() }}
-      </p>
+    <main class="content">
+      <section class="image-gallery">
+        <img
+          src="https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=1200"
+          alt="Honda CBR 650R"
+          class="main-img"
+        />
+        <div class="gallery-controls">
+          <div class="dots">
+            <span></span><span class="active"></span><span></span>
+          </div>
+          <button class="view-all">View All Photos</button>
+        </div>
+      </section>
 
-      <section class="hero-grid">
-        <div class="left-panel">
-          <div class="hero-image">
-            <img :src="primaryImage" :alt="vehicleTitle" />
+      <div class="grid-layout">
+        <div class="details-col">
+          <div class="title-section">
+            <span class="badge">PREMIUM RENTAL</span>
+            <h1>Honda CBR 650R</h1>
+            <p class="meta">
+              ⭐ 4.9 (128 reviews) • 📍 Downtown, San Francisco
+            </p>
           </div>
 
-          <article class="vehicle-card">
-            <div class="vehicle-head">
+          <div class="spec-cards">
+            <div class="spec-card">
+              <span class="icon">⚙️</span>
               <div>
-                <h1>{{ vehicleTitle }}</h1>
-                <p class="rating-line">
-                  <i class="fa-solid fa-star"></i> {{ vehicle.rating ?? 4.8 }}
-                  <span class="dot">|</span> 128 Bookings
-                  <span class="verified">Verified Shop</span>
-                </p>
+                <small>Engine</small>
+                <p>649cc</p>
               </div>
             </div>
-
-            <div class="spec-grid">
-              <div class="spec-item">
-                <span class="label">YEAR</span>
-                <strong>{{ vehicle.year }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">TRANS.</span>
-                <strong>{{ vehicle.transmission }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">FUEL</span>
-                <strong>{{ vehicle.fuel_type }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">STATUS</span>
-                <strong>{{ availabilityText }}</strong>
-              </div>
-            </div>
-          </article>
-
-          <section class="managed-by">
-            <h3>Managed by</h3>
-            <div class="shop-card">
-              <img class="shop-avatar" :src="primaryImage" alt="Shop" />
+            <div class="spec-card">
+              <span class="icon">⚡</span>
               <div>
-                <h4>{{ shopName }}</h4>
-                <p><span class="verified-text">Verified</span> | Member since 2019</p>
+                <small>Power</small>
+                <p>94 HP</p>
               </div>
-              <button class="btn-reset contact-btn">Contact Shop</button>
             </div>
+            <div class="spec-card">
+              <span class="icon">⚖️</span>
+              <div>
+                <small>Weight</small>
+                <p>208 kg</p>
+              </div>
+            </div>
+          </div>
+
+          <section class="description">
+            <h3>Description</h3>
+            <p>
+              The Honda CBR 650R is a high-performance middleweight sports bike
+              designed for both track-day thrills and weekend touring...
+            </p>
+          </section>
+
+          <section class="rental-terms">
+            <h3>Rental Terms</h3>
+            <ul>
+              <li>
+                Must be 21+ years old with a valid motorcycle endorsement.
+              </li>
+              <li>$500 security deposit required (fully refundable).</li>
+              <li>200 miles per day included ($0.50/mile after).</li>
+            </ul>
           </section>
         </div>
 
-        <div class="side-stack">
-          <aside class="booking-panel">
-            <div class="price-box">
-              <h2>${{ formatPrice(vehicle.price_per_day) }} <small>/ day</small></h2>
-              <span class="instant">Instant Book</span>
-            </div>
-
-            <div class="date-grid">
-              <div>
-                <span>PICK-UP</span>
-                <strong>{{ formatDisplayDate(pickupDate) }}</strong>
-              </div>
-              <div>
-                <span>DROP-OFF</span>
-                <strong>{{ formatDisplayDate(dropoffDate) }}</strong>
-              </div>
-            </div>
-
-            <h4>OPTIONAL ADD-ONS</h4>
-            <label class="addon-item" :class="{ active: theftInsuranceSelected }">
-              <input type="checkbox" v-model="theftInsuranceSelected" />
-              <div class="addon-main">
-                <span>Theft Insurance</span>
-              </div>
-              <strong>+$2/day</strong>
-            </label>
-
-            <label class="addon-item" :class="{ active: gpsSelected }">
-              <input type="checkbox" v-model="gpsSelected" />
-              <div class="addon-main">
-                <span>GPS Navigation Tablet</span>
-              </div>
-              <strong>+$3/day</strong>
-            </label>
-
-            <div class="bill">
-              <p><span>${{ formatPrice(vehicle.price_per_day) }} x {{ rentalDays }} day{{ rentalDays > 1 ? 's' : '' }}</span><strong>${{ baseTotal.toFixed(2) }}</strong></p>
-              <p v-for="line in selectedAddonLines" :key="line.key"><span>{{ line.label }}</span><strong>${{ line.amount.toFixed(2) }}</strong></p>
-              <p v-if="fee > 0"><span>Marketplace Fee</span><strong>${{ fee.toFixed(2) }}</strong></p>
-            </div>
-
-            <p class="total"><span>Total (USD)</span><strong>${{ grandTotal.toFixed(2) }}</strong></p>
-            <button class="btn-reset request-btn">Request Booking</button>
-          </aside>
-
-        </div>
-      </section>
-
-      <section class="db-section">
-        <h4>Vehicle Table Data</h4>
-        <div class="db-grid">
-          <p><strong>shop_name:</strong> {{ shopName }}</p>
-          <p><strong>type:</strong> {{ vehicle.type }}</p>
-          <p><strong>brand:</strong> {{ vehicle.brand }}</p>
-          <p><strong>model:</strong> {{ vehicle.model }}</p>
-          <p><strong>year:</strong> {{ vehicle.year }}</p>
-          <p><strong>price_per_day:</strong> {{ vehicle.price_per_day }}</p>
-          <p><strong>fuel_type:</strong> {{ vehicle.fuel_type }}</p>
-          <p><strong>transmission:</strong> {{ vehicle.transmission }}</p>
-          <p><strong>seats:</strong> {{ vehicle.seats }}</p>
-          <p><strong>status:</strong> {{ vehicle.status }}</p>
-        </div>
-      </section>
-    </main>
-
-    <main v-else-if="isLoading" class="not-found">
-      <h2>Loading vehicle...</h2>
-    </main>
-
-    <main v-else class="not-found">
-      <h2>Vehicle not found</h2>
-      <p v-if="loadError">{{ loadError }}</p>
-      <button class="btn-reset back-btn" @click="goBack">Back to Vehicles</button>
-    </main>
-
-    <footer class="page-footer">
-      <div class="footer-col brand-col">
-        <h4>Cambodia<span>Rides</span></h4>
-        <p>
-          Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
-        </p>
+        <aside class="booking-widget">
+          <h3>Booking Details</h3>
+          <div class="booking-row">
+            <span>Pickup Date</span>
+            <strong>Oct 24, 10:00 AM</strong>
+          </div>
+          <div class="booking-row">
+            <span>Return Date</span>
+            <strong>Oct 26, 10:00 AM</strong>
+          </div>
+          <hr />
+          <div class="price-row">
+            <span>$120 x 2 days</span>
+            <span>$240.00</span>
+          </div>
+          <div class="price-row">
+            <span>Insurance fee</span>
+            <span>$30.00</span>
+          </div>
+          <div class="total-row">
+            <span>Total Price</span>
+            <span class="price-blue">$270.00</span>
+          </div>
+          <button class="book-btn"><router-link to="/booking" class="book-btn">
+            Book This Bike
+          </router-link></button>
+          <p class="disclaimer">No payment taken until booking is confirmed</p>
+        </aside>
       </div>
-      <div class="footer-col">
-        <h5>QUICK LINKS</h5>
-        <p>How it works</p>
-        <p>Trust & Safety</p>
-        <p>Rental Policies</p>
-      </div>
-      <div class="footer-col">
-        <h5>SUPPORT</h5>
-        <p>Help Center</p>
-        <p>Become a Partner</p>
-        <p>Contact Us</p>
-      </div>
-    </footer>
+    </main>
   </div>
 </template>
 
 <script setup>
-import axios from 'axios';
-import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { userService } from '../../services/database.js';
-
-const route = useRoute();
-const router = useRouter();
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
-const fallbackImage = 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg';
-
-const resolveImageUrl = (value) => {
-  const image = value ? String(value).trim() : '';
-  if (!image) return fallbackImage;
-  if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  if (image.startsWith('/')) return `${API_ROOT}${image}`;
-  return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
-};
-
-const vehicle = ref(null);
-const isLoading = ref(false);
-const loadError = ref('');
-const shopNamesById = ref({});
-const avatarLoadFailed = ref(false);
-
-const currentUser = computed(() => userService.getCurrentUser());
-const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
-
-const normalizeVehicle = (data) => ({
-  ...data,
-  rating: data?.rating ?? 4.8
-});
-
-const routeId = computed(() => Number(route.params.id));
-
-const loadShopName = async (shopId) => {
-  if (!shopId || shopNamesById.value[shopId]) return;
-  try {
-    const response = await axios.get(`${API_BASE_URL}/shops/${shopId}`);
-    if (response.data?.name) {
-      shopNamesById.value[shopId] = response.data.name;
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const loadVehicle = async (id) => {
-  if (!id) {
-    vehicle.value = null;
-    return;
-  }
-  vehicle.value = null;
-
-  isLoading.value = true;
-  loadError.value = '';
-  try {
-    const response = await axios.get(`${API_BASE_URL}/vehicles/${id}`);
-    vehicle.value = normalizeVehicle(response.data);
-    await loadShopName(vehicle.value.shop_id);
-  } catch (error) {
-    vehicle.value = null;
-    loadError.value = 'Could not load this vehicle from database.';
-    console.error(error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const vehicleTitle = computed(() => {
-  if (!vehicle.value) return '';
-  return `${vehicle.value.brand} ${vehicle.value.model} ${vehicle.value.year}`;
-});
-const availabilityText = computed(() => {
-  const status = String(vehicle.value?.status || '').trim().toLowerCase();
-  return status === 'available' ? 'Available' : 'Unavailable';
-});
-const shopName = computed(() => (vehicle.value ? (shopNamesById.value[vehicle.value.shop_id] || 'Unknown Shop') : 'Unknown Shop'));
-const primaryImage = computed(() => (vehicle.value ? resolveImageUrl(vehicle.value.image_url) : fallbackImage));
-
-watch(
-  routeId,
-  (id) => {
-    loadVehicle(id);
-  },
-  { immediate: true }
-);
-
-const pickupDate = ref('2023-11-20');
-const dropoffDate = ref('2023-11-21');
-
-const rentalDays = computed(() => {
-  const start = new Date(`${pickupDate.value}T00:00:00`);
-  const end = new Date(`${dropoffDate.value}T00:00:00`);
-  const diffMs = end.getTime() - start.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(1, diffDays);
-});
-
-const theftInsuranceSelected = ref(false);
-const gpsSelected = ref(false);
-
-const addonRates = {
-  insurance: 2,
-  gps: 3
-};
-
-const baseTotal = computed(() => (vehicle.value ? Number(vehicle.value.price_per_day) * rentalDays.value : 0));
-const selectedAddonLines = computed(() => {
-  const lines = [];
-  if (theftInsuranceSelected.value) {
-    lines.push({
-      key: 'insurance',
-      label: 'Theft Insurance',
-      amount: addonRates.insurance * rentalDays.value
-    });
-  }
-  if (gpsSelected.value) {
-    lines.push({
-      key: 'gps',
-      label: 'GPS Navigation Tablet',
-      amount: addonRates.gps * rentalDays.value
-    });
-  }
-  return lines;
-});
-const addonsTotal = computed(() => selectedAddonLines.value.reduce((sum, x) => sum + x.amount, 0));
-const fee = computed(() => 0);
-const grandTotal = computed(() => baseTotal.value + addonsTotal.value + fee.value);
-
-const formatPrice = (n) => Number(n).toFixed(2).replace('.00', '');
-const formatDisplayDate = (isoDate) => {
-  const [year, month, day] = isoDate.split('-');
-  return `${month}/${day}/${year}`;
-};
-const goBack = () => {
-  const shopId = route.query.shop_id || vehicle.value?.shop_id;
-  router.push({
-    name: 'vehicles-by-shop',
-    query: shopId ? { shop_id: String(shopId) } : {}
-  });
-};
-
-const goHome = () => {
-  router.push('/view_shop');
-};
-
-const openProfile = () => {
-  router.push('/user/profile');
-};
-
-const handleLogout = async () => {
-  await userService.logout();
-  router.push('/login');
-};
-
+// Logic for handling booking or image switching can go here
 </script>
 
 <style scoped>
-.detail-page {
-  --line: #d9e0ea;
+/* Modern Design System */
+.motoride-container {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  color: #1a1d23;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
-  padding: 0 40px;
-  background: #f2f4f7;
-  color: #1b2940;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
 }
 
-.detail-page,
-.detail-page * {
-  box-sizing: border-box;
-}
-
-.btn-reset {
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-}
-
-.topbar {
+/* Enhanced Header */
+.main-header {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
   position: sticky;
   top: 0;
-  z-index: 5;
-  min-height: 0;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 14px 24px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 32px;
-  background: #ffffff;
-  color: #1a2437;
-  border-bottom: 1px solid var(--line);
+  z-index: 50;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.brand {
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.25rem 2rem;
   display: flex;
   align-items: center;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 700;
-  cursor: pointer;
-  color: #2563eb;
-  white-space: nowrap;
-  background: none;
-  -webkit-text-fill-color: #2563eb;
+  justify-content: space-between;
+  gap: 3rem;
 }
 
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 34px;
-  background: #dbeafe;
-}
-
-.brand i {
-  color: #2563eb;
-}
-
-.nav-links {
+.brand-wrap {
   display: flex;
-  font-size: 16px;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  border-radius: 12px;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3);
+  transition: transform 0.3s ease;
+}
+
+.brand-mark:hover {
+  transform: scale(1.05);
+}
+
+.brand-mark::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  background: white;
+  border-radius: 6px;
+}
+
+.brand-text {
+  font-size: 1.5rem;
   font-weight: 800;
-  gap: 24px;
-  justify-self: center;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.nav-link {
-  padding: 8px 16px;
-  border-radius: 8px;
-  color: #4a556b;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  flex: 1;
 }
 
-.nav-link.active,
-.nav-link:hover {
-  background: #eff6ff;
-  color: #1d4ed8;
+.top-nav a {
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.top-nav a::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  transition: width 0.3s ease;
+}
+
+.top-nav a:hover {
+  color: #00aeef;
+}
+
+.top-nav a:hover::after {
+  width: 100%;
 }
 
 .top-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  white-space: nowrap;
-  justify-self: end;
+  gap: 1rem;
+  flex-shrink: 0;
 }
 
-.user-display-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: #33435d;
-  order: 1;
+.icon-btn {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.icon-btn:hover {
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  border-color: transparent;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 174, 239, 0.3);
+}
+
+.icon-btn:hover svg {
+  stroke: white;
 }
 
 .avatar {
-  width: 54px;
-  height: 54px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: #f4f8fc;
-  border: none;
-  color: #9a6a32;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-  order: 2;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  display: block;
-}
-
-.logout-btn {
-  display: inline-flex;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  color: white;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-  white-space: nowrap;
-  order: 3;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3);
+  transition: transform 0.3s ease;
+  cursor: pointer;
 }
 
-.logout-btn:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+.avatar:hover {
+  transform: scale(1.05);
 }
 
+/* Main Content */
 .content {
-  max-width: 1220px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 14px 10px 34px;
+  padding: 2rem;
 }
 
-.breadcrumbs {
-  color: #96a6ba;
-  font-size: 11px;
-  margin-bottom: 10px;
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 14px;
-}
-
-.left-panel {
-  min-width: 0;
-}
-
-.hero-image {
+/* Enhanced Image Gallery */
+.image-gallery {
   position: relative;
-  height: 420px;
-  border-radius: 9px;
+  border-radius: 24px;
   overflow: hidden;
-  border: 1px solid #d8e1ed;
-  background: #eef3f9;
+  margin-bottom: 3rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  background: white;
 }
 
-.hero-image img {
+.main-img {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.image-gallery:hover .main-img {
+  transform: scale(1.02);
+}
+
+.gallery-controls {
+  position: absolute;
+  bottom: 2rem;
+  left: 2rem;
+  right: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+}
+
+.dots span.active {
+  width: 24px;
+  border-radius: 4px;
+  background: white;
+}
+
+.view-all {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #1a1d23;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.view-all:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced Grid Layout */
+.grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 3rem;
+}
+
+/* Title Section */
+.title-section {
+  margin-bottom: 2.5rem;
+}
+
+.badge {
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3);
+}
+
+.title-section h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1a1d23;
+  margin: 0 0 1rem 0;
+  line-height: 1.1;
+}
+
+.meta {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Enhanced Spec Cards */
+.spec-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin: 2.5rem 0;
+}
+
+.spec-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 2rem 1.5rem;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.spec-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+  border-color: #00aeef;
+}
+
+.spec-card .icon {
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spec-card small {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.spec-card p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1a1d23;
+}
+
+/* Enhanced Sections */
+.description,
+.rental-terms {
+  background: white;
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.description h3,
+.rental-terms h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0 0 1.5rem 0;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.description h3::before,
+.rental-terms h3::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  border-radius: 2px;
+}
+
+.description p {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #475569;
+  margin: 0;
+}
+
+.rental-terms {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.rental-terms ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rental-terms li {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  font-size: 1rem;
+  color: #475569;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.rental-terms li::before {
+  content: "✓";
+  color: #00aeef;
+  font-weight: 700;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.rental-terms li:last-child {
+  border-bottom: none;
+}
+
+/* Enhanced Booking Widget */
+.booking-widget {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  height: fit-content;
+  position: sticky;
+  top: 2rem;
+  transition: all 0.3s ease;
+}
+
+.booking-widget:hover {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.booking-widget h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0 0 2rem 0;
+  text-align: center;
+  position: relative;
+}
+
+.booking-widget h3::after {
+  content: "";
+  position: absolute;
+  bottom: -0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  border-radius: 2px;
+}
+
+.booking-row,
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 0;
+  font-size: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.booking-row span,
+.price-row span {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.booking-row strong,
+.price-row span:last-child {
+  color: #1a1d23;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.total-row {
+  border-bottom: none;
+  border-top: 2px solid #e2e8f0;
+  padding-top: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.price-blue {
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.book-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  color: white;
+  border: none;
+  padding: 1.25rem;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-top: 2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(0, 174, 239, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.book-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
 }
 
-.photos-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  background: #ffffff;
-  color: #22395a;
-  border-radius: 8px;
-  padding: 6px 10px;
-  border: 1px solid #d7e1ed;
-  font-size: 12px;
-  font-weight: 600;
+.book-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(0, 174, 239, 0.4);
 }
 
-.vehicle-card {
-  margin-top: 8px;
-  border-radius: 8px;
-  border: 1px solid #d8e1ec;
-  background: #fff;
-  color: #13213f;
-  padding: 14px;
+.book-btn:hover::before {
+  left: 100%;
 }
 
-h1 {
-  margin: 0;
-  font-size: 32px;
-}
-
-.rating-line {
-  margin-top: 6px;
-  color: #5b6d8f;
-  font-size: 14px;
-}
-
-.rating-line i {
-  color: #f59e0b;
-}
-
-.dot {
-  margin: 0 8px;
-}
-
-.verified {
-  margin-left: 8px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  background: #e7f4ff;
-  color: #0f89de;
-  font-weight: 600;
-}
-
-.spec-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.spec-item {
-  background: #f5f8fc;
-  border: 1px solid #e0e7f0;
-  border-radius: 8px;
-  padding: 9px;
-}
-
-.spec-item .label {
-  display: block;
-  font-size: 12px;
-  color: #6780a3;
-}
-
-.spec-item strong {
-  font-size: 13px;
-}
-
-.managed-by {
-  margin-top: 12px;
-}
-
-.managed-by h3 {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.shop-card {
-  display: grid;
-  grid-template-columns: 50px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #d8e1ec;
-  padding: 10px;
-  color: #0e1e39;
-}
-
-.shop-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.shop-card h4 {
-  margin: 0 0 2px;
-  font-size: 12px;
-}
-
-.shop-card p {
-  margin: 0;
-  color: #61789b;
-  font-size: 11px;
-}
-
-.verified-text {
-  color: #0d88df;
-  font-weight: 700;
-}
-
-.contact-btn {
-  border: 1px solid #4ca9e6;
-  border-radius: 8px;
-  padding: 8px 14px;
-  color: #1386de;
-  font-weight: 700;
-  font-size: 11px;
-}
-
-.side-stack {
-  display: grid;
-  gap: 10px;
-  align-self: start;
-}
-
-.booking-panel {
-  background: #fff;
-  color: #1d2c4a;
-  border-radius: 10px;
-  border: 1px solid #d8e1ec;
-  padding: 14px;
-}
-
-.price-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.price-box h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.price-box small {
-  color: #7083a3;
-  font-weight: 500;
-  font-size: 12px;
-}
-
-.instant {
-  color: #1394ea;
-  font-weight: 700;
-  font-size: 12px;
-}
-
-.date-grid {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid #dbe3f0;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.date-grid > div {
-  padding: 8px;
-}
-
-.date-grid > div:first-child {
-  border-right: 1px solid #dbe3f0;
-}
-
-.date-grid span {
-  display: block;
-  color: #7c8fac;
-  font-size: 10px;
-}
-
-.date-grid strong {
-  font-size: 16px;
-}
-
-.booking-panel h4 {
-  margin: 12px 0 7px;
-  font-size: 11px;
-  letter-spacing: .06em;
-  color: #7789a7;
-}
-
-.addon-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid #d6dfec;
-  border-radius: 8px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-
-.addon-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.qty-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #d1dceb;
-  border-radius: 14px;
-  padding: 2px 6px;
-  background: #fff;
-  font-size: 11px;
-}
-
-.qty-btn {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid #c8d4e5;
-  background: #f4f8fc;
-  color: #1c446f;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.addon-check-placeholder {
-  width: 13px;
-  height: 13px;
-  border: 1px solid #d6dfec;
-  border-radius: 3px;
-}
-
-.addon-item.active {
-  border-color: #2aa0f5;
-  background: #eef7ff;
-}
-
-.bill {
-  border-top: 1px solid #dae3ef;
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
-.bill p {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 0;
-  font-size: 12px;
-}
-
-.total {
-  display: flex;
-  justify-content: space-between;
-  font-size: 22px;
-  font-weight: 700;
-  margin: 8px 0 10px;
-}
-
-.total strong {
-  color: #1193e8;
-}
-
-.request-btn {
-  width: 100%;
-  background: #1ca0ef;
-  color: #fff;
-  border-radius: 8px;
-  padding: 10px;
-  font-weight: 700;
-  font-size: 14px;
-}
-
-.guest-reviews {
-  background: #fff;
-  border: 1px solid #d8e1ec;
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
-.guest-reviews h3 {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.reviews-score {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reviews-score strong {
-  font-size: 52px;
-  line-height: 1;
-}
-
-.stars {
-  margin: 0;
-  color: #f59e0b;
-  font-size: 14px;
-}
-
-.reviews-score small {
-  color: #6d84a1;
-  font-size: 11px;
-}
-
-.db-section {
-  margin-top: 12px;
-  background: #fff;
-  border: 1px solid #d8e1ec;
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.db-section h4 {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: #6f84a2;
-}
-
-.db-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
-}
-
-.db-grid p {
-  margin: 0;
-  font-size: 12px;
-  color: #294364;
-}
-
-.page-footer {
-  margin-top: 24px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  border-top: 1px solid #d8e1ed;
-  background: #f7f9fc;
-  padding: 24px 16px;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 24px;
-}
-
-.footer-col h4 {
-  margin: 0;
-  font-size: 32px;
-}
-
-.footer-col h4 span {
-  color: #1ea8ff;
-}
-
-.footer-col h5 {
-  margin: 0 0 8px;
-  font-size: 11px;
-  letter-spacing: .1em;
-}
-
-.footer-col p {
-  margin: 0 0 6px;
-  font-size: 12px;
-  color: #6a7f9a;
-}
-
-.brand-col p {
-  max-width: 300px;
-}
-
-.not-found {
-  max-width: 560px;
-  margin: 120px auto;
+.disclaimer {
   text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  font-style: italic;
 }
 
-.back-btn {
-  margin-top: 10px;
-  background: #1ca0ef;
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 8px;
-}
-
-@media (max-width: 1100px) {
-  .hero-grid {
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .grid-layout {
     grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
-  .hero-image {
-    height: 320px;
-  }
-
-  .page-footer {
-    grid-template-columns: 1fr;
+  .booking-widget {
+    position: static;
   }
 }
 
-@media (max-width: 760px) {
-  .detail-page {
-    padding: 0 12px;
+@media (max-width: 768px) {
+  .header-content {
+    padding: 1rem;
+    gap: 1rem;
   }
 
-  .spec-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .top-nav {
+    display: none;
   }
 
-  .topbar {
+  .content {
+    padding: 1rem;
+  }
+
+  .title-section h1 {
+    font-size: 2rem;
+  }
+
+  .spec-cards {
     grid-template-columns: 1fr;
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-    padding: 12px;
-    gap: 10px;
+    gap: 1rem;
   }
 
-  .db-grid {
-    grid-template-columns: 1fr;
+  .description,
+  .rental-terms,
+  .booking-widget {
+    padding: 1.5rem;
   }
 
-  .nav-links {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    justify-self: start;
+  .main-img {
+    height: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand-text {
+    font-size: 1.2rem;
   }
 
-  .top-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    justify-self: start;
+  .title-section h1 {
+    font-size: 1.5rem;
   }
 
-  .page-footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
+  .gallery-controls {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .view-all {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
   }
 }
 </style>
