@@ -61,7 +61,6 @@
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   width: min(900px, 95%);
   margin: 40px auto;
-
 }
 
 .shop-header-row {
@@ -72,7 +71,6 @@
   padding: 30px 28px;
   margin-bottom: 30px;
   border-radius: 18px;
-
 }
 
 .shop-image-section {
@@ -111,6 +109,7 @@
   align-items: center;
   justify-content: center;
 }
+
 .shop-status-pill {
   align-self: flex-start;
   border-radius: 999px;
@@ -211,11 +210,11 @@
 .field {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 12px ;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 5px;
-  margin: 0px 20px ;
+  margin: 0 20px;
   background: #ffffff;
 }
 
@@ -376,115 +375,7 @@
   display: none;
 }
 
-<<<<<<< HEAD
-.shop-upload-dropzone {
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 18px;
-  background: #f8fafc;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.2s ease;
-}
-
-.shop-upload-dropzone p {
-  margin: 0;
-  font-size: 14px;
-  color: #1e293b;
-}
-
-.shop-upload-dropzone span {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.shop-upload-dropzone:hover,
-.shop-upload-dropzone.dragging {
-  border-color: #22d3ee;
-  background: #ecfeff;
-}
-
-.shop-image-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.shop-image-actions .change-image-btn,
-.shop-image-actions .delete-image-btn {
-  white-space: nowrap;
-}
-
-.change-image-btn {
-  border: 1px solid #2563eb;
-  background: #2563eb;
-  color: #fff;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.change-image-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.delete-image-btn {
-  border: 1px solid #cbd5e1;
-  background: #e2e8f0;
-  color: #334155;
-  border-radius: 10px;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.delete-image-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.form-grid input,
-.form-grid select,
-.form-grid textarea {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-  background: #f8fafc;
-  transition: all 0.2s ease;
-}
-
-.image-preview-wrap {
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 10px;
-  background: #f8fafc;
-}
-
-.image-preview {
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: 10px;
-  display: block;
-}
-
-.form-grid input:focus,
-.form-grid select:focus,
-.form-grid textarea:focus {
-  outline: none;
-  border-color: #22d3ee;
-=======
 .brand-panel {
->>>>>>> 1af54be (test)
   background: #ffffff;
   border-radius: 24px;
   padding: 32px;
@@ -708,6 +599,7 @@
   opacity: 0.65;
   cursor: not-allowed;
 }
+
 .image-upload-area {
   border: 2px dashed #cbd5e1;
   border-radius: 12px;
@@ -719,11 +611,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  max-width: 400px; /* constrain width so box doesn’t stretch full column */
+  max-width: 400px;
   margin: 0 auto;
 }
 
-/* when a preview is showing reduce padding even more */
 .image-upload-area.has-preview {
   padding: 8px;
   min-height: auto;
@@ -808,7 +699,6 @@
   padding-top: 0;
 }
 
-
 .success-toast {
   position: fixed;
   right: 20px;
@@ -837,7 +727,7 @@
   justify-content: center;
   background: rgba(16, 185, 129, 0.2);
   color: #065f46;
-  flex: 0 0 28px;
+  flex-shrink: 0;
 }
 
 .toast-icon svg {
@@ -972,37 +862,13 @@
 }
 
 @media (max-width: 640px) {
-  .create-shop-header h3 {
-    font-size: 26px;
-  }
-
   .form-actions {
     flex-direction: column-reverse;
     align-items: stretch;
   }
 
-<<<<<<< HEAD
-  .shop-cover-image,
-  .shop-cover-placeholder {
-    width: clamp(130px, 38vw, 190px);
-  }
-
-  .shop-image-section {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .shop-image-actions {
-    justify-content: center;
-  }
-
-  .shop-status-pill {
-    align-self: flex-end;
-  }
-=======
   .ghost-btn,
   .primary-btn {
     width: 100%;
   }
->>>>>>> 1af54be (test)
 }
