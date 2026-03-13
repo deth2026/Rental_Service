@@ -87,6 +87,13 @@
   color: #2563eb;
 }
 
+.brand-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
+}
+
 .search-pill {
   max-width: 430px;
   justify-self: center;

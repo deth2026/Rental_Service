@@ -2,7 +2,7 @@
   <div class="vehicles-page">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
         <span>Chong Choul</span>
       </div>
 
@@ -143,6 +143,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
+import logoUrl from '@/assets/Logo.png'
 import '../../css/VehicleByShop.css'
 
 const location = ref('Siem Reap');
@@ -524,6 +525,13 @@ onUnmounted(() => {
   display: grid;
   place-items: center;
   background: #dbeafe;
+}
+
+.brand-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
 }
 
 .top-actions {

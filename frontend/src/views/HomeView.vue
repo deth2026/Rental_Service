@@ -3,7 +3,7 @@
     <Logo />
     <header class="top-nav">
       <div class="brand-container">
-        <img class="brand-logo" src="@/assets/logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
+        <img class="brand-logo" src="@/assets/Logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
         <div class="brand-text">
           <div class="brand">Chong Choul</div>
           <!-- <div class="brand-tagline">Vehicle Rental</div> -->

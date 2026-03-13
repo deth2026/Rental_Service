@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import logoUrl from '@/assets/Logo.png'
 import '../../css/ShopVehicle.css'
 
 const route = useRoute()
@@ -280,7 +281,7 @@ const openMap = () => {
         <button class="back-btn" @click="goBack">
           <i class="fa-solid fa-arrow-left"></i>
         </button>
-        <div class="brand-icon"><i class="fa-solid fa-car" aria-hidden="true"></i></div>
+        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
         <span>Shop Vehicles</span>
       </div>
 
@@ -440,6 +441,13 @@ const openMap = () => {
   justify-content: center;
   color: white;
   font-size: 1.25rem;
+}
+
+.brand-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand span {

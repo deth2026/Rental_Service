@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import Logo from '@/components/Logo.vue'
+import logoUrl from '@/assets/Logo.png'
 
 const router = useRouter()
 const route = useRoute()
@@ -299,7 +300,7 @@ onMounted(fetchPromotions)
     <Logo />
     <header class="topbar">
       <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
         <span>Chong Choul</span>
       </div>
 
@@ -466,6 +467,13 @@ onMounted(fetchPromotions)
   height: 42px;
   border-radius: 14px;
   color: #fff;
+}
+
+.brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .nav-links {

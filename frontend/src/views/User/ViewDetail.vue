@@ -3,6 +3,7 @@ import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
+import logoUrl from '@/assets/Logo.png'
 
 const route = useRoute();
 const router = useRouter();
@@ -280,7 +281,7 @@ const handleLogout = async () => {
   <div class="detail-page">
     <header class="topbar">
       <div class="brand" @click="goHome">
-        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
+        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
         <span>Chong Choul</span>
       </div>
 
@@ -467,6 +468,13 @@ const handleLogout = async () => {
   display: grid;
   place-items: center;
   background: #dbeafe;
+}
+
+.brand-icon img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-icon i {

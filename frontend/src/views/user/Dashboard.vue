@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
+import logoUrl from '@/assets/Logo.png'
 import '../../css/userDashboard.css'
 
 const router = useRouter()
@@ -316,7 +317,7 @@ onBeforeUnmount(() => {
     <div class="rides-shell">
       <header class="topbar">
         <div class="brand">
-          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+          <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
           <span>Chong Choul</span>
         </div>
 
