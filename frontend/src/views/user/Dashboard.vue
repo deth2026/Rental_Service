@@ -317,8 +317,7 @@ onBeforeUnmount(() => {
     <div class="rides-shell">
       <header class="topbar">
         <div class="brand">
-          <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
-          <span>Chong Choul</span>
+          <img :src="logoUrl" alt="Chong Choul Logo">
         </div>
 
         <nav class="nav-links">
