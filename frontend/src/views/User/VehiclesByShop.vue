@@ -43,15 +43,15 @@
           <p>Available for your selected dates ({{ dateRange }})</p>
 
           <div class="filter-row">
-            <button
-              v-for="type in vehicleTypes"
-              :key="type.key"
+           <button  
+              v-for="item in filterItems"
+              :key="item.id"
               class="filter-pill"
-              :class="{ active: selectedType === type.key }"
-              @click="selectedType = type.key"
+              :class="{ active: activeFilter === item.id }"
+              @click="activeFilter = item.id"
             >
-              <i :class="type.icon"></i>
-              <span>{{ type.label }}</span>
+              <i :class="item.icon"></i>
+              <span>{{ item.label }}</span>
             </button>
           </div>
         </div>
@@ -140,12 +140,12 @@ const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
-const selectedType = ref('all');
-const vehicleTypes = [
-  { key: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
-  { key: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
-  { key: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
-  { key: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
+const activeFilter = ref('all');
+const filterItems = [
+  { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
+  { id: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
+  { id: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
+  { id: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
 ];
 
 const normalizeType = (raw, fallback = '') => {
@@ -278,16 +278,16 @@ const filteredVehicles = computed(() => {
     ? vehicles.value.filter((v) => Number(v.shop_id) === selectedShopId.value)
     : vehicles.value;
 
-  if (selectedType.value === 'all') {
+if (activeFilter.value === 'all') {
     return source;
   }
   return source.filter(
-    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === selectedType.value
+    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === activeFilter.value
   );
 });
 
 const displayedVehicles = computed(() => {
-  const limit = selectedType.value === 'all' ? 8 : 20;
+  const limit = activeFilter.value === 'all' ? 8 : 20;
   return filteredVehicles.value.slice(0, limit);
 });
 
@@ -405,7 +405,7 @@ const handleLogout = async () => {
 };
 
 const runFilterSearch = () => {
-  actionMessage.value = `Search clicked for ${selectedType.value === 'all' ? 'all vehicles' : selectedType.value}.`;
+  actionMessage.value = `Search clicked for ${activeFilter.value === 'all' ? 'all vehicles' : activeFilter.value}.`;
 };
 
 const toggleFavorite = (id, name) => {
@@ -482,6 +482,23 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
+}
+
+.book-btn {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b75ff, #0d62df);
+  color: #fff;
+  padding: 13px 20px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.book-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(27, 117, 255, 0.35);
 }
 
 .brand {
@@ -605,6 +622,31 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.filter-pill{
+   display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill.active{
+   background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
+}
+.filter-pill:hover {
+  background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
 }
 
 .chip,
@@ -859,4 +901,5 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
 }
+
 </style>

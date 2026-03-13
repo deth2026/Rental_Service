@@ -446,9 +446,13 @@ const openMap = () => {
     </main>
   </div>
 </template>
+<<<<<<< HEAD
 
 
 <style>
+=======
+<style scoped>
+>>>>>>> 8f069ee2f73522504220d2ad50ae1b91ea05ba30
 .topbar {
   display: flex;
   justify-content: space-between;
