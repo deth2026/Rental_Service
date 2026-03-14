@@ -869,7 +869,7 @@ onMounted(fetchProfile)
 
 .hero-stripes {
     display: flex;
-    height: 120px;
+    height: 160px;
 }
 
 .hero-stripe {
@@ -905,8 +905,8 @@ onMounted(fetchProfile)
 }
 
 .hero-avatar {
-    width: 140px;
-    height: 140px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     background: #eef1f7;
     display: grid;
@@ -1018,7 +1018,7 @@ onMounted(fetchProfile)
 
 .tab-nav {
     background: #fff;
-    border-radius: 16px;
+    border-radius: 24px;
     padding: 10px;
     display: flex;
     gap: 10px;
@@ -1045,6 +1045,7 @@ onMounted(fetchProfile)
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
+    margin-top: 60px;
 }
 
 .left-column,

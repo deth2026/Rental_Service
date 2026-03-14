@@ -3,14 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
->>>>>>> dc158fb (update setting user)
-=======
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
-=======
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
->>>>>>> dc158fb (update setting user)
 
 const router = useRouter()
 const route = useRoute()

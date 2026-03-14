@@ -3,19 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
->>>>>>> dc158fb (update setting user)
-=======
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
-=======
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
->>>>>>> dc158fb (update setting user)
 
 const router = useRouter()
 const route = useRoute()
 
-// Navbar state
 const navItems = [
   { label: 'Home', route: '/view_shop' },
   { label: 'My Bookings', route: '/bookings' },
@@ -23,27 +16,24 @@ const navItems = [
 ]
 
 const activeNav = computed(() => {
-  const currentPath = route.path
-  const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
   return matchedItem?.label || 'Home'
 })
+
+const notify = (message) => console.log(message)
 
 const setActiveNav = (item) => {
   if (item.route) {
     router.push(item.route)
-    closeMobileMenu()
     return
   }
   notify('My Bookings page is not available yet.')
 }
 
-const notify = (message) => console.log(message)
-
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
 
-const openProfile = () => router.push('/user/profile')
-
+const showLogoutConfirm = ref(false)
 const handleLogout = () => {
   showLogoutConfirm.value = true
 }
@@ -58,49 +48,16 @@ const cancelLogout = () => {
   showLogoutConfirm.value = false
 }
 
+const openProfile = () => {
+  router.push('/user/profile')
+}
+
 const shops = ref([])
 const isLoadingShops = ref(false)
 const shopsError = ref('')
-const isMobileMenuOpen = ref(false)
-const showLogoutConfirm = ref(false)
 const showAllShops = ref(false)
 const expandedShops = ref(new Set())
 
-// Navbar state
-const location = ref('Phnom Penh')
-const dateRange = ref('Mar 15 - Mar 18')
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '/bookings' },
-  { label: 'Promotions', route: '/promotions' }
-]
-
-const activeNav = computed(() => {
-  const currentPath = route.path
-  const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-  return matchedItem?.label || 'Home'
-})
-
-const setActiveNav = (item) => {
-  if (item.route) {
-    router.push(item.route)
-    closeMobileMenu()
-    return
-  }
-
-  notify('My Bookings page is not available yet.')
-}
-
-const handleSearch = () => {
-  console.log('Search clicked')
-}
-
-const notify = (message) => {
-  console.log(message)
-}
-
-const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
 const withCacheBust = (url, version) => {
   if (!url || typeof url !== 'string') return url
   const separator = url.includes('?') ? '&' : '?'
@@ -209,28 +166,6 @@ watch(shops, () => {
   showAllShops.value = false
 })
 
-const handleLogout = () => {
-  showLogoutConfirm.value = true
-}
-
-const confirmLogout = async () => {
-  showLogoutConfirm.value = false
-  await userService.logout()
-  router.push('/login')
-}
-
-const cancelLogout = () => {
-  showLogoutConfirm.value = false
-}
-
-const openProfile = () => {
-  router.push('/user/profile')
-}
-
-const goToShopExplorer = () => {
-  router.push('/view_shop')
-}
-
 const slides = ref([
   {
     id: 1,
@@ -317,14 +252,6 @@ const restartSlideTimer = () => {
   startSlideTimer()
 }
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value
-}
-
-const closeMobileMenu = () => {
-  isMobileMenuOpen.value = false
-}
-
 onMounted(() => {
   loadShops()
   startSlideTimer()
@@ -363,28 +290,22 @@ onBeforeUnmount(() => {
       </header>
 
       <section class="slideshow-section">
-        <div class="containers">
-          <div class="slide">
-            <article
-              v-for="(slide, index) in orderedSlides"
-              :key="slide.id"
-              class="item"
-              :class="`item-${index + 1}`"
-              :style="`background-image: url('${slide.image}')`"
-            >
+      <div class="containers">
+        <div class="slide">
+          <article
             v-for="(slide, index) in orderedSlides"
             :key="slide.id"
             class="item"
             :class="`item-${index + 1}`"
             :style="`background-image: url('${slide.image}')`"
           >
-              <div class="content">
-                <div class="name">{{ slide.title }}</div>
-                <div class="des">{{ slide.description }}</div>
-                <button type="button">See More</button>
-              </div>
-            </article>
-          </div>
+            <div class="content">
+              <div class="name">{{ slide.title }}</div>
+              <div class="des">{{ slide.description }}</div>
+              <button type="button">See More</button>
+            </div>
+          </article>
+        </div>
           <div class="button">
             <button class="btn-reset prev" type="button" aria-label="Previous slide" @click="handlePrevSlide">
               <i class="fa-solid fa-arrow-left"></i>
