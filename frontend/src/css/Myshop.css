@@ -54,14 +54,13 @@
 }
 
 .shop-card {
-  border: 1px solid #dbeafe;
-  background: #fff;
+  border: 1px solid rgba(219, 234, 254, 0.9);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
   border-radius: 16px;
   padding: 52px 56px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 25px 45px rgba(15, 23, 42, 0.07);
   width: min(900px, 95%);
   margin: 40px auto;
-
 }
 
 .shop-header-row {

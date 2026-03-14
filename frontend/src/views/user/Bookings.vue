@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { vehicleService } from '../../services/database.js'
+import CommonFooter from '../../components/CommonFooter.vue'
 
 const activeTab = ref('all')
 const searchQuery = ref('')
@@ -335,8 +336,11 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
       </div>
     </div>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 <style scoped>
-@import "../css/bookings.css";
+@import "../../css/bookings.css";
 </style>

@@ -177,6 +177,9 @@
       </div>
     </footer>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 <script setup>
@@ -184,6 +187,7 @@ import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
+import CommonFooter from '../../components/CommonFooter.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -1003,3 +1007,5 @@ h1 {
   }
 }
 </style>
+
+

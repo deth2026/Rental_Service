@@ -6,6 +6,7 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
 import UserDashboard from '../views/User/Dashboard.vue';
+import UserBookings from '../views/User/Bookings.vue';
 import PromotionView from '../views/User/Promotion.vue';
 import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
@@ -33,8 +34,9 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'my-bookings',
-      component: UserBookings,
+      name: 'home',
+      component: HomeView,
+      meta: { requiresAuth: false }
     },
     {
       path: '/home',
@@ -69,6 +71,12 @@ const router = createRouter({
       name: 'view_shop',
       component: UserDashboard,
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/bookings',
+      name: 'user-bookings',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/user/profile',

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import CommonFooter from '../../components/CommonFooter.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -15,7 +16,7 @@ const dealsSection = ref(null)
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '' },
+  { label: 'My Bookings', route: '/bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -415,6 +416,9 @@ onMounted(fetchPromotions)
       </section>
     </main>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 <style scoped>

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
+import CommonFooter from '../../components/CommonFooter.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,7 +21,7 @@ const location = ref('Phnom Penh')
 const dateRange = ref('Mar 15 - Mar 18')
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '' },
+  { label: 'My Bookings', route: '/bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -477,4 +478,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>

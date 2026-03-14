@@ -3,7 +3,7 @@ import { RouterLink } from 'vue-router'
 
 const quickLinks = [
   { label: 'Home', to: '/' },
-  { label: 'My Booking', to: '/view_shop' },
+  { label: 'My Booking', to: '/bookings' },
   { label: 'Promotions', to: '/promotions' }
 ]
 const paymentMethods = ['Visa', 'Mastercard', 'Bank Transfer']

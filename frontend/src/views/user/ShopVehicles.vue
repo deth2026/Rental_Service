@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 
 const route = useRoute()
@@ -445,6 +446,9 @@ const openMap = () => {
       </section>
     </main>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 

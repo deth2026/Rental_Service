@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue'
-import CommonFooter from './components/CommonFooter.vue'
 
 const getUserRole = () => {
   try {
@@ -12,17 +11,11 @@ const getUserRole = () => {
     return null
   }
 }
-
-const showFooter = computed(() => {
-  const role = getUserRole()
-  return role === 'customer' || !role
-})
 </script>
 
 <template>
   <div id="app">
     <router-view />
-    <CommonFooter v-if="showFooter" />
   </div>
 </template>
 
