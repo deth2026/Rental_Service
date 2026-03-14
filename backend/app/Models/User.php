@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
@@ -13,8 +14,27 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    const CREATED_AT = 'created_at';
-    const UPDATED_AT = 'updated_at';
+    public function getCreatedAtColumn()
+    {
+        static $createdColumn = null;
+        if ($createdColumn === null) {
+            $columns = Schema::getColumnListing($this->getTable());
+            $createdColumn = in_array('created_at', $columns, true) ? 'created_at' : 'create_at';
+        }
+
+        return $createdColumn;
+    }
+
+    public function getUpdatedAtColumn()
+    {
+        static $updatedColumn = null;
+        if ($updatedColumn === null) {
+            $columns = Schema::getColumnListing($this->getTable());
+            $updatedColumn = in_array('updated_at', $columns, true) ? 'updated_at' : 'update_at';
+        }
+
+        return $updatedColumn;
+    }
 
     protected $fillable = [
         'name',

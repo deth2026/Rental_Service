@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import '../../css/Logout.css'
 
 const router = useRouter()
 const confirmLogout = ref(false)
@@ -23,20 +24,4 @@ const doLogout = () => {
 	</div>
 </template>
 
-<style scoped>
-.danger {
-	background: #ef4444;
-	color: #fff;
-	border: 0;
-	padding: 8px 12px;
-	border-radius: 8px;
-	cursor: pointer
-}
 
-button {
-	border-radius: 8px;
-	padding: 8px 12px;
-	border: 0;
-	cursor: pointer
-}
-</style>

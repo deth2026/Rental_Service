@@ -4,14 +4,93 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class Vehicle extends Model
 {
     use HasFactory;
 
-    const CREATED_AT = 'create_at';
-    const UPDATED_AT = 'updated_at';
+    public function getCreatedAtColumn()
+    {
+        static $createdColumn = null;
+        if ($createdColumn === null) {
+            $columns = Schema::getColumnListing($this->getTable());
+            $createdColumn = in_array('created_at', $columns, true) ? 'created_at' : 'create_at';
+        }
 
+        return $createdColumn;
+    }
+
+    public function getUpdatedAtColumn()
+    {
+        static $updatedColumn = null;
+        if ($updatedColumn === null) {
+            $columns = Schema::getColumnListing($this->getTable());
+            $updatedColumn = in_array('updated_at', $columns, true) ? 'updated_at' : 'update_at';
+        }
+
+        return $updatedColumn;
+    }
+
+    public function shop(): BelongsTo
+    {
+        return $this->belongsTo(Shop::class);
+    }
+
+    /**
+     * Get the full image URL for display
+     * This accessor is automatically included in API responses
+     */
+    public function getImageUrlFullAttribute(): ?string
+    {
+        $path = $this->image_url;
+        if (!$path) {
+            return null;
+        }
+
+        // If it's already a full URL, return as-is
+        if (Str::startsWith($path, ['http://', 'https://', 'data:'])) {
+            return $path;
+        }
+
+        // Clean the path and prepend storage URL
+        $cleanPath = ltrim(str_replace('\\', '/', (string) $path), '/');
+        return asset('storage/' . $cleanPath);
+    }
+
+    /**
+     * Get the full photo URLs array for display
+     */
+    public function getPhotoUrlsAttribute(): array
+    {
+        $photos = $this->photos;
+        
+        if (is_string($photos)) {
+            $photos = json_decode($photos, true);
+        }
+        
+        if (!is_array($photos) || empty($photos)) {
+            return [];
+        }
+
+        $urls = [];
+        foreach ($photos as $photo) {
+            if (!$photo) continue;
+            
+            // If it's already a full URL, keep it
+            if (Str::startsWith($photo, ['http://', 'https://', 'data:'])) {
+                $urls[] = $photo;
+            } else {
+                // Clean the path and prepend storage URL
+                $cleanPath = ltrim(str_replace('\\', '/', (string) $photo), '/');
+                $urls[] = asset('storage/' . $cleanPath);
+            }
+        }
+
+        return $urls;
+    }
     protected $fillable = [
         'shop_id',
         'name',
@@ -19,9 +98,11 @@ class Vehicle extends Model
         'brand',
         'model',
         'plate_number',
+        'year',
         'price_per_day',
         'fuel_type',
         'transmission',
+        'seats',
         'status',
         'description',
         'image_url',

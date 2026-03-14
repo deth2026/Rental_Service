@@ -4,28 +4,25 @@
       <main class="panel">
         <section class="content-card">
           <div class="section-head">
-            <p class="section-title">{{ t('settingOwnership') }}</p>
-            <button type="button" class="btn btn-logout creative-logout-btn" @click="openLogoutConfirm">
-              <span class="logout-icon">↪</span>
-              <span>{{ t('logout') }}</span>
-            </button>
-          </div>
-
-          <div class="avatar-row">
-            <img
-              :key="displayImageUrl"
-              :src="displayImageUrl"
-              alt="Profile photo"
-              class="profile-avatar"
-              @error="onAvatarError"
-            />
-            <div class="avatar-actions">
-              <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
-                {{ avatarUploadLoading ? t('uploading') : t('uploadProfile') }}
-              </button>
-              <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
-                {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
-              </button>
+            <p class="section-title">{{ t('Ownershop setting') }}</p>
+            <div class="avatar-panel">
+              <div class="avatar-row">
+                <img
+                  :key="displayImageUrl"
+                  :src="displayImageUrl"
+                  alt="Profile photo"
+                  class="profile-avatar"
+                  @error="onAvatarError"
+                />
+                <div class="avatar-actions">
+                  <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
+                    {{ avatarUploadLoading ? t('uploading') : t('uploadProfile') }}
+                  </button>
+                  <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
+                    {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <input ref="avatarInputRef" type="file" accept="image/*" class="sr-only-file" @change="onAvatarChange" />
@@ -200,6 +197,8 @@ import { useI18n } from 'vue-i18n';
 import api from '../../services/api';
 import { logoutUser } from '../../services/auth';
 import { setLanguage, getCurrentLanguage, syncAutoTranslateWithCurrentLanguage } from '../../i18n';
+import "../../css/setting.css";
+import '../../css/setting_dashboard.css'
 
 const { t } = useI18n();
 const router = useRouter();
@@ -444,7 +443,6 @@ const onAvatarChange = (event) => {
   localPreviewUrl.value = URL.createObjectURL(file);
   avatarFile.value = file;
   avatarLoadFailed.value = false;
-  success.value = 'Image selected. Click Save Setting to upload.';
   error.value = '';
 };
 
@@ -665,130 +663,3 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style>
-@import "../../css/setting.css";
-
-/* Language Selector Styles - Near Notifications */
-.language-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  width: 100%;
-}
-
-.language-box .language-options {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.language-field {
-  margin-top: 8px;
-}
-
-.lang-btn {
-  padding: 8px 16px;
-  border: 1px solid #d5e7eb;
-  background: #ffffff;
-  color: var(--ink-600);
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  min-width: 96px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.lang-btn:hover {
-  background: #eef5f7;
-}
-
-.lang-btn.active {
-  background: #2054e4;
-  color: #fff;
-  border-color: #1d4ed8;
-}
-
-.settings-toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 220px;
-  max-width: min(92vw, 360px);
-  padding: 14px 20px;
-  border-radius: 8px;
-  border: 1px solid #bfe9d2;
-  background: #ecfbf3;
-  color: #136b44;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.3s ease;
-}
-
-.settings-toast.is-error {
-  border-color: #fecaca;
-  background: #fff1f2;
-  color: #9f1239;
-}
-
-.settings-toast-close {
-  margin-left: auto;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  font-size: 22px;
-  line-height: 1;
-  padding: 0;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.creative-logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
-  background: #2563eb;
-  color: #ffffff;
-  box-shadow: 0 8px 18px rgba(29, 78, 216, 0.28);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-}
-
-.creative-logout-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 20px rgba(29, 78, 216, 0.34);
-  filter: brightness(1.03);
-}
-
-.logout-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.16);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.logout-modal {
-  border-top: 4px solid #1d4ed8;
-}
-</style>

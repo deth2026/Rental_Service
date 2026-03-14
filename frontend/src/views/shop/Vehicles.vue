@@ -1,10 +1,11 @@
 ﻿<script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { vehicleApi } from '@/services/api'
+import { vehicleApi, shopApi, api } from '@/services/api'
+import { getSessionUser } from '@/services/auth'
+import '../../css/Vehicles/css'
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
-const shops = ['Main Shop - Phnom Penh', 'Branch Shop - Siem Reap']
 
 const search = ref('')
 const categoryFilter = ref('All Categories')
@@ -12,6 +13,13 @@ const statusFilter = ref('All Status')
 const modal = ref(false)
 const editId = ref(null)
 const loading = ref(false)
+
+// Current shop data
+const currentShop = ref(null)
+const currentShopId = ref(null)
+
+// Get current user
+const sessionUser = ref(getSessionUser() || {})
 
 // Delete confirmation modal
 const showDeleteModal = ref(false)
@@ -31,16 +39,10 @@ const cancelDelete = () => {
 }
 
 // Toast notification
-const showToast = (message, type = 'info') => {
-    const toast = document.createElement('div')
-    toast.className = `toast toast-${type}`
-    toast.textContent = message
-    document.body.appendChild(toast)
-    setTimeout(() => toast.classList.add('show'), 10)
-    setTimeout(() => {
-        toast.classList.remove('show')
-        setTimeout(() => document.body.removeChild(toast), 300)
-    }, 3000)
+const toast = ref({ show: false, message: '', type: 'success' })
+const showToast = (message, type = 'success') => {
+    toast.value = { show: true, message, type }
+    setTimeout(() => toast.value.show = false, 3000)
 }
 
 const khTime = () => {
@@ -59,7 +61,6 @@ const fetchVehicles = async () => {
         vehicles.value = response.data.data || response.data || []
         // Map database fields to frontend fields
         vehicles.value = vehicles.value.map(v => {
-            // Parse photos - could be base64 array or JSON string
             let parsedPhotos = []
             try {
                 if (v.photos) {
@@ -69,17 +70,24 @@ const fetchVehicles = async () => {
                         parsedPhotos = JSON.parse(v.photos)
                     }
                 }
-            } catch (e) {
+            } catch {
                 parsedPhotos = []
             }
-            
+
+            const source = v?.data?.attributes ? v.data.attributes : v
+            const imageUrl = source.image_url_full || source.image_url || ''
+            const baseUrl = api.defaults.baseURL?.replace(/\\/api\\/?$/, '') || ''
+            const resolvedPreview = imageUrl ? `${baseUrl}/${imageUrl}`.replace(/\\/\\/+/g, '/') : (parsedPhotos[0] || sampleThumb)
+
             return {
-                ...v,
-                plate: v.plate_number,
-                price: v.price_per_day,
-                createdAt: v.create_at,
-                updatedAt: v.updated_at,
-                previewUrl: v.image_url || (parsedPhotos.length > 0 ? parsedPhotos[0] : sampleThumb),
+                ...source,
+                category: source.category || source.type,
+                plate: source.plate_number || source.plate,
+                price: Number(source.price_per_day ?? source.price) || 0,
+                status: (source.status || 'Available').trim(),
+                createdAt: source.created_at || source.create_at,
+                updatedAt: source.updated_at,
+                previewUrl: resolvedPreview,
                 photos: parsedPhotos,
                 base64Photos: parsedPhotos
             }
@@ -91,14 +99,41 @@ const fetchVehicles = async () => {
     }
 }
 
-// Load vehicles on mount
-onMounted(() => {
+// Load vehicles and shop on mount
+onMounted(async () => {
+    await fetchUserShop()
     fetchVehicles()
 })
 
 const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
 const photoPreview = ref(sampleThumb)
-const form = reactive({ name: '', brand: '', model: '', category: '', shop: 'Main Shop - Phnom Penh', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
+const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
+
+// Fetch user's shop
+const fetchUserShop = async () => {
+    try {
+        const ownerId = Number(sessionUser.value?.id || 0)
+        if (!ownerId) return
+        
+        const response = await api.get('/shops')
+        const shops = response.data.data || response.data || []
+        const myShops = shops.filter((s) => Number(s.owner_id) === ownerId)
+        
+        if (myShops.length > 0) {
+            // Sort by creation date, newest first
+            myShops.sort((a, b) => {
+                const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
+                const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
+                return bTime - aTime
+            })
+            currentShop.value = myShops[0]
+            currentShopId.value = myShops[0].id
+            form.shop = myShops[0].name
+        }
+    } catch (error) {
+        console.error('Error fetching shop:', error)
+    }
+}
 
 // Format date to show only day, month, year
 const formatDate = (dateStr) => {
@@ -124,6 +159,18 @@ const getStatusIcon = (status) => {
     return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'
   }
   return ''
+}
+
+const categoryIconMap = {
+  car: 'fa-solid fa-car-side',
+  moto: 'fa-solid fa-motorcycle',
+  bike: 'fa-solid fa-bicycle',
+  default: 'fa-solid fa-car'
+}
+
+const getCategoryIcon = (category) => {
+  const key = (category || '').toString().trim().toLowerCase()
+  return categoryIconMap[key] || categoryIconMap.default
 }
 
 // Get status badge class
@@ -154,9 +201,17 @@ const availableVehicles = computed(() => vehicles.value.filter(v => v.status ===
 const maintenanceVehicles = computed(() => vehicles.value.filter(v => v.status === 'Maintenance').length)
 const potentialPerDay = computed(() => vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0))
 
-const openCreate = () => {
+const openCreate = async () => {
     editId.value = null
-    Object.assign(form, { name: '', brand: '', model: '', category: '', shop: 'Main Shop - Phnom Penh', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: khTime(), photos: [], base64Photos: [] })
+    // Ensure we have the latest shop data
+    await fetchUserShop()
+    Object.assign(form, { 
+        name: '', brand: '', model: '', category: '', 
+        shop: currentShop.value?.name || '', 
+        plate: '', description: '', fuel: '', transmission: '', 
+        price: '', status: 'Available', updatedAt: khTime(), 
+        photos: [], base64Photos: [] 
+    })
     photoPreview.value = sampleThumb
     modal.value = true
 }
@@ -172,12 +227,16 @@ const openEdit = (v) => {
             photosData = []
         }
     }
+    
+    // Use image_url_full if available, otherwise fall back to previewUrl
+    const imageUrl = v.image_url_full || v.previewUrl || ''
+    
     Object.assign(form, {
         name: v.name || '',
         brand: v.brand || '',
         model: v.model || '',
         category: v.category || '',
-        shop: v.shop || 'Main Shop - Phnom Penh',
+        shop: v.shop || currentShop.value?.name || '',
         plate: v.plate || '',
         description: v.description || '',
         fuel: v.fuel || '',
@@ -188,21 +247,27 @@ const openEdit = (v) => {
         photos: Array.isArray(photosData) ? photosData.map((_, i) => `Photo ${i + 1}`) : [],
         base64Photos: photosData || []
     })
-    // Use the stored base64 image or the previewUrl
-    photoPreview.value = (photosData && photosData.length > 0) ? photosData[0] : (v.previewUrl || sampleThumb)
+    // Use the stored full URL or fall back to sampleThumb
+    photoPreview.value = imageUrl || sampleThumb
     modal.value = true
 }
 
 const saveVehicle = async () => {
     if (!form.name || !form.category || !form.price) {
-        alert('Please fill in all required fields: Name, Category, and Price')
+        showToast('Please fill in all required fields: Name, Category, and Price', 'error')
         return
     }
 
     // Validate price is a valid number
     const priceValue = Number(form.price)
     if (isNaN(priceValue) || priceValue <= 0) {
-        alert('Please enter a valid price per day')
+        showToast('Please enter a valid price per day', 'error')
+        return
+    }
+
+    // Ensure we have shop data
+    if (!currentShopId.value) {
+        showToast('Please create a shop first before adding vehicles', 'error')
         return
     }
 
@@ -215,17 +280,14 @@ const saveVehicle = async () => {
         price: priceValue,
         status: form.status,
         shop: form.shop,
+        shop_id: currentShopId.value,  // Include shop_id for proper association
         description: form.description,
         fuel: form.fuel,
         transmission: form.transmission,
         photos: form.base64Photos || [],
         previewUrl: photoPreview.value
     }
-    
-    // Close modal immediately and show success
-    modal.value = false
-    showToast('Vehicle saved successfully!', 'success')
-    
+
     try {
         if (editId.value) {
             // Update existing vehicle
@@ -233,6 +295,8 @@ const saveVehicle = async () => {
             const updatedData = response.data
             const index = vehicles.value.findIndex(v => v.id === editId.value)
             if (index >= 0) {
+                // Use image_url_full from API response if available
+                const imageUrl = updatedData.image_url_full || updatedData.image_url || ''
                 vehicles.value[index] = {
                     ...vehicles.value[index],
                     name: updatedData.name,
@@ -245,49 +309,72 @@ const saveVehicle = async () => {
                     description: updatedData.description,
                     fuel: updatedData.fuel_type,
                     transmission: updatedData.transmission,
-                    previewUrl: updatedData.image_url || (form.base64Photos && form.base64Photos[0]) || sampleThumb,
+                    previewUrl: imageUrl || (form.base64Photos && form.base64Photos[0]) || sampleThumb,
+                    image_url_full: updatedData.image_url_full,
                     photos: form.base64Photos || [],
                     base64Photos: form.base64Photos || [],
                     updatedAt: khTime()
                 }
             }
+            modal.value = false
+            showToast('Vehicle updated successfully!', 'success')
         } else {
-            // Create new vehicle - add immediately to list
+            // Create new vehicle - wait for API response first
+            const response = await vehicleApi.create(payload)
+            const newData = response.data
+            
+            // Add vehicle to list with real data from server
             const newVehicle = {
-                id: Date.now(),
-                name: form.name,
-                brand: form.brand,
-                model: form.model,
-                category: form.category,
-                plate: form.plate || `AUTO-${Date.now().toString().slice(-5)}`,
-                price: priceValue,
-                status: form.status,
-                description: form.description,
-                fuel: form.fuel,
-                transmission: form.transmission,
-                previewUrl: photoPreview.value,
+                id: newData.id,
+                name: newData.name,
+                brand: newData.brand,
+                model: newData.model,
+                category: newData.type,
+                plate: newData.plate_number,
+                price: newData.price_per_day,
+                status: newData.status,
+                description: newData.description,
+                fuel: newData.fuel_type,
+                transmission: newData.transmission,
+                // Use full image URL from API response
+                previewUrl: newData.image_url_full || newData.image_url || photoPreview.value,
+                image_url_full: newData.image_url_full,
                 photos: form.base64Photos || [],
                 base64Photos: form.base64Photos || [],
                 createdAt: khTime(),
                 updatedAt: khTime()
             }
             vehicles.value.unshift(newVehicle)
-            
-            // Save to backend in background
-            try {
-                const response = await vehicleApi.create(payload)
-                const newData = response.data
-                // Update with real ID from server
-                const idx = vehicles.value.findIndex(v => v.id === newVehicle.id)
-                if (idx >= 0) {
-                    vehicles.value[idx].id = newData.id
-                }
-            } catch (e) {
-                console.error('Background save error:', e)
-            }
+            modal.value = false
+            showToast('Vehicle created successfully!', 'success')
         }
     } catch (error) {
         console.error('Error saving vehicle:', error)
+        console.error('Error response:', error.response)
+        
+        let errorMessage = 'Failed to save vehicle. Please try again.'
+        
+        if (error.response) {
+            if (error.response.status === 401) {
+                errorMessage = 'You are not authenticated. Please login again.'
+            } else if (error.response.status === 403) {
+                errorMessage = error.response.data?.message || 'You do not have permission.'
+            } else if (error.response.status === 422) {
+                const errors = error.response.data?.errors
+                if (errors) {
+                    const firstError = Object.values(errors)[0]
+                    errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+                } else {
+                    errorMessage = error.response.data?.message || 'Validation failed.'
+                }
+            } else {
+                errorMessage = error.response.data?.message || errorMessage
+            }
+        } else if (error.request) {
+            errorMessage = 'No response from server. Please check your connection.'
+        }
+        
+        showToast(errorMessage, 'error')
     }
 }
 
@@ -467,7 +554,10 @@ const onPhotoDrop = async (e) => {
                         <td>
                             <img :src="v.previewUrl || sampleThumb" alt="Vehicle" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" />
                         </td>
-                        <td>{{ v.name }}</td>
+                        <td class="vehicle-name-cell">
+                            <i :class="['vehicle-category-icon', getCategoryIcon(v.category)]" aria-hidden="true"></i>
+                            <span>{{ v.name }}</span>
+                        </td>
                         <td>{{ v.brand }} / {{ v.model }}</td>
                         <td>{{ v.plate }}</td>
                         <td>${{ v.price }}</td>
@@ -542,8 +632,8 @@ const onPhotoDrop = async (e) => {
                                 <div class="form-group">
                                     <label>Shop Location</label>
                                     <select v-model="form.shop">
-                                        <option value="" disabled>Select Shop</option>
-                                        <option v-for="shop in shops" :key="shop">{{ shop }}</option>
+<option value="" disabled>Select Shop</option>
+                                        <option v-if="currentShop" :value="currentShop.name">{{ currentShop.name }}</option>
                                     </select>
                                 </div>
                             </div>
@@ -668,900 +758,9 @@ const onPhotoDrop = async (e) => {
     </div>
 </template>
 
-<style scoped>
-.panel {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px
-}
+<!-- Toast Notification -->
+<div v-if="toast.show" :class="['toast', toast.type]">
+    {{ toast.message }}
+</div>
 
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-}
 
-.status-badge.status-available {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-badge.status-rented {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.status-badge.status-maintenance {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.line {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px
-}
-
-.cards {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin: 10px 0
-}
-
-.cards article {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 12px
-}
-
-.cards span {
-    color: #64748b
-}
-
-.cards h3 {
-    margin: 8px 0 0
-}
-
-.form {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin: 10px 0
-}
-
-input,
-select {
-    width: 100%;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 8px
-}
-
-.table {
-    overflow: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px
-}
-
-table {
-    width: 100%;
-    min-width: 800px;
-    border-collapse: collapse
-}
-
-th,
-td {
-    padding: 10px;
-    border-bottom: 1px solid #e2e8f0;
-    text-align: left
-}
-
-th {
-    font-size: 12px;
-    background: #f8fafc;
-    text-transform: uppercase;
-    color: #475569
-}
-
-.primary,
-button {
-    border: 0;
-    border-radius: 9px;
-    padding: 8px 12px;
-    cursor: pointer
-}
-
-.primary {
-    background: #1d4ed8;
-    color: #fff
-}
-
-.danger {
-    background: #ef4444;
-    color: #fff
-}
-
-.overlay {
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    left: 260px;
-    right: 0;
-    background: rgba(2, 6, 23, .35);
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    z-index: 50;
-}
-
-.modal {
-    width: min(900px, 100%);
-    max-height: 92vh;
-    overflow: auto;
-    background: #fff;
-    border-radius: 14px;
-    padding: 14px
-}
-
-@media(max-width:1000px) {
-
-    .cards,
-    .form {
-        grid-template-columns: 1fr 1fr
-    }
-}
-
-@media(max-width:680px) {
-
-    .cards,
-    .form {
-        grid-template-columns: 1fr
-    }
-}
-
-/* custom styles to match screenshot */
-.vehicles-page {
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial
-}
-
-.top-line {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px
-}
-
-.top-line h3 {
-    margin: 0
-}
-
-.top-line .muted {
-    margin: 4px 0 0
-}
-
-.controls {
-    display: flex;
-    gap: 10px;
-    align-items: center
-}
-
-.select-wrap {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-
-.select-wrap svg {
-    position: absolute;
-    right: 12px;
-    pointer-events: none;
-}
-
-.search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: #fff;
-    border: 1px solid #e6eef8;
-    padding: 8px 12px;
-    border-radius: 10px
-}
-
-.search input {
-    border: 0;
-    outline: none;
-    min-width: 280px
-}
-
-.select {
-    background: #fff;
-    border: 1px solid #e6eef8;
-    padding: 8px 34px 8px 12px;
-    border-radius: 10px;
-    appearance: none;
-    min-width: 188px;
-}
-
-.add-btn {
-    background: #2563eb;
-    color: #fff;
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-    border-radius: 10px;
-    padding: 10px 16px;
-    font-weight: 600;
-}
-
-.cards article {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-height: 76px;
-}
-
-.icon-box {
-    width: 50px;
-    height: 50px;
-    border-radius: 10px;
-    display: grid;
-    place-items: center;
-    color: #2563eb
-}
-
-.icon-box.blue {
-    background: #e8edff;
-    color: #2f6bff
-}
-
-.icon-box.green {
-    background: #e8f5ee;
-    color: #22a36a
-}
-
-.icon-box.yellow {
-    background: #f8efe2;
-    color: #e09a21
-}
-
-.cards article div span {
-    color: #64748b;
-    font-size: 14px
-}
-
-.cards article div h3 {
-    margin: 0;
-    font-size: 38px;
-    line-height: 1
-}
-
-.table {
-    margin-top: 10px
-}
-
-.empty {
-    padding: 18px
-}
-
-.empty-card {
-    background: #fff;
-    border: 1px solid #e6eef8;
-    border-radius: 10px;
-    padding: 36px;
-    text-align: center;
-    color: #94a3b8
-}
-
-.empty-card svg {
-    display: block;
-    margin: 0 auto 8px;
-}
-
-.actions {
-    white-space: nowrap;
-}
-
-.icon-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #eef2ff;
-    color: #1e3a8a;
-    margin-right: 6px;
-}
-
-/* modal form styles */
-.form-modal {
-    width: min(820px, 100%);
-    padding: 18px
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px
-}
-
-.modal-header .back {
-    background: transparent;
-    border: 0;
-    color: #334155;
-    cursor: pointer
-}
-
-.card-section {
-    background: #fbfdff;
-    border: 1px solid #eef4fb;
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 12px
-}
-
-.card-section h4 {
-    margin: 0 0 8px
-}
-
-.grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px
-}
-
-.card-section small {
-    color: #64748b;
-    margin-bottom: 6px;
-    display: block
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 8px
-}
-
-.full-line {
-    grid-column: 1 / -1;
-}
-
-.desc-help {
-    margin: 0 0 8px;
-    color: #64748b;
-    font-size: 12px;
-    line-height: 1.45
-}
-
-textarea {
-    width: 100%;
-    min-height: 96px;
-    border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 14px;
-    resize: vertical
-}
-
-.dropzone {
-    border: 1px dashed #cbd5e1;
-    border-radius: 10px;
-    padding: 12px;
-    cursor: pointer;
-    background: #fcfeff
-}
-
-.dropzone .dz-inner {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    justify-content: center;
-    padding: 14px
-}
-
-.dropzone .dz-text {
-    color: #64748b;
-    text-align: center
-}
-
-.dz-list {
-    margin-top: 8px;
-    color: #475569;
-    font-size: 13px
-}
-
-.photo-help {
-    margin: 0 0 10px;
-    color: #64748b;
-    font-size: 12px
-}
-
-.preview-row {
-    margin-top: 10px;
-    display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 1fr;
-    gap: 10px
-}
-
-.preview-main,
-.preview-empty {
-    height: 82px;
-    border-radius: 10px;
-    border: 1px dashed #cbd5e1;
-    display: grid;
-    place-items: center;
-    font-size: 12px;
-    color: #64748b;
-    background: #f8fafc
-}
-
-.preview-main {
-    background: linear-gradient(180deg, #29424f, #3f5e6c);
-    color: #fff;
-    font-weight: 600;
-    border: 0
-}
-
-.preview-empty {
-    font-size: 24px;
-    color: #94a3b8
-}
-
-.upload-rule {
-    margin: 8px 0 0;
-    color: #64748b;
-    font-size: 12px
-}
-
-@media(max-width:900px) {
-
-    .grid-2,
-    .preview-row {
-        grid-template-columns: 1fr
-    }
-}
-
-/* Delete Modal Styles */
-.delete-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.delete-modal {
-    background: white;
-    border-radius: 16px;
-    padding: 32px;
-    max-width: 420px;
-    width: 90%;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-    animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-
-.delete-icon-wrapper {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: #fef2f2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 20px;
-}
-
-.delete-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0 0 12px;
-}
-
-.delete-message {
-    font-size: 16px;
-    color: #333;
-    margin: 0 0 8px;
-    font-weight: 500;
-}
-
-.delete-vehicle-name {
-    font-size: 14px;
-    color: #e74c3c;
-    font-weight: 600;
-    margin: 0 0 16px;
-    padding: 8px 16px;
-    background: #fef2f2;
-    border-radius: 8px;
-    display: inline-block;
-}
-
-.delete-warning {
-    font-size: 13px;
-    color: #666;
-    margin: 0 0 24px;
-    line-height: 1.5;
-}
-
-.delete-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-
-.delete-cancel-btn {
-    padding: 12px 24px;
-    border: 2px solid #ddd;
-    background: white;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.2s;
-    min-width: 120px;
-}
-
-.delete-cancel-btn:hover {
-    border-color: #999;
-    color: #333;
-}
-
-.delete-confirm-btn {
-    padding: 12px 24px;
-    border: none;
-    background: #e74c3c;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    min-width: 120px;
-}
-
-.delete-confirm-btn:hover {
-    background: #c0392b;
-}
-
-@media (max-width: 480px) {
-    .delete-modal {
-        padding: 24px;
-        margin: 16px;
-    }
-    
-    .delete-actions {
-        flex-direction: column;
-    }
-    
-    .delete-cancel-btn,
-    .delete-confirm-btn {
-        width: 100%;
-    }
-}
-
-/* Add Vehicle Modal Styles */
-.add-vehicle-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    padding: 20px;
-}
-
-.add-vehicle-modal {
-    background: white;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 900px;
-    max-height: 90vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-}
-
-.add-vehicle-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 24px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.add-vehicle-header h2 {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0;
-}
-
-.add-vehicle-header .close-btn {
-    width: 32px;
-    height: 32px;
-    border: none;
-    background: #f1f5f9;
-    border-radius: 8px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #64748b;
-    transition: all 0.2s;
-}
-
-.add-vehicle-header .close-btn:hover {
-    background: #e2e8f0;
-    color: #1a1a1a;
-}
-
-.add-vehicle-content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    padding: 24px;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.add-vehicle-left,
-.add-vehicle-right {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.form-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 20px;
-}
-
-.card-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0 0 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.form-group {
-    margin-bottom: 16px;
-    flex: 1;
-}
-
-.form-group:last-child {
-    margin-bottom: 0;
-}
-
-.form-group label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: #475569;
-    margin-bottom: 6px;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #1a1a1a;
-    background: white;
-    transition: all 0.2s;
-    box-sizing: border-box;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-    color: #94a3b8;
-}
-
-.form-group select {
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    padding-right: 36px;
-}
-
-.form-group textarea {
-    min-height: 80px;
-    resize: vertical;
-}
-
-.form-row {
-    display: flex;
-    gap: 12px;
-}
-
-.mt-12 {
-    margin-top: 12px;
-}
-
-.photo-upload-area {
-    border: 2px dashed #cbd5e1;
-    border-radius: 10px;
-    padding: 32px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.photo-upload-area:hover {
-    border-color: #3b82f6;
-    background: #f8fafc;
-}
-
-.upload-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-.upload-placeholder p {
-    margin: 0;
-    font-size: 14px;
-    color: #475569;
-    font-weight: 500;
-}
-
-.upload-placeholder span {
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-.photo-preview {
-    position: relative;
-    width: 100%;
-    max-width: 200px;
-}
-
-.photo-preview img {
-    width: 100%;
-    border-radius: 8px;
-    object-fit: cover;
-}
-
-.photo-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.photo-preview:hover .photo-overlay {
-    opacity: 1;
-}
-
-.photo-overlay span {
-    color: white;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.add-vehicle-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 20px 24px;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
-}
-
-.discard-btn {
-    padding: 10px 20px;
-    border: 1px solid #cbd5e1;
-    background: white;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 500;
-    color: #475569;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.discard-btn:hover {
-    border-color: #94a3b8;
-    color: #1a1a1a;
-}
-
-.store-btn {
-    padding: 10px 24px;
-    border: none;
-    background: #3b82f6;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    color: white;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.store-btn:hover {
-    background: #2563eb;
-}
-
-@media (max-width: 768px) {
-    .add-vehicle-content {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-row {
-        flex-direction: column;
-        gap: 0;
-    }
-    
-    .add-vehicle-footer {
-        flex-direction: column;
-    }
-    
-    .discard-btn,
-    .store-btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-</style>

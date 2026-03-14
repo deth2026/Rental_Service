@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
 import userService from '@/services/userService.js'
+import CommonFooter from '../../components/CommonFooter.vue'
 
 const styles = useCssModule()
 
@@ -561,6 +562,9 @@ onMounted(fetchProfile)
         </div>
 
     </div>
+
+    <!-- Common Footer -->
+    <CommonFooter />
 </template>
 
 <style module>
@@ -709,9 +713,7 @@ onMounted(fetchProfile)
     margin-top: 3px;
 }
 
-.text-blue {
-    color: var(--color-primary);
-}
+
 
 /* ─── Avatar Row ───────────────────────────────────────────── */
 .avatar-row {

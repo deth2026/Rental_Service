@@ -5,10 +5,14 @@ import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/user/Dashboard.vue';
-import SettingUser from '../views/user/Setting_user.vue';
+import UserDashboard from '../views/User/Dashboard.vue';
+import UserBookings from '../views/User/Bookings.vue';
+import PromotionView from '../views/User/Promotion.vue';
+import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
+import ShopVehicles from '../views/User/ShopVehicles.vue';
+import VehiclesByShop from '../views/User/VehiclesByShop.vue';
+import ViewDetail from '../views/User/ViewDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -66,12 +70,24 @@ const router = createRouter({
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/bookings',
+      name: 'user-bookings',
+      component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/user/profile',
       name: 'user-profile',
       component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/promotions',
+      name: 'promotions',
+      component: PromotionView,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
@@ -86,10 +102,22 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] }
     },
     {
+      path: '/vehicles',
+      name: 'vehicles-by-shop',
+      component: VehiclesByShop,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
       path: '/vehicles/:id',
       name: 'vehicle-detail',
-      component: VehicleDetail,
+      component: ViewDetail,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
+    },
+    {
+      path: '/shop/:id/vehicles',
+      name: 'shop-vehicles',
+      component: ShopVehicles,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     }
   ]
 });
@@ -146,4 +174,3 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
-

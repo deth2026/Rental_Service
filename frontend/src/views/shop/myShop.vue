@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { shopApi } from '@/services/api'
+import '../../css/Myshop.css'
 
 const shop = ref(null)
 const ownerName = ref('')
@@ -17,14 +18,23 @@ const shopImageFile = ref(null)
 const shopImagePreview = ref('')
 const shopImageInputRef = ref(null)
 const isShopImageDragOver = ref(false)
-const isDisplayImageBroken = ref(false)
+const changeImageInputRef = ref(null)
+const isUpdatingImage = ref(false)
 
 const createForm = reactive({
   name: '',
   phone: '',
   description: '',
   address: '',
+  location: '',
+  latitude: '',
+  longitude: '',
   status: 'active',
+  font: 'Modern Sans-serif',
+  primary_color: '#2563eb',
+  accent_color: '#10b981',
+  instagram: '',
+  facebook: '',
   img_url: ''
 })
 const fieldErrors = reactive({
@@ -35,47 +45,16 @@ const fieldErrors = reactive({
   description: ''
 })
 
-const shopImageSource = computed(() => {
-  const image = shop.value?.img_url || shop.value?.image_url || shop.value?.image || shop.value?.shop_image || ''
-  if (!image) return ''
-  if (/^https?:\/\//.test(String(image)) || String(image).startsWith('data:')) return String(image)
-  const normalized = String(image).replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
-})
+const colorPalette = ['#2563eb', '#0ea5e9', '#10b981', '#f97316', '#f43f5e', '#a855f7', '#fbbf24', '#94a3b8']
+const accentPalette = ['#111827', '#1f2937', '#4c1d95', '#0f172a', '#1d4ed8']
+const fontOptions = ['Modern Sans-serif', 'Classic Serif', 'Minimalist', 'Bold Display']
 
-const displayShopImage = computed(() => {
-  if (isDisplayImageBroken.value) return ''
-  return shopImageSource.value
-})
-
-// store the actual File object separately so we can send multipart data
-const selectedImage = ref(null)
-
-// Handle image upload
-const onImageUpload = (event) => {
-  const file = event.target.files?.[0]
-  if (file) {
-    selectedImage.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      createForm.img_url = e.target?.result || ''
-    }
-    reader.readAsDataURL(file)
-  }
+const setPrimaryColor = (color) => {
+  createForm.primary_color = color
 }
 
-
-const onImageDrop = (event) => {
-  const file = event.dataTransfer?.files?.[0]
-  if (file && file.type.startsWith('image/')) {
-    selectedImage.value = file
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      createForm.img_url = e.target?.result || ''
-    }
-    reader.readAsDataURL(file)
-  }
+const setAccentColor = (color) => {
+  createForm.accent_color = color
 }
 
 const getCachedShop = (ownerId) => {
@@ -185,7 +164,15 @@ const resetForm = () => {
   createForm.phone = ''
   createForm.description = ''
   createForm.address = ''
+  createForm.location = ''
+  createForm.latitude = ''
+  createForm.longitude = ''
   createForm.status = 'active'
+  createForm.font = fontOptions[0]
+  createForm.primary_color = colorPalette[0]
+  createForm.accent_color = accentPalette[0]
+  createForm.instagram = ''
+  createForm.facebook = ''
   createForm.img_url = ''
   fieldErrors.name = ''
   fieldErrors.status = ''
@@ -193,7 +180,6 @@ const resetForm = () => {
   fieldErrors.phone = ''
   fieldErrors.description = ''
   shopImageFile.value = null
-  selectedImage.value = null
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value)
     shopImagePreview.value = ''
@@ -242,6 +228,7 @@ const applyShopImageFile = (file) => {
   }
   selectedImage.value = file
   shopImageFile.value = file
+  createForm.img_url = ''
   shopImagePreview.value = URL.createObjectURL(file)
   // File upload takes priority over manual URL input.
   createForm.img_url = ''
@@ -293,6 +280,71 @@ const closeCreateModal = () => {
   error.value = ''
 }
 
+const triggerChangeImagePicker = () => {
+  if (changeImageInputRef.value) {
+    changeImageInputRef.value.value = ''
+    changeImageInputRef.value.click()
+  }
+}
+
+const updateShopImage = async (file) => {
+  if (!shop.value?.id) return
+  if (!file || !file.type.startsWith('image/')) {
+    error.value = 'Please select a valid image file.'
+    return
+  }
+
+  isUpdatingImage.value = true
+  error.value = ''
+
+  try {
+    const payload = new FormData()
+    payload.append('img_url', file)
+
+    const { data } = await shopApi.update(shop.value.id, payload)
+    const updatedShop = data?.data || data || null
+    if (updatedShop && typeof updatedShop === 'object') {
+      shop.value = updatedShop
+      setCachedShop(getUserId(), updatedShop)
+    }
+    await loadMyShop()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Failed to update shop image.'
+    console.error('Update shop image error', e)
+  } finally {
+    isUpdatingImage.value = false
+  }
+}
+
+const onChangeShopImage = async (event) => {
+  const file = event.target.files?.[0] || null
+  await updateShopImage(file)
+}
+
+const removeShopImage = async () => {
+  if (!shop.value?.id) return
+
+  isUpdatingImage.value = true
+  error.value = ''
+
+  try {
+    const payload = new FormData()
+    payload.append('remove_img', '1')
+    const { data } = await shopApi.update(shop.value.id, payload)
+    const updatedShop = data?.data || data || null
+    if (updatedShop && typeof updatedShop === 'object') {
+      shop.value = updatedShop
+      setCachedShop(getUserId(), updatedShop)
+    }
+    await loadMyShop()
+  } catch (e) {
+    error.value = e?.response?.data?.message || 'Failed to delete shop image.'
+    console.error('Delete shop image error', e)
+  } finally {
+    isUpdatingImage.value = false
+  }
+}
+
 const createShop = async () => {
   if (!validateCreateForm()) {
     error.value = 'Please fill all required fields correctly.'
@@ -305,22 +357,28 @@ const createShop = async () => {
   try {
     let payload
     // if an image file has been selected, use FormData to send multipart request
-    if (selectedImage.value) {
+    if (shopImageFile.value) {
       payload = new FormData()
       payload.append('owner_id', getUserId())
       payload.append('name', createForm.name.trim())
       payload.append('description', createForm.description.trim())
       payload.append('address', createForm.address.trim())
+      if (createForm.location) payload.append('location', createForm.location.trim())
+      if (createForm.latitude) payload.append('latitude', createForm.latitude)
+      if (createForm.longitude) payload.append('longitude', createForm.longitude)
       payload.append('phone', createForm.phone.trim())
       payload.append('status', createForm.status)
       // the backend expects the field name img_url
-      payload.append('img_url', selectedImage.value)
+      payload.append('img_url', shopImageFile.value)
     } else {
       payload = {
         owner_id: getUserId(),
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
+        location: createForm.location.trim() || null,
+        latitude: createForm.latitude || null,
+        longitude: createForm.longitude || null,
         phone: createForm.phone.trim(),
         status: createForm.status,
         img_url: createForm.img_url || null
@@ -380,28 +438,54 @@ onBeforeUnmount(() => {
       <p>Click Create Shop and fill in your shop information.</p>
     </div>
 
-    <div v-else class="shop-card">
-      <!-- Shop Image - Small profile style -->
-      <div class="shop-header-row">
-        <div class="shop-image-section" v-if="displayShopImage">
-          <img :src="displayShopImage" alt="Shop Image" class="shop-cover-image" @error="onDisplayShopImageError" />
-        </div>
-        <div class="shop-image-section" v-else>
-          <div class="shop-cover-placeholder">
-            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <polyline points="21 15 16 10 5 21"></polyline>
-            </svg>
+      <div v-else class="shop-card">
+        <!-- Shop Image - Small profile style -->
+        <div class="shop-header-row">
+          <div class="shop-image-section">
+            <div class="shop-avatar-stack">
+              <img v-if="shop.img_url" :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
+              <div v-else class="shop-cover-placeholder">
+                <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                  <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+              </div>
+            </div>
+            <input
+              ref="changeImageInputRef"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden-file-input"
+              @change="onChangeShopImage"
+            />
+            <div class="shop-image-actions">
+              <button
+                type="button"
+                class="change-image-btn"
+                :disabled="isUpdatingImage"
+                @click="triggerChangeImagePicker"
+              >
+                {{ isUpdatingImage ? 'Updating...' : 'Change Image' }}
+              </button>
+              <button
+                v-if="shop.img_url"
+                type="button"
+                class="delete-image-btn"
+                :disabled="isUpdatingImage"
+                @click="removeShopImage"
+              >
+                Delete Image
+              </button>
+            </div>
           </div>
-        </div>
-        <div class="shop-title-row">
-          <h2>{{ shop.name || 'My Shop' }}</h2>
-          <span :class="['status-badge', (shop.status || 'inactive').toLowerCase()]">
+          <span class="shop-status-pill" :class="(shop.status || 'inactive').toLowerCase()">
             {{ shop.status || 'inactive' }}
           </span>
         </div>
-      </div>
+      <p v-if="error && !showCreateModal" class="error-text" style="margin: 10px 0 0">
+        {{ error }}
+      </p>
 
       <div class="shop-grid">
         <div class="field"><b>Shop Name</b><span>{{ shop.name || 'N/A' }}</span></div>
@@ -420,51 +504,43 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="showCreateModal" class="modal-overlay" @click.self="closeCreateModal">
-      <div class="modal-card">
-        <div class="modal-header">
-          <div class="modal-title-wrap">
-            <h3>Create Shop</h3>
+      <div class="modal-card create-shop-modal">
+        <div class="modal-header create-shop-header">
+          <div class="step-bar">
+            <span class="step active"></span>
+            <span class="step"></span>
           </div>
+          <h3>Create Your Shop</h3>
           <button class="close-btn" @click="closeCreateModal" aria-label="Close">x</button>
         </div>
 
-        <form class="shop-form" @submit.prevent="createShop">
-          <div class="form-grid">
-            <label>
-              Shop Name *
-              <input v-model="createForm.name" required type="text" placeholder="Enter shop name" @input="clearFieldError('name')" />
-              <small v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name }}</small>
-            </label>
-
-            <label>
-              Status *
-              <select v-model="createForm.status" @change="clearFieldError('status')">
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-              </select>
-              <small v-if="fieldErrors.status" class="field-error">{{ fieldErrors.status }}</small>
-            </label>
-
-            <label class="wide">
-              Address *
-              <input v-model="createForm.address" required type="text" placeholder="Enter address" @input="clearFieldError('address')" />
-              <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
-            </label>
-
-            <label>
-              Phone *
-              <input v-model="createForm.phone" required type="text" placeholder="Enter phone number" @input="clearFieldError('phone')" />
-              <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
-            </label>
-
-            <label class="wide">
-              Description *
-              <textarea v-model="createForm.description" rows="3" placeholder="Describe your shop" @input="clearFieldError('description')"></textarea>
-              <small v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</small>
-            </label>
-
-            <label class="wide">
-              Shop Image
+        <form class="create-shop-form" @submit.prevent="createShop">
+          <div class="create-grid">
+            <section
+              class="photo-panel"
+              :class="{ dragging: isShopImageDragOver }"
+              @dragover.prevent="isShopImageDragOver = true"
+              @dragleave.prevent="isShopImageDragOver = false"
+              @drop.prevent="onShopImageDrop"
+            >
+              <div class="photo-circle">
+                <img v-if="shopImagePreview" :src="shopImagePreview" alt="Shop preview" />
+                <div v-else class="photo-placeholder">
+                  <svg viewBox="0 0 80 80" fill="none" stroke="#94a3b8" stroke-width="1.6">
+                    <rect x="8" y="18" width="64" height="44" rx="14" />
+                    <path d="M16 38h48" />
+                    <circle cx="34" cy="31" r="5" />
+                    <path d="M34 45h12" />
+                  </svg>
+                </div>
+              </div>
+              <div class="photo-note">
+                <p>Shop Profile Image</p>
+                <button type="button" class="upload-btn" @click="triggerShopImagePicker">
+                  {{ shopImageFile ? 'Change Photo' : 'Upload Photo' }}
+                </button>
+                <p class="upload-help">Drag and drop or click to upload your shop's logo (PNG, JPG, WEBP).</p>
+              </div>
               <input
                 ref="shopImageInputRef"
                 type="file"
@@ -472,29 +548,137 @@ onBeforeUnmount(() => {
                 class="hidden-file-input"
                 @change="onShopImageChange"
               />
-              <div
-                class="shop-upload-dropzone"
-                :class="{ dragging: isShopImageDragOver }"
-                @click="triggerShopImagePicker"
-                @dragover.prevent="isShopImageDragOver = true"
-                @dragleave.prevent="isShopImageDragOver = false"
-                @drop.prevent="onShopImageDrop"
-              >
-                <p>{{ shopImageFile ? 'Change shop image' : 'Click to upload or drag image here' }}</p>
-                <span>PNG / JPG / WEBP</span>
-              </div>
-              <div v-if="shopImagePreview" class="image-preview-wrap" style="margin-top:8px">
-                <img :src="shopImagePreview" alt="Shop preview" class="image-preview" />
-              </div>
-            </label>
+            </section>
 
+            <section class="brand-panel">
+              <div class="section-title-row">
+                <div>
+                  <p class="section-kicker">Customization & Branding</p>
+                  <h4>Shop Color Palette</h4>
+                </div>
+                <p class="section-subtext">Pick a tone for your store front</p>
+              </div>
+
+              <div class="color-group">
+                <div class="color-label">Primary Colour</div>
+                <div class="color-palette-grid">
+                  <button
+                    v-for="color in colorPalette"
+                    :key="`primary-${color}`"
+                    type="button"
+                    class="color-chip"
+                    :style="{ backgroundColor: color }"
+                    :class="{ selected: createForm.primary_color === color }"
+                    @click="setPrimaryColor(color)"
+                  ></button>
+                </div>
+              </div>
+
+              <div class="color-group">
+                <div class="color-label">Accent Colour</div>
+                <div class="color-palette-grid">
+                  <button
+                    v-for="color in accentPalette"
+                    :key="`accent-${color}`"
+                    type="button"
+                    class="color-chip accent"
+                    :style="{ backgroundColor: color }"
+                    :class="{ selected: createForm.accent_color === color }"
+                    @click="setAccentColor(color)"
+                  ></button>
+                </div>
+              </div>
+
+              <label class="font-select">
+                <span>Shop Font</span>
+                <select v-model="createForm.font">
+                  <option v-for="font in fontOptions" :key="font" :value="font">{{ font }}</option>
+                </select>
+              </label>
+
+              <label class="about-field">
+                <span>About Us Section</span>
+                <textarea
+                  v-model="createForm.description"
+                  rows="3"
+                  placeholder="Share your passion and the story behind your shop"
+                  @input="clearFieldError('description')"
+                ></textarea>
+                <small v-if="fieldErrors.description" class="field-error">{{ fieldErrors.description }}</small>
+              </label>
+
+              <div class="basic-info-grid">
+                <label>
+                  <span>Shop Name *</span>
+                  <input
+                    v-model="createForm.name"
+                    required
+                    type="text"
+                    placeholder="Enter shop name"
+                    @input="clearFieldError('name')"
+                  />
+                  <small v-if="fieldErrors.name" class="field-error">{{ fieldErrors.name }}</small>
+                </label>
+
+                <label>
+                  <span>Status *</span>
+                  <select v-model="createForm.status" @change="clearFieldError('status')">
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                  <small v-if="fieldErrors.status" class="field-error">{{ fieldErrors.status }}</small>
+                </label>
+
+                <label class="wide">
+                  <span>Address *</span>
+                  <input
+                    v-model="createForm.address"
+                    required
+                    type="text"
+                    placeholder="Enter address"
+                    @input="clearFieldError('address')"
+                  />
+                  <small v-if="fieldErrors.address" class="field-error">{{ fieldErrors.address }}</small>
+                </label>
+
+                <label>
+                  <span>Phone *</span>
+                  <input
+                    v-model="createForm.phone"
+                    required
+                    type="text"
+                    placeholder="Enter phone number"
+                    @input="clearFieldError('phone')"
+                  />
+                  <small v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</small>
+                </label>
+              </div>
+
+              <div class="social-section">
+                <p>Social Links</p>
+                <label>
+                  <span>Instagram</span>
+                  <div class="addon-input">
+                    <span>@</span>
+                    <input v-model="createForm.instagram" type="text" placeholder="yourhandle" />
+                  </div>
+                </label>
+                <label>
+                  <span>Facebook</span>
+                  <div class="addon-input">
+                    <span>facebook.com/</span>
+                    <input v-model="createForm.facebook" type="text" placeholder="yourhandle" />
+                  </div>
+                </label>
+              </div>
+            </section>
           </div>
 
-          <p v-if="error" class="error-text">{{ error }}</p>
+          <p v-if="error" class="error-text form-error">{{ error }}</p>
 
-          <div class="actions">
-            <button type="button" class="btn-cancel" @click="closeCreateModal">Cancel</button>
-            <button type="submit" class="btn-submit" :disabled="loading">
+          <div class="form-actions">
+            <button type="button" class="ghost-btn" @click="closeCreateModal">Cancel</button>
+            <button type="submit" class="primary-btn" :disabled="loading">
               {{ loading ? 'Creating...' : 'Create Shop' }}
             </button>
           </div>
@@ -530,657 +714,3 @@ onBeforeUnmount(() => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.myshop-page {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px;
-  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-  border-radius: 16px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-header h1 {
-  margin: 0;
-  font-size: 30px;
-  color: #1e293b;
-}
-
-.create-btn {
-  border: 0;
-  border-radius: 999px;
-  background: #1d4ed8;
-  color: #fff;
-  padding: 11px 20px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(29, 78, 216, 0.25);
-}
-
-
-.create-btn:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.empty-state {
-  border: 1px dashed #bfdbfe;
-  background: #f0f9ff;
-  border-radius: 16px;
-  padding: 48px 20px;
-  text-align: center;
-}
-
-.empty-state h3 {
-  margin: 0 0 8px;
-  color: #0f172a;
-}
-
-.empty-state p {
-  margin: 0;
-  color: #475569;
-}
-
-.shop-card {
-  border: 1px solid #dbeafe;
-  background: #fff;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-}
-
-.card-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.card-title-row h2 {
-  margin: 0;
-  font-size: 22px;
-  color: #0f172a;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 999px;
-  padding: 7px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: capitalize;
-  border: 1px solid transparent;
-}
-
-.status-badge::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.status-badge.active {
-  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-  color: #166534;
-  border-color: #86efac;
-}
-
-.status-badge.active::before {
-  background: #16a34a;
-  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15);
-}
-
-.status-badge.inactive {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-color: #fca5a5;
-}
-
-.status-badge.inactive::before {
-  background: #dc2626;
-  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
-}
-
-.status-text {
-  font-weight: 700;
-  text-transform: capitalize;
-}
-
-.status-text.active {
-  color: #15803d;
-}
-
-.status-text.inactive {
-  color: #b91c1c;
-}
-
-.shop-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.field {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #ffffff;
-}
-
-.field b {
-  font-size: 12px;
-  color: #64748b;
-}
-
-.field span {
-  color: #0f172a;
-  font-size: 14px;
-  word-break: break-word;
-}
-
-.field-wide {
-  grid-column: span 2;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 1000;
-}
-
-.modal-card {
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-  border-radius: 22px;
-  overflow: hidden;
-  border: 1px solid #dbeafe;
-  box-shadow: 0 30px 70px rgba(2, 6, 23, 0.35);
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 18px;
-  border-bottom: 1px solid #dbeafe;
-  background: linear-gradient(90deg, #ecfeff 0%, #eff6ff 100%);
-}
-
-.modal-header h2 {
-  margin: 0;
-  color: #0f172a;
-  font-size: 36px;
-  line-height: 1.05;
-}
-
-.modal-title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.modal-kicker {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #0ea5a0;
-}
-
-.close-btn {
-  border: 1px solid #bfdbfe;
-  background: #ffffff;
-  color: #0f172a;
-  border-radius: 12px;
-  width: 38px;
-  height: 38px;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.close-btn:hover {
-  background: #eff6ff;
-  border-color: #93c5fd;
-}
-
-.shop-form {
-  padding: 20px;
-  overflow-y: auto;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-}
-
-.form-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.field-error {
-  margin-top: -2px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #dc2626;
-}
-
-.upload-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 14px;
-  color: #334155;
-  font-weight: 600;
-}
-
-.hidden-file-input {
-  display: none;
-}
-
-.shop-upload-dropzone {
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 18px;
-  background: #f8fafc;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.2s ease;
-}
-
-.shop-upload-dropzone p {
-  margin: 0;
-  font-size: 14px;
-  color: #1e293b;
-}
-
-.shop-upload-dropzone span {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-.shop-upload-dropzone:hover,
-.shop-upload-dropzone.dragging {
-  border-color: #22d3ee;
-  background: #ecfeff;
-}
-
-.form-grid input,
-.form-grid select,
-.form-grid textarea {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 13px;
-  width: 100%;
-  box-sizing: border-box;
-  background: #f8fafc;
-  transition: all 0.2s ease;
-}
-
-.image-preview-wrap {
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 10px;
-  background: #f8fafc;
-}
-
-.image-preview {
-  width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  border-radius: 10px;
-  display: block;
-}
-
-.form-grid input:focus,
-.form-grid select:focus,
-.form-grid textarea:focus {
-  outline: none;
-  border-color: #22d3ee;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.16);
-}
-
-.wide {
-  grid-column: span 2;
-}
-
-.image-upload-area {
-  border: 2px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 12px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  min-height: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 400px; /* constrain width so box doesn’t stretch full column */
-  margin: 0 auto;
-}
-
-/* when a preview is showing reduce padding even more */
-.image-upload-area.has-preview {
-  padding: 8px;
-  min-height: auto;
-}
-
-.image-upload-area:hover {
-  border-color: #3b82f6;
-  background: #f8fafc;
-}
-
-.upload-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.upload-placeholder p {
-  margin: 0;
-  font-size: 14px;
-  color: #475569;
-  font-weight: 500;
-}
-
-.upload-placeholder span {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.image-preview {
-  position: relative;
-  width: 100%;
-  max-width: 80px;
-}
-
-.image-preview img {
-  width: 100%;
-  height: 40px;
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-.image-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.image-preview:hover .image-overlay {
-  opacity: 1;
-}
-
-.image-overlay span {
-  color: white;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.error-text {
-  margin: 0;
-  color: #dc2626;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 16px;
-  background: transparent;
-  border-top: 0;
-  padding-top: 0;
-}
-
-.btn-cancel,
-.btn-submit {
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.btn-cancel {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
-}
-
-.btn-cancel:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-}
-
-.btn-submit {
-  border: 1px solid #2563eb;
-  background: #2563eb;
-  color: #fff;
-  min-width: 140px;
-}
-
-.btn-submit:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-}
-
-.btn-submit:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.success-toast {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  z-index: 1200;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 240px;
-  max-width: min(360px, calc(100vw - 24px));
-  background: #d1fae5;
-  border-left: 4px solid #10b981;
-  border-radius: 8px;
-  padding: 14px 16px;
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.3s ease;
-}
-
-.toast-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(16, 185, 129, 0.2);
-  color: #065f46;
-  flex: 0 0 28px;
-}
-
-.toast-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.alert-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 1200;
-}
-
-.alert-modal {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px;
-  max-width: 360px;
-  width: 100%;
-  text-align: center;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
-}
-
-.alert-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 16px;
-  background: #f4b3b4;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.alert-icon svg {
-  width: 28px;
-  height: 28px;
-  color: #f50b0b;
-}
-
-.alert-modal h3 {
-  margin: 0 0 8px;
-  font-size: 20px;
-  color: #0f172a;
-}
-
-.alert-modal p {
-  margin: 0 0 20px;
-  color: #64748b;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.alert-btn {
-  background: #1d4ed8;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 32px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.alert-btn:hover {
-  background: #1e40af;
-}
-
-.toast-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.toast-content strong {
-  display: block;
-  font-size: 14px;
-  color: #0f172a;
-}
-
-.toast-content p {
-  margin: 0;
-  font-size: 13px;
-  color: #065f46;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@media (max-width: 760px) {
-  .myshop-page {
-    padding: 16px;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .shop-grid,
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .field-wide,
-  .wide {
-    grid-column: span 1;
-  }
-
-  .shop-form {
-    padding: 14px;
-  }
-
-  .modal-header {
-    padding: 16px;
-  }
-
-  .modal-header h2 {
-    font-size: 28px;
-  }
-}
-</style>

@@ -36,7 +36,11 @@ api.interceptors.request.use((config) => {
 
 // Vehicle API calls
 export const vehicleApi = {
-  getAll: () => api.get('/vehicles'),
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `/vehicles?${queryString}` : '/vehicles';
+    return api.get(url);
+  },
   getById: (id) => api.get(`/vehicles/${id}`),
   create: (data) => api.post('/vehicles', data),
   update: (id, data) => api.put(`/vehicles/${id}`, data),
@@ -48,7 +52,13 @@ export const shopApi = {
   getAll: () => api.get('/shops'),
   getById: (id) => api.get(`/shops/${id}`),
   create: (data) => api.post('/shops', data),
-  update: (id, data) => api.put(`/shops/${id}`, data),
+  update: (id, data) => {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      data.append('_method', 'PUT');
+      return api.post(`/shops/${id}`, data);
+    }
+    return api.put(`/shops/${id}`, data);
+  },
   delete: (id) => api.delete(`/shops/${id}`)
 };
 

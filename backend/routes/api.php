@@ -25,6 +25,12 @@ Route::post('/auth/login', [UserController::class, 'login']);
 Route::post('/users/register', [AuthController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
 
+// Auth routes with /auth prefix
+Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/logout', [AuthController::class, 'logout']);
+Route::get('/auth/me', [AuthController::class, 'me']);
+
 Route::middleware('auth:sanctum')->get('/auth-user', function (Request $request) {
     return $request->user();
 });
@@ -38,20 +44,24 @@ Route::get('/test', function () {
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
 });
 
 // Admin only routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('users', UserController::class)->except(['create', 'edit']);
     Route::apiResource('categories', CategoryController::class);
-    Route::apiResource('cities', CityController::class);
+    Route::apiResource('cities', CityController::class)->except(['index']);
 });
+
+// Public cities endpoint - needed for dropdowns in shop creation forms
+Route::get('/cities', [CityController::class, 'index']);
+
+// Public coupons listing for customer promotions page
+Route::get('/coupons', [CouponController::class, 'index']);
 
 // Admin + Shop Owner shared routes (coupons & loyalty points management)
 Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () {
-    Route::apiResource('coupons', CouponController::class);
+    Route::apiResource('coupons', CouponController::class)->except(['index']);
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
@@ -74,9 +84,17 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
-// Shop owner routes
-Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
-    Route::apiResource('vehicles', VehicleController::class);
+// Public vehicle routes (for customers to view vehicles)
+Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
+
+// Protected vehicle routes - require authentication for listing vehicles
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/vehicles', [VehicleController::class, 'index']);
+    
+    // Shop owner can create, update, delete their own vehicles
+    Route::post('/vehicles', [VehicleController::class, 'store']);
+    Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update']);
+    Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
     Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
     Route::apiResource('bookings', BookingController::class);
     Route::apiResource('booking-status-logs', BookingStatusLogController::class);
@@ -88,5 +106,6 @@ Route::middleware(['auth:sanctum', 'role:shop_owner'])->group(function () {
 
 // Customer routes (accessible by all authenticated users)
 Route::middleware('auth:sanctum')->group(function () {
-    // Add customer-specific routes here if needed
+    // Customer can view their own bookings
+    Route::get('/my-bookings', [BookingController::class, 'customerBookings']);
 });

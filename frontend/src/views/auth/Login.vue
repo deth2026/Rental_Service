@@ -205,9 +205,10 @@ const handleLogin = async () => {
 
   try {
     const data = await loginUser({
-      email: form.email.trim().toLowerCase(),
+      email: form.email.trim(),
       password: form.password,
     });
+
     const token = data?.token || data?.access_token;
     const user = data?.user || data?.data?.user;
     
@@ -229,23 +230,14 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('Login error:', error);
     const responseData = error?.response?.data;
-    const responseText = typeof responseData === 'string' ? responseData : '';
-    const responseMessage = typeof responseData === 'object' ? responseData?.message || '' : '';
     const firstField = responseData?.errors ? Object.keys(responseData.errors)[0] : null;
-    const fieldMessage = firstField ? responseData?.errors?.[firstField]?.[0] : null;
-    const proxyConnectionError =
-      responseText.includes('ECONNREFUSED') ||
-      responseText.includes('proxy error') ||
-      responseText.includes('connect ECONNREFUSED') ||
-      responseMessage.includes('ECONNREFUSED') ||
-      responseMessage.includes('proxy error') ||
-      responseMessage.includes('connect ECONNREFUSED') ||
-      error?.message === 'Failed to fetch';
-    generalError.value = fieldMessage
-      || responseData?.message
-      || (proxyConnectionError ? 'Cannot reach backend server. Start Laravel server on http://127.0.0.1:8000.' : '')
-      || error.message
-      || 'Invalid email or password';
+    const fieldMessage = firstField
+      ? Array.isArray(responseData.errors[firstField])
+        ? responseData.errors[firstField][0]
+        : responseData.errors[firstField]
+      : '';
+    const apiMessage = fieldMessage || responseData?.message;
+    generalError.value = apiMessage || error.message || 'Invalid email or password';
   } finally {
     isLoading.value = false;
   }
