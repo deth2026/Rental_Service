@@ -4,28 +4,25 @@
       <main class="panel">
         <section class="content-card">
           <div class="section-head">
-            <p class="section-title">{{ t('setting Ownershop') }}</p>
-            <button type="button" class="btn btn-logout creative-logout-btn" @click="openLogoutConfirm">
-              <span class="logout-icon">↪</span>
-              <span>{{ t('logout') }}</span>
-            </button>
-          </div>
-
-          <div class="avatar-row">
-            <img
-              :key="displayImageUrl"
-              :src="displayImageUrl"
-              alt="Profile photo"
-              class="profile-avatar"
-              @error="onAvatarError"
-            />
-            <div class="avatar-actions">
-              <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
-                {{ avatarUploadLoading ? t('uploading') : t('uploadProfile') }}
-              </button>
-              <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
-                {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
-              </button>
+            <p class="section-title">{{ t('Ownershop setting') }}</p>
+            <div class="avatar-panel">
+              <div class="avatar-row">
+                <img
+                  :key="displayImageUrl"
+                  :src="displayImageUrl"
+                  alt="Profile photo"
+                  class="profile-avatar"
+                  @error="onAvatarError"
+                />
+                <div class="avatar-actions">
+                  <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
+                    {{ avatarUploadLoading ? t('uploading') : t('uploadProfile') }}
+                  </button>
+                  <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
+                    {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <input ref="avatarInputRef" type="file" accept="image/*" class="sr-only-file" @change="onAvatarChange" />
@@ -446,7 +443,6 @@ const onAvatarChange = (event) => {
   localPreviewUrl.value = URL.createObjectURL(file);
   avatarFile.value = file;
   avatarLoadFailed.value = false;
-  success.value = 'Image selected. Click Save Setting to upload.';
   error.value = '';
 };
 

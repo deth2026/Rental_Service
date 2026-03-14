@@ -15,6 +15,7 @@ const shop = ref(null)
 const isLoading = ref(true)
 const error = ref('')
 const isLoadingShop = ref(false)
+const shopImageError = ref(false)
 
 // Get shop from localStorage or use default
 const getShopFromStorage = () => {
@@ -140,9 +141,22 @@ const fetchVehicles = async () => {
   error.value = ''
 
   try {
-    const response = await vehicleApi.getAll({ shop_id: shopId.value })
-    const data = response.data.data || response.data || []
-    vehicles.value = data.map(normalizeVehicle)
+    const allVehicles = []
+    let page = 1
+    let lastPage = 1
+
+    do {
+      const response = await vehicleApi.getAll({ shop_id: shopId.value, page })
+      const payload = response.data
+      const pageData = Array.isArray(payload) ? payload : payload?.data || []
+      allVehicles.push(...pageData.map(normalizeVehicle))
+
+      const meta = payload?.meta
+      lastPage = meta?.last_page || payload?.last_page || lastPage
+      page += 1
+    } while (page <= lastPage)
+
+    vehicles.value = allVehicles
   } catch (err) {
     console.error('Error fetching vehicles:', err)
     error.value = 'Failed to load vehicles. Please try again.'
@@ -282,17 +296,58 @@ const formatDate = (dateStr) => {
   const year = date.getFullYear()
   return `${day}/${month}/${year}`
 }
+
+const resolveShopImageUrl = (value) => {
+  if (!value || typeof value !== 'string') return ''
+  if (/^(https?:\/\/|data:|blob:)/i.test(value)) return value
+  const clean = value.replace(/^\/+/, '')
+  if (clean.startsWith('storage/')) return `${getApiOrigin()}/${clean}`
+  return `${getApiOrigin()}/storage/${clean}`
+}
+
+const shopImageUrl = computed(() => {
+  if (shopImageError.value) return ''
+  const src = shop.value?.img_url || shop.value?.image_url || shop.value?.photo || shop.value?.image || ''
+  return resolveShopImageUrl(src)
+})
+
+const onShopImageError = () => {
+  shopImageError.value = true
+}
+
+const shopInitials = computed(() => {
+  const name = shop.value?.name || 'Shop'
+  const words = String(name).trim().split(/\s+/)
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
+  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
+})
+
+const ownerNameDisplay = computed(() => shop.value?.owner_name || shop.value?.owner?.name || userDisplayName.value)
+const shopStatusLabel = computed(() => {
+  const status = shop.value?.status || 'Active'
+  const str = String(status)
+  return str.charAt(0).toUpperCase() + str.slice(1)
+})
+const createdAtDisplay = computed(() => formatDate(shop.value?.created_at || shop.value?.create_at))
+
+const getShopStatusClass = (status) => {
+  const s = String(status || '').toLowerCase()
+  if (s === 'active') return 'pill-active'
+  if (s === 'inactive' || s === 'disabled') return 'pill-inactive'
+  if (s === 'pending') return 'pill-pending'
+  return 'pill-active'
+}
 </script>
 
 <template>
   <div class="shop-vehicles-page">
     <header class="topbar">
       <div class="brand">
-        <button class="back-btn" @click="goBack">
+        <button class="back-btn" @click="goBack" aria-label="Back to shops">
           <i class="fa-solid fa-arrow-left"></i>
         </button>
         <div class="brand-icon"><i class="fa-solid fa-car" aria-hidden="true"></i></div>
-        <span>Shop Vehicles</span>
+        <span>My Shop</span>
       </div>
 
       <div class="top-actions">
@@ -307,95 +362,169 @@ const formatDate = (dateStr) => {
       </div>
     </header>
 
-    <main class="vehicles-content">
-      <div class="page-header">
-        <h1>Available Vehicles</h1>
-        <p>Browse vehicles from this shop</p>
-      </div>
-
-      <div class="filters-row" v-if="vehicles.length">
-        <div class="filter-chips">
-          <button
-            v-for="category in categoryButtons"
-            :key="category.value"
-            class="chip"
-            :class="{ active: selectedCategory === category.value }"
-            @click="selectedCategory = category.value"
-          >
-            {{ category.label }}
-          </button>
+    <main class="shop-shell">
+      <section class="shop-hero">
+        <div>
+          <p class="eyebrow">Dashboard / My Shop</p>
+          <h1>My Shop</h1>
+          <p class="subhead">Keep your shop profile up to date and manage vehicles in one place.</p>
         </div>
-        <p class="results-text">
-          {{ filteredVehicles.length }} vehicles found
-          <span v-if="shop?.name">in {{ shop.name }}</span>
-        </p>
-      </div>
+        <div class="hero-actions">
+          <button class="ghost-btn" @click="goBack">Back</button>
+          <button class="primary-btn create-btn" @click="router.push('/dashboard')">Create Shop</button>
+        </div>
+      </section>
 
-      <div v-if="isLoading" class="status-box">Loading vehicles...</div>
-      <div v-else-if="error" class="status-box error">{{ error }}</div>
-      <div v-else-if="vehicles.length === 0" class="status-box">
-        No vehicles available at this shop yet.
-      </div>
+      <section v-if="isLoadingShop" class="status-box large">Loading shop...</section>
+      <section v-else-if="!shop" class="status-box large">
+        No shop found. Create a shop to start adding vehicles.
+      </section>
 
-      <div v-else-if="filteredVehicles.length === 0" class="status-box">
-        No vehicles match this category.
-      </div>
+      <section v-else class="shop-profile-card">
+        <span class="status-pill" :class="getShopStatusClass(shop.status)">{{ shopStatusLabel }}</span>
 
-      <div v-else class="vehicles-grid">
-        <article v-for="vehicle in filteredVehicles" :key="vehicle.id" class="vehicle-card">
-          <div class="vehicle-card-image">
-            <img 
-              v-if="vehicle.imageUrl" 
-              :src="vehicle.imageUrl" 
-              :alt="vehicle.name" 
-              @error="vehicle.imageUrl = ''" 
-            />
-            <div v-else class="no-image">
-              <i class="fa-solid fa-car"></i>
-            </div>
-            <span :class="'status-badge ' + getStatusClass(vehicle.status)">
-              {{ vehicle.status }}
-            </span>
+        <div class="avatar-wrap">
+          <img
+            v-if="shopImageUrl"
+            :src="shopImageUrl"
+            alt="Shop image"
+            class="shop-avatar"
+            @error="onShopImageError"
+          />
+          <div v-else class="shop-avatar placeholder">
+            <span>{{ shopInitials }}</span>
           </div>
-          
-          <div class="vehicle-card-content">
-            <h3>{{ vehicle.name }}</h3>
-            <p class="vehicle-type">{{ vehicle.type }} - {{ vehicle.brand }} {{ vehicle.model }}</p>
-            
-            <div class="vehicle-details">
-              <div class="detail-item" v-if="vehicle.plate_number">
-                <i class="fa-solid fa-tag"></i>
-                <span>{{ vehicle.plate_number }}</span>
-              </div>
-              <div class="detail-item">
-                <i class="fa-solid fa-circle"></i>
-                <span>Status: {{ vehicle.status }}</span>
-              </div>
-              <div class="detail-item" v-if="vehicle.fuel_type">
-                <i class="fa-solid fa-gas-pump"></i>
-                <span>{{ vehicle.fuel_type }}</span>
-              </div>
-              <div class="detail-item" v-if="vehicle.transmission">
-                <i class="fa-solid fa-gear"></i>
-                <span>{{ vehicle.transmission }}</span>
-              </div>
-              <div class="detail-item" v-if="vehicle.created_at">
-                <i class="fa-solid fa-calendar-days"></i>
-                <span>Created: {{ formatDate(vehicle.created_at) }}</span>
-              </div>
-            </div>
+        </div>
 
-            <div class="vehicle-price">
-              <span class="price-amount">${{ vehicle.price_per_day }}</span>
-              <span class="price-period">/day</span>
-            </div>
+        <div class="photo-actions">
+          <button class="primary-btn">Change Image</button>
+          <button class="ghost-btn">Delete Image</button>
+        </div>
 
-            <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">
-              View Details
+        <div class="info-grid">
+          <div class="info-field">
+            <p class="label">Shop Name</p>
+            <p class="value">{{ shop.name || '—' }}</p>
+          </div>
+          <div class="info-field">
+            <p class="label">Status</p>
+            <p class="value success">{{ shopStatusLabel }}</p>
+          </div>
+          <div class="info-field">
+            <p class="label">Owner Name</p>
+            <p class="value">{{ ownerNameDisplay }}</p>
+          </div>
+          <div class="info-field">
+            <p class="label">Created</p>
+            <p class="value">{{ createdAtDisplay || '—' }}</p>
+          </div>
+          <div class="info-field wide">
+            <p class="label">Phone</p>
+            <p class="value">{{ shop.phone || '—' }}</p>
+          </div>
+          <div class="info-field wide">
+            <p class="label">Address</p>
+            <p class="value">{{ shop.address || shop.location || '—' }}</p>
+          </div>
+          <div class="info-field wide" v-if="shop.description">
+            <p class="label">Description</p>
+            <p class="value muted">{{ shop.description }}</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="vehicles-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Inventory</p>
+            <h2>Available Vehicles</h2>
+            <p class="subhead">Browse vehicles from this shop</p>
+          </div>
+          <p class="results-text">
+            {{ filteredVehicles.length }} vehicles found
+            <span v-if="shop?.name">in {{ shop.name }}</span>
+          </p>
+        </div>
+
+        <div class="filters-row" v-if="vehicles.length">
+          <div class="filter-chips">
+            <button
+              v-for="category in categoryButtons"
+              :key="category.value"
+              class="chip"
+              :class="{ active: selectedCategory === category.value }"
+              @click="selectedCategory = category.value"
+            >
+              {{ category.label }}
             </button>
           </div>
-        </article>
-      </div>
+        </div>
+
+        <div v-if="isLoading" class="status-box">Loading vehicles...</div>
+        <div v-else-if="error" class="status-box error">{{ error }}</div>
+        <div v-else-if="vehicles.length === 0" class="status-box">
+          No vehicles available at this shop yet.
+        </div>
+        <div v-else-if="filteredVehicles.length === 0" class="status-box">
+          No vehicles match this category.
+        </div>
+
+        <div v-else class="vehicles-grid">
+          <article v-for="vehicle in filteredVehicles" :key="vehicle.id" class="vehicle-card">
+            <div class="vehicle-card-image">
+              <img
+                v-if="vehicle.imageUrl"
+                :src="vehicle.imageUrl"
+                :alt="vehicle.name"
+                @error="vehicle.imageUrl = ''"
+              />
+              <div v-else class="no-image">
+                <i class="fa-solid fa-car"></i>
+              </div>
+              <span :class="'status-badge ' + getStatusClass(vehicle.status)">
+                {{ vehicle.status }}
+              </span>
+            </div>
+
+            <div class="vehicle-card-content">
+              <h3>{{ vehicle.name }}</h3>
+              <p class="vehicle-type">{{ vehicle.type }} - {{ vehicle.brand }} {{ vehicle.model }}</p>
+
+              <div class="vehicle-details">
+                <div class="detail-item" v-if="vehicle.plate_number">
+                  <i class="fa-solid fa-tag"></i>
+                  <span>{{ vehicle.plate_number }}</span>
+                </div>
+                <div class="detail-item">
+                  <i class="fa-solid fa-circle"></i>
+                  <span>Status: {{ vehicle.status }}</span>
+                </div>
+                <div class="detail-item" v-if="vehicle.fuel_type">
+                  <i class="fa-solid fa-gas-pump"></i>
+                  <span>{{ vehicle.fuel_type }}</span>
+                </div>
+                <div class="detail-item" v-if="vehicle.transmission">
+                  <i class="fa-solid fa-gear"></i>
+                  <span>{{ vehicle.transmission }}</span>
+                </div>
+                <div class="detail-item" v-if="vehicle.created_at">
+                  <i class="fa-solid fa-calendar-days"></i>
+                  <span>Created: {{ formatDate(vehicle.created_at) }}</span>
+                </div>
+              </div>
+
+              <div class="vehicle-price">
+                <span class="price-amount">${{ vehicle.price_per_day }}</span>
+                <span class="price-period">/day</span>
+              </div>
+
+              <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">
+                View Details
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
 
       <section class="map-section" v-if="shop">
         <div class="map">

@@ -1,13 +1,14 @@
+
 .shop-vehicles-page {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background: linear-gradient(180deg, #f7f9fd 0%, #f3f6ff 40%, #eef2f7 100%);
 }
 
 .topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 4rem;
+  padding: 1rem 3rem;
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: sticky;
@@ -31,6 +32,7 @@
   border-radius: 8px;
   transition: background-color 0.2s;
 }
+
 
 .back-btn:hover {
   background-color: #f0f0f0;
@@ -105,24 +107,254 @@
   background: #fecaca;
 }
 
-.vehicles-content {
-  padding: 2rem;
+.shop-shell {
+  padding: 2.5rem 3rem 3.5rem;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.page-header {
-  margin-bottom: 2rem;
+.shop-profile-card {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.page-header h1 {
-  font-size: 1.75rem;
-  color: #333;
-  margin-bottom: 0.5rem;
+.shop-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, #f5f8ff 0%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 10px 40px rgba(65, 90, 160, 0.12);
+  margin-bottom: 1.5rem;
 }
 
-.page-header p {
-  color: #666;
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #5b6b7a;
+  margin: 0 0 0.35rem;
+}
+
+.shop-hero h1 {
+  font-size: 1.8rem;
+  color: #0f172a;
+  margin: 0;
+}
+
+.subhead {
+  color: #6b7280;
+  margin: 0.25rem 0 0;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.primary-btn {
+  border: none;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff;
+  font-weight: 700;
+  padding: 0.75rem 1.35rem;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(37, 99, 235, 0.35);
+}
+
+.ghost-btn {
+  border: 1px solid #d0d7e2;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 600;
+  padding: 0.72rem 1.15rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ghost-btn:hover {
+  background: #edf1f7;
+  border-color: #c8d0df;
+}
+
+.create-btn {
+  min-width: 140px;
+}
+
+.shop-profile-card {
+  position: relative;
+  background: #fff;
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 16px 50px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e4e9f2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.75rem;
+}
+
+.status-pill {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 0.5rem 1.1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: #e2f3ff;
+  color: #0f172a;
+}
+
+.pill-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pill-inactive {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pill-pending {
+  background: #fef9c3;
+  color: #92400e;
+}
+
+.avatar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.shop-avatar {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 8px solid #f4f6fb;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.12);
+  background: #f8fafc;
+}
+
+.shop-avatar.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: #475569;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.info-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.1rem;
+}
+
+@media (min-width: 1280px) {
+  .info-grid {
+    grid-template-columns: repeat(2, minmax(420px, 1fr));
+  }
+}
+
+.info-field {
+  background: #f9fbff;
+  border: 1px solid #e4e9f2;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+}
+
+.info-field.wide {
+  grid-column: 1 / -1;
+}
+
+.info-field .label {
+  font-weight: 700;
+  color: #6b7280;
+  margin: 0 0 0.25rem;
+}
+
+.info-field .value {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  word-break: break-word;
+}
+
+.info-field .value.success {
+  color: #16a34a;
+}
+
+.info-field .value.muted {
+  color: #475569;
+  font-weight: 500;
+}
+
+.filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 1px solid #d8dee7;
+  background: white;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.chip.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+
+.results-text {
+  color: #475569;
+  font-weight: 600;
 }
 
 .status-box {
@@ -134,15 +366,72 @@
   font-size: 1.1rem;
 }
 
+.status-box.large {
+  padding: 3.25rem;
+  margin-bottom: 1.5rem;
+}
+
 .status-box.error {
   color: #dc2626;
   background: #fee2e2;
+}
+
+.vehicles-section {
+  background: #fff;
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem 2rem;
+  border: 1px solid #e4e9f2;
+  box-shadow: 0 12px 45px rgba(15, 23, 42, 0.07);
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-head h2 {
+  margin: 0;
+  color: #0f172a;
 }
 
 .vehicles-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 1.5rem;
+}
+
+.map-section {
+  margin-top: 2rem;
+}
+
+.map {
+  position: relative;
+  height: 340px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d8dee7;
+}
+
+.map-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.open-map-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8dee7;
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .vehicle-card {
@@ -280,11 +569,29 @@
     padding: 1rem;
   }
 
-  .vehicles-content {
-    padding: 1rem;
+  .shop-shell {
+    padding: 1rem 1.2rem 2rem;
+  }
+
+  .shop-profile-card {
+    padding: 2rem 1.25rem;
   }
 
   .vehicles-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .info-grid {
     grid-template-columns: 1fr;
   }
 }

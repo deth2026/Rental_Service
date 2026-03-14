@@ -143,6 +143,7 @@
   </div>
 </template>
 
+
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -314,10 +315,7 @@ const filteredVehicles = computed(() => {
   );
 });
 
-const displayedVehicles = computed(() => {
-  const limit = selectedType.value === 'all' ? 8 : 20;
-  return filteredVehicles.value.slice(0, limit);
-});
+const displayedVehicles = computed(() => filteredVehicles.value);
 
 const getVehicleImage = (vehicle) => {
   const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
@@ -330,13 +328,13 @@ const getVehicleImage = (vehicle) => {
   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
 };
 
-const loadAllPages = async (resource) => {
+const loadAllPages = async (resource, extraParams = {}) => {
   let page = 1;
   let lastPage = 1;
   const results = [];
 
   while (page <= lastPage) {
-    const response = await api.get(`/${resource}`, { params: { page } });
+    const response = await api.get(`/${resource}`, { params: { page, ...extraParams } });
     const payload = response.data;
     const data = Array.isArray(payload) ? payload : payload?.data || [];
     // Normalize types up front so filters work even if API returns "Motorbikes" etc.
@@ -346,7 +344,8 @@ const loadAllPages = async (resource) => {
         type: normalizeType(item.type || item.category, `${item.name} ${item.brand} ${item.model}`)
       }))
     );
-    lastPage = payload?.last_page || 1;
+    const meta = payload?.meta;
+    lastPage = meta?.last_page || payload?.last_page || lastPage;
     page += 1;
   }
 
@@ -471,7 +470,7 @@ onUnmounted(() => {
 
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .vehicles-page {
   --brand: #1d4ed8;
   --brand-dark: #1e40af;
@@ -935,4 +934,4 @@ onUnmounted(() => {
     margin-right: -12px;
   }
 }
-</style>
+</style> -->
