@@ -435,11 +435,11 @@ onBeforeUnmount(() => {
               <div class="shop-kpi-row">
                 <div class="shop-kpi">
                   <span>Customer Rating</span>
-                  <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
+                  <strong>&#9733; {{ shop.rating.toFixed(1) }}</strong>
                 </div>
                 <div class="shop-kpi">
                   <span>Shop Status</span>
-                  <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
+                  <strong>{{ shop.status === 'active' ? 'Open' : 'Closed' }}</strong>
                 </div>
               </div>
             </div>

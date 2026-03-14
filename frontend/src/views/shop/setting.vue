@@ -160,7 +160,7 @@
 
     <div v-if="showToast" class="settings-toast" :class="toastType === 'error' ? 'is-error' : 'is-success'" role="status" aria-live="polite">
       <span>{{ toastMessage }}</span>
-      <button type="button" class="settings-toast-close" @click="closeToast">×</button>
+      <button type="button" class="settings-toast-close" @click="closeToast">&times;</button>
     </div>
 
     <div v-if="showRemoveConfirm" class="confirm-overlay" @click="closeRemoveConfirm">

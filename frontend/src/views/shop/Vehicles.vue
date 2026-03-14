@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { vehicleApi, shopApi, api } from '@/services/api'
 import { getSessionUser } from '@/services/auth'
-import '../../css/Vehicles/css'
+import '../../css/Vehicles.css'
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
@@ -756,11 +756,11 @@ const onPhotoDrop = async (e) => {
             </div>
         </div>
     </div>
-</template>
 
-<!-- Toast Notification -->
-<div v-if="toast.show" :class="['toast', toast.type]">
-    {{ toast.message }}
-</div>
+    <!-- Toast Notification -->
+    <div v-if="toast.show" :class="['toast', toast.type]">
+        {{ toast.message }}
+    </div>
+</template>
 
 
