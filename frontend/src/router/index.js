@@ -5,11 +5,12 @@ import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/user/Dashboard.vue';
-import PromotionView from '../views/user/Promotion.vue';
-import SettingUser from '../views/user/Setting_user.vue';
+import UserDashboard from '../views/User/Dashboard.vue';
+import UserBookings from '../views/User/Bookings.vue';
+import PromotionView from '../views/User/Promotion.vue';
+import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/user/ShopVehicles.vue';
+import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
 
@@ -70,6 +71,12 @@ const router = createRouter({
       name: 'view_shop',
       component: UserDashboard,
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/bookings',
+      name: 'user-bookings',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/user/profile',

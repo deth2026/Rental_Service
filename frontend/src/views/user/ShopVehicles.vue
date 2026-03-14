@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 
 const route = useRoute()
@@ -60,6 +61,21 @@ const userInitials = computed(() => {
   return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
 })
 
+const isOwnerRole = computed(() => {
+  const role = String(currentUser.value?.role || '').toLowerCase()
+  return role === 'shop_owner' || role === 'owner'
+})
+
+const getShopImage = () => {
+  if (!shop.value) return ''
+  const img = shop.value.img_url || shop.value.image || shop.value.cover || ''
+  if (!img) return ''
+  if (/^(https?:\/\/|data:|blob:)/i.test(img)) return img
+  const normalized = String(img).replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `${getApiOrigin()}/${normalized}`
+  return `${getApiOrigin()}/storage/${normalized.replace(/^storage\//, '')}`
+}
+
 const getApiOrigin = () => {
   try {
     const currentOrigin = window.location.origin
@@ -92,11 +108,12 @@ const resolveVehicleImageUrl = (value) => {
 const normalizeType = (raw) => {
   const t = String(raw || '').trim().toLowerCase()
   if (!t) return ''
-  if (['motorbike', 'motorbikes', 'motor', 'moto', 'motorbike ', 'motorbike-', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some(k => t.includes(k))) {
-    return 'motorbike'
-  }
-  if (t.includes('bicy')) return 'bicycle'
-  if (t.includes('car') || t.includes('suv')) return 'car'
+
+  // From DB: "moto" → motorbike, "bike" → bicycle, "car" → car
+  if (['moto', 'motor', 'motorbike', 'motorcycle', 'scooter'].some((k) => t.includes(k))) return 'motorbike'
+  if (['bike', 'bicy', 'cycle', 'bicycle'].some((k) => t.includes(k))) return 'bicycle'
+  if (['car', 'suv', 'sedan', 'auto', 'truck', 'pickup'].some((k) => t.includes(k))) return 'car'
+
   return t
 }
 
@@ -116,7 +133,20 @@ const normalizeVehicle = (vehicle) => {
 
   const imageUrl = vehicle.image_url_full || vehicle.image_url || (parsedPhotos.length > 0 ? (vehicle.photo_urls && vehicle.photo_urls[0] ? vehicle.photo_urls[0] : parsedPhotos[0]) : '')
 
-  const normalizedType = normalizeType(vehicle.type || vehicle.category || vehicle.vehicle_type || vehicle.kind || vehicle.name)
+  const rawType =
+    vehicle.type ||
+    vehicle.category ||
+    vehicle.category_name ||
+    vehicle.categoryName ||
+    vehicle.vehicle_type ||
+    vehicle.vehicleCategory ||
+    vehicle.vehicle_category ||
+    vehicle?.category?.name ||
+    vehicle?.vehicle_category?.name ||
+    vehicle.kind ||
+    vehicle.name
+
+  const normalizedType = normalizeType(rawType)
 
   return {
     id: vehicle.id,
@@ -209,18 +239,30 @@ const getStatusClass = (status) => {
 const filteredVehicles = computed(() => {
   if (selectedCategory.value === 'all') return vehicles.value
   return vehicles.value.filter((v) => {
-    const type = normalizeType(v.type || v.category || v.vehicle_type || v.kind || v.name)
+    const type = normalizeType(
+      v.type ||
+        v.category ||
+        v.category_name ||
+        v.categoryName ||
+        v.vehicle_type ||
+        v.vehicleCategory ||
+        v.vehicle_category ||
+        v?.category?.name ||
+        v?.vehicle_category?.name ||
+        v.kind ||
+        v.name
+    )
     if (type === selectedCategory.value) return true
     // looser matching: e.g., "motorbikes", "motor" or text mentions
     const text = `${v.name || ''} ${v.brand || ''} ${v.model || ''} ${v.description || ''}`.toLowerCase()
     if (selectedCategory.value === 'motorbike') {
-      return ['motor', 'moto', 'bike', 'scooter'].some((k) => type.includes(k) || text.includes(k))
+      return ['moto', 'motor', 'motorbike', 'motorcycle', 'scooter'].some((k) => type.includes(k) || text.includes(k))
     }
     if (selectedCategory.value === 'bicycle') {
-      return ['bicy', 'cycle', 'bike'].some((k) => type.includes(k) || text.includes(k))
+      return ['bike', 'bicy', 'cycle', 'bicycle'].some((k) => type.includes(k) || text.includes(k))
     }
     if (selectedCategory.value === 'car') {
-      return ['car', 'suv', 'auto', 'sedan', 'truck'].some((k) => type.includes(k) || text.includes(k))
+      return ['car', 'suv', 'auto', 'sedan', 'truck', 'pickup'].some((k) => type.includes(k) || text.includes(k))
     }
     return false
   })
@@ -542,6 +584,9 @@ const getShopStatusClass = (status) => {
       </section>
     </main>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 

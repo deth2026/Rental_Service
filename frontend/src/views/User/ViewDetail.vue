@@ -404,27 +404,6 @@ const handleLogout = async () => {
         </div>
       </section>
     </main>
-
-    <footer class="page-footer">
-      <div class="footer-col brand-col">
-        <h4>Cambodia<span>Rides</span></h4>
-        <p>
-          Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
-        </p>
-      </div>
-      <div class="footer-col">
-        <h5>QUICK LINKS</h5>
-        <p>How it works</p>
-        <p>Trust & Safety</p>
-        <p>Rental Policies</p>
-      </div>
-      <div class="footer-col">
-        <h5>SUPPORT</h5>
-        <p>Help Center</p>
-        <p>Become a Partner</p>
-        <p>Contact Us</p>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -854,43 +833,6 @@ const handleLogout = async () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-.page-footer {
-  margin-top: 32px;
-  padding: 32px 48px 48px;
-  border-top: 1px solid #e1e6f0;
-  background: #fff;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  color: #4f5676;
-}
-
-.footer-col h4 {
-  margin: 0 0 6px;
-  font-size: 1.5rem;
-}
-
-.footer-col h4 span {
-  color: #1d4ed8;
-}
-
-.footer-col h5 {
-  margin: 0 0 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  font-size: 0.75rem;
-  color: #7b859b;
-}
-
-.footer-col p {
-  margin: 4px 0;
-  font-size: 0.95rem;
-}
-
-.brand-col p {
-  max-width: 320px;
 }
 
 @keyframes spin {

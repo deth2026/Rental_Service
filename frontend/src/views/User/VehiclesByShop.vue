@@ -1,3 +1,4 @@
+
 <template>
   <div class="vehicles-page">
     <header class="topbar">
@@ -49,15 +50,15 @@
           <p>Available for your selected dates ({{ dateRange }})</p>
 
           <div class="filter-row">
-            <button
-              v-for="type in vehicleTypes"
-              :key="type.key"
+           <button  
+              v-for="item in filterItems"
+              :key="item.id"
               class="filter-pill"
-              :class="{ active: selectedType === type.key }"
-              @click="selectedType = type.key"
+              :class="{ active: activeFilter === item.id }"
+              @click="activeFilter = item.id"
             >
-              <i :class="type.icon"></i>
-              <span>{{ type.label }}</span>
+              <i :class="item.icon"></i>
+              <span>{{ item.label }}</span>
             </button>
           </div>
         </div>
@@ -117,30 +118,10 @@
         </div>
       </section>
     </main>
-
-    <footer class="footer">
-      <div class="footer-brand">
-        <strong>Cambodia<span>Rides</span></strong>
-        <p>
-          Connecting adventurous travelers with the best local rentals across Cambodia.
-        </p>
-      </div>
-
-      <div class="footer-links">
-        <h4>Quick Links</h4>
-        <button class="btn-reset" @click="notify('How it works clicked')">How it works</button>
-        <button class="btn-reset" @click="notify('Trust & Safety clicked')">Trust & Safety</button>
-        <button class="btn-reset" @click="notify('Rental Policies clicked')">Rental Policies</button>
-      </div>
-
-      <div class="footer-links">
-        <h4>Support</h4>
-        <button class="btn-reset" @click="notify('Help Center clicked')">Help Center</button>
-        <button class="btn-reset" @click="notify('Become a Partner clicked')">Become a Partner</button>
-        <button class="btn-reset" @click="notify('Contact Us clicked')">Contact Us</button>
-      </div>
-    </footer>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 
@@ -149,6 +130,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
+import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/VehicleByShop.css'
 
 const location = ref('Siem Reap');
@@ -169,30 +151,35 @@ const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
-const selectedType = ref('all');
-const vehicleTypes = [
-  { key: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
-  { key: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
-  { key: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
-  { key: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
+const activeFilter = ref('all');
+const filterItems = [
+  { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
+  { id: 'moto', label: 'Motorbike', icon: 'fa-solid fa-motorcycle' },
+  { id: 'bike', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
+  { id: 'car', label: 'Car', icon: 'fa-solid fa-car-side' }
 ];
 
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
   if (!t) return '';
-  if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
-    return 'motorbike';
+  // Match exact types from database: 'moto', 'bike', 'car'
+  if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters'].some((k) => t.includes(k))) {
+    return 'moto';
   }
-  if (t.includes('bicy')) return 'bicycle';
-  if (t.includes('car') || t.includes('suv')) return 'car';
+  if (t.includes('bicy') || t === 'bike' || t.includes('bicycle')) {
+    return 'bike';
+  }
+  if (t.includes('car') || t.includes('suv')) {
+    return 'car';
+  }
   return t;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
 const fallbackImageByType = {
-  motorbike: 'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
-  bicycle: 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
+  moto: 'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
+  bike: 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
   car: 'https://i.pinimg.com/1200x/d9/9e/06/d99e06bd9dd77fb2581170af2063b3b5.jpg'
 };
 
@@ -307,11 +294,11 @@ const filteredVehicles = computed(() => {
     ? vehicles.value.filter((v) => Number(v.shop_id) === selectedShopId.value)
     : vehicles.value;
 
-  if (selectedType.value === 'all') {
+if (activeFilter.value === 'all') {
     return source;
   }
   return source.filter(
-    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === selectedType.value
+    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === activeFilter.value
   );
 });
 
@@ -383,6 +370,10 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
+  if (item === 'My Bookings') {
+    router.push('/bookings');
+    return;
+  }
   if (item === 'Promotion') {
     router.push('/promotions');
     return;
@@ -432,7 +423,7 @@ const handleLogout = async () => {
 };
 
 const runFilterSearch = () => {
-  actionMessage.value = `Search clicked for ${selectedType.value === 'all' ? 'all vehicles' : selectedType.value}.`;
+  actionMessage.value = `Search clicked for ${activeFilter.value === 'all' ? 'all vehicles' : activeFilter.value}.`;
 };
 
 const toggleFavorite = (id, name) => {
@@ -470,7 +461,7 @@ onUnmounted(() => {
 
 </script>
 
-<!-- <style scoped>
+<style scoped>
 .vehicles-page {
   --brand: #1d4ed8;
   --brand-dark: #1e40af;
@@ -509,6 +500,23 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
+}
+
+.book-btn {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b75ff, #0d62df);
+  color: #fff;
+  padding: 13px 20px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.book-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(27, 117, 255, 0.35);
 }
 
 .brand {
@@ -632,6 +640,31 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.filter-pill{
+   display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill.active{
+   background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
+}
+.filter-pill:hover {
+  background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
 }
 
 .chip,
@@ -843,44 +876,6 @@ onUnmounted(() => {
   right: 12px;
 }
 
-.footer {
-  margin-top: 28px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 24px 20px;
-  background: #fff;
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 28px;
-}
-
-.footer-brand strong {
-  font-size: 24px;
-}
-
-.footer-brand strong span {
-  color: var(--brand);
-}
-
-.footer-brand p {
-  margin: 8px 0 0;
-  max-width: 420px;
-  color: #66758d;
-}
-
-.footer-links h4 {
-  margin: 2px 0 10px;
-  font-size: 15px;
-}
-
-.footer-links button {
-  display: block;
-  margin: 0 0 8px;
-  color: #52627b;
-}
-
 @media (max-width: 1080px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -897,10 +892,6 @@ onUnmounted(() => {
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .footer {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -927,11 +918,6 @@ onUnmounted(() => {
   .grid {
     grid-template-columns: 1fr;
   }
-
-  .footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-  }
 }
-</style> -->
+
+</style>
