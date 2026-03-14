@@ -1,148 +1,187 @@
 <template>
-  <div class="detail-page">
+  <div class="motoride-container">
     <header class="topbar">
-      <div class="brand" @click="goHome">
-        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
-        <span>Chong Choul</span>
-      </div>
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+          <span>Chong Choul</span>
+        </div>
 
+<<<<<<< HEAD
       <nav class="nav-links">
         <button class="btn-reset nav-link active" @click="goHome">Home</button>
         <button class="btn-reset nav-link">My Bookings</button>
         <button class="btn-reset nav-link">Promotion</button>
       </nav>
+=======
+        <nav class="nav-links">
+          <button
+            v-for="item in navItems"
+            :key="item"
+            class="btn-reset nav-link"
+            :class="{ active: activeNav === item }"
+            @click="setActiveNav(item)"
+          >
+            {{ item }}
+          </button>
+        </nav>
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 
-      <div class="top-actions">
-        <span class="user-display-name">customer</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Logout</span>
-        </button>
+        <div class="top-actions">
+          <span class="user-display-name">{{ userDisplayName }}</span>
+          <button class="btn-reset avatar" @click="openProfile">
+            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+            <span v-else>{{ userInitials }}</span>
+          </button>
+          <button class="btn-reset logout-btn" @click="handleLogout">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
     </header>
 
-    <main class="content" v-if="vehicle">
-      <p class="breadcrumbs">
-        HOME <i class="fa-solid fa-angle-right"></i> SIEM REAP <i class="fa-solid fa-angle-right"></i> {{ vehicleTitle.toUpperCase() }}
-      </p>
+    <main class="content">
+      <p v-if="isLoading" class="action-message">Loading vehicle details...</p>
+      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
 
-      <section class="hero-grid">
-        <div class="left-panel">
-          <div class="hero-image">
-            <img :src="primaryImage" :alt="vehicleTitle" />
+      <template v-else>
+        <section class="image-gallery">
+          <img
+            :src="vehicleImage"
+            :alt="vehicleName"
+            class="main-img"
+          />
+          <div class="gallery-controls">
+            <div class="dots">
+              <span></span><span class="active"></span><span></span>
+            </div>
+            <button class="view-all">View All Photos</button>
+          </div>
+        </section>
+
+        <div class="grid-layout">
+          <div class="details-col">
+            <div class="title-section">
+              <span class="badge">PREMIUM RENTAL</span>
+              <h1>{{ vehicleName }}</h1>
+              <p class="meta">
+                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicleRating }}</span>
+                <span><i class="fa-regular fa-building" aria-hidden="true"></i> {{ vehicleShopName }}</span>
+              </p>
+            </div>
+
+            <div class="spec-cards">
+              <div class="spec-card">
+                <span class="icon"><i class="fa-solid fa-gear" aria-hidden="true"></i></span>
+                <div>
+                  <small>Transmission</small>
+                  <p>{{ vehicleTransmission }}</p>
+                </div>
+              </div>
+              <div class="spec-card">
+                <span class="icon"><i class="fa-solid fa-gas-pump" aria-hidden="true"></i></span>
+                <div>
+                  <small>Fuel</small>
+                  <p>{{ vehicleFuel }}</p>
+                </div>
+              </div>
+              <div class="spec-card">
+                <span class="icon"><i class="fa-solid fa-tag" aria-hidden="true"></i></span>
+                <div>
+                  <small>Type</small>
+                  <p>{{ vehicleType }}</p>
+                </div>
+              </div>
+            </div>
+
+            <section class="description">
+              <h3>Description</h3>
+              <p>
+                Enjoy the {{ vehicleName }} from {{ vehicleShopName || 'our partners' }} with a smooth
+                {{ vehicleTransmission }} ride and {{ vehicleFuel }} efficiency.
+              </p>
+            </section>
+
+            <section class="rental-terms">
+              <h3>Rental Terms</h3>
+              <ul>
+                <li>
+                  Must be 21+ years old with a valid motorcycle endorsement.
+                </li>
+                <li>$500 security deposit required (fully refundable).</li>
+                <li>200 miles per day included ($0.50/mile after).</li>
+              </ul>
+            </section>
           </div>
 
-          <article class="vehicle-card">
-            <div class="vehicle-head">
-              <div>
-                <h1>{{ vehicleTitle }}</h1>
-                <p class="rating-line">
-                  <i class="fa-solid fa-star"></i> {{ vehicle.rating ?? 4.8 }}
-                  <span class="dot">|</span> 128 Bookings
-                  <span class="verified">Verified Shop</span>
-                </p>
-              </div>
+          <aside class="booking-widget">
+            <h3>Booking Details</h3>
+            <div class="price-row">
+              <span>Rider Details</span>
+              <select v-model="riderDetails" class="rider-select">
+                <option value="1 Rider">1 Rider</option>
+                <option value="2 Riders">2 Riders</option>
+                <option value="3 Riders">3 Riders</option>
+                <option value="4+ Riders">4+ Riders</option>
+              </select>
             </div>
-
-            <div class="spec-grid">
-              <div class="spec-item">
-                <span class="label">YEAR</span>
-                <strong>{{ vehicle.year }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">TRANS.</span>
-                <strong>{{ vehicle.transmission }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">FUEL</span>
-                <strong>{{ vehicle.fuel_type }}</strong>
-              </div>
-              <div class="spec-item">
-                <span class="label">STATUS</span>
-                <strong>{{ availabilityText }}</strong>
-              </div>
+            <div class="price-row">
+              <span>Daily Rate (per rider)</span>
+              <span>{{ formatCurrency(dailyRate) }}</span>
             </div>
-          </article>
-
-          <section class="managed-by">
-            <h3>Managed by</h3>
-            <div class="shop-card">
-              <img class="shop-avatar" :src="primaryImage" alt="Shop" />
-              <div>
-                <h4>{{ shopName }}</h4>
-                <p><span class="verified-text">Verified</span> | Member since 2019</p>
-              </div>
-              <button class="btn-reset contact-btn">Contact Shop</button>
+            <div class="price-row">
+              <span>Riders</span>
+              <span>{{ riderCount }} {{ riderCount === 1 ? 'Rider' : 'Riders' }}</span>
             </div>
-          </section>
-        </div>
-
-        <div class="side-stack">
-          <aside class="booking-panel">
-            <div class="price-box">
-              <h2>${{ formatPrice(vehicle.price_per_day) }} <small>/ day</small></h2>
-              <span class="instant">Instant Book</span>
+            <div class="price-row">
+              <span>Insurance fee</span>
+              <span>{{ formatCurrency(insuranceFee) }}</span>
             </div>
-
-            <div class="date-grid">
-              <div>
-                <span>PICK-UP</span>
-                <strong>{{ formatDisplayDate(pickupDate) }}</strong>
-              </div>
-              <div>
-                <span>DROP-OFF</span>
-                <strong>{{ formatDisplayDate(dropoffDate) }}</strong>
-              </div>
+            <div class="price-row">
+              <span>Taxes & Fees</span>
+              <span>{{ formatCurrency(taxesFee) }}</span>
             </div>
-
-            <h4>OPTIONAL ADD-ONS</h4>
-            <label class="addon-item" :class="{ active: theftInsuranceSelected }">
-              <input type="checkbox" v-model="theftInsuranceSelected" />
-              <div class="addon-main">
-                <span>Theft Insurance</span>
-              </div>
-              <strong>+$2/day</strong>
-            </label>
-
-            <label class="addon-item" :class="{ active: gpsSelected }">
-              <input type="checkbox" v-model="gpsSelected" />
-              <div class="addon-main">
-                <span>GPS Navigation Tablet</span>
-              </div>
-              <strong>+$3/day</strong>
-            </label>
-
-            <div class="bill">
-              <p><span>${{ formatPrice(vehicle.price_per_day) }} x {{ rentalDays }} day{{ rentalDays > 1 ? 's' : '' }}</span><strong>${{ baseTotal.toFixed(2) }}</strong></p>
-              <p v-for="line in selectedAddonLines" :key="line.key"><span>{{ line.label }}</span><strong>${{ line.amount.toFixed(2) }}</strong></p>
-              <p v-if="fee > 0"><span>Marketplace Fee</span><strong>${{ fee.toFixed(2) }}</strong></p>
+            <div class="total-row">
+              <span>Total Price</span>
+              <span class="price-blue">{{ formatCurrency(totalPrice) }}</span>
             </div>
-
-            <p class="total"><span>Total (USD)</span><strong>${{ grandTotal.toFixed(2) }}</strong></p>
-            <button class="btn-reset request-btn">Request Booking</button>
+            <button class="book-btn" @click="goToBooking">Book This Bike</button>
+            <p class="disclaimer">No payment taken until booking is confirmed</p>
           </aside>
-
         </div>
-      </section>
+      </template>
+    </main>
 
-      <section class="db-section">
-        <h4>Vehicle Table Data</h4>
-        <div class="db-grid">
-          <p><strong>shop_name:</strong> {{ shopName }}</p>
-          <p><strong>type:</strong> {{ vehicle.type }}</p>
-          <p><strong>brand:</strong> {{ vehicle.brand }}</p>
-          <p><strong>model:</strong> {{ vehicle.model }}</p>
-          <p><strong>year:</strong> {{ vehicle.year }}</p>
-          <p><strong>price_per_day:</strong> {{ vehicle.price_per_day }}</p>
-          <p><strong>fuel_type:</strong> {{ vehicle.fuel_type }}</p>
-          <p><strong>transmission:</strong> {{ vehicle.transmission }}</p>
-          <p><strong>seats:</strong> {{ vehicle.seats }}</p>
-          <p><strong>status:</strong> {{ vehicle.status }}</p>
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <strong>Chong Choul<span>Rides</span></strong>
+          <p>Secure, fast, and transparent bookings across Cambodia.</p>
+          <div class="footer-badges">
+            <span class="badge-pill">Secure Checkout</span>
+            <span class="badge-pill">Verified Partners</span>
+          </div>
         </div>
+        <div class="footer-links">
+          <h4>Support</h4>
+          <p>Help Center</p>
+          <p>Cancel your booking</p>
+          <p>Contact Us</p>
+        </div>
+        <div class="footer-links">
+          <h4>Terms &amp; Privacy</h4>
+          <p>Terms of Service</p>
+          <p>Privacy Policy</p>
+          <p>Cookie Policy</p>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <p>About</p>
+          <p>Partners</p>
+          <p>Careers</p>
+        </div>
+<<<<<<< HEAD
       </section>
     </main>
 
@@ -162,18 +201,16 @@
         <p>
           Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
         </p>
+=======
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
       </div>
-      <div class="footer-col">
-        <h5>QUICK LINKS</h5>
-        <p>How it works</p>
-        <p>Trust & Safety</p>
-        <p>Rental Policies</p>
-      </div>
-      <div class="footer-col">
-        <h5>SUPPORT</h5>
-        <p>Help Center</p>
-        <p>Become a Partner</p>
-        <p>Contact Us</p>
+      <div class="footer-bottom">
+        <span>© 2026 Chong Choul. All rights reserved.</span>
+        <div class="footer-bottom-links">
+          <span>Security</span>
+          <span>Accessibility</span>
+          <span>Legal</span>
+        </div>
       </div>
     </footer>
   </div>
@@ -183,35 +220,23 @@
 </template>
 
 <script setup>
-import axios from 'axios';
-import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 
-const route = useRoute();
 const router = useRouter();
+const route = useRoute();
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
-const fallbackImage = 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg';
-
-const resolveImageUrl = (value) => {
-  const image = value ? String(value).trim() : '';
-  if (!image) return fallbackImage;
-  if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  if (image.startsWith('/')) return `${API_ROOT}${image}`;
-  return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
-};
-
-const vehicle = ref(null);
-const isLoading = ref(false);
-const loadError = ref('');
-const shopNamesById = ref({});
+const navItems = ['Home', 'Viewdetails', 'Bookings'];
+const activeNav = ref('Home');
+const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
-
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
+
 const normalizeAvatarUrl = (url) => {
   if (!url) return '';
   if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
@@ -237,123 +262,13 @@ const userInitials = computed(() => {
   return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
 });
 
-const normalizeVehicle = (data) => ({
-  ...data,
-  rating: data?.rating ?? 4.8
-});
-
-const routeId = computed(() => Number(route.params.id));
-
-const loadShopName = async (shopId) => {
-  if (!shopId || shopNamesById.value[shopId]) return;
-  try {
-    const response = await axios.get(`${API_BASE_URL}/shops/${shopId}`);
-    if (response.data?.name) {
-      shopNamesById.value[shopId] = response.data.name;
-    }
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const loadVehicle = async (id) => {
-  if (!id) {
-    vehicle.value = null;
+const setActiveNav = (item) => {
+  activeNav.value = item;
+  if (item === 'Home') {
+    router.replace('/view_shop');
     return;
   }
-  vehicle.value = null;
-
-  isLoading.value = true;
-  loadError.value = '';
-  try {
-    const response = await axios.get(`${API_BASE_URL}/vehicles/${id}`);
-    vehicle.value = normalizeVehicle(response.data);
-    await loadShopName(vehicle.value.shop_id);
-  } catch (error) {
-    vehicle.value = null;
-    loadError.value = 'Could not load this vehicle from database.';
-    console.error(error);
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const vehicleTitle = computed(() => {
-  if (!vehicle.value) return '';
-  return `${vehicle.value.brand} ${vehicle.value.model} ${vehicle.value.year}`;
-});
-const availabilityText = computed(() => {
-  const status = String(vehicle.value?.status || '').trim().toLowerCase();
-  return status === 'available' ? 'Available' : 'Unavailable';
-});
-const shopName = computed(() => (vehicle.value ? (shopNamesById.value[vehicle.value.shop_id] || 'Unknown Shop') : 'Unknown Shop'));
-const primaryImage = computed(() => (vehicle.value ? resolveImageUrl(vehicle.value.image_url) : fallbackImage));
-
-watch(
-  routeId,
-  (id) => {
-    loadVehicle(id);
-  },
-  { immediate: true }
-);
-
-const pickupDate = ref('2023-11-20');
-const dropoffDate = ref('2023-11-21');
-
-const rentalDays = computed(() => {
-  const start = new Date(`${pickupDate.value}T00:00:00`);
-  const end = new Date(`${dropoffDate.value}T00:00:00`);
-  const diffMs = end.getTime() - start.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(1, diffDays);
-});
-
-const theftInsuranceSelected = ref(false);
-const gpsSelected = ref(false);
-
-const addonRates = {
-  insurance: 2,
-  gps: 3
-};
-
-const baseTotal = computed(() => (vehicle.value ? Number(vehicle.value.price_per_day) * rentalDays.value : 0));
-const selectedAddonLines = computed(() => {
-  const lines = [];
-  if (theftInsuranceSelected.value) {
-    lines.push({
-      key: 'insurance',
-      label: 'Theft Insurance',
-      amount: addonRates.insurance * rentalDays.value
-    });
-  }
-  if (gpsSelected.value) {
-    lines.push({
-      key: 'gps',
-      label: 'GPS Navigation Tablet',
-      amount: addonRates.gps * rentalDays.value
-    });
-  }
-  return lines;
-});
-const addonsTotal = computed(() => selectedAddonLines.value.reduce((sum, x) => sum + x.amount, 0));
-const fee = computed(() => 0);
-const grandTotal = computed(() => baseTotal.value + addonsTotal.value + fee.value);
-
-const formatPrice = (n) => Number(n).toFixed(2).replace('.00', '');
-const formatDisplayDate = (isoDate) => {
-  const [year, month, day] = isoDate.split('-');
-  return `${month}/${day}/${year}`;
-};
-const goBack = () => {
-  const shopId = route.query.shop_id || vehicle.value?.shop_id;
-  router.push({
-    name: 'vehicles-by-shop',
-    query: shopId ? { shop_id: String(shopId) } : {}
-  });
-};
-
-const goHome = () => {
-  router.push('/view_shop');
+  actionMessage.value = `${item} is not available yet.`;
 };
 
 const openProfile = () => {
@@ -365,47 +280,197 @@ const handleLogout = async () => {
   router.push('/login');
 };
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
+const fallbackImageByType = {
+  motorbike: 'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
+  bicycle: 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
+  car: 'https://i.pinimg.com/1200x/d9/9e/06/d99e06bd9dd77fb2581170af2063b3b5.jpg'
+};
+
+const vehicle = ref(null);
+const shopNamesById = ref({});
+const isLoading = ref(false);
+const loadingError = ref('');
+const insuranceFee = ref(30);
+const riderDetails = ref('1 Rider');
+const vehicleId = computed(() => {
+  const value = Number(route.params.id);
+  return Number.isFinite(value) && value > 0 ? value : null;
+});
+
+const setLastVehicleId = (id) => {
+  if (!id) return;
+  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
+};
+
+const getLastVehicleId = () => {
+  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : '');
+const getVehicleShop = (item) => (item?.shop_id ? (shopNamesById.value[item.shop_id] || 'Unknown Shop') : 'Unknown Shop');
+
+const getVehicleImage = (item) => {
+  const image = item?.image_url ? String(item.image_url).trim() : '';
+  if (image) {
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    if (image.startsWith('/')) return `${API_ROOT}${image}`;
+    return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+  }
+  const normalizedType = String(item?.type || '').toLowerCase();
+  return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
+};
+
+const vehicleName = computed(() => getVehicleName(vehicle.value) || 'Vehicle');
+const vehicleShopName = computed(() => getVehicleShop(vehicle.value));
+const vehicleRating = computed(() => vehicle.value?.rating ?? vehicle.value?.average_rating ?? 4.8);
+const vehicleTransmission = computed(() => vehicle.value?.transmission || 'N/A');
+const vehicleFuel = computed(() => vehicle.value?.fuel_type || 'N/A');
+const vehicleType = computed(() => vehicle.value?.type || 'Vehicle');
+const vehicleImage = computed(() => getVehicleImage(vehicle.value));
+
+const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
+const riderCount = computed(() => {
+  const match = String(riderDetails.value).match(/^\s*(\d+)/);
+  if (!match) return 1;
+  const count = Number(match[1]);
+  return Number.isFinite(count) && count > 0 ? count : 1;
+});
+const baseAmount = computed(() => dailyRate.value * riderCount.value);
+const taxesFee = computed(() => baseAmount.value * 0.1);
+const totalPrice = computed(() => baseAmount.value + insuranceFee.value + taxesFee.value);
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+
+const loadAllPages = async (resource) => {
+  let page = 1;
+  let lastPage = 1;
+  const results = [];
+
+  while (page <= lastPage) {
+    const response = await api.get(`/${resource}`, { params: { page } });
+    const payload = response.data;
+    const data = Array.isArray(payload) ? payload : payload?.data || [];
+    results.push(...data);
+    lastPage = payload?.last_page || 1;
+    page += 1;
+  }
+
+  return results;
+};
+
+const loadVehicleDetail = async () => {
+  if (!vehicleId.value) {
+    loadingError.value = 'Vehicle not found.';
+    return;
+  }
+  isLoading.value = true;
+  loadingError.value = '';
+
+  try {
+    const [vehicleList, shopList] = await Promise.all([
+      loadAllPages('vehicles'),
+      loadAllPages('shops')
+    ]);
+
+    shopNamesById.value = shopList.reduce((acc, shop) => {
+      acc[shop.id] = shop.name;
+      return acc;
+    }, {});
+
+    const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
+    if (!found) {
+      throw new Error('Vehicle not found.');
+    }
+
+    vehicle.value = {
+      ...found,
+      rating: found.rating ?? found.average_rating ?? 4.8
+    };
+  } catch (error) {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || error.message;
+    console.error('API Error:', status, message);
+
+    if (status === 401) {
+      loadingError.value = 'Authentication required. Please log in.';
+    } else if (status === 500) {
+      loadingError.value = 'Server error. Please try again later.';
+    } else {
+      loadingError.value = `Could not load vehicle (${status || 'network error'}). Check backend server.`;
+    }
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const goToBooking = () => {
+  const vehicleId = route.params.id;
+  const insuranceValue = Number(insuranceFee.value);
+  const query = {};
+  if (Number.isFinite(insuranceValue)) {
+    query.insuranceFee = insuranceValue;
+  }
+  if (riderDetails.value) {
+    query.riderDetails = riderDetails.value;
+  }
+
+  if (vehicleId) {
+    setLastVehicleId(vehicleId);
+    router.push({ name: 'booking', params: { id: vehicleId }, query });
+  } else {
+    router.push({ name: 'booking', params: { id: 1 }, query }); // Fallback ID
+  }
+};
+
+onMounted(() => {
+  loadVehicleDetail();
+  if (vehicleId.value) {
+    setLastVehicleId(vehicleId.value);
+  }
+});
 </script>
 
 <style scoped>
-.detail-page {
-  --line: #d9e0ea;
+/* Modern Design System */
+.motoride-container {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  color: #1a1d23;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
-  padding: 0 40px;
-  background: #f2f4f7;
-  color: #1b2940;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
-}
-
-.detail-page,
-.detail-page * {
-  box-sizing: border-box;
 }
 
 .btn-reset {
   border: 0;
   background: transparent;
+  font: inherit;
   color: inherit;
   cursor: pointer;
-  font: inherit;
 }
 
 .topbar {
   position: sticky;
   top: 0;
   z-index: 5;
-  min-height: 0;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 14px 24px;
+  background: #fff;
+  border-bottom: 1px solid #d8dee7;
+}
+
+.topbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 14px 2rem;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  align-items: center;
   gap: 32px;
-  background: #ffffff;
-  color: #1a2437;
-  border-bottom: 1px solid var(--line);
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .brand {
@@ -414,11 +479,12 @@ const handleLogout = async () => {
   gap: 16px;
   font-size: 20px;
   font-weight: 700;
-  cursor: pointer;
-  color: #2563eb;
+  color: #1d4ed8;
   white-space: nowrap;
-  background: none;
-  -webkit-text-fill-color: #2563eb;
+  margin-left: 10vh;
+}
+.brand span {
+  margin-right: 35vh;
 }
 
 .brand-icon {
@@ -427,20 +493,18 @@ const handleLogout = async () => {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  flex: 0 0 34px;
   background: #dbeafe;
 }
 
-.brand i {
+.brand-icon i {
   color: #2563eb;
 }
 
 .nav-links {
   display: flex;
-  font-size: 16px;
-  font-weight: 800;
-  gap: 24px;
+  gap: 50px;
   justify-self: center;
+  margin-right: 30vh;
 }
 
 .nav-link {
@@ -449,28 +513,27 @@ const handleLogout = async () => {
   color: #4a556b;
   font-size: 14px;
   font-weight: 700;
-  white-space: nowrap;
 }
 
 .nav-link.active,
 .nav-link:hover {
-  background: #eff6ff;
+  background: #eef7ff;
   color: #1d4ed8;
 }
+
 
 .top-actions {
   display: flex;
   align-items: center;
   gap: 12px;
-  white-space: nowrap;
   justify-self: end;
+  white-space: nowrap;
 }
 
 .user-display-name {
   font-size: 16px;
   font-weight: 800;
   color: #33435d;
-  order: 1;
 }
 
 .avatar {
@@ -479,21 +542,19 @@ const handleLogout = async () => {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #f4f8fc;
-  border: none;
-  color: #9a6a32;
+  background: #1d4ed8;
+  color: #fff;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  order: 2;
 }
 
 .avatar-image {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
   object-fit: cover;
   display: block;
+  object-position: center;
 }
 
 .logout-btn {
@@ -502,508 +563,596 @@ const handleLogout = async () => {
   gap: 6px;
   padding: 8px 14px;
   border-radius: 8px;
-  background: #2563eb;
+  background: #1d4ed8;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-  white-space: nowrap;
-  order: 3;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
 }
 
 .logout-btn:hover {
   background: #1d4ed8;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
 }
 
+/* Main Content */
 .content {
-  max-width: 1220px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 14px 10px 34px;
+  padding: 2rem;
 }
 
-.breadcrumbs {
-  color: #96a6ba;
-  font-size: 11px;
-  margin-bottom: 10px;
+.action-message {
+  margin: 0 0 12px;
+  color: #1d4ed8;
+  font-size: 14px;
 }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 14px;
-}
-
-.left-panel {
-  min-width: 0;
-}
-
-.hero-image {
+/* Enhanced Image Gallery */
+.image-gallery {
   position: relative;
-  height: 420px;
-  border-radius: 9px;
+  border-radius: 24px;
   overflow: hidden;
-  border: 1px solid #d8e1ed;
-  background: #eef3f9;
+  margin-bottom: 3rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+  /* padding-bottom: 4vh; */
 }
 
-.hero-image img {
-  width: 100%;
+.main-img {
+  width: 50%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.5s ease;
+  margin: 5vh 0vh 10vh 0vh;
 }
 
-.photos-btn {
+.image-gallery:hover .main-img {
+  transform: scale(1.02);
+}
+
+.gallery-controls {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  background: #ffffff;
-  color: #22395a;
-  border-radius: 8px;
-  padding: 6px 10px;
-  border: 1px solid #d7e1ed;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.vehicle-card {
-  margin-top: 8px;
-  border-radius: 8px;
-  border: 1px solid #d8e1ec;
-  background: #fff;
-  color: #13213f;
-  padding: 14px;
-}
-
-h1 {
-  margin: 0;
-  font-size: 32px;
-}
-
-.rating-line {
-  margin-top: 6px;
-  color: #5b6d8f;
-  font-size: 14px;
-}
-
-.rating-line i {
-  color: #f59e0b;
-}
-
-.dot {
-  margin: 0 8px;
-}
-
-.verified {
-  margin-left: 8px;
-  padding: 3px 8px;
-  border-radius: 8px;
-  background: #e7f4ff;
-  color: #0f89de;
-  font-weight: 600;
-}
-
-.spec-grid {
-  margin-top: 12px;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-}
-
-.spec-item {
-  background: #f5f8fc;
-  border: 1px solid #e0e7f0;
-  border-radius: 8px;
-  padding: 9px;
-}
-
-.spec-item .label {
-  display: block;
-  font-size: 12px;
-  color: #6780a3;
-}
-
-.spec-item strong {
-  font-size: 13px;
-}
-
-.managed-by {
-  margin-top: 12px;
-}
-
-.managed-by h3 {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.shop-card {
-  display: grid;
-  grid-template-columns: 50px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #d8e1ec;
-  padding: 10px;
-  color: #0e1e39;
-}
-
-.shop-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.shop-card h4 {
-  margin: 0 0 2px;
-  font-size: 12px;
-}
-
-.shop-card p {
-  margin: 0;
-  color: #61789b;
-  font-size: 11px;
-}
-
-.verified-text {
-  color: #0d88df;
-  font-weight: 700;
-}
-
-.contact-btn {
-  border: 1px solid #4ca9e6;
-  border-radius: 8px;
-  padding: 8px 14px;
-  color: #1386de;
-  font-weight: 700;
-  font-size: 11px;
-}
-
-.side-stack {
-  display: grid;
-  gap: 10px;
-  align-self: start;
-}
-
-.booking-panel {
-  background: #fff;
-  color: #1d2c4a;
-  border-radius: 10px;
-  border: 1px solid #d8e1ec;
-  padding: 14px;
-}
-
-.price-box {
+  bottom: 2rem;
+  left: 2rem;
+  right: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.price-box h2 {
-  margin: 0;
-  font-size: 20px;
+.dots {
+  display: flex;
+  gap: 0.5rem;
 }
 
-.price-box small {
-  color: #7083a3;
-  font-weight: 500;
-  font-size: 12px;
+.dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
 }
 
-.instant {
-  color: #1394ea;
-  font-weight: 700;
-  font-size: 12px;
+.dots span.active {
+  width: 24px;
+  border-radius: 4px;
+  background: white;
 }
 
-.date-grid {
-  margin-top: 10px;
+.view-all {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #1a1d23;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.view-all:hover {
+  background: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Enhanced Grid Layout */
+.grid-layout {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid #dbe3f0;
-  border-radius: 10px;
+  grid-template-columns: 1fr 400px;
+  gap: 3rem;
+}
+
+/* Title Section */
+.title-section {
+  margin-bottom: 2.5rem;
+}
+
+.badge {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  display: inline-block;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+.title-section h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #1a1d23;
+  margin: 0 0 1rem 0;
+  line-height: 1.1;
+}
+
+.meta {
+  font-size: 1.1rem;
+  color: #64748b;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Enhanced Spec Cards */
+.spec-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin: 2.5rem 0;
+}
+
+.spec-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  padding: 2rem 1.5rem;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.spec-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+  border-color: #1d4ed8;
+}
+
+.spec-card .icon {
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.spec-card .icon i {
+  color: white;
+}
+
+.spec-card small {
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.spec-card p {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #1a1d23;
+}
+
+/* Enhanced Sections */
+.description,
+.rental-terms {
+  background: white;
+  border-radius: 20px;
+  padding: 2.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.description h3,
+.rental-terms h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0 0 1.5rem 0;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.description h3::before,
+.rental-terms h3::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 24px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
+  border-radius: 2px;
+}
+
+.description p {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #475569;
+  margin: 0;
+}
+
+.rental-terms {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.rental-terms ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.rental-terms li {
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  font-size: 1rem;
+  color: #475569;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.rental-terms li::before {
+  content: "✓";
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.rental-terms li:last-child {
+  border-bottom: none;
+}
+
+/* Enhanced Booking Widget */
+.booking-widget {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 2.5rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  height: fit-content;
+  position: sticky;
+  top: 2rem;
+  transition: all 0.3s ease;
+}
+
+.booking-widget:hover {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.booking-widget h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0 0 2rem 0;
+  text-align: center;
+  position: relative;
+}
+
+.booking-widget h3::after {
+  content: "";
+  position: absolute;
+  bottom: -0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
+  border-radius: 2px;
+}
+
+.booking-row,
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 0;
+  font-size: 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.booking-row span,
+.price-row span {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.booking-row strong,
+.price-row span:last-child {
+  color: #1a1d23;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.total-row {
+  border-bottom: none;
+  border-top: 2px solid #e2e8f0;
+  padding-top: 1.5rem;
+  margin-top: 0.5rem;
+  margin-right: 10px
+  ;
+}
+.total-row span{
+  margin-right: 10px;
+}
+
+.price-row span {
+  margin-right: 10px;
+}
+
+.rider-select {
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #1a1d23;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.rider-select:focus {
+  outline: none;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+}
+
+.rider-select:hover {
+  border-color: #1d4ed8;
+}
+
+.price-blue {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.book-btn {
+  width: 100%;
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
+  color: white;
+  border: none;
+  padding: 1.25rem;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  cursor: pointer;
+  margin-top: 2rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 25px rgba(29, 78, 216, 0.3);
+  position: relative;
   overflow: hidden;
 }
 
-.date-grid > div {
-  padding: 8px;
-}
-
-.date-grid > div:first-child {
-  border-right: 1px solid #dbe3f0;
-}
-
-.date-grid span {
-  display: block;
-  color: #7c8fac;
-  font-size: 10px;
-}
-
-.date-grid strong {
-  font-size: 16px;
-}
-
-.booking-panel h4 {
-  margin: 12px 0 7px;
-  font-size: 11px;
-  letter-spacing: .06em;
-  color: #7789a7;
-}
-
-.addon-item {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid #d6dfec;
-  border-radius: 8px;
-  padding: 6px 8px;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-
-.addon-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.qty-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid #d1dceb;
-  border-radius: 14px;
-  padding: 2px 6px;
-  background: #fff;
-  font-size: 11px;
-}
-
-.qty-btn {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 1px solid #c8d4e5;
-  background: #f4f8fc;
-  color: #1c446f;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.addon-check-placeholder {
-  width: 13px;
-  height: 13px;
-  border: 1px solid #d6dfec;
-  border-radius: 3px;
-}
-
-.addon-item.active {
-  border-color: #2aa0f5;
-  background: #eef7ff;
-}
-
-.bill {
-  border-top: 1px solid #dae3ef;
-  margin-top: 8px;
-  padding-top: 8px;
-}
-
-.bill p {
-  display: flex;
-  justify-content: space-between;
-  margin: 4px 0;
-  font-size: 12px;
-}
-
-.total {
-  display: flex;
-  justify-content: space-between;
-  font-size: 22px;
-  font-weight: 700;
-  margin: 8px 0 10px;
-}
-
-.total strong {
-  color: #1193e8;
-}
-
-.request-btn {
+.book-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
   width: 100%;
-  background: #1ca0ef;
-  color: #fff;
-  border-radius: 8px;
-  padding: 10px;
-  font-weight: 700;
-  font-size: 14px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
 }
 
-.guest-reviews {
+.book-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 35px rgba(29, 78, 216, 0.4);
+}
+
+.book-btn:hover::before {
+  left: 100%;
+}
+
+.disclaimer {
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+  font-style: italic;
+}
+
+.site-footer {
+  margin-top: 28px;
+  border-top: 1px solid #d8dee7;
   background: #fff;
-  border: 1px solid #d8e1ec;
-  border-radius: 10px;
-  padding: 10px 12px;
 }
 
-.guest-reviews h3 {
-  margin: 0 0 6px;
-  font-size: 28px;
-}
-
-.reviews-score {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reviews-score strong {
-  font-size: 52px;
-  line-height: 1;
-}
-
-.stars {
-  margin: 0;
-  color: #f59e0b;
-  font-size: 14px;
-}
-
-.reviews-score small {
-  color: #6d84a1;
-  font-size: 11px;
-}
-
-.db-section {
-  margin-top: 12px;
-  background: #fff;
-  border: 1px solid #d8e1ec;
-  border-radius: 8px;
-  padding: 10px 12px;
-}
-
-.db-section h4 {
-  margin: 0 0 8px;
-  font-size: 12px;
-  color: #6f84a2;
-}
-
-.db-grid {
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 26px 2rem;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px 12px;
-}
-
-.db-grid p {
-  margin: 0;
-  font-size: 12px;
-  color: #294364;
-}
-
-.page-footer {
-  margin-top: 24px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  border-top: 1px solid #d8e1ed;
-  background: #f7f9fc;
-  padding: 24px 16px;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
   gap: 24px;
 }
 
-.footer-col h4 {
-  margin: 0;
-  font-size: 32px;
+.footer-brand strong {
+  font-size: 24px;
 }
 
-.footer-col h4 span {
-  color: #1ea8ff;
+.footer-brand strong span {
+  color: #1d4ed8;
 }
 
-.footer-col h5 {
+.footer-brand p {
+  margin: 8px 0 14px;
+  max-width: 420px;
+  color: #66758d;
+}
+
+.footer-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge-pill {
+  background: #eef2ff;
+  color: #1d4ed8;
+  border: 1px solid #dbe4f0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.footer-links h4 {
+  margin: 2px 0 10px;
+  font-size: 15px;
+}
+
+.footer-links p {
   margin: 0 0 8px;
-  font-size: 11px;
-  letter-spacing: .1em;
+  color: #52627b;
 }
 
-.footer-col p {
-  margin: 0 0 6px;
-  font-size: 12px;
-  color: #6a7f9a;
+.footer-bottom {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 14px 2rem 22px;
+  border-top: 1px solid #d8dee7;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #75839b;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
 }
 
-.brand-col p {
-  max-width: 300px;
+.footer-bottom-links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.not-found {
-  max-width: 560px;
-  margin: 120px auto;
-  text-align: center;
-}
-
-.back-btn {
-  margin-top: 10px;
-  background: #1ca0ef;
-  color: #fff;
-  padding: 10px 14px;
-  border-radius: 8px;
-}
-
-@media (max-width: 1100px) {
-  .hero-grid {
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .grid-layout {
     grid-template-columns: 1fr;
+    gap: 2rem;
   }
 
-  .hero-image {
-    height: 320px;
-  }
-
-  .page-footer {
-    grid-template-columns: 1fr;
+  .booking-widget {
+    position: static;
   }
 }
 
-@media (max-width: 760px) {
-  .detail-page {
-    padding: 0 12px;
-  }
-
-  .spec-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .topbar {
+@media (max-width: 768px) {
+  .topbar-inner {
     grid-template-columns: 1fr;
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-    padding: 12px;
     gap: 10px;
+    padding: 12px 16px;
   }
 
-  .db-grid {
-    grid-template-columns: 1fr;
+  .nav-links,
+  .top-actions {
+    justify-self: start;
   }
 
   .nav-links {
-    justify-content: flex-start;
     flex-wrap: wrap;
-    justify-self: start;
   }
 
-  .top-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    justify-self: start;
+  .content {
+    padding: 1rem;
   }
 
-  .page-footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
+  .title-section h1 {
+    font-size: 2rem;
+  }
+
+  .spec-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .description,
+  .rental-terms,
+  .booking-widget {
+    padding: 1.5rem;
+  }
+
+  .main-img {
+    height: 300px;
+  }
+
+  .footer-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-inner {
+    padding: 12px 16px;
+  }
+
+  .brand {
+    font-size: 18px;
+  }
+
+  .title-section h1 {
+    font-size: 1.5rem;
+  }
+
+  .gallery-controls {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .view-all {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
   }
 }
 </style>

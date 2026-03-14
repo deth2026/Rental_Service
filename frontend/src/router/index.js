@@ -10,9 +10,10 @@ import UserBookings from '../views/User/Bookings.vue';
 import PromotionView from '../views/User/Promotion.vue';
 import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/User/ShopVehicles.vue';
-import VehiclesByShop from '../views/User/VehiclesByShop.vue';
-import ViewDetail from '../views/User/ViewDetail.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
+import BookingDetail from '../views/user/Booking.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -111,7 +112,13 @@ const router = createRouter({
       path: '/vehicles/:id',
       name: 'vehicle-detail',
       component: ViewDetail,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'shop_owner', 'admin'] }
+    },
+    {
+      path: '/booking/:id',
+      name: 'booking',
+      component: BookingDetail,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'shop_owner', 'admin'] }
     },
     {
       path: '/shop/:id/vehicles',

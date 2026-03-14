@@ -19,17 +19,8 @@ const expandedShops = ref(new Set())
 // Navbar state
 const location = ref('Phnom Penh')
 const dateRange = ref('Mar 15 - Mar 18')
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '/bookings' },
-  { label: 'Promotions', route: '/promotions' }
-]
-
-const activeNav = computed(() => {
-  const currentPath = route.path
-  const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-  return matchedItem?.label || 'Home'
-})
+const navItems = ref(['Home', 'Viewdetails', 'Bookings'])
+const activeNav = ref('Home')
 
 const setActiveNav = (item) => {
   if (item.route) {

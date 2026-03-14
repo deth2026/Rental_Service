@@ -85,12 +85,11 @@ Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
 // Public vehicle routes (for customers to view vehicles)
+Route::get('/vehicles', [VehicleController::class, 'index']);
 Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
 
-// Protected vehicle routes - require authentication for listing vehicles
+// Protected vehicle routes - require authentication for modifications
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/vehicles', [VehicleController::class, 'index']);
-    
     // Shop owner can create, update, delete their own vehicles
     Route::post('/vehicles', [VehicleController::class, 'store']);
     Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update']);

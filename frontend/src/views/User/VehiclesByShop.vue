@@ -33,6 +33,7 @@
     </header>
 
     <main class="content">
+<<<<<<< HEAD
       <section class="deals-section">
         <div class="section-header">
           <div class="section-badge">
@@ -88,6 +89,54 @@
                   <span>per day</span>
                 </div>
                 <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
+=======
+      <div class="results-head">
+        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h1>
+        <p>Available for your selected dates ({{ dateRange }})</p>
+      </div>
+
+      <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
+      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+
+      <section class="grid">
+        <article class="card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
+          <span v-if="vehicle.bestValue" class="badge">BEST VALUE</span>
+
+          <button
+            class="btn-reset fav-btn"
+            :class="{ active: favoriteIds.has(vehicle.id) }"
+            @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
+            :aria-label="`Save ${getVehicleName(vehicle)}`"
+          >
+            <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+          </button>
+
+          <div class="card-image">
+            <button
+              class="btn-reset card-image-btn"
+              @click="viewDetails(vehicle)"
+              :aria-label="`View details for ${getVehicleName(vehicle)}`"
+            >
+              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+            </button>
+          </div>
+
+          <div class="card-body">
+            <div class="card-top">
+              <h3>
+                <button
+                  class="btn-reset card-title-btn"
+                  @click="viewDetails(vehicle)"
+                  :aria-label="`View details for ${getVehicleName(vehicle)}`"
+                >
+                  {{ getVehicleName(vehicle) }}
+                </button>
+              </h3>
+              <div class="price">
+                <strong>${{ vehicle.price_per_day }}</strong>
+                <span>per day</span>
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
               </div>
             </div>
           </article>
@@ -103,12 +152,15 @@
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
+<<<<<<< HEAD
           <button class="btn-reset open-map-btn" @click="openMainLocation">
             Open in Google Maps
           </button>
           <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
             Open Saved Location
           </button>
+=======
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
         </div>
       </section>
     </main>
@@ -140,17 +192,31 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
+<<<<<<< HEAD
 const navItems = ['Home', 'My Bookings', 'Promotion'];
+=======
+const navItems = ['Home', 'Viewdetails', 'Bookings'];
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
+<<<<<<< HEAD
 const activeFilter = ref('all');
 const filterItems = [
   { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
   { id: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
   { id: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
   { id: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
+=======
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
+const selectedType = ref('all');
+const vehicleTypes = [
+  { key: 'all', label: 'All' },
+  { key: 'motorbike', label: 'Motorbikes' },
+  { key: 'bicycle', label: 'Bicycles' },
+  { key: 'car', label: 'Cars' }
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 ];
 
 const normalizeType = (raw, fallback = '') => {
@@ -348,8 +414,17 @@ const loadVehiclesAndShops = async () => {
       return acc;
     }, {});
   } catch (error) {
-    loadingError.value = 'Could not load vehicles from database. Check backend server and API URL.';
-    console.error(error);
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || error.message;
+    console.error('API Error:', status, message);
+    
+    if (status === 401) {
+      loadingError.value = 'Authentication required. Please log in.';
+    } else if (status === 500) {
+      loadingError.value = 'Server error. Please try again later.';
+    } else {
+      loadingError.value = `Could not load vehicles (${status || 'network error'}). Check backend server.`;
+    }
   } finally {
     isLoading.value = false;
   }
@@ -361,6 +436,7 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
+<<<<<<< HEAD
   if (item === 'My Bookings') {
     router.push('/bookings');
     return;
@@ -370,12 +446,16 @@ const setActiveNav = (item) => {
     return;
   }
   actionMessage.value = `${item} opened.`;
+=======
+  actionMessage.value = `${item} is not available yet.`;
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 };
 
 const handleSearch = () => {
   actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
 };
 
+<<<<<<< HEAD
 const openMainLocation = () => {
   const coords = selectedShopCoords.value;
   const shopAddress = selectedShopAddress.value;
@@ -399,6 +479,8 @@ const openCustomLocation = () => {
   const target = link.startsWith('http') ? link : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(link)}`;
   window.open(target, '_blank');
 };
+=======
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 
 const notify = (message) => {
   actionMessage.value = message;
@@ -417,6 +499,33 @@ const runFilterSearch = () => {
   actionMessage.value = `Search clicked for ${activeFilter.value === 'all' ? 'all vehicles' : activeFilter.value}.`;
 };
 
+const buildVehicleDetailRoute = (vehicle) => {
+  if (!vehicle || !vehicle.id) return null;
+  return {
+    name: 'vehicle-detail',
+    params: { id: vehicle.id },
+    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
+  };
+};
+
+const setLastVehicleId = (id) => {
+  if (!id) return;
+  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
+};
+
+const getLastVehicleId = () => {
+  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const viewDetails = (vehicle) => {
+  const routeTarget = buildVehicleDetailRoute(vehicle);
+  if (!routeTarget) return;
+  setLastVehicleId(vehicle.id);
+  router.push(routeTarget);
+};
+
 const toggleFavorite = (id, name) => {
   if (favoriteIds.has(id)) {
     favoriteIds.delete(id);
@@ -430,11 +539,10 @@ const toggleFavorite = (id, name) => {
 const bookNow = (vehicle) => {
   const vehicleName = getVehicleName(vehicle);
   actionMessage.value = `Booking started for ${vehicleName}.`;
-  router.push({
-    name: 'vehicle-detail',
-    params: { id: vehicle.id },
-    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
-  });
+  const routeTarget = buildVehicleDetailRoute(vehicle);
+  if (!routeTarget) return;
+  setLastVehicleId(vehicle.id);
+  router.push(routeTarget);
 };
 
 onMounted(() => {
@@ -556,6 +664,7 @@ onUnmounted(() => {
   background: #eef7ff;
   color: #2563eb;
 }
+
 
 .brand-icon i {
   color: #2563eb;
@@ -766,6 +875,13 @@ onUnmounted(() => {
   /* padding: 0px; */
 }
 
+.card-image-btn {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
 .card-image img {
   width: 100%;
   max-height: 152px;
@@ -787,6 +903,17 @@ onUnmounted(() => {
   margin: 0;
   font-size: 24px;
   line-height: 1.3;
+}
+
+.card-title-btn {
+  text-align: left;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.card-title-btn:hover {
+  text-decoration: underline;
 }
 
 .price {
@@ -850,6 +977,7 @@ onUnmounted(() => {
   border: 0;
 }
 
+<<<<<<< HEAD
 .open-map-btn {
   position: absolute;
   left: 12px;
@@ -865,6 +993,45 @@ onUnmounted(() => {
 .open-map-btn.secondary {
   left: auto;
   right: 12px;
+=======
+
+.footer {
+  margin-top: 28px;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
+  padding: 24px 20px;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 28px;
+}
+
+.footer-brand strong {
+  font-size: 24px;
+}
+
+.footer-brand strong span {
+  color: var(--brand);
+}
+
+.footer-brand p {
+  margin: 8px 0 0;
+  max-width: 420px;
+  color: #66758d;
+}
+
+.footer-links h4 {
+  margin: 2px 0 10px;
+  font-size: 15px;
+}
+
+.footer-links button {
+  display: block;
+  margin: 0 0 8px;
+  color: #52627b;
+>>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 }
 
 @media (max-width: 1080px) {
