@@ -713,9 +713,7 @@ onMounted(fetchProfile)
     margin-top: 3px;
 }
 
-.text-blue {
-    /* color: var(--color-primary); */
-}
+
 
 /* ─── Avatar Row ───────────────────────────────────────────── */
 .avatar-row {
