@@ -100,6 +100,9 @@
         <button class="btn-reset" @click="notify('Contact Us clicked')">Contact Us</button>
       </div>
     </footer>
+
+    <ConfirmModal v-model="showLogoutConfirm" title="Logout" message="Are you sure you want to logout?"
+      cancel-text="Cancel" confirm-text="Yes" variant="danger" @confirm="confirmLogout" />
   </div>
 </template>
 
@@ -108,6 +111,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
+import ConfirmModal from '../../components/ConfirmModal.vue';
 import '../../css/VehicleByShop.css';
 
 const location = ref('Siem Reap');
@@ -334,7 +338,9 @@ const openCustomLocation = () => {
 
 const notify = (message) => { actionMessage.value = message; };
 const openProfile = () => { router.push('/user/profile'); };
-const handleLogout = async () => { await userService.logout(); router.push('/login'); };
+const showLogoutConfirm = ref(false);
+const handleLogout = () => { showLogoutConfirm.value = true; };
+const confirmLogout = async () => { await userService.logout(); router.push('/login'); };
 
 const toggleFavorite = (id, name) => {
   if (favoriteIds.has(id)) { favoriteIds.delete(id); actionMessage.value = `${name} removed from favorites.`; }

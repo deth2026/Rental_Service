@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import Logo from '@/components/Logo.vue'
+import ConfirmModal from '../../components/ConfirmModal.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -130,7 +131,9 @@ const openProfile = () => {
   router.push('/user/profile')
 }
 
-const handleLogout = async () => {
+const showLogoutConfirm = ref(false)
+const handleLogout = () => { showLogoutConfirm.value = true }
+const confirmLogout = async () => {
   await userService.logout()
   localStorage.removeItem('auth_token')
   localStorage.removeItem('token')
@@ -421,6 +424,16 @@ onMounted(fetchPromotions)
         </div>
       </section>
     </main>
+
+    <ConfirmModal
+      v-model="showLogoutConfirm"
+      title="Logout"
+      message="Are you sure you want to logout?"
+      cancel-text="Cancel"
+      confirm-text="Yes"
+      variant="danger"
+      @confirm="confirmLogout"
+    />
   </div>
 </template>
 

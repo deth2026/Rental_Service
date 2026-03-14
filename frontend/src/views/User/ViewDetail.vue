@@ -4,6 +4,7 @@ import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
+import ConfirmModal from '../../components/ConfirmModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -25,6 +26,7 @@ const isLoading = ref(false);
 const loadError = ref('');
 const shopNamesById = ref({});
 const avatarLoadFailed = ref(false);
+const showLogoutConfirm = ref(false);
 
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -267,10 +269,8 @@ const openProfile = () => {
   router.push('/user/profile');
 };
 
-const handleLogout = async () => {
-  await userService.logout();
-  router.push('/login');
-};
+const handleLogout = () => { showLogoutConfirm.value = true; };
+const confirmLogout = async () => { await userService.logout(); router.push('/login'); };
 </script>
 
 <template>
@@ -422,6 +422,16 @@ const handleLogout = async () => {
         <p>Contact Us</p>
       </div>
     </footer>
+
+    <ConfirmModal
+      v-model="showLogoutConfirm"
+      title="Logout"
+      message="Are you sure you want to logout?"
+      cancel-text="Cancel"
+      confirm-text="Yes"
+      variant="danger"
+      @confirm="confirmLogout"
+    />
   </div>
 </template>
 

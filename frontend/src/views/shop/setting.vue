@@ -185,7 +185,7 @@
         <p class="confirm-text">{{ confirmLogoutText }}</p>
         <div class="confirm-actions">
           <button type="button" class="btn btn-muted" @click="closeLogoutConfirm">{{ t('cancel') }}</button>
-          <button type="button" class="btn btn-primary" @click="confirmLogout">{{ t('confirm') }}</button>
+          <button type="button" class="btn btn-primary" @click="confirmLogout">Yes</button>
         </div>
       </div>
     </div>
@@ -625,6 +625,11 @@ const saveSettings = async () => {
       phone: form.phone || '',
       status: form.shop_status || 'active'
     };
+
+    // If the user is creating their first shop, default the shop image to the owner's profile picture.
+    if (!currentShopId.value && profileImageUrl.value) {
+      shopPayload.img_url = profileImageUrl.value;
+    }
 
     if (currentShopId.value) {
       await api.put(`/shops/${currentShopId.value}`, shopPayload);

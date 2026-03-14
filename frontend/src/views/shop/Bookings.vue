@@ -1,11 +1,58 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { bookingApi } from '@/services/api'
 import '../../css/Booking.css'
 
 const activeTab = ref('all')
 const searchQuery = ref('')
 
 const bookings = ref([])
+const loading = ref(true)
+const error = ref('')
+
+const fetchBookings = async () => {
+  try {
+    loading.value = true
+    error.value = ''
+    const response = await bookingApi.getAll()
+    const data = response.data?.data || response.data || []
+
+    bookings.value = data.map((b) => {
+      const vehicle = b.vehicle || null
+      const shop = vehicle?.shop || null
+
+      const startDate = b.start_date ? String(b.start_date).split('T')[0] : ''
+      const totalDays = Number(b.total_days || 0) || 0
+      const end = (() => {
+        if (!startDate) return ''
+        const start = new Date(startDate)
+        if (Number.isNaN(start.getTime())) return ''
+        const d = new Date(start.getTime() + Math.max(1, totalDays) * 24 * 60 * 60 * 1000)
+        return d.toISOString().split('T')[0]
+      })()
+
+      return {
+        id: b.id,
+        booking_code: b.id ? `BKG-${String(b.id).padStart(6, '0')}` : 'BKG-—',
+        vehicle_name: vehicle ? `${vehicle.brand || ''} ${vehicle.model || ''}`.trim() : `Vehicle #${b.vehicle_id}`,
+        shop_name: shop?.name || `Shop #${vehicle?.shop_id || '—'}`,
+        image: vehicle?.image_url_full || '',
+        status: b.status || 'pending',
+        start_date: startDate,
+        end_date: end,
+        total_price: Number(b.total_price || 0) || 0,
+      }
+    })
+  } catch (err) {
+    console.error('Error fetching bookings:', err)
+    error.value = err?.response?.data?.message || err?.message || 'Failed to load bookings.'
+    bookings.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(fetchBookings)
 
 const filteredBookings = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -109,11 +156,14 @@ const getTotalDays = (start, end) => {
     </section>
 
     <section class="booking-list-wrap">
-      <div v-if="filteredBookings.length === 0" class="empty-state">No bookings found for your search.</div>
+      <div v-if="loading" class="empty-state">Loading bookings from database...</div>
+      <div v-else-if="error" class="empty-state">{{ error }}</div>
+      <div v-else-if="filteredBookings.length === 0" class="empty-state">No bookings found for your search.</div>
 
       <article v-for="booking in filteredBookings" :key="booking.id" class="booking-card">
         <div class="booking-image">
-          <img :src="booking.image" :alt="booking.vehicle_name" class="vehicle-img" />
+          <img v-if="booking.image" :src="booking.image" :alt="booking.vehicle_name" class="vehicle-img" />
+          <div v-else class="vehicle-img placeholder"></div>
         </div>
 
         <div class="booking-info">

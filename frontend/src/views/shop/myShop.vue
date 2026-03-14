@@ -76,18 +76,6 @@ const getStoredUser = () => {
   }
 }
 
-const getUserId = () => {
-  const rawUser = localStorage.getItem('user')
-  if (!rawUser) return 1
-
-  try {
-    const parsed = JSON.parse(rawUser)
-    return parsed.id || 1
-  } catch {
-    return 1
-  }
-}
-
 const asArray = (payload) => payload?.data || payload || []
 
 const formatDateTime = (value) => {
@@ -123,27 +111,26 @@ const getShopImageUrl = (url) => {
 }
 
 const loadMyShop = async () => {
-  const ownerId = getUserId()
   const storedUser = getStoredUser()
+  const ownerId = storedUser?.id ? Number(storedUser.id) : null
   ownerName.value = storedUser?.name || 'N/A'
   
   // Clear shop first to ensure we get fresh data
   shop.value = null
-  const cachedShop = getCachedShop(ownerId)
+  const cachedShop = ownerId ? getCachedShop(ownerId) : null
   if (cachedShop) {
     shop.value = cachedShop
   }
 
   try {
-    const response = await shopApi.getAll()
-    const shops = asArray(response.data)
-    const myShops = shops.filter((item) => Number(item.owner_id) === Number(ownerId))
+    const response = await shopApi.getMine()
+    const myShops = asArray(response.data)
 
     if (!myShops.length) {
       if (!cachedShop) {
         shop.value = null
       }
-      setCachedShop(ownerId, null)
+      if (ownerId) setCachedShop(ownerId, null)
       return
     }
 
@@ -156,7 +143,7 @@ const loadMyShop = async () => {
     })
 
     shop.value = myShops[0]
-    setCachedShop(ownerId, shop.value)
+    if (ownerId) setCachedShop(ownerId, shop.value)
     ownerName.value = shop.value?.owner_name || shop.value?.owner?.name || storedUser?.name || 'N/A'
   } catch (e) {
     console.error('Failed to load shop', e)

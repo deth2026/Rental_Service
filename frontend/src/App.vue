@@ -1,6 +1,11 @@
+<script setup>
+import ToastHost from './components/ToastHost.vue'
+</script>
+
 <template>
   <div id="app">
     <router-view/>
+    <ToastHost />
   </div>
 </template>
 

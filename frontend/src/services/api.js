@@ -51,6 +51,7 @@ export const vehicleApi = {
 export const shopApi = {
   getAll: () => api.get('/shops'),
   getById: (id) => api.get(`/shops/${id}`),
+  getMine: () => api.get('/my/shops'),
   create: (data) => api.post('/shops', data),
   update: (id, data) => {
     if (typeof FormData !== 'undefined' && data instanceof FormData) {
@@ -62,9 +63,22 @@ export const shopApi = {
   delete: (id) => api.delete(`/shops/${id}`)
 };
 
+// Category API calls
+export const categoryApi = {
+  getAll: () => api.get('/categories'),
+  getById: (id) => api.get(`/categories/${id}`),
+  create: (data) => api.post('/categories', data),
+  update: (id, data) => api.put(`/categories/${id}`, data),
+  delete: (id) => api.delete(`/categories/${id}`)
+};
+
 // City API calls
 export const cityApi = {
-  getAll: () => api.get('/cities')
+  getAll: () => api.get('/cities'),
+  getById: (id) => api.get(`/cities/${id}`),
+  create: (data) => api.post('/cities', data),
+  update: (id, data) => api.put(`/cities/${id}`, data),
+  delete: (id) => api.delete(`/cities/${id}`)
 };
 
 // Payment API calls
@@ -76,13 +90,22 @@ export const paymentApi = {
   delete: (id) => api.delete(`/payments/${id}`)
 };
 
+// Booking API calls
+export const bookingApi = {
+  getAll: () => api.get('/bookings'),
+  getById: (id) => api.get(`/bookings/${id}`),
+  create: (data) => api.post('/bookings', data),
+  update: (id, data) => api.put(`/bookings/${id}`, data),
+  delete: (id) => api.delete(`/bookings/${id}`),
+};
+
 // Coupon API calls
 export const couponApi = {
   getAll: () => api.get('/coupons'),
-  getById: (id) => api.get(`/coupons/${id}`),
-  create: (data) => api.post('/coupons', data),
-  update: (id, data) => api.put(`/coupons/${id}`, data),
-  delete: (id) => api.delete(`/coupons/${id}`)
+  getById: (id) => api.get(`/admin/coupons/${id}`),
+  create: (data) => api.post('/admin/coupons', data),
+  update: (id, data) => api.put(`/admin/coupons/${id}`, data),
+  delete: (id) => api.delete(`/admin/coupons/${id}`),
 };
 
 // Feedback API calls

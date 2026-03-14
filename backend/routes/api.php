@@ -23,6 +23,21 @@ Route::post('/login', [UserController::class, 'login']);
 Route::post('/users/register', [AuthController::class, 'register']);
 Route::post('/users/login', [UserController::class, 'login']);
 
+// Admin base route
+Route::get('/admin', function () {
+    return response()->json([
+        'message' => 'Welcome to CHONG CHOUL Admin API',
+        'version' => '1.0.0',
+        'endpoints' => [
+            'users' => '/api/admin/users',
+            'categories' => '/api/admin/categories',
+            'cities' => '/api/admin/cities',
+            'coupons' => '/api/admin/coupons',
+            'loyalty-points' => '/api/admin/loyalty-points',
+        ]
+    ]);
+});
+
 // Auth routes with /auth prefix
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -45,11 +60,14 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Admin only routes
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
     Route::apiResource('users', UserController::class)->except(['create', 'edit']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('cities', CityController::class)->except(['index']);
 });
+
+// Public categories endpoint
+Route::get('/categories', [CategoryController::class, 'index']);
 
 // Public cities endpoint - needed for dropdowns in shop creation forms
 Route::get('/cities', [CityController::class, 'index']);
@@ -58,7 +76,7 @@ Route::get('/cities', [CityController::class, 'index']);
 Route::get('/coupons', [CouponController::class, 'index']);
 
 // Admin + Shop Owner shared routes (coupons & loyalty points management)
-Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->prefix('admin')->group(function () {
     Route::apiResource('coupons', CouponController::class)->except(['index']);
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
@@ -82,6 +100,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
+// Public users route for admin dashboard
+Route::get('/users', [UserController::class, 'index']);
+
 // Public vehicle routes (for customers to view vehicles)
 Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
 
@@ -93,6 +114,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/vehicles', [VehicleController::class, 'store']);
     Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update']);
     Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
+
+    // Shop owner helpers
+    Route::get('/my/shops', [ShopController::class, 'mine']);
+
     Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
     Route::apiResource('bookings', BookingController::class);
     Route::apiResource('booking-status-logs', BookingStatusLogController::class);

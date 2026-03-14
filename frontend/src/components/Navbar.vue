@@ -55,18 +55,36 @@
       </nav>
     </header>
   </nav>
+
+  <ConfirmModal
+    v-model="showLogoutConfirm"
+    :title="t('logout')"
+    :message="confirmLogoutText"
+    :cancel-text="t('cancel')"
+    confirm-text="Yes"
+    variant="danger"
+    @confirm="confirmLogout"
+  />
 </template>
 
 <script setup>
 import Logo from '@/components/Logo.vue';
+import ConfirmModal from '@/components/ConfirmModal.vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { ref, computed, onMounted } from 'vue';
 import userService from '@/services/userService.js';
+import { logoutUser } from '@/services/auth';
 
 const { t } = useI18n();
 const router = useRouter();
 const showDropdown = ref(false);
+const showLogoutConfirm = ref(false);
+
+const confirmLogoutText = computed(() => {
+  const msg = t('confirmLogout');
+  return msg === 'confirmLogout' ? 'Are you sure you want to logout?' : msg;
+});
 
 // Get user avatar
 const userAvatar = computed(() => {
@@ -80,10 +98,14 @@ const userAvatar = computed(() => {
 });
 
 function handleLogout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.dispatchEvent(new Event('user-logged-out'));
-    router.push('/login');
+  showDropdown.value = false;
+  showLogoutConfirm.value = true;
+}
+
+async function confirmLogout() {
+  await logoutUser();
+  window.dispatchEvent(new Event('user-logged-out'));
+  router.push('/login');
 }
 
 onMounted(() => {

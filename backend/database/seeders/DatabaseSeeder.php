@@ -13,7 +13,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // \App\Models\User::factory(10)->create();
+        // \\App\Models\User::factory(10)->create();
 
         // Create test users
         \App\Models\User::create([
@@ -54,6 +54,23 @@ class DatabaseSeeder extends Seeder
                 'is_verified' => true,
             ]
         );
+
+        // Create vehicle categories
+        $categories = [
+            ['name' => 'Motorcycle', 'description' => 'Standard motorcycles for daily commute', 'status' => 'active'],
+            ['name' => 'Scooter', 'description' => 'Scooters for easy city riding', 'status' => 'active'],
+            ['name' => 'Electric Bike', 'description' => 'Electric bicycles and bikes', 'status' => 'active'],
+            ['name' => 'Car', 'description' => 'Cars for rent', 'status' => 'active'],
+            ['name' => 'Truck', 'description' => 'Pickup trucks and cargo vehicles', 'status' => 'active'],
+            ['name' => 'Van', 'description' => 'Passenger vans and cargo vans', 'status' => 'active'],
+        ];
+
+        foreach ($categories as $category) {
+            \App\Models\Category::updateOrCreate(
+                ['name' => $category['name']],
+                $category
+            );
+        }
     }
 }
 

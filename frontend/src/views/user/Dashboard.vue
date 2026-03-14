@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import Logo from '../../components/Logo.vue'
+import ConfirmModal from '../../components/ConfirmModal.vue'
 import '../../css/userDashboard.css'
 
 const router = useRouter()
@@ -14,6 +15,7 @@ const shopsError = ref('')
 const showAllShops = ref(false)
 const expandedShops = ref(new Set())
 const isProfileDropdownOpen = ref(false)
+const showLogoutConfirm = ref(false)
 
 // Navigation items
 const navItems = [
@@ -221,6 +223,11 @@ const viewShopVehicles = (shop) => router.push({ name: 'vehicles-by-shop', query
 
 // Logout
 const handleLogout = async () => {
+  isProfileDropdownOpen.value = false
+  showLogoutConfirm.value = true
+}
+
+const confirmLogout = async () => {
   await userService.logout()
   router.push('/login')
 }
@@ -447,5 +454,15 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </footer>
+
+    <ConfirmModal
+      v-model="showLogoutConfirm"
+      title="Logout"
+      message="Are you sure you want to logout?"
+      cancel-text="Cancel"
+      confirm-text="Yes"
+      variant="danger"
+      @confirm="confirmLogout"
+    />
   </div>
 </template>
