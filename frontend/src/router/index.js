@@ -33,9 +33,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
-      meta: { requiresAuth: false }
+      name: 'my-bookings',
+      component: UserBookings,
     },
     {
       path: '/home',

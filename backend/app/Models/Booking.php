@@ -12,6 +12,7 @@ class Booking extends Model
     protected $fillable = [
         'user_id',
         'vehicle_id',
+        'shop_id',
         'coupon_id',
         'start_date',
         'total_days',
@@ -27,4 +28,26 @@ class Booking extends Model
         'total_days' => 'integer',
         'total_price' => 'decimal:2'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
+    }
+
+    public function shop()
+    {
+        return $this->belongsTo(Shop::class);
+    }
+
+    public function coupon()
+    {
+        return $this->belongsTo(Coupon::class);
+    }
 }
+
+
