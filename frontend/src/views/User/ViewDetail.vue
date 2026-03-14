@@ -1,4 +1,4 @@
-<template>
+d<template>
   <div class="detail-page">
     <header class="topbar">
       <div class="brand" @click="goHome">
@@ -13,15 +13,8 @@
       </nav>
 
       <div class="top-actions">
-        <span class="user-display-name">customer</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          <span>Logout</span>
-        </button>
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -187,7 +180,14 @@ import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
+>>>>>>> dc158fb (update setting user)
+=======
 import CommonFooter from '../../components/CommonFooter.vue';
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
+
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
+ dc158fb (update setting user)
 
 const route = useRoute();
 const router = useRouter();
@@ -208,34 +208,9 @@ const vehicle = ref(null);
 const isLoading = ref(false);
 const loadError = ref('');
 const shopNamesById = ref({});
-const avatarLoadFailed = ref(false);
 
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
 
 const normalizeVehicle = (data) => ({
   ...data,
@@ -366,6 +341,132 @@ const handleLogout = async () => {
 };
 
 </script>
+<<<<<<< HEAD
+=======
+<template>
+  <div class="detail-page">
+    <header class="topbar">
+      <div class="brand" @click="goHome">
+        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
+        <span>Chong Choul</span>
+      </div>
+
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item.label"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item.label }"
+          @click="setActiveNav(item)"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+      </div>
+    </header>
+
+    <main class="detail-wrapper">
+      <div v-if="isLoading" class="status-card">
+        <div class="loading-spinner"></div>
+        <p>Loading vehicle details...</p>
+      </div>
+
+      <div v-else-if="loadError" class="status-card status-card--error">
+        <p>{{ loadError }}</p>
+        <button class="btn-reset text-btn" type="button" @click="goBack">Back to Vehicles</button>
+      </div>
+
+      <section v-else class="detail-card">
+        <div class="detail-card__hero">
+          <div>
+            <p class="hero-eyebrow">DriveMatch</p>
+            <h1>{{ vehicleTitle }}</h1>
+            <p class="hero-subtitle">{{ shopName }}</p>
+          </div>
+          <div class="hero-price">
+            <span class="hero-price__value">${{ formatPrice(vehicle.price_per_day) }}</span>
+            <span class="hero-price__unit">per day</span>
+            <small>Premium auto selection</small>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-left">
+            <div class="image-panel">
+              <img :src="primaryImage" :alt="vehicleTitle" />
+              <span class="status-pill">{{ availabilityText }}</span>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn-ghost" type="button" @click="goBack">Back to vehicles</button>
+              <button class="btn-solid" type="button" @click="goBack">Rent now</button>
+            </div>
+
+            <div class="feature-sections">
+              <article v-for="section in featureSections" :key="section.title" class="feature-card">
+                <div class="feature-card__head">
+                  <h3>{{ section.title }}</h3>
+                  <span>{{ section.caption }}</span>
+                </div>
+                <ul>
+                  <li v-for="item in section.items.slice(0, 4)" :key="item">{{ item }}</li>
+                </ul>
+              </article>
+            </div>
+          </div>
+
+          <aside class="detail-right">
+            <article class="panel journey-panel">
+              <div class="panel-head">
+                <h3>Your Journey</h3>
+                <span class="pill">Ready</span>
+              </div>
+              <ul>
+                <li v-for="step in journeySteps" :key="step.label">
+                  <span>{{ step.label }}</span>
+                  <strong>{{ step.value }}</strong>
+                </li>
+              </ul>
+            </article>
+
+            <article class="panel price-panel">
+              <div class="panel-head">
+                <h3>Price Breakdown</h3>
+                <span class="pill pill--muted">{{ rentalDays }} day{{ rentalDays > 1 ? 's' : '' }}</span>
+              </div>
+              <ul>
+                <li v-for="row in priceRows" :key="row.label">
+                  <span>{{ row.label }}</span>
+                  <strong>{{ row.value }}</strong>
+                </li>
+              </ul>
+              <div class="panel-total">
+                <span>Total Payment</span>
+                <strong>${{ totalPayment }}</strong>
+              </div>
+            </article>
+
+            <article class="panel location-panel">
+              <div class="panel-head">
+                <h3>My Location</h3>
+                <button class="btn-link" type="button" @click="openMainLocation">
+                  Open map <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </button>
+              </div>
+              <p>{{ vehicleLocation }}</p>
+              <p class="small-text">Pick-up at Trip Zone Motorbike and Scooter Rental</p>
+            </article>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+</template>
+
 
 <style scoped>
 .detail-page {
