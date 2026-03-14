@@ -479,7 +479,7 @@
   justify-content: flex-start;
   gap: 12px;
   margin: 26px 0 16px;
-  margin-top: 80px;
+  margin-top: 40px;
 }
 
 .choose-shop-box {
@@ -522,7 +522,7 @@
 .containers {
   position: relative;
   width: 105vw;
-  height: 110vh;
+  height: 100vh;
   margin: 0;
   padding: 0;
   margin-left: calc(-50vw + 50%);
@@ -532,7 +532,7 @@
   width: 200px;
   height: 300px;
   position: absolute;
-  top: 38%;
+  top: 44%;
   transform: translate(0, -50%);
   border-radius: 20px;
   background-size: cover;
