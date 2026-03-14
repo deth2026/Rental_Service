@@ -123,9 +123,6 @@
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
-          <button class="btn-reset open-map-btn" @click="openMainLocation">
-            Open in Google Maps
-          </button>
         </div>
       </section>
     </main>
@@ -175,11 +172,12 @@ let dateRangeTimer = null;
 const mapEmbedUrl = `https://maps.google.com/maps?hl=en&q=${encodeURIComponent('Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia')}&t=k&z=18&output=embed`;
 
 const route = useRoute();
-const navItems = ['Home', 'My Bookings', 'About'];
+const navItems = ['Home', 'Viewdetails', 'Bookings'];
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
 const selectedType = ref('all');
 const vehicleTypes = [
   { key: 'all', label: 'All' },
@@ -325,16 +323,13 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
-  actionMessage.value = `${item} opened.`;
+  actionMessage.value = `${item} is not available yet.`;
 };
 
 const handleSearch = () => {
   actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
 };
 
-const openMainLocation = () => {
-  window.open('https://maps.google.com/?q=Trip Zone Motorbike and Scooter Rental, Siem Reap, Cambodia', '_blank');
-};
 
 const notify = (message) => {
   actionMessage.value = message;
@@ -362,9 +357,21 @@ const buildVehicleDetailRoute = (vehicle) => {
   };
 };
 
+const setLastVehicleId = (id) => {
+  if (!id) return;
+  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
+};
+
+const getLastVehicleId = () => {
+  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
 const viewDetails = (vehicle) => {
   const routeTarget = buildVehicleDetailRoute(vehicle);
   if (!routeTarget) return;
+  setLastVehicleId(vehicle.id);
   router.push(routeTarget);
 };
 
@@ -383,6 +390,7 @@ const bookNow = (vehicle) => {
   actionMessage.value = `Booking started for ${vehicleName}.`;
   const routeTarget = buildVehicleDetailRoute(vehicle);
   if (!routeTarget) return;
+  setLastVehicleId(vehicle.id);
   router.push(routeTarget);
 };
 
@@ -488,6 +496,7 @@ onUnmounted(() => {
   background: #eef7ff;
   color: #2563eb;
 }
+
 
 .brand-icon i {
   color: #2563eb;
@@ -775,18 +784,6 @@ onUnmounted(() => {
   border: 0;
 }
 
-.open-map-btn {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  color: var(--brand-dark);
-  font-size: 13px;
-  font-weight: 600;
-}
 
 .footer {
   margin-top: 28px;

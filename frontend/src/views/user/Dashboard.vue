@@ -15,7 +15,7 @@ const showLogoutConfirm = ref(false)
 // Navbar state
 const location = ref('Phnom Penh')
 const dateRange = ref('Mar 15 - Mar 18')
-const navItems = ref(['Home', 'My Bookings', 'About'])
+const navItems = ref(['Home', 'Viewdetails', 'Bookings'])
 const activeNav = ref('Home')
 
 const setActiveNav = (item) => {

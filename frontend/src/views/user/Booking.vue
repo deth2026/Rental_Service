@@ -1,43 +1,39 @@
 <template>
   <div class="booking-checkout-page">
-    <header class="main-header">
-      <div class="header-content">
-        <div class="brand-wrap">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span class="brand-text">Moto Rental</span>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+          <span>Chong Choul</span>
         </div>
 
-        <nav class="top-nav" aria-label="Primary">
-          <a href="#">Browse Motorcycles</a>
-          <a href="#">My Bookings</a>
-          <a href="#">Support</a>
+        <nav class="nav-links">
+          <button
+            v-for="item in navItems"
+            :key="item"
+            class="btn-reset nav-link"
+            :class="{ active: activeNav === item }"
+            @click="setActiveNav(item)"
+          >
+            {{ item }}
+          </button>
         </nav>
 
         <div class="top-actions">
-          <button class="icon-btn" type="button" aria-label="Notifications">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M9 17a3 3 0 006 0"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
+          <span class="user-display-name">{{ userDisplayName }}</span>
+          <button class="btn-reset avatar" @click="openProfile">
+            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+            <span v-else>{{ userInitials }}</span>
           </button>
-          <div class="avatar">JD</div>
+          <button class="btn-reset logout-btn" @click="handleLogout">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            <span>Logout</span>
+          </button>
         </div>
       </div>
     </header>
 
     <div class="page-container">
-      <p class="breadcrumb">Home / Checkout / Payment</p>
 
       <div class="page-heading-row">
         <h1>Checkout</h1>
@@ -48,7 +44,9 @@
         <span class="progress-value"></span>
       </div>
 
-      <p class="page-subtitle">
+      <p v-if="isLoading" class="page-subtitle">Loading vehicle details...</p>
+      <p v-else-if="loadingError" class="page-subtitle">{{ loadingError }}</p>
+      <p v-else class="page-subtitle">
         Securely complete your rental booking for the {{ rental.title }}
       </p>
 
@@ -57,10 +55,10 @@
           <div class="card summary-card">
             <div class="motorcycle-image">
               <img
-                src="https://images.pexels.com/photos/136872/pexels-photo-136872.jpeg?auto=compress&cs=tinysrgb&w=1200"
-                alt="Honda CB500X"
+                :src="vehicleImage"
+                :alt="vehicleName"
               />
-              <span class="vehicle-tag">ADVENTURE</span>
+              <span class="vehicle-tag">{{ vehicleTag }}</span>
             </div>
 
             <h2 class="item-title">{{ rental.title }}</h2>
@@ -81,11 +79,11 @@
               </div>
             </div>
 
-            <div class="pricing-list">
-              <div class="row">
-                <span>Daily Rate x {{ calculateDays() }} day(s)</span>
-                <span>${{ rental.subtotal.toFixed(2) }}</span>
-              </div>
+          <div class="pricing-list">
+            <div class="row">
+              <span>Daily Rate x {{ calculateDays() }} day(s) x {{ riderCount }} rider(s)</span>
+              <span>${{ rental.subtotal.toFixed(2) }}</span>
+            </div>
               <div class="row">
                 <span>Insurance</span>
                 <span>${{ rental.insurance.toFixed(2) }}</span>
@@ -231,8 +229,8 @@
                     autocomplete="cc-csc"
                     inputmode="numeric"
                     placeholder="***"
-                    maxlength="4"
-                    pattern="\d{3,4}"
+                    maxlength="3"
+                    pattern="\d{3}"
                     required
                   />
                 </div>
@@ -384,18 +382,41 @@
     </div>
 
     <footer class="site-footer">
-      <div class="footer-content">
-        <div>
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <strong>Chong Choul<span>Rides</span></strong>
+          <p>Secure, fast, and transparent bookings across Cambodia.</p>
+          <div class="footer-badges">
+            <span class="badge-pill">Secure Checkout</span>
+            <span class="badge-pill">PCI Compliant</span>
+          </div>
+        </div>
+        <div class="footer-links">
           <h4>Support</h4>
           <p>Help Center</p>
           <p>Cancel your booking</p>
+          <p>Contact Us</p>
         </div>
-        <div>
-          <h4>Terms & Privacy</h4>
+        <div class="footer-links">
+          <h4>Terms &amp; Privacy</h4>
           <p>Terms of Service</p>
           <p>Privacy Policy</p>
+          <p>Cookie Policy</p>
         </div>
-        <div class="footer-brand">Secure Checkout</div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <p>About</p>
+          <p>Partners</p>
+          <p>Careers</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Chong Choul. All rights reserved.</span>
+        <div class="footer-bottom-links">
+          <span>Security</span>
+          <span>Accessibility</span>
+          <span>Legal</span>
+        </div>
       </div>
     </footer>
 
@@ -445,8 +466,197 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import api from "@/services/api";
+import { userService } from "../../services/database.js";
 import "../../assets/user/booking.css";
+
+// Navigation
+const router = useRouter();
+const route = useRoute();
+
+// Header data from VehiclesByShop.vue
+const navItems = ['Home', 'Viewdetails', 'Bookings'];
+const activeNav = ref('Home');
+const actionMessage = ref('');
+const avatarLoadFailed = ref(false);
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
+
+const currentUser = computed(() => userService.getCurrentUser());
+const userDisplayName = computed(() => currentUser.value?.name || 'customer');
+
+const normalizeAvatarUrl = (url) => {
+  if (!url) return '';
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
+  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
+  if (normalized.startsWith('storage/')) return `/${normalized}`;
+  return `/storage/${normalized}`;
+};
+
+const userAvatarUrl = computed(() => {
+  if (avatarLoadFailed.value) return '';
+  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
+  return normalizeAvatarUrl(src);
+});
+
+const userInitials = computed(() => {
+  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'CU';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
+});
+
+// Header functions
+const setActiveNav = (item) => {
+  activeNav.value = item;
+  if (item === 'Home') {
+    router.replace('/view_shop');
+    return;
+  }
+  actionMessage.value = `${item} is not available yet.`;
+};
+
+const openProfile = () => {
+  router.push('/user/profile');
+};
+
+const handleLogout = async () => {
+  await userService.logout();
+  router.push('/login');
+};
+
+const onAvatarError = () => {
+  avatarLoadFailed.value = true;
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, "");
+const fallbackImageByType = {
+  motorbike: "https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg",
+  bicycle: "https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg",
+  car: "https://i.pinimg.com/1200x/d9/9e/06/d99e06bd9dd77fb2581170af2063b3b5.jpg",
+};
+
+const vehicle = ref(null);
+const shopsById = ref({});
+const isLoading = ref(false);
+const loadingError = ref("");
+const vehicleId = computed(() => {
+  const value = Number(route.params.id);
+  return Number.isFinite(value) && value > 0 ? value : null;
+});
+
+const setLastVehicleId = (id) => {
+  if (!id) return;
+  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
+};
+
+const getLastVehicleId = () => {
+  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
+const getVehicleImage = (item) => {
+  const image = item?.image_url ? String(item.image_url).trim() : "";
+  if (image) {
+    if (image.startsWith("http://") || image.startsWith("https://")) return image;
+    if (image.startsWith("/")) return `${API_ROOT}${image}`;
+    return `${API_ROOT}/storage/${image.replace(/^storage\//, "")}`;
+  }
+  const normalizedType = String(item?.type || "").toLowerCase();
+  return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
+};
+
+const stripMapLinks = (value) => {
+  if (!value) return "";
+  return String(value)
+    .replace(/https?:\/\/maps\.app\.goo\.gl\/\S+/gi, "")
+    .replace(/https?:\/\/(www\.)?google\.com\/maps\/\S+/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
+
+const getShopLocation = (shop) => {
+  const raw = shop?.address || shop?.name || "Unknown Shop";
+  const cleaned = stripMapLinks(raw);
+  if (cleaned) return cleaned;
+  return shop?.name || "Unknown Shop";
+};
+
+const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
+const vehicleType = computed(() => vehicle.value?.type || "");
+const vehicleTag = computed(() => (vehicleType.value ? String(vehicleType.value).toUpperCase() : "RENTAL"));
+const vehicleImage = computed(() => getVehicleImage(vehicle.value));
+const vehicleLocation = computed(() => {
+  const shop = vehicle.value?.shop_id ? shopsById.value[vehicle.value.shop_id] : null;
+  return getShopLocation(shop);
+});
+
+const loadAllPages = async (resource) => {
+  let page = 1;
+  let lastPage = 1;
+  const results = [];
+
+  while (page <= lastPage) {
+    const response = await api.get(`/${resource}`, { params: { page } });
+    const payload = response.data;
+    const data = Array.isArray(payload) ? payload : payload?.data || [];
+    results.push(...data);
+    lastPage = payload?.last_page || 1;
+    page += 1;
+  }
+
+  return results;
+};
+
+const loadVehicleDetail = async () => {
+  if (!vehicleId.value) {
+    loadingError.value = "Vehicle not found.";
+    return;
+  }
+
+  isLoading.value = true;
+  loadingError.value = "";
+
+  try {
+    const [vehicleList, shopList] = await Promise.all([
+      loadAllPages("vehicles"),
+      loadAllPages("shops"),
+    ]);
+
+    shopsById.value = shopList.reduce((acc, shop) => {
+      acc[shop.id] = shop;
+      return acc;
+    }, {});
+
+    const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
+    if (!found) {
+      throw new Error("Vehicle not found.");
+    }
+
+    vehicle.value = found;
+    rental.value.title = getVehicleName(found) || rental.value.title;
+    rental.value.location = vehicleLocation.value;
+    rental.value.dailyRate = Number(found.price_per_day || 0);
+  } catch (error) {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || error.message;
+    console.error("API Error:", status, message);
+
+    if (status === 401) {
+      loadingError.value = "Authentication required. Please log in.";
+    } else if (status === 500) {
+      loadingError.value = "Server error. Please try again later.";
+    } else {
+      loadingError.value = `Could not load vehicle (${status || "network error"}). Check backend server.`;
+    }
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 const method = ref("card");
 const promoCode = ref("");
@@ -463,17 +673,50 @@ const transactionId = ref(
 const qrCodeUrl = ref("");
 
 const rental = ref({
-  title: "Honda CB500X",
-  location: "Brisbane, Australia",
+  title: "Vehicle",
+  location: "Unknown Shop",
   startDate: "",
   endDate: "",
   period: "",
   riders: "1 Rider",
-  dailyRate: 85,
+  dailyRate: 0,
   subtotal: 0,
   insurance: 75,
   taxes: 0,
 });
+
+const parseNumberFromQuery = (value) => {
+  if (value === null || value === undefined) return null;
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === "") return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : null;
+};
+
+const parseRiderDetailsFromQuery = (value) => {
+  if (value === null || value === undefined) return null;
+  const raw = Array.isArray(value) ? value[0] : value;
+  const text = String(raw).trim();
+  if (!text) return null;
+  if (/^\d+$/.test(text)) {
+    const count = Number(text);
+    if (!Number.isFinite(count) || count <= 0) return null;
+    return `${count} ${count === 1 ? "Rider" : "Riders"}`;
+  }
+  return text;
+};
+
+const applyRouteDefaults = () => {
+  const insuranceFromQuery = parseNumberFromQuery(route.query.insuranceFee);
+  if (insuranceFromQuery !== null) {
+    rental.value.insurance = insuranceFromQuery;
+  }
+
+  const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
+  if (riderFromQuery) {
+    rental.value.riders = riderFromQuery;
+  }
+};
 
 const methodTitle = computed(() => {
   if (method.value === "qr") return "QR Code Payment";
@@ -513,9 +756,17 @@ const calculateDays = () => {
   return days > 0 ? days : 0;
 };
 
+const riderCount = computed(() => {
+  const match = String(rental.value.riders).match(/^\s*(\d+)/);
+  if (!match) return 1;
+  const count = Number(match[1]);
+  return Number.isFinite(count) && count > 0 ? count : 1;
+});
+
 const totalAmount = computed(() => {
   const days = calculateDays();
-  const subtotal = days * rental.value.dailyRate;
+  const riders = riderCount.value;
+  const subtotal = days * rental.value.dailyRate * riders;
   rental.value.subtotal = subtotal;
   rental.value.taxes = subtotal * 0.1;
   return rental.value.subtotal + rental.value.insurance + rental.value.taxes;
@@ -594,13 +845,49 @@ const validateDates = async () => {
 };
 
 const saveBookingToDatabase = async (bookingData) => {
-  console.log("Saving booking:", bookingData);
-  await new Promise((resolve) => setTimeout(resolve, 900));
+  const currentUser = userService.getCurrentUser();
+  if (!currentUser?.id) {
+    return { success: false, message: "Please login first." };
+  }
 
-  return {
-    success: true,
-    bookingId: "BK" + Math.random().toString(36).slice(2, 11).toUpperCase(),
+  if (!vehicleId.value) {
+    return { success: false, message: "Vehicle not found." };
+  }
+
+  const payload = {
+    user_id: currentUser.id,
+    vehicle_id: vehicleId.value,
+    coupon_id: null,
+    start_date: rental.value.startDate,
+    total_days: calculateDays(),
+    total_price: totalAmount.value,
+    status: bookingData?.status || "pending",
+    deposit_amount: 0,
+    deposit_status: "unpaid",
+    rider_details: rental.value.riders,
+    daily_rate: rental.value.dailyRate,
+    insurance_fee: rental.value.insurance,
+    taxes_fee: rental.value.taxes,
   };
+
+  try {
+    const response = await api.post("/bookings", payload);
+    const record = response?.data?.data || response?.data;
+    const recordId = record?.id;
+    const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
+
+    return {
+      success: true,
+      bookingId: nextBookingId || "",
+    };
+  } catch (error) {
+    console.error("Booking create error:", error);
+    const message =
+      error?.response?.data?.message ||
+      error?.message ||
+      "Failed to create booking.";
+    return { success: false, message };
+  }
 };
 
 const buildBookingData = (paymentMethod, status) => ({
@@ -635,7 +922,7 @@ const handlePayment = async () => {
     bookingId.value = result.bookingId;
     showSuccessModal.value = true;
   } else {
-    alert("Payment failed. Please try again.");
+    alert(result.message || "Payment failed. Please try again.");
   }
 };
 
@@ -648,7 +935,7 @@ const handleBankTransfer = async () => {
   );
 
   if (!result.success) {
-    alert("Failed to create bank transfer instructions.");
+    alert(result.message || "Failed to create bank transfer instructions.");
     return;
   }
 
@@ -744,15 +1031,27 @@ Period: ${rental.value.period}
 
 const initDates = () => {
   const start = new Date();
-  start.setDate(start.getDate() + 7);
-
   const end = new Date(start);
-  end.setDate(end.getDate() + 7);
+  end.setDate(end.getDate() + 1);
 
   rental.value.startDate = start.toISOString().split("T")[0];
   rental.value.endDate = end.toISOString().split("T")[0];
   formatPeriod();
 };
 
+onMounted(() => {
+  loadVehicleDetail();
+  if (vehicleId.value) {
+    setLastVehicleId(vehicleId.value);
+  }
+});
+
+watch(
+  () => route.query.insuranceFee,
+  () => {
+    applyRouteDefaults();
+  },
+  { immediate: true }
+);
 initDates();
 </script>

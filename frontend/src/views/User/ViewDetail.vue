@@ -1,145 +1,404 @@
 <template>
   <div class="motoride-container">
-    <header class="main-header">
-      <div class="header-content">
-        <div class="brand-wrap">
-          <span class="brand-mark" aria-hidden="true"></span>
-          <span class="brand-text">Moto Rental</span>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+          <span>Chong Choul</span>
         </div>
 
-        <nav class="top-nav" aria-label="Primary">
-          <a href="#">Browse Motorcycles</a>
-          <a href="#">My Bookings</a>
-          <a href="#">Support</a>
+        <nav class="nav-links">
+          <button
+            v-for="item in navItems"
+            :key="item"
+            class="btn-reset nav-link"
+            :class="{ active: activeNav === item }"
+            @click="setActiveNav(item)"
+          >
+            {{ item }}
+          </button>
         </nav>
 
         <div class="top-actions">
-          <button class="icon-btn" type="button" aria-label="Notifications">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M15 17h5l-1.4-1.4a2 2 0 01-.6-1.4V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <path
-                d="M9 17a3 3 0 006 0"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              />
-            </svg>
+          <span class="user-display-name">{{ userDisplayName }}</span>
+          <button class="btn-reset avatar" @click="openProfile">
+            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
+            <span v-else>{{ userInitials }}</span>
           </button>
-          <div class="avatar">JD</div>
+          <button class="btn-reset logout-btn" @click="handleLogout">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+            <span>Logout</span>
+          </button>
         </div>
       </div>
     </header>
 
     <main class="content">
-      <section class="image-gallery">
-        <img
-          src="https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=1200"
-          alt="Honda CBR 650R"
-          class="main-img"
-        />
-        <div class="gallery-controls">
-          <div class="dots">
-            <span></span><span class="active"></span><span></span>
+      <p v-if="isLoading" class="action-message">Loading vehicle details...</p>
+      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+
+      <template v-else>
+        <section class="image-gallery">
+          <img
+            :src="vehicleImage"
+            :alt="vehicleName"
+            class="main-img"
+          />
+          <div class="gallery-controls">
+            <div class="dots">
+              <span></span><span class="active"></span><span></span>
+            </div>
+            <button class="view-all">View All Photos</button>
           </div>
-          <button class="view-all">View All Photos</button>
+        </section>
+
+        <div class="grid-layout">
+          <div class="details-col">
+            <div class="title-section">
+              <span class="badge">PREMIUM RENTAL</span>
+              <h1>{{ vehicleName }}</h1>
+              <p class="meta">
+                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicleRating }}</span>
+                <span><i class="fa-regular fa-building" aria-hidden="true"></i> {{ vehicleShopName }}</span>
+              </p>
+            </div>
+
+            <div class="spec-cards">
+              <div class="spec-card">
+                <span class="icon"><i class="fa-solid fa-gear" aria-hidden="true"></i></span>
+                <div>
+                  <small>Transmission</small>
+                  <p>{{ vehicleTransmission }}</p>
+                </div>
+              </div>
+              <div class="spec-card">
+                <span class="icon"><i class="fa-solid fa-gas-pump" aria-hidden="true"></i></span>
+                <div>
+                  <small>Fuel</small>
+                  <p>{{ vehicleFuel }}</p>
+                </div>
+              </div>
+              <div class="spec-card">
+                <span class="icon"><i class="fa-solid fa-tag" aria-hidden="true"></i></span>
+                <div>
+                  <small>Type</small>
+                  <p>{{ vehicleType }}</p>
+                </div>
+              </div>
+            </div>
+
+            <section class="description">
+              <h3>Description</h3>
+              <p>
+                Enjoy the {{ vehicleName }} from {{ vehicleShopName || 'our partners' }} with a smooth
+                {{ vehicleTransmission }} ride and {{ vehicleFuel }} efficiency.
+              </p>
+            </section>
+
+            <section class="rental-terms">
+              <h3>Rental Terms</h3>
+              <ul>
+                <li>
+                  Must be 21+ years old with a valid motorcycle endorsement.
+                </li>
+                <li>$500 security deposit required (fully refundable).</li>
+                <li>200 miles per day included ($0.50/mile after).</li>
+              </ul>
+            </section>
+          </div>
+
+          <aside class="booking-widget">
+            <h3>Booking Details</h3>
+            <div class="price-row">
+              <span>Rider Details</span>
+              <select v-model="riderDetails" class="rider-select">
+                <option value="1 Rider">1 Rider</option>
+                <option value="2 Riders">2 Riders</option>
+                <option value="3 Riders">3 Riders</option>
+                <option value="4+ Riders">4+ Riders</option>
+              </select>
+            </div>
+            <div class="price-row">
+              <span>Daily Rate (per rider)</span>
+              <span>{{ formatCurrency(dailyRate) }}</span>
+            </div>
+            <div class="price-row">
+              <span>Riders</span>
+              <span>{{ riderCount }} {{ riderCount === 1 ? 'Rider' : 'Riders' }}</span>
+            </div>
+            <div class="price-row">
+              <span>Insurance fee</span>
+              <span>{{ formatCurrency(insuranceFee) }}</span>
+            </div>
+            <div class="price-row">
+              <span>Taxes & Fees</span>
+              <span>{{ formatCurrency(taxesFee) }}</span>
+            </div>
+            <div class="total-row">
+              <span>Total Price</span>
+              <span class="price-blue">{{ formatCurrency(totalPrice) }}</span>
+            </div>
+            <button class="book-btn" @click="goToBooking">Book This Bike</button>
+            <p class="disclaimer">No payment taken until booking is confirmed</p>
+          </aside>
         </div>
-      </section>
-
-      <div class="grid-layout">
-        <div class="details-col">
-          <div class="title-section">
-            <span class="badge">PREMIUM RENTAL</span>
-            <h1>Honda CBR 650R</h1>
-            <p class="meta">
-              ⭐ 4.9 (128 reviews) • 📍 Downtown, San Francisco
-            </p>
-          </div>
-
-          <div class="spec-cards">
-            <div class="spec-card">
-              <span class="icon">⚙️</span>
-              <div>
-                <small>Engine</small>
-                <p>649cc</p>
-              </div>
-            </div>
-            <div class="spec-card">
-              <span class="icon">⚡</span>
-              <div>
-                <small>Power</small>
-                <p>94 HP</p>
-              </div>
-            </div>
-            <div class="spec-card">
-              <span class="icon">⚖️</span>
-              <div>
-                <small>Weight</small>
-                <p>208 kg</p>
-              </div>
-            </div>
-          </div>
-
-          <section class="description">
-            <h3>Description</h3>
-            <p>
-              The Honda CBR 650R is a high-performance middleweight sports bike
-              designed for both track-day thrills and weekend touring...
-            </p>
-          </section>
-
-          <section class="rental-terms">
-            <h3>Rental Terms</h3>
-            <ul>
-              <li>
-                Must be 21+ years old with a valid motorcycle endorsement.
-              </li>
-              <li>$500 security deposit required (fully refundable).</li>
-              <li>200 miles per day included ($0.50/mile after).</li>
-            </ul>
-          </section>
-        </div>
-
-        <aside class="booking-widget">
-          <h3>Booking Details</h3>
-          <div class="booking-row">
-            <span>Pickup Date</span>
-            <strong>Oct 24, 10:00 AM</strong>
-          </div>
-          <div class="booking-row">
-            <span>Return Date</span>
-            <strong>Oct 26, 10:00 AM</strong>
-          </div>
-          <hr />
-          <div class="price-row">
-            <span>$120 x 2 days</span>
-            <span>$240.00</span>
-          </div>
-          <div class="price-row">
-            <span>Insurance fee</span>
-            <span>$30.00</span>
-          </div>
-          <div class="total-row">
-            <span>Total Price</span>
-            <span class="price-blue">$270.00</span>
-          </div>
-          <button class="book-btn"><router-link to="/booking" class="book-btn">
-            Book This Bike
-          </router-link></button>
-          <p class="disclaimer">No payment taken until booking is confirmed</p>
-        </aside>
-      </div>
+      </template>
     </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <strong>Chong Choul<span>Rides</span></strong>
+          <p>Secure, fast, and transparent bookings across Cambodia.</p>
+          <div class="footer-badges">
+            <span class="badge-pill">Secure Checkout</span>
+            <span class="badge-pill">Verified Partners</span>
+          </div>
+        </div>
+        <div class="footer-links">
+          <h4>Support</h4>
+          <p>Help Center</p>
+          <p>Cancel your booking</p>
+          <p>Contact Us</p>
+        </div>
+        <div class="footer-links">
+          <h4>Terms &amp; Privacy</h4>
+          <p>Terms of Service</p>
+          <p>Privacy Policy</p>
+          <p>Cookie Policy</p>
+        </div>
+        <div class="footer-links">
+          <h4>Company</h4>
+          <p>About</p>
+          <p>Partners</p>
+          <p>Careers</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Chong Choul. All rights reserved.</span>
+        <div class="footer-bottom-links">
+          <span>Security</span>
+          <span>Accessibility</span>
+          <span>Legal</span>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
-// Logic for handling booking or image switching can go here
+import { computed, onMounted, ref } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import api from '@/services/api';
+import { userService } from '../../services/database.js';
+
+const router = useRouter();
+const route = useRoute();
+
+const navItems = ['Home', 'Viewdetails', 'Bookings'];
+const activeNav = ref('Home');
+const actionMessage = ref('');
+const avatarLoadFailed = ref(false);
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
+const currentUser = computed(() => userService.getCurrentUser());
+const userDisplayName = computed(() => currentUser.value?.name || 'customer');
+
+const normalizeAvatarUrl = (url) => {
+  if (!url) return '';
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
+  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
+  if (normalized.startsWith('storage/')) return `/${normalized}`;
+  return `/storage/${normalized}`;
+};
+
+const userAvatarUrl = computed(() => {
+  if (avatarLoadFailed.value) return '';
+  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
+  return normalizeAvatarUrl(src);
+});
+
+const onAvatarError = () => {
+  avatarLoadFailed.value = true;
+};
+
+const userInitials = computed(() => {
+  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'CU';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
+});
+
+const setActiveNav = (item) => {
+  activeNav.value = item;
+  if (item === 'Home') {
+    router.replace('/view_shop');
+    return;
+  }
+  actionMessage.value = `${item} is not available yet.`;
+};
+
+const openProfile = () => {
+  router.push('/user/profile');
+};
+
+const handleLogout = async () => {
+  await userService.logout();
+  router.push('/login');
+};
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
+const fallbackImageByType = {
+  motorbike: 'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
+  bicycle: 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
+  car: 'https://i.pinimg.com/1200x/d9/9e/06/d99e06bd9dd77fb2581170af2063b3b5.jpg'
+};
+
+const vehicle = ref(null);
+const shopNamesById = ref({});
+const isLoading = ref(false);
+const loadingError = ref('');
+const insuranceFee = ref(30);
+const riderDetails = ref('1 Rider');
+const vehicleId = computed(() => {
+  const value = Number(route.params.id);
+  return Number.isFinite(value) && value > 0 ? value : null;
+});
+
+const setLastVehicleId = (id) => {
+  if (!id) return;
+  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
+};
+
+const getLastVehicleId = () => {
+  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : '');
+const getVehicleShop = (item) => (item?.shop_id ? (shopNamesById.value[item.shop_id] || 'Unknown Shop') : 'Unknown Shop');
+
+const getVehicleImage = (item) => {
+  const image = item?.image_url ? String(item.image_url).trim() : '';
+  if (image) {
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    if (image.startsWith('/')) return `${API_ROOT}${image}`;
+    return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+  }
+  const normalizedType = String(item?.type || '').toLowerCase();
+  return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
+};
+
+const vehicleName = computed(() => getVehicleName(vehicle.value) || 'Vehicle');
+const vehicleShopName = computed(() => getVehicleShop(vehicle.value));
+const vehicleRating = computed(() => vehicle.value?.rating ?? vehicle.value?.average_rating ?? 4.8);
+const vehicleTransmission = computed(() => vehicle.value?.transmission || 'N/A');
+const vehicleFuel = computed(() => vehicle.value?.fuel_type || 'N/A');
+const vehicleType = computed(() => vehicle.value?.type || 'Vehicle');
+const vehicleImage = computed(() => getVehicleImage(vehicle.value));
+
+const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
+const riderCount = computed(() => {
+  const match = String(riderDetails.value).match(/^\s*(\d+)/);
+  if (!match) return 1;
+  const count = Number(match[1]);
+  return Number.isFinite(count) && count > 0 ? count : 1;
+});
+const baseAmount = computed(() => dailyRate.value * riderCount.value);
+const taxesFee = computed(() => baseAmount.value * 0.1);
+const totalPrice = computed(() => baseAmount.value + insuranceFee.value + taxesFee.value);
+
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
+
+const loadAllPages = async (resource) => {
+  let page = 1;
+  let lastPage = 1;
+  const results = [];
+
+  while (page <= lastPage) {
+    const response = await api.get(`/${resource}`, { params: { page } });
+    const payload = response.data;
+    const data = Array.isArray(payload) ? payload : payload?.data || [];
+    results.push(...data);
+    lastPage = payload?.last_page || 1;
+    page += 1;
+  }
+
+  return results;
+};
+
+const loadVehicleDetail = async () => {
+  if (!vehicleId.value) {
+    loadingError.value = 'Vehicle not found.';
+    return;
+  }
+  isLoading.value = true;
+  loadingError.value = '';
+
+  try {
+    const [vehicleList, shopList] = await Promise.all([
+      loadAllPages('vehicles'),
+      loadAllPages('shops')
+    ]);
+
+    shopNamesById.value = shopList.reduce((acc, shop) => {
+      acc[shop.id] = shop.name;
+      return acc;
+    }, {});
+
+    const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
+    if (!found) {
+      throw new Error('Vehicle not found.');
+    }
+
+    vehicle.value = {
+      ...found,
+      rating: found.rating ?? found.average_rating ?? 4.8
+    };
+  } catch (error) {
+    const status = error?.response?.status;
+    const message = error?.response?.data?.message || error.message;
+    console.error('API Error:', status, message);
+
+    if (status === 401) {
+      loadingError.value = 'Authentication required. Please log in.';
+    } else if (status === 500) {
+      loadingError.value = 'Server error. Please try again later.';
+    } else {
+      loadingError.value = `Could not load vehicle (${status || 'network error'}). Check backend server.`;
+    }
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const goToBooking = () => {
+  const vehicleId = route.params.id;
+  const insuranceValue = Number(insuranceFee.value);
+  const query = {};
+  if (Number.isFinite(insuranceValue)) {
+    query.insuranceFee = insuranceValue;
+  }
+  if (riderDetails.value) {
+    query.riderDetails = riderDetails.value;
+  }
+
+  if (vehicleId) {
+    setLastVehicleId(vehicleId);
+    router.push({ name: 'booking', params: { id: vehicleId }, query });
+  } else {
+    router.push({ name: 'booking', params: { id: 1 }, query }); // Fallback ID
+  }
+};
+
+onMounted(() => {
+  loadVehicleDetail();
+  if (vehicleId.value) {
+    setLastVehicleId(vehicleId.value);
+  }
+});
 </script>
 
 <style scoped>
@@ -153,149 +412,132 @@
   min-height: 100vh;
 }
 
-/* Enhanced Header */
-.main-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+.btn-reset {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.topbar {
   position: sticky;
   top: 0;
-  z-index: 50;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  z-index: 5;
+  background: #fff;
+  border-bottom: 1px solid #d8dee7;
 }
 
-.header-content {
+.topbar-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 1.25rem 2rem;
+  padding: 14px 2rem;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.brand {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 3rem;
+  gap: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d4ed8;
+  white-space: nowrap;
+  margin-left: 10vh;
+}
+.brand span {
+  margin-right: 35vh;
 }
 
-.brand-wrap {
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #dbeafe;
+}
+
+.brand-icon i {
+  color: #2563eb;
+}
+
+.nav-links {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
+  gap: 50px;
+  justify-self: center;
+  margin-right: 30vh;
 }
 
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
-  border-radius: 12px;
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3);
-  transition: transform 0.3s ease;
+.nav-link {
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: #4a556b;
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.brand-mark:hover {
-  transform: scale(1.05);
+.nav-link.active,
+.nav-link:hover {
+  background: #eef7ff;
+  color: #1d4ed8;
 }
 
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  background: white;
-  border-radius: 6px;
-}
-
-.brand-text {
-  font-size: 1.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.top-nav {
-  display: flex;
-  align-items: center;
-  gap: 2.5rem;
-  flex: 1;
-}
-
-.top-nav a {
-  color: #64748b;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.95rem;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.top-nav a::after {
-  content: "";
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
-  transition: width 0.3s ease;
-}
-
-.top-nav a:hover {
-  color: #00aeef;
-}
-
-.top-nav a:hover::after {
-  width: 100%;
-}
 
 .top-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex-shrink: 0;
+  gap: 12px;
+  justify-self: end;
+  white-space: nowrap;
 }
 
-.icon-btn {
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0.75rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.icon-btn:hover {
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
-  border-color: transparent;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 174, 239, 0.3);
-}
-
-.icon-btn:hover svg {
-  stroke: white;
+.user-display-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: #33435d;
 }
 
 .avatar {
-  width: 44px;
-  height: 44px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
+  background: #1d4ed8;
+  color: #fff;
   font-weight: 700;
-  font-size: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3);
-  transition: transform 0.3s ease;
-  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
 }
 
-.avatar:hover {
-  transform: scale(1.05);
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  object-position: center;
+}
+
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
+}
+
+.logout-btn:hover {
+  background: #1d4ed8;
 }
 
 /* Main Content */
@@ -303,6 +545,12 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 2rem;
+}
+
+.action-message {
+  margin: 0 0 12px;
+  color: #1d4ed8;
+  font-size: 14px;
 }
 
 /* Enhanced Image Gallery */
@@ -313,13 +561,19 @@
   margin-bottom: 3rem;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60vh;
+  /* padding-bottom: 4vh; */
 }
 
 .main-img {
-  width: 100%;
-  height: 500px;
+  width: 50%;
+  height: 100%;
   object-fit: cover;
   transition: transform 0.5s ease;
+  margin: 5vh 0vh 10vh 0vh;
 }
 
 .image-gallery:hover .main-img {
@@ -387,7 +641,7 @@
 }
 
 .badge {
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   color: white;
   font-size: 0.75rem;
   font-weight: 700;
@@ -397,7 +651,7 @@
   margin-bottom: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 0 4px 12px rgba(0, 174, 239, 0.3);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
 }
 
 .title-section h1 {
@@ -440,18 +694,21 @@
 .spec-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
-  border-color: #00aeef;
+  border-color: #1d4ed8;
 }
 
 .spec-card .icon {
   font-size: 1.5rem;
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.spec-card .icon i {
+  color: white;
 }
 
 .spec-card small {
@@ -501,7 +758,7 @@
   transform: translateY(-50%);
   width: 4px;
   height: 24px;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   border-radius: 2px;
 }
 
@@ -534,7 +791,7 @@
 
 .rental-terms li::before {
   content: "✓";
-  color: #00aeef;
+  color: #1d4ed8;
   font-weight: 700;
   font-size: 1.2rem;
   flex-shrink: 0;
@@ -580,7 +837,7 @@
   transform: translateX(-50%);
   width: 60px;
   height: 3px;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   border-radius: 2px;
 }
 
@@ -612,10 +869,42 @@
   border-top: 2px solid #e2e8f0;
   padding-top: 1.5rem;
   margin-top: 0.5rem;
+  margin-right: 10px
+  ;
+}
+.total-row span{
+  margin-right: 10px;
+}
+
+.price-row span {
+  margin-right: 10px;
+}
+
+.rider-select {
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #1a1d23;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.rider-select:focus {
+  outline: none;
+  border-color: #1d4ed8;
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.1);
+}
+
+.rider-select:hover {
+  border-color: #1d4ed8;
 }
 
 .price-blue {
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -625,7 +914,7 @@
 
 .book-btn {
   width: 100%;
-  background: linear-gradient(135deg, #00aeef 0%, #0078a8 100%);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   color: white;
   border: none;
   padding: 1.25rem;
@@ -635,7 +924,7 @@
   cursor: pointer;
   margin-top: 2rem;
   transition: all 0.3s ease;
-  box-shadow: 0 8px 25px rgba(0, 174, 239, 0.3);
+  box-shadow: 0 8px 25px rgba(29, 78, 216, 0.3);
   position: relative;
   overflow: hidden;
 }
@@ -658,7 +947,7 @@
 
 .book-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 35px rgba(0, 174, 239, 0.4);
+  box-shadow: 0 12px 35px rgba(29, 78, 216, 0.4);
 }
 
 .book-btn:hover::before {
@@ -671,6 +960,80 @@
   font-size: 0.9rem;
   margin-top: 1rem;
   font-style: italic;
+}
+
+.site-footer {
+  margin-top: 28px;
+  border-top: 1px solid #d8dee7;
+  background: #fff;
+}
+
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 26px 2rem;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 24px;
+}
+
+.footer-brand strong {
+  font-size: 24px;
+}
+
+.footer-brand strong span {
+  color: #1d4ed8;
+}
+
+.footer-brand p {
+  margin: 8px 0 14px;
+  max-width: 420px;
+  color: #66758d;
+}
+
+.footer-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge-pill {
+  background: #eef2ff;
+  color: #1d4ed8;
+  border: 1px solid #dbe4f0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.footer-links h4 {
+  margin: 2px 0 10px;
+  font-size: 15px;
+}
+
+.footer-links p {
+  margin: 0 0 8px;
+  color: #52627b;
+}
+
+.footer-bottom {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 14px 2rem 22px;
+  border-top: 1px solid #d8dee7;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #75839b;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 /* Responsive Design */
@@ -686,13 +1049,19 @@
 }
 
 @media (max-width: 768px) {
-  .header-content {
-    padding: 1rem;
-    gap: 1rem;
+  .topbar-inner {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px 16px;
   }
 
-  .top-nav {
-    display: none;
+  .nav-links,
+  .top-actions {
+    justify-self: start;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
   }
 
   .content {
@@ -717,11 +1086,24 @@
   .main-img {
     height: 300px;
   }
+
+  .footer-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 480px) {
-  .brand-text {
-    font-size: 1.2rem;
+  .topbar-inner {
+    padding: 12px 16px;
+  }
+
+  .brand {
+    font-size: 18px;
   }
 
   .title-section h1 {
@@ -740,3 +1122,5 @@
   }
 }
 </style>
+
+
