@@ -21,75 +21,11 @@
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
     <main class="content">
-<<<<<<< HEAD
-      <section class="deals-section">
-        <div class="section-header">
-          <div class="section-badge">
-            <i class="fa-solid fa-car"></i>
-            <span>AVAILABLE VEHICLES</span>
-          </div>
-
-          <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
-          <p>Available for your selected dates ({{ dateRange }})</p>
-
-          <div class="filter-row">
-           <button  
-              v-for="item in filterItems"
-              :key="item.id"
-              class="filter-pill"
-              :class="{ active: activeFilter === item.id }"
-              @click="activeFilter = item.id"
-            >
-              <i :class="item.icon"></i>
-              <span>{{ item.label }}</span>
-            </button>
-          </div>
-        </div>
-
-        <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
-        <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
-        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
-
-        <div class="promo-grid">
-          <article class="promo-card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
-            <div class="promo-media">
-              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
-              <span v-if="vehicle.bestValue" class="promo-ribbon">BEST VALUE</span>
-              <span class="promo-type" @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))" style="cursor: pointer;">
-                <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
-              </span>
-            </div>
-
-            <div class="promo-body">
-              <h3>{{ getVehicleName(vehicle) }}</h3>
-
-              <div class="vehicle-meta">
-                <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
-                <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
-                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
-              </div>
-
-              <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
-
-              <div class="promo-meta">
-                <div class="promo-value">
-                  <strong>${{ vehicle.price_per_day }}</strong>
-                  <span>per day</span>
-                </div>
-                <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
-=======
       <div class="results-head">
         <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h1>
         <p>Available for your selected dates ({{ dateRange }})</p>
@@ -136,7 +72,6 @@
               <div class="price">
                 <strong>${{ vehicle.price_per_day }}</strong>
                 <span>per day</span>
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
               </div>
             </div>
           </article>
@@ -152,15 +87,6 @@
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
-<<<<<<< HEAD
-          <button class="btn-reset open-map-btn" @click="openMainLocation">
-            Open in Google Maps
-          </button>
-          <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
-            Open Saved Location
-          </button>
-=======
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
         </div>
       </section>
     </main>
@@ -178,6 +104,7 @@ import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/VehicleByShop.css'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -192,16 +119,15 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-<<<<<<< HEAD
-const navItems = ['Home', 'My Bookings', 'Promotion'];
-=======
 const navItems = ['Home', 'Viewdetails', 'Bookings'];
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
+<<<<<<< HEAD
 const avatarLoadFailed = ref(false);
 <<<<<<< HEAD
+=======
+>>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 const activeFilter = ref('all');
 const filterItems = [
   { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
@@ -308,31 +234,6 @@ const mapEmbedUrl = computed(() => {
 });
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
 
 const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
 const getVehicleShop = (vehicle) => {

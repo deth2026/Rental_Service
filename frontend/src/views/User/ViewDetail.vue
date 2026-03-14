@@ -7,13 +7,6 @@
           <span>Chong Choul</span>
         </div>
 
-<<<<<<< HEAD
-      <nav class="nav-links">
-        <button class="btn-reset nav-link active" @click="goHome">Home</button>
-        <button class="btn-reset nav-link">My Bookings</button>
-        <button class="btn-reset nav-link">Promotion</button>
-      </nav>
-=======
         <nav class="nav-links">
           <button
             v-for="item in navItems"
@@ -25,19 +18,10 @@
             {{ item }}
           </button>
         </nav>
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">
-            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-            <span v-else>{{ userInitials }}</span>
-          </button>
-          <button class="btn-reset logout-btn" @click="handleLogout">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            <span>Logout</span>
-          </button>
-        </div>
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -181,28 +165,6 @@
           <p>Partners</p>
           <p>Careers</p>
         </div>
-<<<<<<< HEAD
-      </section>
-    </main>
-
-    <main v-else-if="isLoading" class="not-found">
-      <h2>Loading vehicle...</h2>
-    </main>
-
-    <main v-else class="not-found">
-      <h2>Vehicle not found</h2>
-      <p v-if="loadError">{{ loadError }}</p>
-      <button class="btn-reset back-btn" @click="goBack">Back to vehicles</button>
-    </main>
-
-    <footer class="page-footer">
-      <div class="footer-col brand-col">
-        <h4>Cambodia<span>Rides</span></h4>
-        <p>
-          Connecting adventurous travelers with the best local vehicle rentals across Cambodia.
-        </p>
-=======
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
       </div>
       <div class="footer-bottom">
         <span>© 2026 Chong Choul. All rights reserved.</span>
@@ -225,42 +187,30 @@ import { useRouter, useRoute } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
 
 const router = useRouter();
 const route = useRoute();
 
-const navItems = ['Home', 'Viewdetails', 'Bookings'];
-const activeNav = ref('Home');
-const actionMessage = ref('');
-const avatarLoadFailed = ref(false);
-const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
+const fallbackImage = 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg';
+
+const resolveImageUrl = (value) => {
+  const image = value ? String(value).trim() : '';
+  if (!image) return fallbackImage;
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  if (image.startsWith('/')) return `${API_ROOT}${image}`;
+  return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+};
+
+const vehicle = ref(null);
+const isLoading = ref(false);
+const loadError = ref('');
+const shopNamesById = ref({});
+
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
 
 const setActiveNav = (item) => {
   activeNav.value = item;
@@ -434,7 +384,6 @@ onMounted(() => {
   }
 });
 </script>
-
 <style scoped>
 /* Modern Design System */
 .motoride-container {
@@ -1156,5 +1105,3 @@ onMounted(() => {
   }
 }
 </style>
-
-

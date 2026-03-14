@@ -5,6 +5,7 @@ import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,32 +34,6 @@ const getShopFromStorage = () => {
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-const avatarLoadFailed = ref(false)
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return ''
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
-}
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return ''
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || ''
-  return normalizeAvatarUrl(src)
-})
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true
-}
-
-const userInitials = computed(() => {
-  const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return 'GU'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
-})
 
 const isOwnerRole = computed(() => {
   const role = String(currentUser.value?.role || '').toLowerCase()
@@ -302,13 +277,7 @@ const openMap = () => {
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -535,23 +504,6 @@ const openMap = () => {
   object-fit: cover;
 }
 
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.logout-btn:hover {
-  background: #fecaca;
-}
 
 .vehicles-content {
   padding: 2rem;
