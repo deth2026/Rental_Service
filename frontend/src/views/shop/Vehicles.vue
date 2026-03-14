@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { vehicleApi, shopApi, api } from '@/services/api'
 import { getSessionUser } from '@/services/auth'
-import '../../css/Vehicles/css'
+import '../../css/Vehicles.css'
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
@@ -80,33 +80,23 @@ const fetchVehicles = async () => {
             const resolvedPreview = imageUrl ? `${baseUrl}/${imageUrl}`.replace(/\\/\\/+/g, '/') : (parsedPhotos[0] || sampleThumb)
 
             return {
-<<<<<<< HEAD
                 ...v,
-                // Normalize names and categories so table cells are never blank
-                name: v.name || v.vehicle_name || v.title || 'Untitled',
-                brand: v.brand || v.make || '',
-                model: v.model || v.variant || '',
-                category: v.category || v.type || v.vehicle_type || v.kind || '',
-                // Normalize plate value from different API keys
-                plate: v.plate_number || v.plate || '',
-                price: v.price_per_day || v.price || 0,
-                // Default to Available if backend didn’t send a status (protect against empty string/null)
-                status: (v.status ?? v.state ?? 'Available') || 'Available',
-                // Created at: handle multiple keys and fall back to existing updatedAt/now to avoid blanks
-                createdAt: v.create_at || v.created_at || v.createdAt || v.updated_at || khTime(),
-                updatedAt: v.updated_at,
-                // Use the full URL from API or first photo URL
-                previewUrl: imageUrl || (parsedPhotos.length > 0 ? parsedPhotos[0] : sampleThumb),
-=======
                 ...source,
-                category: source.category || source.type,
-                plate: source.plate_number || source.plate,
+                // Normalize names and related labels so table cells are never blank
+                name: source.name || source.vehicle_name || source.title || 'Untitled',
+                brand: source.brand || source.make || '',
+                model: source.model || source.variant || '',
+                category: source.category || source.type || source.vehicle_type || source.kind || '',
+                // Normalize plate value from different API keys
+                plate: source.plate_number || source.plate || '',
                 price: Number(source.price_per_day ?? source.price) || 0,
-                status: (source.status || 'Available').trim(),
-                createdAt: source.created_at || source.create_at,
-                updatedAt: source.updated_at,
-                previewUrl: resolvedPreview,
->>>>>>> 5deee96cdfb5be8376bd72465395fb4ead6f54a4
+                // Default to Available if backend didn’t send a status (protect against empty string/null)
+                status: ((source.status ?? source.state) || 'Available').toString().trim() || 'Available',
+                // Created at: handle multiple keys and fall back to existing updatedAt/now to avoid blanks
+                createdAt: source.create_at || source.created_at || source.createdAt || source.updated_at || khTime(),
+                updatedAt: source.updated_at || source.update_at,
+                // Use the full URL from API or first photo URL
+                previewUrl: resolvedPreview || sampleThumb,
                 photos: parsedPhotos,
                 base64Photos: parsedPhotos
             }
@@ -780,11 +770,9 @@ const onPhotoDrop = async (e) => {
             </div>
         </div>
     </div>
+
+    <!-- Toast Notification -->
+    <div v-if="toast.show" :class="['toast', toast.type]">
+        {{ toast.message }}
+    </div>
 </template>
-
-<!-- Toast Notification -->
-<div v-if="toast.show" :class="['toast', toast.type]">
-    {{ toast.message }}
-</div>
-
-
