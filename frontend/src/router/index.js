@@ -4,6 +4,7 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
+<<<<<<< Updated upstream
 import UserDashboard from '../views/user/Dashboard.vue';
 import PromotionView from '../views/user/Promotion.vue';
 import SettingUser from '../views/user/Setting_user.vue';
@@ -63,6 +64,17 @@ import ShopVehicles from '../views/user/ShopVehicles.vue';
 import VehiclesByShop from '../views/user/VehiclesByShop.vue';
 import ViewDetail from '../views/user/ViewDetail.vue';
 >>>>>>> dashboard/admin
+=======
+import ShopDashboard from '../views/shop/DashboardLayout.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
+import UserBookings from '../views/user/Bookings.vue';
+import PromotionView from '../views/user/Promotion.vue';
+import SettingUser from '../views/user/Setting_user.vue';
+import AdminDashboard from '../views/admin/Dashboard.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
+>>>>>>> Stashed changes
 
 // Check if user is authenticated
 const isAuthenticated = () => {

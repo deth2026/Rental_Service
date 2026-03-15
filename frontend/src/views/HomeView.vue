@@ -3,11 +3,15 @@
     <Logo />
     <header class="top-nav">
       <div class="brand-container">
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         <img class="brand-logo" src="@/assets/Logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
 =======
         <img class="brand-logo" src="/images/chong-choul-logo.svg" alt="CHONG CHOUL VEHICLE SERVICES" />
 >>>>>>> dashboard/admin
+=======
+        <img class="brand-logo" src="@/assets/logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
+>>>>>>> Stashed changes
         <div class="brand-text">
           <div class="brand">Chong Choul</div>
           <!-- <div class="brand-tagline">Vehicle Rental</div> -->
@@ -110,10 +114,13 @@
       </div>
     </section>
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
     <footer class="footer">
       <div class="footer-main">
         <div>
@@ -146,6 +153,7 @@
       </div>
     </footer>
   </main>
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 =======
 
@@ -153,6 +161,8 @@
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 </template>
 
 <script>

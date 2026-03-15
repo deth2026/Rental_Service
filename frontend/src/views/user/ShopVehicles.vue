@@ -3,11 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
-<<<<<<< HEAD
-import logoUrl from '@/assets/Logo.png'
-=======
+import logoUrl from '@/assets/logo.png'
 import CommonFooter from '../../components/CommonFooter.vue'
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 import '../../css/ShopVehicle.css'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
@@ -372,11 +369,14 @@ const openMap = () => {
   <!-- Common Footer -->
   <CommonFooter />
 </template>
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 
 =======
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> Stashed changes
 <style scoped>
 =======
 

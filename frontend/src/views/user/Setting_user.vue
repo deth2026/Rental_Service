@@ -1,6 +1,7 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 import { useRouter } from 'vue-router'
@@ -10,15 +11,21 @@ import { useRoute, useRouter } from 'vue-router'
 =======
 import { useRouter } from 'vue-router'
 >>>>>>> dashboard/admin
+=======
+import { useRoute, useRouter } from 'vue-router'
+>>>>>>> Stashed changes
 import userService from '@/services/userService.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const styles = useCssModule()
 const router = useRouter()
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
 const route = useRoute()
 
 const mapUserToProfile = (user = {}) => {
@@ -37,13 +44,17 @@ const mapUserToProfile = (user = {}) => {
 }
 
 const storedUser = userService.getCurrentUser() || {}
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 
 // Get current logged-in user's ID
 const getUserId = () => userService.getCurrentUserId()
 
+<<<<<<< Updated upstream
 // ─── State ───────────────────────────────────────────────────────────────
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -75,6 +86,9 @@ const avatarPreview = ref(null)
 const backgroundPreview = ref(null)
 <<<<<<< HEAD
 =======
+=======
+// â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+>>>>>>> Stashed changes
 const profile = ref(mapUserToProfile(storedUser))
 const originalProfile = ref({
     name: profile.value.name,
@@ -84,9 +98,12 @@ const originalProfile = ref({
 }) // Store original values
 const avatarPreview = ref(null)
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 const profileFile = ref(null)
 const backgroundFile = ref(null)
 const fileInput = ref(null)
@@ -107,7 +124,7 @@ const profileErrors = ref({ name: '', email: '', phone: '', first_name: '', last
 const passwordErrors = ref({ current_password: '', new_password: '', new_password_confirmation: '' })
 let toastTimer = null
 
-// ─── Computed ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Computed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const initials = computed(() => {
     if (!profile.value.name) return '?'
     return profile.value.name
@@ -124,6 +141,7 @@ const avatarSrc = computed(() => {
     return null
 })
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -147,6 +165,9 @@ const userDisplayName = computed(() => profile.value.name || 'Guest User')
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+const userDisplayName = computed(() => profile.value.name || 'Guest User')
+>>>>>>> Stashed changes
 
 const pwdStrength = computed(() => {
     const p = passwordForm.value.new_password
@@ -260,14 +281,14 @@ const teamList = [
     { name: 'Digital Marketing', members: '24', label: 'Marketing', badgeKey: 'marketing' },
 ];
 
-// ─── Toast ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function showToast(message, type = 'success') {
     clearTimeout(toastTimer)
     toast.value = { show: true, message, type }
     toastTimer = setTimeout(() => { toast.value.show = false }, 4000)
 }
 
-// ─── Profile picture ─────────────────────────────────────────────────────
+// â”€â”€â”€ Profile picture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function triggerFileInput() {
     fileInput.value.click()
 }
@@ -293,7 +314,7 @@ function removeProfilePicture() {
     profile.value.profile_picture = null
 }
 
-// ─── Background picture ─────────────────────────────────────────────────
+// â”€â”€â”€ Background picture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function triggerBackgroundInput() {
     backgroundInput.value.click()
 }
@@ -346,7 +367,7 @@ function removeBackgroundPicture() {
     profile.value.background_picture = null
 }
 
-// ─── Fetch profile ────────────────────────────────────────────────────────
+// â”€â”€â”€ Fetch profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async function fetchProfile() {
     const userId = getUserId()
     if (!userId) {
@@ -355,6 +376,7 @@ async function fetchProfile() {
     }
     try {
         const data = await userService.getAuthUser()
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         profile.value.name = data.name || ''
         profile.value.email = data.email || ''
@@ -381,6 +403,8 @@ async function fetchProfile() {
             role: profile.value.role
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
         const mappedProfile = mapUserToProfile(data)
         Object.assign(profile.value, mappedProfile)
 
@@ -390,16 +414,19 @@ async function fetchProfile() {
             email: mappedProfile.email,
             phone: mappedProfile.phone,
             profile_picture: mappedProfile.profile_picture,
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
         }
     } catch {
         showToast('Could not load profile data.', 'danger')
     }
 }
 
-// ─── Save profile ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Save profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function validateProfile() {
     profileErrors.value = { name: '', email: '', phone: '', first_name: '', last_name: '' }
     let hasError = false
@@ -408,6 +435,7 @@ function validateProfile() {
     const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
     const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
     const hasFileChange = profileFile.value !== null
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
     const hasBackgroundChange = backgroundFile.value !== null
@@ -423,6 +451,11 @@ function validateProfile() {
     
     if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange && !hasBackgroundChange) {
 >>>>>>> dashboard/admin
+=======
+
+    // If nothing changed, no validation needed
+    if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange) {
+>>>>>>> Stashed changes
         showToast('No changes detected.', 'info')
         return 'No changes detected.'
     }
@@ -462,6 +495,7 @@ async function saveProfile() {
         const hasNameChange = profile.value.name.trim() !== originalProfile.value.name
         const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
         const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -470,9 +504,10 @@ async function saveProfile() {
         const hasBackgroundPictureRemoved = originalProfile.value.background_picture && !profile.value.background_picture
         
 =======
+=======
+>>>>>>> Stashed changes
         const hasFileChange = profileFile.value !== null
 
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
         if (hasNameChange) {
             fd.append('name', profile.value.name.trim())
         }
@@ -498,6 +533,7 @@ async function saveProfile() {
         const res = await userService.updateProfile(userId, fd)
         
         if (res.user) {
+<<<<<<< Updated upstream
 <<<<<<< HEAD
             const resolvedProfilePicture = res.user.avatar_url || res.user.profile_picture || res.user.img_url || null
             const resolvedBackgroundPicture = res.user.background_picture_url || res.user.background_picture || null
@@ -516,6 +552,8 @@ async function saveProfile() {
             profile.value.background_picture = resolvedBackgroundPicture || profile.value.background_picture
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
             const mappedProfile = mapUserToProfile(res.user)
             originalProfile.value = {
                 name: mappedProfile.name,
@@ -525,9 +563,12 @@ async function saveProfile() {
             }
             const avatar = mappedProfile.profile_picture || profile.value.profile_picture
             Object.assign(profile.value, mappedProfile, { profile_picture: avatar })
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 
             try {
                 const rawUser = localStorage.getItem('user')
@@ -541,6 +582,7 @@ async function saveProfile() {
         }
         
         profileFile.value = null
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
         backgroundFile.value = null
@@ -550,6 +592,9 @@ async function saveProfile() {
 =======
         backgroundFile.value = null
 >>>>>>> dashboard/admin
+=======
+        avatarPreview.value = null
+>>>>>>> Stashed changes
         showToast('Profile updated successfully!', 'success')
     } catch (e) {
         showToast(e.response?.data?.message || 'Failed to update profile.', 'danger')
@@ -558,7 +603,7 @@ async function saveProfile() {
     }
 }
 
-// ─── Change password ──────────────────────────────────────────────────────
+// â”€â”€â”€ Change password â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function validatePassword() {
     const p = passwordForm.value
     passwordErrors.value = { current_password: '', new_password: '', new_password_confirmation: '' }
@@ -626,6 +671,7 @@ async function changePassword() {
     }
 }
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -645,6 +691,8 @@ function cancelChanges() {
     showToast('Changes discarded.', 'info')
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
 const handleLogout = async () => {
     try {
         await userService.logout()
@@ -655,9 +703,12 @@ const handleLogout = async () => {
 
 const openProfile = () => {
     router.push('/user/profile')
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 }
 
 onMounted(fetchProfile)
@@ -714,6 +765,7 @@ onMounted(fetchProfile)
             </div>
         </transition>
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -780,6 +832,8 @@ onMounted(fetchProfile)
                 <h1 :class="styles['profile-name']">{{ profile.name || 'Your Name' }}</h1>
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
         <section :class="styles['hero']">
             <div :class="styles['hero-stripes']">
                 <span v-for="stripe in 5" :key="stripe" :class="styles['hero-stripe']"></span>
@@ -822,7 +876,7 @@ onMounted(fetchProfile)
                     <p :class="styles['hero-role']">{{ heroRoleLabel }}</p>
                     <div :class="styles['hero-meta']">
                         <span>{{ heroLocationLabel }}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>{{ heroJoinedLabel }}</span>
                     </div>
                 </div>
@@ -830,12 +884,12 @@ onMounted(fetchProfile)
                     <i class="fa-solid fa-user-check" aria-hidden="true"></i>
                     Connected
                 </button>
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
             </div>
             <input ref="fileInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp"
                 style="display:none" @change="handleFileChange" />
         </section>
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
             <!-- Profile Action Buttons -->
             <div :class="styles['profile-actions']">
@@ -1134,6 +1188,8 @@ onMounted(fetchProfile)
                 <button :class="[styles['btn-save'], loading.profile && styles['btn-save--loading']]" type="button"
                     :disabled="loading.profile" @click="saveProfile">
 =======
+=======
+>>>>>>> Stashed changes
         <!-- <nav :class="styles['tab-nav']">
             <button v-for="tab in heroTabs" :key="tab" type="button" :class="[styles['tab'], tab === heroTabs[0] ? styles['tab--active'] : '']">
                 {{ tab }}
@@ -1288,6 +1344,7 @@ onMounted(fetchProfile)
                     :disabled="loading.profile"
                     @click="saveProfile"
                 >
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 
@@ -1416,14 +1473,17 @@ onMounted(fetchProfile)
                 <button :class="[styles['btn-save'], loading.profile && styles['btn-save--loading']]" type="button"
                     :disabled="loading.profile" @click="saveProfile">
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
                     <svg v-if="!loading.profile" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12" />
                     </svg>
                     <span :class="styles['spinner']" v-if="loading.profile"></span>
-                    {{ loading.profile ? 'Saving…' : 'Save Changes' }}
+                    {{ loading.profile ? 'Savingâ€¦' : 'Save Changes' }}
                 </button>
             </div>
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -1434,6 +1494,8 @@ onMounted(fetchProfile)
 >>>>>>> dashboard/admin
 
 =======
+=======
+>>>>>>> Stashed changes
             <div :class="styles['form-card']">
                 <div :class="styles['form-card__header']">
                     <div>
@@ -1507,7 +1569,7 @@ onMounted(fetchProfile)
                             <span :class="[styles['strength__label'], styles[`strength__label--${pwdStrength.level}`]]">{{
                                 pwdStrength.label }}</span>
                         </div>
-                        <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars · Uppercase · Lowercase · Number · Special character</p>
+                        <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars Â· Uppercase Â· Lowercase Â· Number Â· Special character</p>
                         <p v-if="passwordErrors.new_password" :class="styles['field-error']">{{ passwordErrors.new_password }}</p>
                     </div>
                     <div :class="styles['field-group']">
@@ -1542,10 +1604,9 @@ onMounted(fetchProfile)
                 <button :class="[styles['btn-primary'], loading.password && styles['btn-primary--loading']]" type="button"
                     :disabled="loading.password" @click="changePassword">
                     <span :class="styles['spinner']" v-if="loading.password"></span>
-                    {{ loading.password ? 'Updating…' : 'Update Password' }}
+                    {{ loading.password ? 'Updatingâ€¦' : 'Update Password' }}
                 </button>
             </div>
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
         </div>
     </div>
 
@@ -1553,343 +1614,9 @@ onMounted(fetchProfile)
     <CommonFooter />
 </template>
 <style module>
-/* ─── Page Layout ──────────────────────────────────────────── */
+/* â”€â”€â”€ Page Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page {
     min-height: 100vh;
-<<<<<<< HEAD
-    background: var(--color-bg);
-    padding-bottom: 60px;
-    position: relative;
-}
-
-/* ─── Profile Header ──────────────────────────────────────────── */
-.profile-header {
-    position: relative;
-    padding-bottom: 30px;
-}
-
-.profile-background {
-    position: relative;
-    height: 240px;
-    overflow: hidden;
-}
-
-.profile-background__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.profile-background__default {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-}
-
-.profile-background__overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 50%);
-}
-
-.background-controls {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    display: flex;
-    gap: 8px;
-    z-index: 10;
-}
-
-.bg-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: rgba(0, 0, 0, 0.6);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.bg-btn:hover {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: #fff;
-}
-
-.bg-btn-remove {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: rgba(220, 38, 38, 0.9);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.bg-btn-remove:hover {
-    background: #dc2626;
-}
-
-/* Back Button */
-.back-btn {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(4px);
-}
-
-.back-btn:hover {
-    background: rgba(0, 0, 0, 0.7);
-    border-color: #fff;
-}
-
-/* Profile Avatar Section */
-.profile-avatar-section {
-    position: relative;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: -70px;
-}
-
-.profile-avatar {
-    width: 130px;
-    height: 130px;
-    border-radius: 50%;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #fff;
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-    border: 5px solid #fff;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease;
-}
-
-.profile-avatar:hover {
-    transform: scale(1.05);
-}
-
-.profile-avatar__img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 50%;
-}
-
-.profile-avatar__initials {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    user-select: none;
-    letter-spacing: 1px;
-}
-
-.profile-avatar__overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(37, 99, 235, 0.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    border-radius: 50%;
-}
-
-.profile-avatar:hover .profile-avatar__overlay {
-    opacity: 1;
-}
-
-.profile-name {
-    margin-top: 14px;
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #1e293b;
-    text-shadow: 0 1px 3px rgba(255, 255, 255, 0.8);
-}
-
-.profile-actions {
-    position: relative;
-    z-index: 5;
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 16px;
-}
-
-.btn-upload {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    background: #3b82f6;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-}
-
-.btn-upload:hover {
-    background: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-}
-
-.btn-remove {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    background: #fff;
-    color: #dc2626;
-    border: 1.5px solid #dc2626;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-remove:hover {
-    background: #fef2f2;
-}
-
-/* ─── Content Container ──────────────────────────────────────────── */
-.content-container {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 0 20px;
-    position: relative;
-    z-index: 5;
-}
-
-/* ─── Right Side Notification ───────────────────────────────── */
-.right-toast {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    padding: 16px 24px;
-    border-radius: 10px;
-    border: 2px solid;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    z-index: 99999;
-    animation: slideInRight 0.3s ease;
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-
-.right-toast__icon {
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    color: #10b981;
-}
-
-.right-toast--success {
-    background: #d1fae5;
-    color: #065f46;
-    border-color: #10b981;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2), 0 4px 12px rgba(16, 185, 129, 0.25);
-}
-
-.right-toast--success .right-toast__icon {
-    color: #10b981;
-}
-
-.right-toast--error {
-    background: #fee2e2;
-    color: #991b1b;
-    border-color: #dc2626;
-    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2), 0 4px 12px rgba(220, 38, 38, 0.25);
-}
-
-.right-toast--error .right-toast__icon {
-    color: #dc2626;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-/* ─── Card ─────────────────────────────────────────────────── */
-.card {
-    background: var(--color-card-bg);
-    border-radius: 14px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--color-border);
-    padding: 26px;
-    margin-bottom: 20px;
-}
-
-/* ─── Section Header ───────────────────────────────────────── */
-.section-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    margin-bottom: 24px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--color-border);
-}
-
-.section-header__icon {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    border: none;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-=======
     /* background: #eef1f7; */
     padding: 32px clamp(16px, 4vw, 48px) 60px;
     max-width: 80%;
@@ -1902,7 +1629,6 @@ onMounted(fetchProfile)
 }
 
 
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 
 .section-header__title {
     font-size: 1.1rem;
@@ -1916,6 +1642,7 @@ onMounted(fetchProfile)
     margin-top: 4px;
 }
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 .text-blue {
     color: #3b82f6;
@@ -1923,60 +1650,18 @@ onMounted(fetchProfile)
 <<<<<<< HEAD
 }
 =======
+=======
+>>>>>>> Stashed changes
 
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 
-/* ─── Info Grid ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Info Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .info-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
 }
 
-<<<<<<< HEAD
-@media (max-width: 600px) {
-    .info-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-.info-item {
-    background: #f8fafc;
-    border-radius: 10px;
-    padding: 16px;
-}
-
-.info-label {
-    display: block;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-
-.info-value {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-.info-value--status {
-    display: flex;
-    align-items: center;
-}
-
-.status-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    background: #10b981;
-    color: #fff;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-=======
-/* The avatar circle – fixed dimensions; image never changes its size */
+/* The avatar circle â€“ fixed dimensions; image never changes its size */
 .avatar {
     width: 72px;
     height: 72px;
@@ -2440,6 +2125,7 @@ onMounted(fetchProfile)
 .form-card__content {
     display: flex;
     flex-direction: column;
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 }
@@ -2493,6 +2179,8 @@ onMounted(fetchProfile)
     font-size: 0.75rem;
     font-weight: 600;
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 }
 
 .field-group {
@@ -2503,6 +2191,7 @@ onMounted(fetchProfile)
     display: block;
     font-size: 0.85rem;
     font-weight: 600;
+<<<<<<< Updated upstream
 <<<<<<< HEAD
     color: var(--color-text-primary);
     margin-bottom: 8px;
@@ -2513,6 +2202,10 @@ onMounted(fetchProfile)
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+    color: #4b5563;
+    margin-bottom: 6px;
+>>>>>>> Stashed changes
 }
 
 .field-label--danger {
@@ -2522,6 +2215,7 @@ onMounted(fetchProfile)
 .input-wrap {
     display: flex;
     align-items: center;
+<<<<<<< Updated upstream
 <<<<<<< HEAD
     gap: 0;
     border-radius: 10px;
@@ -2536,6 +2230,8 @@ onMounted(fetchProfile)
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
     gap: 10px;
     border-radius: 14px;
     padding: 10px 14px;
@@ -2546,9 +2242,12 @@ onMounted(fetchProfile)
 .input-wrap:focus-within {
     border-color: #4338ca;
     box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
     background: #fff;
 }
 
@@ -2562,6 +2261,7 @@ onMounted(fetchProfile)
     border: none;
     outline: none;
     background: transparent;
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -2577,6 +2277,10 @@ onMounted(fetchProfile)
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+    font-size: 0.95rem;
+    color: #111827;
+>>>>>>> Stashed changes
 }
 
 .input::placeholder {
@@ -2666,6 +2370,7 @@ onMounted(fetchProfile)
     display: inline-flex;
     align-items: center;
     gap: 8px;
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -2677,15 +2382,17 @@ onMounted(fetchProfile)
     border-radius: 10px;
     font-size: 0.9rem;
 =======
+=======
+>>>>>>> Stashed changes
     justify-content: center;
     padding: 12px 20px;
     border-radius: 999px;
     background: #2563eb;
     color: #fff;
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
     font-weight: 600;
     border: none;
     cursor: pointer;
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -2702,9 +2409,10 @@ onMounted(fetchProfile)
 .btn-primary:active:not(:disabled) {
     transform: scale(0.98);
 =======
+=======
+>>>>>>> Stashed changes
     box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
     transition: transform 0.15s ease;
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 }
 
 .btn-primary:disabled {
@@ -2717,6 +2425,7 @@ onMounted(fetchProfile)
     pointer-events: none;
 }
 
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -2785,6 +2494,8 @@ onMounted(fetchProfile)
 /* Spinner */
 =======
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> Stashed changes
 .spinner {
     width: 15px;
     height: 15px;
@@ -2840,9 +2551,12 @@ onMounted(fetchProfile)
         transform: rotate(360deg);
     }
 }
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
 
 @media (max-width: 960px) {
     .hero-content {
@@ -2854,9 +2568,12 @@ onMounted(fetchProfile)
         justify-content: center;
     }
 }
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 </style>
 
 <style>

@@ -1,7 +1,3 @@
-import ToastHost from './components/ToastHost.vue'
->>>>>>> dashboard/admin
-</script>
-=======
 <script setup>
 import { computed } from 'vue'
 import ToastHost from './components/ToastHost.vue'
@@ -17,19 +13,11 @@ const getUserRole = () => {
   }
 }
 </script>
-=======
-import ToastHost from './components/ToastHost.vue'
->>>>>>> dashboard/admin
-</script>
 
 <template>
   <div id="app">
-<<<<<<< HEAD
     <router-view />
-=======
-    <router-view/>
     <ToastHost />
->>>>>>> dashboard/admin
   </div>
 </template>
 

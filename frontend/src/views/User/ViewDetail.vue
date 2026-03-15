@@ -3,7 +3,7 @@
   <div class="detail-page">
     <header class="topbar">
       <div class="brand" @click="goHome">
-        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
+        <div class="brand-icon"><img :src="logoUrl" alt="CHONG CHOUL" /></div>
         <span>Chong Choul</span>
       </div>
 
@@ -184,6 +184,7 @@ import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
@@ -194,6 +195,11 @@ import UserProfileMenu from '@/components/UserProfileMenu.vue';
 =======
 import ConfirmModal from '../../components/ConfirmModal.vue';
 >>>>>>> dashboard/admin
+=======
+import CommonFooter from '../../components/CommonFooter.vue';
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import logoUrl from '../../assets/logo.png';
+>>>>>>> Stashed changes
 
 const route = useRoute();
 const router = useRouter();
@@ -372,6 +378,7 @@ const openProfile = () => {
 const handleLogout = () => { showLogoutConfirm.value = true; };
 const confirmLogout = async () => { await userService.logout(); router.push('/login'); };
 </script>
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -541,6 +548,8 @@ const confirmLogout = async () => { await userService.logout(); router.push('/lo
 
 =======
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> Stashed changes
 <style scoped>
 .detail-page {
   --line: #d9e0ea;
@@ -551,86 +560,9 @@ const confirmLogout = async () => { await userService.logout(); router.push('/lo
   font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
 }
 
-<<<<<<< HEAD
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 32px;
-  align-items: center;
-  padding: 14px 24px;
-  background: #fff;
-  border-bottom: 1px solid rgba(20, 33, 61, 0.08);
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.09);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #2563eb;
-  cursor: pointer;
-}
-
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: #dbeafe;
-}
-
-.brand-icon img {
-  width: 70%;
-  height: 70%;
-  object-fit: contain;
-  display: block;
-}
-
-.brand-icon i {
-  color: #2563eb;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  justify-self: center;
-}
-
-.nav-link {
-  padding: 10px 28px;
-  border-radius: 999px;
-  color: #4b5563;
-  font-size: 0.98rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: transparent;
-  border: 1px solid transparent;
-  transition: 0.2s ease;
-}
-
-.nav-link.active,
-.nav-link:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #4338ca;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-=======
 .detail-page,
 .detail-page * {
   box-sizing: border-box;
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 }
 
 .btn-reset {
@@ -680,6 +612,13 @@ const confirmLogout = async () => { await userService.logout(); router.push('/lo
   place-items: center;
   flex: 0 0 34px;
   background: #dbeafe;
+}
+
+.brand-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
 }
 
 .brand i {

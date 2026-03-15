@@ -31,9 +31,6 @@ class Booking extends Model
     ];
 
     public function vehicle(): BelongsTo
-=======
-    public function vehicle(): BelongsTo
->>>>>>> dashboard/admin
     {
         return $this->belongsTo(Vehicle::class);
     }
@@ -44,17 +41,8 @@ class Booking extends Model
     }
 
     public function coupon(): BelongsTo
-=======
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function coupon(): BelongsTo
->>>>>>> dashboard/admin
     {
         return $this->belongsTo(Coupon::class);
     }
 }
-
 

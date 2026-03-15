@@ -2,12 +2,16 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
 =======
 import Logo from '../../components/Logo.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 >>>>>>> dashboard/admin
+=======
+import logoUrl from '@/assets/logo.png'
+>>>>>>> Stashed changes
 import '../../css/userDashboard.css'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'

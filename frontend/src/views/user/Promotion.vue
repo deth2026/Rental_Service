@@ -3,18 +3,23 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
-import Logo from '@/components/Logo.vue'
-import logoUrl from '@/assets/Logo.png'
 =======
+>>>>>>> Stashed changes
+import Logo from '@/components/Logo.vue'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 import Logo from '@/components/Logo.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 >>>>>>> dashboard/admin
+=======
+import logoUrl from '@/assets/logo.png'
+>>>>>>> Stashed changes
 
 const router = useRouter()
 const route = useRoute()
