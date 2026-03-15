@@ -818,9 +818,6 @@ body {
   cursor: pointer;
 }
 
-<<<<<<< HEAD
-/* ==================== LOADING & ERROR STATES ==================== */
-=======
 /* ── Old Header Styles - kept for compatibility ── */
 /* Override old brand gradient so new topbar brand shows #2563eb */
 .topbar .brand {
@@ -1260,7 +1257,6 @@ body {
   border-color: #8acebf;
 }
 
->>>>>>> d9e7426d2ad61e95ce8e61d567caedbd5cc98485
 .status-box {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--line);
