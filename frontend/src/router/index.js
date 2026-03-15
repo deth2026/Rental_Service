@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-
-=======
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
@@ -177,4 +174,3 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
->>>>>>> f710dc63c2bd5bd200b52ee0ee4c2d7d22e01397
