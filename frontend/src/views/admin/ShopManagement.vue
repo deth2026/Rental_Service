@@ -20,6 +20,7 @@ const showCreate = ref(false)
 const createForm = ref({ name: '', address: '', location: '', phone: '', description: '', img_url: '' })
 const createImageFile = ref(null)
 const createImagePreview = ref('')
+const createImageInput = ref(null)
 
 const showEdit = ref(false)
 const editForm = ref({ id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' })
@@ -174,20 +175,44 @@ const shopImage = (shop) => {
   return resolveShopImageUrl(value)
 }
 
-const onCreateImageChange = (event) => {
-  const file = event.target.files?.[0]
+const handleCreateImageFile = (file) => {
   if (!file) return
   if (!file.type?.startsWith('image/')) {
     toast.error('Please select a valid image file.')
     return
   }
+
   createImageFile.value = file
   const reader = new FileReader()
   reader.onload = (e) => {
-    createImagePreview.value = String(e.target?.result || '')
-    createForm.value.img_url = createImagePreview.value
+    const preview = String(e.target?.result || '')
+    createImagePreview.value = preview
+    createForm.value.img_url = preview
   }
   reader.readAsDataURL(file)
+}
+
+const onCreateImageDrop = (event) => {
+  event.preventDefault()
+  const file = event.dataTransfer?.files?.[0]
+  handleCreateImageFile(file)
+}
+
+const onCreateImageChange = (event) => {
+  const file = event.target.files?.[0]
+  handleCreateImageFile(file)
+  if (event.target) {
+    event.target.value = ''
+  }
+}
+
+const removeCreateImage = () => {
+  createImageFile.value = null
+  createImagePreview.value = ''
+  createForm.value.img_url = ''
+  if (createImageInput.value) {
+    createImageInput.value.value = ''
+  }
 }
 
 const onEditImageChange = (event) => {
@@ -213,8 +238,7 @@ const openCreate = () => {
 const closeCreate = () => {
   showCreate.value = false
   createForm.value = { name: '', address: '', location: '', phone: '', description: '', img_url: '' }
-  createImageFile.value = null
-  createImagePreview.value = ''
+  removeCreateImage()
   if (route.query.create) {
     const nextQuery = { ...route.query }
     delete nextQuery.create
@@ -512,11 +536,38 @@ onMounted(() => {
             <span class="field-label">Description</span>
             <textarea v-model="createForm.description" rows="3" placeholder="Short shop description (optional)"></textarea>
           </label>
-          <label class="field span-2">
+          <label class="field span-2 upload-field">
             <span class="field-label">Shop Image</span>
-            <input type="file" accept="image/*" @change="onCreateImageChange" />
-            <div v-if="createImagePreview" class="image-preview">
-              <img :src="createImagePreview" alt="Shop preview" />
+            <div
+              class="upload-dropzone"
+              role="button"
+              tabindex="0"
+              aria-label="Upload shop image"
+              @click="createImageInput?.click()"
+              @keydown.enter.prevent="createImageInput?.click()"
+              @keydown.space.prevent="createImageInput?.click()"
+              @dragover.prevent
+              @drop.prevent="onCreateImageDrop"
+            >
+              <input
+                ref="createImageInput"
+                type="file"
+                accept="image/*"
+                class="upload-input"
+                @change="onCreateImageChange"
+              />
+              <div v-if="createImagePreview" class="upload-preview">
+                <img :src="createImagePreview" alt="Shop preview" />
+                <button type="button" class="upload-remove" @click.stop="removeCreateImage">
+                  <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+                  Remove photo
+                </button>
+              </div>
+              <div v-else class="upload-placeholder">
+                <i class="fa-solid fa-image" aria-hidden="true"></i>
+                <p class="upload-title">Click or drop an image</p>
+                <small class="muted">JPG, PNG, max 5 MB</small>
+              </div>
             </div>
           </label>
         </div>

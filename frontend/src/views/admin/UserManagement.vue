@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
 import api from '../../services/api.js'
+import userService from '../../services/userService.js'
 import { useToast } from '../../composables/useToast.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 import CountUp from '../../components/CountUp.vue'
@@ -27,6 +28,37 @@ const deleteTarget = ref(null)
 const editForm = ref({ id: null, name: '', phone: '', role: 'customer', is_verified: false })
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
+
+const fallbackAvatarUrl = '/images/avatar-placeholder.svg'
+const avatarLoadErrors = ref(new Set())
+
+const buildAvatarKey = (user) => {
+  if (!user) return ''
+  if (user.id) return String(user.id)
+  if (user.email) return `email:${user.email}`
+  return String(user.name || user.role || 'unknown')
+}
+
+const markAvatarError = (user) => {
+  const key = buildAvatarKey(user)
+  if (!key) return
+  const next = new Set(avatarLoadErrors.value)
+  next.add(key)
+  avatarLoadErrors.value = next
+}
+
+const buildAvatarPath = (user) => {
+  if (!user) return ''
+  const path =
+    user.avatar_url || user.profile_picture || user.img_url || user.image || user.photo || user.picture || ''
+  return userService.getAvatarUrl(path)
+}
+
+const getUserAvatarUrl = (user) => {
+  const key = buildAvatarKey(user)
+  if (key && avatarLoadErrors.value.has(key)) return fallbackAvatarUrl
+  return buildAvatarPath(user) || fallbackAvatarUrl
+}
 
 const totals = computed(() => {
   const activeUsers = admin.state.users.filter((u) => {
@@ -189,6 +221,10 @@ const initials = (name) => {
   if (!parts.length) return 'U'
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
+}
+
+const handleAvatarError = (user) => {
+  markAvatarError(user)
 }
 
 const registrationSeries = computed(() => {
@@ -519,7 +555,14 @@ watch(
           <tbody>
             <tr v-for="user in pagedUsers" :key="user.id">
               <td class="shop-cell">
-                <span class="user-bubble" aria-hidden="true">{{ initials(user.name) }}</span>
+                <div class="user-avatar-stack">
+                  <img
+                    class="user-avatar-img"
+                    :src="getUserAvatarUrl(user)"
+                    :alt="`Profile photo for ${user.name || 'user'}`"
+                    @error="handleAvatarError(user)"
+                  />
+                </div>
                 <div class="shop-meta">
                   <div class="shop-name">{{ user.name }}</div>
                   <div class="shop-id">ID: {{ user.id }}</div>
