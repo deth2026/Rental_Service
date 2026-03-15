@@ -10,6 +10,7 @@ import UserBookings from '../views/User/Bookings.vue';
 import PromotionView from '../views/User/Promotion.vue';
 import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
+import AdminSetting from '../views/admin/Admins_setting.vue';
 import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
@@ -94,6 +95,12 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingUser
+    },
+    {
+      path: '/admin/settings',
+      name: 'admin-settings',
+      component: AdminSetting,
+      meta: { requiresAuth: false }
     },
     {
       path: '/admin',
