@@ -21,20 +21,7 @@
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img
-            v-if="userAvatarUrl"
-            :src="userAvatarUrl"
-            alt="Profile photo"
-            class="avatar-image"
-            @error="onAvatarError"
-          />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -132,6 +119,7 @@ import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/VehicleByShop.css'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -150,7 +138,6 @@ const navItems = ['Home', 'My Bookings', 'Promotion'];
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
-const avatarLoadFailed = ref(false);
 const activeFilter = ref('all');
 const filterItems = [
   { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
@@ -253,31 +240,6 @@ const mapEmbedUrl = computed(() => {
 });
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
 
 const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
 const getVehicleShop = (vehicle) => {

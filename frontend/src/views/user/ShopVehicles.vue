@@ -5,6 +5,7 @@ import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -34,32 +35,6 @@ const getShopFromStorage = () => {
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-const avatarLoadFailed = ref(false)
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return ''
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
-}
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return ''
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || ''
-  return normalizeAvatarUrl(src)
-})
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true
-}
-
-const userInitials = computed(() => {
-  const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return 'GU'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
-})
 
 const isOwnerRole = computed(() => {
   const role = String(currentUser.value?.role || '').toLowerCase()
@@ -394,13 +369,7 @@ const getShopStatusClass = (status) => {
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -590,3 +559,455 @@ const getShopStatusClass = (status) => {
 </template>
 
 
+<style scoped>
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: #333;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.back-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.25rem;
+}
+
+.brand span {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #333;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  /* margin-right: 40px; */
+}
+
+.user-display-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+.vehicles-content {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.page-header h1 {
+  font-size: 1.75rem;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.page-header p {
+  color: #666;
+}
+
+.owner-shop-card {
+  margin-bottom: 2rem;
+  background: linear-gradient(180deg, #fafbff 0%, #f4f7ff 100%);
+  border-radius: 26px;
+  padding: 28px 32px;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.15);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.owner-top-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.owner-avatar {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  padding: 6px;
+  background: #fff;
+  border: 4px solid rgba(37, 99, 235, 0.25);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.2);
+}
+
+.owner-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+}
+
+.owner-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #2563eb;
+  font-weight: 700;
+  background: radial-gradient(circle, #e0eeff 0%, #cdd8f6 70%);
+}
+
+.owner-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.owner-btn {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border-radius: 28px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+}
+
+.secondary-btn {
+  background: #e2e8f0;
+  color: #1f2937;
+  border: 1px solid #cfd7ea;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.owner-status {
+  margin-left: auto;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: #ecffef;
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.3);
+}
+
+.owner-status.is-inactive {
+  background: #ffe8e8;
+  color: #991b1b;
+  border-color: rgba(153, 27, 27, 0.3);
+}
+
+.owner-info-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.owner-info-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 12px 16px;
+  border: 1px solid #e0e6f6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.owner-info-card p {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.owner-info-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-chips {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  border: 1px solid #d8dee7;
+  background: white;
+  color: #334155;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.chip:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.chip.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+
+.results-text {
+  color: #475569;
+  font-weight: 600;
+}
+
+.status-box {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 12px;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.status-box.error {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.vehicles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.map-section {
+  margin-top: 2rem;
+}
+
+.map {
+  position: relative;
+  height: 340px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #d8dee7;
+}
+
+.map-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.open-map-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8dee7;
+  color: #1e40af;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.vehicle-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.vehicle-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.vehicle-card-image {
+  position: relative;
+  height: 200px;
+  background: #f8f9fa;
+}
+
+.vehicle-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vehicle-card-image .no-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: #ccc;
+}
+
+.status-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-available {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-rented {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-maintenance {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.vehicle-card-content {
+  padding: 1.25rem;
+}
+
+.vehicle-card-content h3 {
+  font-size: 1.1rem;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.vehicle-type {
+  color: #666;
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.vehicle-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  color: #666;
+  background: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.detail-item i {
+  font-size: 0.75rem;
+}
+
+.vehicle-price {
+  margin-bottom: 1rem;
+}
+
+.price-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.price-period {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.view-details-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #2563eb;;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.view-details-btn:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .topbar {
+    padding: 1rem;
+  }
+
+  .vehicles-content {
+    padding: 1rem;
+  }
+
+  .vehicles-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
