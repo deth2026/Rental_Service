@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 import { useRouter } from 'vue-router'
@@ -14,6 +15,9 @@ import { useRouter } from 'vue-router'
 =======
 import { useRoute, useRouter } from 'vue-router'
 >>>>>>> Stashed changes
+=======
+import { useRoute, useRouter } from 'vue-router'
+>>>>>>> Stashed changes
 import userService from '@/services/userService.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
@@ -21,9 +25,12 @@ import UserProfileMenu from '@/components/UserProfileMenu.vue'
 const styles = useCssModule()
 const router = useRouter()
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 const route = useRoute()
@@ -45,15 +52,19 @@ const mapUserToProfile = (user = {}) => {
 
 const storedUser = userService.getCurrentUser() || {}
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
 // Get current logged-in user's ID
 const getUserId = () => userService.getCurrentUserId()
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 // ─── State ───────────────────────────────────────────────────────────────
 <<<<<<< HEAD
@@ -89,6 +100,9 @@ const backgroundPreview = ref(null)
 =======
 // â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 >>>>>>> Stashed changes
+=======
+// â”€â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+>>>>>>> Stashed changes
 const profile = ref(mapUserToProfile(storedUser))
 const originalProfile = ref({
     name: profile.value.name,
@@ -99,9 +113,12 @@ const originalProfile = ref({
 const avatarPreview = ref(null)
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 const profileFile = ref(null)
@@ -142,6 +159,7 @@ const avatarSrc = computed(() => {
 })
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -165,6 +183,9 @@ const userDisplayName = computed(() => profile.value.name || 'Guest User')
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+const userDisplayName = computed(() => profile.value.name || 'Guest User')
+>>>>>>> Stashed changes
 =======
 const userDisplayName = computed(() => profile.value.name || 'Guest User')
 >>>>>>> Stashed changes
@@ -315,6 +336,7 @@ function removeProfilePicture() {
 }
 
 // â”€â”€â”€ Background picture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+<<<<<<< Updated upstream
 function triggerBackgroundInput() {
     backgroundInput.value.click()
 }
@@ -342,6 +364,8 @@ function removeProfilePicture() {
 }
 
 // ─── Background picture ─────────────────────────────────────────────────
+=======
+>>>>>>> Stashed changes
 function triggerBackgroundInput() {
     backgroundInput.value.click()
 }
@@ -377,6 +401,7 @@ async function fetchProfile() {
     try {
         const data = await userService.getAuthUser()
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
         profile.value.name = data.name || ''
         profile.value.email = data.email || ''
@@ -405,6 +430,8 @@ async function fetchProfile() {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         const mappedProfile = mapUserToProfile(data)
         Object.assign(profile.value, mappedProfile)
 
@@ -415,9 +442,12 @@ async function fetchProfile() {
             phone: mappedProfile.phone,
             profile_picture: mappedProfile.profile_picture,
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         }
@@ -436,6 +466,7 @@ function validateProfile() {
     const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
     const hasFileChange = profileFile.value !== null
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
     const hasBackgroundChange = backgroundFile.value !== null
@@ -451,6 +482,11 @@ function validateProfile() {
     
     if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange && !hasBackgroundChange) {
 >>>>>>> dashboard/admin
+=======
+
+    // If nothing changed, no validation needed
+    if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange) {
+>>>>>>> Stashed changes
 =======
 
     // If nothing changed, no validation needed
@@ -496,6 +532,7 @@ async function saveProfile() {
         const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
         const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -504,6 +541,8 @@ async function saveProfile() {
         const hasBackgroundPictureRemoved = originalProfile.value.background_picture && !profile.value.background_picture
         
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         const hasFileChange = profileFile.value !== null
@@ -534,6 +573,7 @@ async function saveProfile() {
         
         if (res.user) {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
             const resolvedProfilePicture = res.user.avatar_url || res.user.profile_picture || res.user.img_url || null
             const resolvedBackgroundPicture = res.user.background_picture_url || res.user.background_picture || null
@@ -554,6 +594,8 @@ async function saveProfile() {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
             const mappedProfile = mapUserToProfile(res.user)
             originalProfile.value = {
                 name: mappedProfile.name,
@@ -564,9 +606,12 @@ async function saveProfile() {
             const avatar = mappedProfile.profile_picture || profile.value.profile_picture
             Object.assign(profile.value, mappedProfile, { profile_picture: avatar })
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
@@ -583,6 +628,7 @@ async function saveProfile() {
         
         profileFile.value = null
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
         backgroundFile.value = null
@@ -592,6 +638,9 @@ async function saveProfile() {
 =======
         backgroundFile.value = null
 >>>>>>> dashboard/admin
+=======
+        avatarPreview.value = null
+>>>>>>> Stashed changes
 =======
         avatarPreview.value = null
 >>>>>>> Stashed changes
@@ -672,6 +721,7 @@ async function changePassword() {
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -693,6 +743,8 @@ function cancelChanges() {
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 const handleLogout = async () => {
     try {
         await userService.logout()
@@ -704,9 +756,12 @@ const handleLogout = async () => {
 const openProfile = () => {
     router.push('/user/profile')
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 }
@@ -765,6 +820,7 @@ onMounted(fetchProfile)
             </div>
         </transition>
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -834,6 +890,8 @@ onMounted(fetchProfile)
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         <section :class="styles['hero']">
             <div :class="styles['hero-stripes']">
                 <span v-for="stripe in 5" :key="stripe" :class="styles['hero-stripe']"></span>
@@ -889,6 +947,7 @@ onMounted(fetchProfile)
                 style="display:none" @change="handleFileChange" />
         </section>
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
             <!-- Profile Action Buttons -->
@@ -1190,6 +1249,8 @@ onMounted(fetchProfile)
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
         <!-- <nav :class="styles['tab-nav']">
             <button v-for="tab in heroTabs" :key="tab" type="button" :class="[styles['tab'], tab === heroTabs[0] ? styles['tab--active'] : '']">
                 {{ tab }}
@@ -1345,6 +1406,7 @@ onMounted(fetchProfile)
                     @click="saveProfile"
                 >
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 
@@ -1475,6 +1537,8 @@ onMounted(fetchProfile)
 >>>>>>> dashboard/admin
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
                     <svg v-if="!loading.profile" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12" />
@@ -1483,6 +1547,7 @@ onMounted(fetchProfile)
                     {{ loading.profile ? 'Savingâ€¦' : 'Save Changes' }}
                 </button>
             </div>
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1494,6 +1559,8 @@ onMounted(fetchProfile)
 >>>>>>> dashboard/admin
 
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
             <div :class="styles['form-card']">
@@ -1643,6 +1710,7 @@ onMounted(fetchProfile)
 }
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 .text-blue {
     color: #3b82f6;
@@ -1650,6 +1718,8 @@ onMounted(fetchProfile)
 <<<<<<< HEAD
 }
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
@@ -2126,6 +2196,7 @@ onMounted(fetchProfile)
     display: flex;
     flex-direction: column;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 }
@@ -2181,6 +2252,8 @@ onMounted(fetchProfile)
 >>>>>>> dashboard/admin
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 }
 
 .field-group {
@@ -2191,6 +2264,7 @@ onMounted(fetchProfile)
     display: block;
     font-size: 0.85rem;
     font-weight: 600;
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
     color: var(--color-text-primary);
@@ -2206,6 +2280,10 @@ onMounted(fetchProfile)
     color: #4b5563;
     margin-bottom: 6px;
 >>>>>>> Stashed changes
+=======
+    color: #4b5563;
+    margin-bottom: 6px;
+>>>>>>> Stashed changes
 }
 
 .field-label--danger {
@@ -2215,6 +2293,7 @@ onMounted(fetchProfile)
 .input-wrap {
     display: flex;
     align-items: center;
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
     gap: 0;
@@ -2232,6 +2311,8 @@ onMounted(fetchProfile)
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     gap: 10px;
     border-radius: 14px;
     padding: 10px 14px;
@@ -2243,9 +2324,12 @@ onMounted(fetchProfile)
     border-color: #4338ca;
     box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
     background: #fff;
@@ -2262,6 +2346,7 @@ onMounted(fetchProfile)
     outline: none;
     background: transparent;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -2277,6 +2362,10 @@ onMounted(fetchProfile)
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+    font-size: 0.95rem;
+    color: #111827;
+>>>>>>> Stashed changes
 =======
     font-size: 0.95rem;
     color: #111827;
@@ -2371,6 +2460,7 @@ onMounted(fetchProfile)
     align-items: center;
     gap: 8px;
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -2384,6 +2474,8 @@ onMounted(fetchProfile)
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     justify-content: center;
     padding: 12px 20px;
     border-radius: 999px;
@@ -2392,6 +2484,7 @@ onMounted(fetchProfile)
     font-weight: 600;
     border: none;
     cursor: pointer;
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -2411,6 +2504,8 @@ onMounted(fetchProfile)
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
     box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
     transition: transform 0.15s ease;
 }
@@ -2425,6 +2520,7 @@ onMounted(fetchProfile)
     pointer-events: none;
 }
 
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -2496,6 +2592,8 @@ onMounted(fetchProfile)
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 .spinner {
     width: 15px;
     height: 15px;
@@ -2552,9 +2650,12 @@ onMounted(fetchProfile)
     }
 }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 
@@ -2569,9 +2670,12 @@ onMounted(fetchProfile)
     }
 }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 =======
 >>>>>>> dashboard/admin
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 </style>

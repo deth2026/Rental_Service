@@ -185,6 +185,7 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
@@ -195,6 +196,11 @@ import UserProfileMenu from '@/components/UserProfileMenu.vue';
 =======
 import ConfirmModal from '../../components/ConfirmModal.vue';
 >>>>>>> dashboard/admin
+=======
+import CommonFooter from '../../components/CommonFooter.vue';
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import logoUrl from '../../assets/logo.png';
+>>>>>>> Stashed changes
 =======
 import CommonFooter from '../../components/CommonFooter.vue';
 import UserProfileMenu from '@/components/UserProfileMenu.vue';
@@ -379,6 +385,7 @@ const handleLogout = () => { showLogoutConfirm.value = true; };
 const confirmLogout = async () => { await userService.logout(); router.push('/login'); };
 </script>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -548,6 +555,8 @@ const confirmLogout = async () => { await userService.logout(); router.push('/lo
 
 =======
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 <style scoped>

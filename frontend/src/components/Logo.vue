@@ -2,10 +2,15 @@
   <div class="app-logo">Chong Choul Rental</div>
 </template>
 
+<<<<<<< Updated upstream
 <script>
 export default {
   name: 'Logo'
 }
+=======
+<script setup>
+import logoUrl from '@/assets/logo.png'
+>>>>>>> Stashed changes
 </script>
 
 <style scoped>

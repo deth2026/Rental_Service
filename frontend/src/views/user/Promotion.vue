@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -18,6 +19,12 @@ import Logo from '@/components/Logo.vue'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 >>>>>>> dashboard/admin
 =======
+import logoUrl from '@/assets/logo.png'
+>>>>>>> Stashed changes
+=======
+import Logo from '@/components/Logo.vue'
+import CommonFooter from '../../components/CommonFooter.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 import logoUrl from '@/assets/logo.png'
 >>>>>>> Stashed changes
 

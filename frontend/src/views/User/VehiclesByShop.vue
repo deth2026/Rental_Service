@@ -144,12 +144,17 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
 =======
 import CommonFooter from '../../components/CommonFooter.vue'
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+import logoUrl from '@/assets/logo.png';
+import CommonFooter from '../../components/CommonFooter.vue';
+>>>>>>> Stashed changes
 =======
 import logoUrl from '@/assets/logo.png';
 import CommonFooter from '../../components/CommonFooter.vue';

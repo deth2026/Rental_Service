@@ -370,11 +370,14 @@ const openMap = () => {
   <CommonFooter />
 </template>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 <<<<<<< HEAD
 <<<<<<< HEAD
 
 =======
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 <style scoped>
