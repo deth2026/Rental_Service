@@ -12,7 +12,6 @@ import Setting from './setting.vue'
 import ActivityHistory from './ActivityHistory.vue'
 import api, { shopApi, vehicleApi } from '@/services/api'
 import { getSessionUser, logoutUser } from '@/services/auth'
-import CommonFooter from '../../components/CommonFooter.vue'
 
 // Toast notifications
 const router = useRouter()
@@ -1323,8 +1322,6 @@ const iconSvg = (name) => {
     </div>
   </div>
   
-  <!-- Common Footer -->
-  <CommonFooter />
 </template>
 
 <style>

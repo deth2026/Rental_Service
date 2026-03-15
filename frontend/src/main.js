@@ -7,8 +7,11 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import i18n, { syncAutoTranslateWithCurrentLanguage } from './i18n'
+import CommonFooter from './components/CommonFooter.vue'
 
-createApp(App).use(router).use(i18n).mount('#app')
+const app = createApp(App)
+app.component('CommonFooter', CommonFooter)
+app.use(router).use(i18n).mount('#app')
 syncAutoTranslateWithCurrentLanguage()
 
 router.afterEach(() => {

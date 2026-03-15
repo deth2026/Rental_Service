@@ -288,7 +288,6 @@ const availabilityText = computed(() => {
 });
 const shopName = computed(() => (vehicle.value ? (shopNamesById.value[vehicle.value.shop_id] || 'Unknown Shop') : 'Unknown Shop'));
 const primaryImage = computed(() => (vehicle.value ? resolveImageUrl(vehicle.value.image_url) : fallbackImage));
-
 watch(
   routeId,
   (id) => {
@@ -296,7 +295,6 @@ watch(
   },
   { immediate: true }
 );
-
 const pickupDate = ref('2023-11-20');
 const dropoffDate = ref('2023-11-21');
 

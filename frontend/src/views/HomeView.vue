@@ -135,12 +135,14 @@
       </div>
     </section>
 
+    <CommonFooter />
 
   </div>
 </template>
 
 <script setup>
 import { reactive } from 'vue'
+import CommonFooter from '../components/CommonFooter.vue'
 
 const search = reactive({
   type: 'All Vehicles',
@@ -221,6 +223,10 @@ const rides = [
 
 <style>
 @import "../css/HomeView.css";
+
+.home-page .common-footer {
+  margin-top: 0;
+}
 </style>
 
 
