@@ -102,6 +102,12 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] }
     },
     {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('../views/admin/User_management.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] }
+    },
+    {
       path: '/vehicles',
       name: 'vehicles-by-shop',
       component: VehiclesByShop,
