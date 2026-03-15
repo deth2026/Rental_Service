@@ -4,15 +4,65 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Bookings.vue';
-import PromotionView from '../views/User/Promotion.vue';
-import SettingUser from '../views/User/Setting_user.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
+import PromotionView from '../views/user/Promotion.vue';
+import SettingUser from '../views/user/Setting_user.vue';
+import AdminLayout from '../views/admin/AdminLayout.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/User/ShopVehicles.vue';
-import VehiclesByShop from '../views/User/VehiclesByShop.vue';
-import ViewDetail from '../views/User/ViewDetail.vue';
+import AdminShopManagement from '../views/admin/ShopManagement.vue';
+import AdminUserManagement from '../views/admin/UserManagement.vue';
+import AdminVehicleManagement from '../views/admin/VehicleManagement.vue';
+import AdminBookingManagement from '../views/admin/BookingManagement.vue';
+import AdminCouponManagement from '../views/admin/CouponManagement.vue';
+import AdminCategoryManagement from '../views/admin/CategoryManagement.vue';
+import AdminCityManagement from '../views/admin/CityManagement.vue';
+import AdminFinancials from '../views/admin/Financials.vue';
+import AdminReports from '../views/admin/Reports.vue';
+import AdminSettings from '../views/admin/Settings.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
+>>>>>>> dashboard/admin
+=======
+import ShopDashboard from '../views/shop/DashboardLayout.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
+import PromotionView from '../views/user/Promotion.vue';
+import SettingUser from '../views/user/Setting_user.vue';
+import AdminLayout from '../views/admin/AdminLayout.vue';
+import AdminDashboard from '../views/admin/Dashboard.vue';
+import AdminShopManagement from '../views/admin/ShopManagement.vue';
+import AdminUserManagement from '../views/admin/UserManagement.vue';
+import AdminVehicleManagement from '../views/admin/VehicleManagement.vue';
+import AdminBookingManagement from '../views/admin/BookingManagement.vue';
+import AdminCouponManagement from '../views/admin/CouponManagement.vue';
+import AdminCategoryManagement from '../views/admin/CategoryManagement.vue';
+import AdminCityManagement from '../views/admin/CityManagement.vue';
+import AdminFinancials from '../views/admin/Financials.vue';
+import AdminReports from '../views/admin/Reports.vue';
+import AdminSettings from '../views/admin/Settings.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
+=======
+import UserDashboard from '../views/user/Dashboard.vue';
+import PromotionView from '../views/user/Promotion.vue';
+import SettingUser from '../views/user/Setting_user.vue';
+import AdminLayout from '../views/admin/AdminLayout.vue';
+import AdminDashboard from '../views/admin/Dashboard.vue';
+import AdminShopManagement from '../views/admin/ShopManagement.vue';
+import AdminUserManagement from '../views/admin/UserManagement.vue';
+import AdminVehicleManagement from '../views/admin/VehicleManagement.vue';
+import AdminBookingManagement from '../views/admin/BookingManagement.vue';
+import AdminCouponManagement from '../views/admin/CouponManagement.vue';
+import AdminCategoryManagement from '../views/admin/CategoryManagement.vue';
+import AdminCityManagement from '../views/admin/CityManagement.vue';
+import AdminFinancials from '../views/admin/Financials.vue';
+import AdminReports from '../views/admin/Reports.vue';
+import AdminSettings from '../views/admin/Settings.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
+>>>>>>> dashboard/admin
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -98,9 +148,22 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      name: 'admin',
-      component: AdminDashboard,
-      meta: { requiresAuth: true, allowedRoles: ['admin'] }
+      component: AdminLayout,
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+      children: [
+        { path: '', redirect: '/admin/dashboard' },
+        { path: 'dashboard', name: 'admin-dashboard', component: AdminDashboard },
+        { path: 'shops', name: 'admin-shops', component: AdminShopManagement },
+        { path: 'users', name: 'admin-users', component: AdminUserManagement },
+        { path: 'vehicles', name: 'admin-vehicles', component: AdminVehicleManagement },
+        { path: 'bookings', name: 'admin-bookings', component: AdminBookingManagement },
+        { path: 'coupons', name: 'admin-coupons', component: AdminCouponManagement },
+        { path: 'categories', name: 'admin-categories', component: AdminCategoryManagement },
+        { path: 'cities', name: 'admin-cities', component: AdminCityManagement },
+        { path: 'financials', name: 'admin-financials', component: AdminFinancials },
+        { path: 'reports', name: 'admin-reports', component: AdminReports },
+        { path: 'settings', name: 'admin-settings', component: AdminSettings },
+      ]
     },
     {
       path: '/vehicles',

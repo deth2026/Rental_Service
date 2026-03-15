@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Confirmation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .popup {
+            background: white;
+            border-radius: 20px;
+            padding: 80px 60px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-40px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .popup-icon {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .popup-icon svg {
+            width: 100px;
+            height: 100px;
+            color: #ff4444;
+            filter: drop-shadow(0 4px 12px rgba(255, 68, 68, 0.3));
+        }
+
+        .popup-title {
+            font-size: 42px;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 25px;
+            letter-spacing: -0.5px;
+        }
+
+        .popup-message {
+            font-size: 20px;
+            color: #555;
+            text-align: center;
+            margin-bottom: 60px;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        .popup-buttons {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 20px 45px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-cancel {
+            background: #f5f5f5;
+            color: #333;
+            border: 3px solid #ddd;
+        }
+
+        .btn-cancel:hover {
+            background: #ffffff;
+            border-color: #999;
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-cancel:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-confirm {
+            background: #ff4444;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background: #ff2222;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 35px rgba(255, 68, 68, 0.5);
+        }
+
+        .btn-confirm:active {
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <div class="popup">
+            <div class="popup-icon">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </div>
+            <div class="popup-title">Delete Confirmation</div>
+            <div class="popup-message" id="message">
+                Are you sure you want to delete this? This action cannot be undone.
+            </div>
+            <div class="popup-buttons" id="buttons">
+                <button class="btn-cancel" onclick="handleCancel()">Cancel</button>
+                <button class="btn-confirm" id="confirmBtn" onclick="handleFirstConfirm()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let confirmationStep = 1;
+
+        function handleCancel() {
+            confirmationStep = 1;
+            document.getElementById('message').innerText = 'Are you sure you want to delete this? This action cannot be undone.';
+            document.getElementById('confirmBtn').innerText = 'Confirm';
+            document.getElementById('confirmBtn').style.background = '#ff4444';
+            document.getElementById('confirmBtn').onclick = function() { handleFirstConfirm(); };
+        }
+
+        function handleFirstConfirm() {
+            if (confirmationStep === 1) {
+                confirmationStep = 2;
+                document.getElementById('message').innerText = 'Click CONFIRM one more time to permanently delete this. This cannot be reversed!';
+                document.getElementById('confirmBtn').innerText = 'Yes, Delete Forever';
+                document.getElementById('confirmBtn').style.background = '#cc0000';
+            } else if (confirmationStep === 2) {
+                handleFinalDelete();
+            }
+        }
+
+        function handleFinalDelete() {
+            alert('✓ Item deleted successfully!');
+            // Add your delete logic here
+            handleCancel(); // Reset dialog
+        }
+    </script>
+</body>
+</html>

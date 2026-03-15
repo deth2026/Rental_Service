@@ -2,16 +2,21 @@
 import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { useRouter } from 'vue-router'
 =======
 import { useRoute, useRouter } from 'vue-router'
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+import { useRouter } from 'vue-router'
+>>>>>>> dashboard/admin
 import userService from '@/services/userService.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const styles = useCssModule()
 const router = useRouter()
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 const route = useRoute()
@@ -33,12 +38,17 @@ const mapUserToProfile = (user = {}) => {
 
 const storedUser = userService.getCurrentUser() || {}
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 
 // Get current logged-in user's ID
 const getUserId = () => userService.getCurrentUserId()
 
 // ─── State ───────────────────────────────────────────────────────────────
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
 const profile = ref({ 
     name: '', 
     email: '', 
@@ -63,6 +73,7 @@ const originalProfile = ref({
 })
 const avatarPreview = ref(null)
 const backgroundPreview = ref(null)
+<<<<<<< HEAD
 =======
 const profile = ref(mapUserToProfile(storedUser))
 const originalProfile = ref({
@@ -74,6 +85,8 @@ const originalProfile = ref({
 const avatarPreview = ref(null)
 const MAX_AVATAR_SIZE = 5 * 1024 * 1024
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 const profileFile = ref(null)
 const backgroundFile = ref(null)
 const fileInput = ref(null)
@@ -112,6 +125,9 @@ const avatarSrc = computed(() => {
 })
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
 const backgroundSrc = computed(() => {
     if (backgroundPreview.value) return backgroundPreview.value
     if (profile.value.background_picture) return userService.getBackgroundUrl(profile.value.background_picture)
@@ -125,9 +141,12 @@ const defaultAvatarColor = computed(() => {
     const hash = profile.value.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     return colors[hash % colors.length];
 })
+<<<<<<< HEAD
 =======
 const userDisplayName = computed(() => profile.value.name || 'Guest User')
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 
 const pwdStrength = computed(() => {
     const p = passwordForm.value.new_password
@@ -293,6 +312,34 @@ function handleBackgroundChange(event) {
     event.target.value = ''
 }
 
+<<<<<<< HEAD
+=======
+function removeProfilePicture() {
+    profileFile.value = null
+    avatarPreview.value = null
+    profile.value.profile_picture = null
+}
+
+// ─── Background picture ─────────────────────────────────────────────────
+function triggerBackgroundInput() {
+    backgroundInput.value.click()
+}
+
+function handleBackgroundChange(event) {
+    const file = event.target.files[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be less than 5 MB.', 'danger')
+        return
+    }
+    backgroundFile.value = file
+    const reader = new FileReader()
+    reader.onload = e => { backgroundPreview.value = e.target.result }
+    reader.readAsDataURL(file)
+    event.target.value = ''
+}
+
+>>>>>>> dashboard/admin
 function removeBackgroundPicture() {
     backgroundFile.value = null
     backgroundPreview.value = null
@@ -332,6 +379,7 @@ async function fetchProfile() {
             last_name: profile.value.last_name,
             status: profile.value.status,
             role: profile.value.role
+<<<<<<< HEAD
 =======
         const mappedProfile = mapUserToProfile(data)
         Object.assign(profile.value, mappedProfile)
@@ -343,6 +391,8 @@ async function fetchProfile() {
             phone: mappedProfile.phone,
             profile_picture: mappedProfile.profile_picture,
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
         }
     } catch {
         showToast('Could not load profile data.', 'danger')
@@ -359,6 +409,7 @@ function validateProfile() {
     const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
     const hasFileChange = profileFile.value !== null
 <<<<<<< HEAD
+<<<<<<< HEAD
     const hasBackgroundChange = backgroundFile.value !== null
     
     if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange && !hasBackgroundChange) {
@@ -367,6 +418,11 @@ function validateProfile() {
     // If nothing changed, no validation needed
     if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange) {
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+    const hasBackgroundChange = backgroundFile.value !== null
+    
+    if (!hasNameChange && !hasEmailChange && !hasPhoneChange && !hasFileChange && !hasBackgroundChange) {
+>>>>>>> dashboard/admin
         showToast('No changes detected.', 'info')
         return 'No changes detected.'
     }
@@ -407,6 +463,9 @@ async function saveProfile() {
         const hasEmailChange = profile.value.email.trim() !== originalProfile.value.email
         const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
         const hasProfilePictureRemoved = originalProfile.value.profile_picture && !profile.value.profile_picture
         const hasBackgroundPictureRemoved = originalProfile.value.background_picture && !profile.value.background_picture
         
@@ -455,6 +514,7 @@ async function saveProfile() {
             }
             profile.value.profile_picture = resolvedProfilePicture || profile.value.profile_picture
             profile.value.background_picture = resolvedBackgroundPicture || profile.value.background_picture
+<<<<<<< HEAD
 =======
             const mappedProfile = mapUserToProfile(res.user)
             originalProfile.value = {
@@ -466,6 +526,8 @@ async function saveProfile() {
             const avatar = mappedProfile.profile_picture || profile.value.profile_picture
             Object.assign(profile.value, mappedProfile, { profile_picture: avatar })
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 
             try {
                 const rawUser = localStorage.getItem('user')
@@ -480,10 +542,14 @@ async function saveProfile() {
         
         profileFile.value = null
 <<<<<<< HEAD
+<<<<<<< HEAD
         backgroundFile.value = null
 =======
         avatarPreview.value = null
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+        backgroundFile.value = null
+>>>>>>> dashboard/admin
         showToast('Profile updated successfully!', 'success')
     } catch (e) {
         showToast(e.response?.data?.message || 'Failed to update profile.', 'danger')
@@ -561,6 +627,9 @@ async function changePassword() {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
 // ─── Navigation ────────────────────────────────────────────────────────────
 function goBack() {
     router.back()
@@ -574,6 +643,7 @@ function cancelChanges() {
     backgroundFile.value = null
     passwordForm.value = { current_password: '', new_password: '', new_password_confirmation: '' }
     showToast('Changes discarded.', 'info')
+<<<<<<< HEAD
 =======
 const handleLogout = async () => {
     try {
@@ -586,6 +656,8 @@ const handleLogout = async () => {
 const openProfile = () => {
     router.push('/user/profile')
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 }
 
 onMounted(fetchProfile)
@@ -643,6 +715,9 @@ onMounted(fetchProfile)
         </transition>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
         <!-- ═══════════════════════════════════════════════════════════
          PROFILE HEADER SECTION - Full Width with Background
     ═══════════════════════════════════════════════════════════ -->
@@ -703,6 +778,7 @@ onMounted(fetchProfile)
 
                 <!-- User Name -->
                 <h1 :class="styles['profile-name']">{{ profile.name || 'Your Name' }}</h1>
+<<<<<<< HEAD
 =======
         <section :class="styles['hero']">
             <div :class="styles['hero-stripes']">
@@ -723,10 +799,19 @@ onMounted(fetchProfile)
                 <div :class="styles['hero-avatar__overlay']">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+=======
+            </div>
+
+            <!-- Profile Action Buttons -->
+            <div :class="styles['profile-actions']">
+                <button :class="styles['btn-upload']" type="button" @click="triggerFileInput">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+>>>>>>> dashboard/admin
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="17 8 12 3 7 8" />
                         <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
+<<<<<<< HEAD
                 </div>
                 <div v-if="loading.profile" :class="styles['hero-avatar__loader']">
                     <span :class="styles['hero-avatar__loader-dot']"></span>
@@ -767,6 +852,15 @@ onMounted(fetchProfile)
                         <polyline points="3 6 5 6 21 6" />
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
+=======
+                    Upload Image
+                </button>
+                <button v-if="avatarSrc || avatarPreview" :class="styles['btn-remove']" type="button" @click="removeProfilePicture">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+>>>>>>> dashboard/admin
                     Remove
                 </button>
             </div>
@@ -913,6 +1007,7 @@ onMounted(fetchProfile)
                         </p>
                     </div>
                 </div>
+<<<<<<< HEAD
 
                 <!-- Current Password -->
                 <div :class="styles['field-group']">
@@ -1194,6 +1289,133 @@ onMounted(fetchProfile)
                     @click="saveProfile"
                 >
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+
+                <!-- Current Password -->
+                <div :class="styles['field-group']">
+                    <label :class="[styles['field-label'], styles['field-label--danger']]">Current Password</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input v-model="passwordForm.current_password" :class="[styles['input'], passwordErrors.current_password && styles['input--error']]"
+                            :type="showPwd.current ? 'text' : 'password'" placeholder="Enter current password"
+                            autocomplete="current-password" />
+                        <button :class="styles['eye-btn']" type="button" @click="showPwd.current = !showPwd.current"
+                            :aria-label="showPwd.current ? 'Hide' : 'Show'">
+                            <svg v-if="showPwd.current" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p v-if="passwordErrors.current_password" :class="styles['field-error']">{{ passwordErrors.current_password }}</p>
+                </div>
+
+                <!-- New Password -->
+                <div :class="styles['field-group']">
+                    <label :class="[styles['field-label'], styles['field-label--danger']]">New Password</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input v-model="passwordForm.new_password" :class="styles['input']"
+                            :type="showPwd.newPwd ? 'text' : 'password'" placeholder="Enter new password"
+                            @blur="touched.newPassword = true" autocomplete="new-password" />
+                        <button :class="styles['eye-btn']" type="button" @click="showPwd.newPwd = !showPwd.newPwd"
+                            :aria-label="showPwd.newPwd ? 'Hide' : 'Show'">
+                            <svg v-if="showPwd.newPwd" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Strength indicator -->
+                    <div v-if="pwdStrength" :class="styles['strength']">
+                        <div :class="styles['strength__bars']">
+                            <span :class="[styles['strength__bar'], styles[`strength__bar--${pwdStrength.level}`]]"></span>
+                            <span
+                                :class="[styles['strength__bar'], (pwdStrength.level === 'medium' || pwdStrength.level === 'strong') && styles[`strength__bar--${pwdStrength.level}`]]"></span>
+                            <span
+                                :class="[styles['strength__bar'], pwdStrength.level === 'strong' && styles['strength__bar--strong']]"></span>
+                        </div>
+                        <span :class="[styles['strength__label'], styles[`strength__label--${pwdStrength.level}`]]">{{
+                            pwdStrength.label }}</span>
+                    </div>
+                    <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars · Uppercase · Lowercase · Number · Special character</p>
+                    <p v-if="passwordErrors.new_password" :class="styles['field-error']">{{ passwordErrors.new_password }}</p>
+                </div>
+
+                <!-- Confirm New Password -->
+                <div :class="styles['field-group']">
+                    <label :class="[styles['field-label'], styles['field-label--danger']]">Confirm New Password</label>
+                    <div :class="styles['input-wrap']">
+                        <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input v-model="passwordForm.new_password_confirmation" :class="styles['input']"
+                            :type="showPwd.confirm ? 'text' : 'password'" placeholder="Confirm new password"
+                            autocomplete="new-password" />
+                        <button :class="styles['eye-btn']" type="button" @click="showPwd.confirm = !showPwd.confirm"
+                            :aria-label="showPwd.confirm ? 'Hide' : 'Show'">
+                            <svg v-if="showPwd.confirm" width="17" height="17" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                        </button>
+                    </div>
+                    <p v-if="passwordErrors.new_password_confirmation" :class="styles['field-error']">{{ passwordErrors.new_password_confirmation }}</p>
+                </div>
+
+                <button :class="[styles['btn-primary'], loading.password && styles['btn-primary--loading']]" type="button"
+                    :disabled="loading.password" @click="changePassword">
+                    <span :class="styles['spinner']" v-if="loading.password"></span>
+                    {{ loading.password ? 'Updating…' : 'Change Password' }}
+                </button>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
+             ACTION BUTTONS - Cancel and Save
+        ═══════════════════════════════════════════════════════════ -->
+            <div :class="styles['action-buttons']">
+                <button :class="styles['btn-cancel']" type="button" @click="cancelChanges">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                    Cancel
+                </button>
+                <button :class="[styles['btn-save'], loading.profile && styles['btn-save--loading']]" type="button"
+                    :disabled="loading.profile" @click="saveProfile">
+>>>>>>> dashboard/admin
                     <svg v-if="!loading.profile" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="20 6 9 17 4 12" />
@@ -1203,6 +1425,13 @@ onMounted(fetchProfile)
                 </button>
             </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+        </div>
+    </div>
+</template>
+>>>>>>> dashboard/admin
 
 =======
             <div :class="styles['form-card']">
@@ -1691,6 +1920,7 @@ onMounted(fetchProfile)
 .text-blue {
     color: #3b82f6;
     font-weight: 600;
+<<<<<<< HEAD
 }
 =======
 
@@ -2211,6 +2441,58 @@ onMounted(fetchProfile)
     display: flex;
     flex-direction: column;
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+}
+
+/* ─── Info Grid ─────────────────────────────────────────────── */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.info-item {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.info-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.info-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.info-value--status {
+    display: flex;
+    align-items: center;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #10b981;
+    color: #fff;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+>>>>>>> dashboard/admin
 }
 
 .field-group {
@@ -2224,10 +2506,13 @@ onMounted(fetchProfile)
 <<<<<<< HEAD
     color: var(--color-text-primary);
     margin-bottom: 8px;
+<<<<<<< HEAD
 =======
     color: #4b5563;
     margin-bottom: 6px;
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 }
 
 .field-label--danger {
@@ -2249,6 +2534,7 @@ onMounted(fetchProfile)
 .input-wrap:focus-within {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+<<<<<<< HEAD
 =======
     gap: 10px;
     border-radius: 14px;
@@ -2261,6 +2547,8 @@ onMounted(fetchProfile)
     border-color: #4338ca;
     box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
     background: #fff;
 }
 
@@ -2275,14 +2563,20 @@ onMounted(fetchProfile)
     outline: none;
     background: transparent;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
     padding: 12px 0;
     font-size: 0.9rem;
     color: var(--color-text-primary);
     min-width: 0;
+<<<<<<< HEAD
 =======
     font-size: 0.95rem;
     color: #111827;
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 }
 
 .input::placeholder {
@@ -2373,6 +2667,9 @@ onMounted(fetchProfile)
     align-items: center;
     gap: 8px;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
     padding: 12px 24px;
     background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: #fff;
@@ -2390,6 +2687,9 @@ onMounted(fetchProfile)
     border: none;
     cursor: pointer;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
     transition: all 0.2s ease;
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
 }
@@ -2418,6 +2718,9 @@ onMounted(fetchProfile)
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
 /* Action Buttons - Cancel and Save */
 .action-buttons {
     display: flex;
@@ -2538,6 +2841,7 @@ onMounted(fetchProfile)
     }
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 @media (max-width: 960px) {
@@ -2551,6 +2855,8 @@ onMounted(fetchProfile)
     }
 }
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 </style>
 
 <style>

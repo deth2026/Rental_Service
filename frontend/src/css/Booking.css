@@ -160,6 +160,17 @@
   object-fit: cover;
 }
 
+.vehicle-img.placeholder {
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.18), rgba(148, 163, 184, 0.32), rgba(148, 163, 184, 0.18));
+  background-size: 200% 100%;
+  animation: booking-skeleton 1200ms ease-in-out infinite;
+}
+
+@keyframes booking-skeleton {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
 .booking-info {
   display: flex;
   flex-direction: column;

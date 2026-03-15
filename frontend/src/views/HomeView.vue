@@ -3,7 +3,11 @@
     <Logo />
     <header class="top-nav">
       <div class="brand-container">
+<<<<<<< HEAD
         <img class="brand-logo" src="@/assets/Logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
+=======
+        <img class="brand-logo" src="/images/chong-choul-logo.svg" alt="CHONG CHOUL VEHICLE SERVICES" />
+>>>>>>> dashboard/admin
         <div class="brand-text">
           <div class="brand">Chong Choul</div>
           <!-- <div class="brand-tagline">Vehicle Rental</div> -->
@@ -107,6 +111,9 @@
     </section>
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> dashboard/admin
     <footer class="footer">
       <div class="footer-main">
         <div>
@@ -139,10 +146,13 @@
       </div>
     </footer>
   </main>
+<<<<<<< HEAD
 =======
 
   </div>
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+>>>>>>> dashboard/admin
 </template>
 
 <script>

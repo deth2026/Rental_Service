@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
@@ -20,6 +21,9 @@ class ShopController extends Controller
 
     public function store(Request $request)
     {
+        $columns = $this->shopColumns();
+        $canPersistImage = in_array('img_url', $columns, true);
+
         // Validate most fields first; img_url is handled separately because it
         // can be either a file upload (multipart) or a plain string URL.
         $payload = $request->validate([
@@ -40,25 +44,24 @@ class ShopController extends Controller
         $payload['owner_id'] = $request->user()?->id;
 
         // handle image validation / payload separately
-        if ($request->hasFile('img_url')) {
-            // file rule ensures it is an image and not too large
-            $request->validate(['img_url' => 'image|max:10240']);
-        } elseif ($request->filled('img_url')) {
-            // if it's provided as a string we still want to make sure it's not
-            // some non-string type (e.g. array) that would break the model
-            $request->validate(['img_url' => 'string']);
+        if ($canPersistImage) {
+            if ($request->hasFile('img_url')) {
+                // file rule ensures it is an image and not too large
+                $request->validate(['img_url' => 'image|max:10240']);
+            } elseif ($request->filled('img_url')) {
+                // if it's provided as a string we still want to make sure it's not
+                // some non-string type (e.g. array) that would break the model
+                $request->validate(['img_url' => 'string']);
+            }
         }
 
-        // A shop owner can only create shops for themselves.
-        $payload['owner_id'] = $request->user()?->id;
-
         // Handle image upload or URL
-        if ($request->hasFile('img_url')) {
+        if ($canPersistImage && $request->hasFile('img_url')) {
             $image = $request->file('img_url');
             $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
             $image->storeAs('public/shops', $imageName);
             $payload['img_url'] = 'shops/' . $imageName;
-        } elseif ($request->input('img_url')) {
+        } elseif ($canPersistImage && $request->input('img_url')) {
             // Accept base64 data URL or regular URL
             $imgUrl = $request->input('img_url');
             // If it's a base64 data URL, decode and save it
@@ -91,9 +94,25 @@ class ShopController extends Controller
             }
         }
 
+        $payload = $this->filterShopPayload($payload, $columns);
         $record = Shop::create($payload);
 
         return response()->json($record, 201);
+    }
+
+    public function mine(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $shops = Shop::with('owner')
+            ->where('owner_id', $user->id)
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json($shops);
     }
 
     public function show(Shop $shop)
@@ -103,6 +122,9 @@ class ShopController extends Controller
 
     public function update(Request $request, Shop $shop)
     {
+        $columns = $this->shopColumns();
+        $canPersistImage = in_array('img_url', $columns, true);
+
         $user = $request->user();
         if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
@@ -125,16 +147,20 @@ class ShopController extends Controller
         ]);
 
         // validate img_url value type depending on upload or text
-        if ($request->hasFile('img_url')) {
-            $request->validate(['img_url' => 'image|max:10240']);
-        } elseif ($request->filled('img_url')) {
-            $request->validate(['img_url' => 'string']);
+        if ($canPersistImage) {
+            if ($request->hasFile('img_url')) {
+                $request->validate(['img_url' => 'image|max:10240']);
+            } elseif ($request->filled('img_url')) {
+                $request->validate(['img_url' => 'string']);
+            }
         }
 
-        $shouldRemoveImage = $request->boolean('remove_img');
+        $shouldRemoveImage = $canPersistImage && $request->boolean('remove_img');
 
         // Handle image upload or URL
-        if ($shouldRemoveImage) {
+        if (!$canPersistImage) {
+            unset($payload['img_url']);
+        } elseif ($shouldRemoveImage) {
             if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
                 $oldPath = storage_path('app/public/' . $shop->img_url);
                 if (file_exists($oldPath)) {
@@ -201,6 +227,7 @@ class ShopController extends Controller
             }
         }
 
+        $payload = $this->filterShopPayload($payload, $columns);
         $shop->update($payload);
 
         return response()->json($shop->fresh());
@@ -235,10 +262,14 @@ class ShopController extends Controller
             return [null, null];
         }
 
-        $response = Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
-            'address' => $address,
-            'key' => $apiKey,
-        ]);
+        try {
+            $response = Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+                'address' => $address,
+                'key' => $apiKey,
+            ]);
+        } catch (\Throwable $e) {
+            return [null, null];
+        }
 
         if (!$response->successful()) {
             return [null, null];
@@ -250,5 +281,34 @@ class ShopController extends Controller
         }
 
         return [$result['lat'], $result['lng']];
+    }
+
+    private function shopColumns(): array
+    {
+        try {
+            return Schema::getColumnListing((new Shop())->getTable());
+        } catch (\Throwable $e) {
+            // Baseline columns from the initial shops migration.
+            return [
+                'id',
+                'owner_id',
+                'city_id',
+                'name',
+                'description',
+                'address',
+                'latitude',
+                'longitude',
+                'total_reviews',
+                'status',
+                'created_at',
+                'updated_at',
+            ];
+        }
+    }
+
+    private function filterShopPayload(array $payload, array $columns): array
+    {
+        $allowed = array_flip($columns);
+        return array_intersect_key($payload, $allowed);
     }
 }

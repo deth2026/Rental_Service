@@ -8,9 +8,22 @@ use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Payment::paginate(15));
+        $query = Payment::query()->with(['booking.vehicle.shop']);
+
+        $user = $request->user();
+        if ($user && $user->role === 'shop_owner') {
+            $query->whereHas('booking.vehicle.shop', function ($q) use ($user) {
+                $q->where('owner_id', $user->id);
+            });
+        }
+
+        if ($request->filled('booking_id')) {
+            $query->where('booking_id', $request->input('booking_id'));
+        }
+
+        return response()->json($query->orderByDesc('id')->paginate(15));
     }
 
     public function store(Request $_request)

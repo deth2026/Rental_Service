@@ -10,7 +10,7 @@ import MyShop from './myShop.vue'
 import LoyaltyPoints from './Loyalty_points.vue'
 import Setting from './setting.vue'
 import ActivityHistory from './ActivityHistory.vue'
-import api, { shopApi, vehicleApi } from '@/services/api'
+import api, { bookingApi, shopApi, vehicleApi } from '@/services/api'
 import { getSessionUser, logoutUser } from '@/services/auth'
 import CommonFooter from '../../components/CommonFooter.vue'
 
@@ -242,12 +242,8 @@ const triggerShopImagePicker = () => {
 // Fetch shop data
 const fetchShop = async () => {
   try {
-    const ownerId = Number(sessionUser.value?.id || 0)
-    const response = await api.get('/shops')
-    const shops = response.data.data || response.data || []
-    const myShops = ownerId
-      ? shops.filter((entry) => Number(entry.owner_id) === ownerId)
-      : shops
+    const response = await shopApi.getMine()
+    const myShops = response.data?.data || response.data || []
 
     myShops.sort((a, b) => {
       const aTime = a.created_at ? new Date(a.created_at).getTime() : 0
@@ -413,6 +409,38 @@ const fetchVehicles = async () => {
 // Load vehicles on mount
 fetchVehicles()
 
+const fetchBookings = async () => {
+  try {
+    const response = await bookingApi.getAll()
+    const data = response.data?.data || response.data || []
+
+    bookings.value = data.map((b) => {
+      const start = b.start_date ? String(b.start_date).split('T')[0] : ''
+      const totalDays = Number(b.total_days || 0) || 0
+      const startDate = start ? new Date(start) : null
+      const endDate = startDate && totalDays
+        ? new Date(startDate.getTime() + Math.max(1, totalDays) * 24 * 60 * 60 * 1000)
+        : null
+
+      return {
+        id: b.id,
+        date: start,
+        status: b.status || 'pending',
+        customer: b.user?.name || b.user_id || '',
+        total_price: Number(b.total_price || 0) || 0,
+        start_date: start,
+        end_date: endDate ? endDate.toISOString().split('T')[0] : '',
+        vehicle_name: b.vehicle ? `${b.vehicle.brand || ''} ${b.vehicle.model || ''}`.trim() : '',
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching bookings:', error)
+    bookings.value = []
+  }
+}
+
+fetchBookings()
+
 const histories = ref([
   { id: 1, action: 'New booking received for Toyota Camry', time: '2 min ago' },
   { id: 2, action: 'Payment of $45 received from Sokha', time: '15 min ago' },
@@ -427,20 +455,6 @@ const form = reactive({
 
 const currentShopName = ref('No Shop Found')
 
-const getUserId = () => {
-  const sessionId = Number(sessionUser.value?.id || 0)
-  if (sessionId) return sessionId
-
-  const rawUser = localStorage.getItem('user')
-  if (!rawUser) return 1
-  try {
-    const parsed = JSON.parse(rawUser)
-    return parsed.id || 1
-  } catch {
-    return 1
-  }
-}
-
 const loadOwnerShopName = async () => {
   try {
     if (shop.value?.name) {
@@ -449,10 +463,8 @@ const loadOwnerShopName = async () => {
       return
     }
 
-    const ownerId = getUserId()
-    const response = await shopApi.getAll()
-    const shops = response.data?.data || response.data || []
-    const myShops = shops.filter((s) => Number(s.owner_id) === Number(ownerId))
+    const response = await shopApi.getMine()
+    const myShops = response.data?.data || response.data || []
 
     if (!myShops.length) {
       currentShopName.value = 'No Shop Found'
@@ -479,10 +491,8 @@ const loadOwnerShopName = async () => {
 const resolveOwnerShop = async () => {
   if (shop.value?.id) return shop.value
 
-  const ownerId = getUserId()
-  const response = await shopApi.getAll()
-  const shops = response.data?.data || response.data || []
-  const myShops = shops.filter((s) => Number(s.owner_id) === Number(ownerId))
+  const response = await shopApi.getMine()
+  const myShops = response.data?.data || response.data || []
 
   if (!myShops.length) return null
 
@@ -1229,7 +1239,7 @@ const iconSvg = (name) => {
       <h3 class="delete-title">Logout</h3>
       <p class="delete-message">Are you sure you want to logout?</p>
       <div class="delete-actions">
-        <button class="delete-cancel-btn" @click="cancelLogout">No</button>
+        <button class="delete-cancel-btn" @click="cancelLogout">Cancel</button>
         <button class="delete-confirm-btn logout-confirm-btn" @click="confirmLogout">Yes</button>
       </div>
     </div>

@@ -9,9 +9,26 @@ use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Booking::paginate(15));
+        $query = Booking::query()->with(['vehicle.shop', 'user']);
+
+        $user = $request->user();
+        if ($user && $user->role === 'shop_owner') {
+            $query->whereHas('vehicle.shop', function ($q) use ($user) {
+                $q->where('owner_id', $user->id);
+            });
+        }
+
+        if ($request->filled('vehicle_id')) {
+            $query->where('vehicle_id', $request->input('vehicle_id'));
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        return response()->json($query->orderByDesc('id')->paginate(15));
     }
 
     public function customerBookings()

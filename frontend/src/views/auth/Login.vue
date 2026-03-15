@@ -173,9 +173,11 @@
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../../services/auth";
+import { useAdminStore } from "../../stores/adminStore";
 import "../../css/login.css";
 
 const router = useRouter();
+const admin = useAdminStore();
 const isLoading = ref(false);
 const errors = ref({});
 const showPassword = ref(false);
@@ -221,6 +223,8 @@ const handleLogin = async () => {
     // Redirect based on user role
     const userRole = user?.role;
     if (userRole === 'admin') {
+      // Preload admin data in background for instant page load
+      admin.preload()
       router.push('/admin');
     } else if (userRole === 'shop_owner') {
       router.push('/dashboard');

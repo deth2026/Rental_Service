@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <template>
   <div class="detail-page">
     <header class="topbar">
@@ -175,17 +176,24 @@
   <CommonFooter />
 </template>
 
+=======
+>>>>>>> dashboard/admin
 <script setup>
+import Logo from '@/components/Logo.vue';
 import axios from 'axios';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { userService } from '../../services/database.js';
+<<<<<<< HEAD
 <<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
 =======
 import CommonFooter from '../../components/CommonFooter.vue';
 import UserProfileMenu from '@/components/UserProfileMenu.vue';
 >>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
+=======
+import ConfirmModal from '../../components/ConfirmModal.vue';
+>>>>>>> dashboard/admin
 
 const route = useRoute();
 const router = useRouter();
@@ -206,6 +214,11 @@ const vehicle = ref(null);
 const isLoading = ref(false);
 const loadError = ref('');
 const shopNamesById = ref({});
+<<<<<<< HEAD
+=======
+const avatarLoadFailed = ref(false);
+const showLogoutConfirm = ref(false);
+>>>>>>> dashboard/admin
 
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -215,6 +228,29 @@ const normalizeVehicle = (data) => ({
   rating: data?.rating ?? 4.8
 });
 
+<<<<<<< HEAD
+=======
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Bookings', route: '' },
+  { label: 'Promotions', route: '/promotions' }
+];
+
+const activeNav = computed(() => {
+  const currentPath = route.path;
+  const matched = navItems.find((item) => item.route && currentPath.startsWith(item.route));
+  return matched?.label || 'Home';
+});
+
+const setActiveNav = (item) => {
+  if (item.route) {
+    router.push(item.route);
+    return;
+  }
+  console.log('My Bookings page is not available yet.');
+};
+
+>>>>>>> dashboard/admin
 const routeId = computed(() => Number(route.params.id));
 
 const loadShopName = async (shopId) => {
@@ -333,13 +369,14 @@ const openProfile = () => {
   router.push('/user/profile');
 };
 
-const handleLogout = async () => {
-  await userService.logout();
-  router.push('/login');
-};
-
+const handleLogout = () => { showLogoutConfirm.value = true; };
+const confirmLogout = async () => { await userService.logout(); router.push('/login'); };
 </script>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> dashboard/admin
 <template>
   <div class="detail-page">
     <header class="topbar">
@@ -384,7 +421,7 @@ const handleLogout = async () => {
         <button class="btn-reset text-btn" type="button" @click="goBack">Back to Vehicles</button>
       </div>
 
-      <section v-else class="detail-card">
+      <section v-else-if="vehicle" class="detail-card">
         <div class="detail-card__hero">
           <div>
             <p class="hero-eyebrow">DriveMatch</p>
@@ -457,7 +494,7 @@ const handleLogout = async () => {
             <article class="panel location-panel">
               <div class="panel-head">
                 <h3>My Location</h3>
-                <button class="btn-link" type="button" @click="openMainLocation">
+                <button class="btn-link" type="button">
                   Open map <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </button>
               </div>
@@ -489,6 +526,16 @@ const handleLogout = async () => {
         <p>Contact Us</p>
       </div>
     </footer>
+
+    <ConfirmModal
+      v-model="showLogoutConfirm"
+      title="Logout"
+      message="Are you sure you want to logout?"
+      cancel-text="Cancel"
+      confirm-text="Yes"
+      variant="danger"
+      @confirm="confirmLogout"
+    />
   </div>
 </template>
 

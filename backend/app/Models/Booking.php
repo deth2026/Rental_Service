@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Booking extends Model
 {
@@ -29,22 +30,28 @@ class Booking extends Model
         'total_price' => 'decimal:2'
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function vehicle()
+    public function vehicle(): BelongsTo
+=======
+    public function vehicle(): BelongsTo
+>>>>>>> dashboard/admin
     {
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function shop()
+    public function user(): BelongsTo
     {
-        return $this->belongsTo(Shop::class);
+        return $this->belongsTo(User::class);
     }
 
-    public function coupon()
+    public function coupon(): BelongsTo
+=======
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function coupon(): BelongsTo
+>>>>>>> dashboard/admin
     {
         return $this->belongsTo(Coupon::class);
     }

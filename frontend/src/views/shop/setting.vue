@@ -4,6 +4,7 @@
       <main class="panel">
         <section class="content-card">
           <div class="section-head">
+<<<<<<< HEAD
             <p class="section-title">{{ t('Ownershop setting') }}</p>
             <div class="avatar-panel">
               <div class="avatar-row">
@@ -23,6 +24,30 @@
                   </button>
                 </div>
               </div>
+=======
+            <p class="section-title">{{ t('setting Ownership') }}</p>
+            <button type="button" class="btn btn-logout creative-logout-btn" @click="openLogoutConfirm">
+              <span class="logout-icon">↪</span>
+              <span>{{ t('logout') }}</span>
+            </button>
+          </div>
+
+          <div class="avatar-row">
+            <img
+              :key="displayImageUrl"
+              :src="displayImageUrl"
+              alt="Profile photo"
+              class="profile-avatar"
+              @error="onAvatarError"
+            />
+            <div class="avatar-actions">
+              <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
+                {{ avatarUploadLoading ? t('uploading') : t('uploadProfile') }}
+              </button>
+              <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
+                {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
+              </button>
+>>>>>>> dashboard/admin
             </div>
           </div>
           <input ref="avatarInputRef" type="file" accept="image/*" class="sr-only-file" @change="onAvatarChange" />
@@ -182,7 +207,7 @@
         <p class="confirm-text">{{ confirmLogoutText }}</p>
         <div class="confirm-actions">
           <button type="button" class="btn btn-muted" @click="closeLogoutConfirm">{{ t('cancel') }}</button>
-          <button type="button" class="btn btn-primary" @click="confirmLogout">{{ t('confirm') }}</button>
+          <button type="button" class="btn btn-primary" @click="confirmLogout">Yes</button>
         </div>
       </div>
     </div>
@@ -621,6 +646,11 @@ const saveSettings = async () => {
       phone: form.phone || '',
       status: form.shop_status || 'active'
     };
+
+    // If the user is creating their first shop, default the shop image to the owner's profile picture.
+    if (!currentShopId.value && profileImageUrl.value) {
+      shopPayload.img_url = profileImageUrl.value;
+    }
 
     if (currentShopId.value) {
       await api.put(`/shops/${currentShopId.value}`, shopPayload);
