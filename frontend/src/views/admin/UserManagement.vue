@@ -40,16 +40,46 @@ const totals = computed(() => {
 
 const query = computed(() => String(route.query.q || '').trim().toLowerCase())
 
+const showRoleMenu = ref(false)
+const showStatusMenu = ref(false)
+const selectedRole = ref('')
+const selectedStatus = ref('')
+
+const closeFilterMenus = () => {
+  showRoleMenu.value = false
+  showStatusMenu.value = false
+}
+
+const toggleRoleMenu = () => {
+  showRoleMenu.value = !showRoleMenu.value
+  if (showRoleMenu.value) showStatusMenu.value = false
+}
+
+const toggleStatusMenu = () => {
+  showStatusMenu.value = !showStatusMenu.value
+  if (showStatusMenu.value) showRoleMenu.value = false
+}
+
 const filteredUsers = computed(() => {
   const q = query.value
-  const items = admin.state.users
-  if (!q) return items
-  return items.filter((u) => `${u.name || ''} ${u.email || ''} ${u.id || ''}`.toLowerCase().includes(q))
+  const role = String(selectedRole.value || '').trim().toUpperCase()
+  const status = String(selectedStatus.value || '').trim().toUpperCase()
+
+  let items = admin.state.users
+  if (q) items = items.filter((u) => `${u.name || ''} ${u.email || ''} ${u.id || ''}`.toLowerCase().includes(q))
+  if (role) items = items.filter((u) => String(u.role || '').trim().toUpperCase() === role)
+  if (status) items = items.filter((u) => statusText(u) === status)
+
+  return items
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / perPage)))
 watch(totalPages, (next) => {
   if (page.value > next) page.value = next
+})
+
+watch([selectedRole, selectedStatus, query], () => {
+  page.value = 1
 })
 
 const pagedUsers = computed(() => {
@@ -71,6 +101,80 @@ const statusText = (user) => {
 }
 
 const statusClass = (user) => statusBadgeClass(statusText(user))
+
+const roleLabel = (value) => {
+  const role = String(value || '').trim().toUpperCase()
+  if (!role) return 'All Roles'
+  if (role === 'SHOP_STAFF') return 'Shop Staff'
+  if (role === 'SHOP_OWNER') return 'Shop Owner'
+  if (role === 'CUSTOMER') return 'Customer'
+  if (role === 'ADMIN') return 'Admin'
+  return role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (m) => m.toUpperCase())
+}
+
+const statusLabel = (value) => {
+  const s = String(value || '').trim().toUpperCase()
+  if (!s) return 'Any Status'
+  if (s === 'ACTIVE') return 'Active'
+  if (s === 'PENDING') return 'Pending'
+  if (s === 'BLOCKED') return 'Blocked'
+  return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (m) => m.toUpperCase())
+}
+
+const roleOptions = computed(() => {
+  const seen = new Set()
+  const roles = []
+
+  admin.state.users.forEach((u) => {
+    const role = String(u?.role || '').trim().toUpperCase()
+    if (!role || seen.has(role)) return
+    seen.add(role)
+    roles.push(role)
+  })
+
+  const preferred = ['CUSTOMER', 'SHOP_OWNER', 'SHOP_STAFF', 'ADMIN']
+  const orderIndex = (r) => {
+    const idx = preferred.indexOf(r)
+    return idx === -1 ? 999 : idx
+  }
+  roles.sort((a, b) => {
+    const da = orderIndex(a)
+    const db = orderIndex(b)
+    if (da !== db) return da - db
+    return a.localeCompare(b)
+  })
+
+  return ['', ...roles].map((r) => ({ value: r, label: roleLabel(r) }))
+})
+
+const statusOptions = computed(() => {
+  const seen = new Set()
+  const statuses = []
+
+  admin.state.users.forEach((u) => {
+    const s = statusText(u)
+    if (!s || seen.has(s)) return
+    seen.add(s)
+    statuses.push(s)
+  })
+
+  const preferred = ['ACTIVE', 'PENDING', 'BLOCKED']
+  const orderIndex = (s) => {
+    const idx = preferred.indexOf(s)
+    return idx === -1 ? 999 : idx
+  }
+  statuses.sort((a, b) => {
+    const da = orderIndex(a)
+    const db = orderIndex(b)
+    if (da !== db) return da - db
+    return a.localeCompare(b)
+  })
+
+  return ['', ...statuses].map((s) => ({ value: s, label: statusLabel(s) }))
+})
+
+const selectedRoleLabel = computed(() => roleLabel(selectedRole.value))
+const selectedStatusLabel = computed(() => statusLabel(selectedStatus.value))
 
 const roleBadgeClass = (role) => {
   const value = String(role || '').toUpperCase()
@@ -168,7 +272,7 @@ const submitCreate = async () => {
         password,
       })
       toast.success('User created successfully.')
-      await admin.load({ force: true }).catch(() => {})
+      await admin.load({ force: true }).catch(() => { })
     } else {
       const created = admin.addUser({ name, email, role: String(createForm.value.role || 'CUSTOMER').toUpperCase() })
       if (!created) return
@@ -190,7 +294,7 @@ const toggleBlock = (user) => {
     api.put(`/users/${user.id}`, { is_verified: next })
       .then(() => {
         toast.success(next ? 'User verified.' : 'User unverified.')
-        admin.load({ force: true }).catch(() => {})
+        admin.load({ force: true }).catch(() => { })
       })
       .catch((err) => toast.error(err?.response?.data?.message || err?.message || 'Failed to update user.'))
     return
@@ -240,7 +344,7 @@ const submitEdit = async () => {
         is_verified: Boolean(editForm.value.is_verified),
       })
       toast.success('User updated successfully.')
-      await admin.load({ force: true }).catch(() => {})
+      await admin.load({ force: true }).catch(() => { })
     } else {
       // Demo mode: best-effort local update
       const idx = admin.state.users.findIndex((u) => String(u.id) === String(id))
@@ -275,7 +379,7 @@ const confirmDelete = async () => {
     if (admin.state.source === 'api') {
       await api.delete(`/users/${user.id}`)
       toast.success('User deleted.')
-      await admin.load({ force: true }).catch(() => {})
+      await admin.load({ force: true }).catch(() => { })
     } else {
       admin.state.users = admin.state.users.filter((u) => String(u.id) !== String(user.id))
       toast.success('User deleted.')
@@ -294,13 +398,13 @@ const exportList = () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'motopremium-users.json'
+  a.download = 'chong-choul-users.json'
   a.click()
   URL.revokeObjectURL(url)
 }
 
 onMounted(async () => {
-  await admin.load().catch(() => {})
+  await admin.load().catch(() => { })
   triggerAnimation()
 })
 
@@ -311,7 +415,7 @@ watch(
 </script>
 
 <template>
-  <section class="admin-page">
+  <section class="admin-page" @click="closeFilterMenus">
     <header class="page-head">
       <div>
         <h1 class="page-title">User Management</h1>
@@ -334,7 +438,9 @@ watch(
         <div class="wide-stat">
           <div>
             <div class="stat-label">TOTAL ACTIVE USERS</div>
-            <div class="wide-value"><CountUp :value="Number(totals.activeUsers || 0)" :formatter="(n) => admin.formatted.fmtNumber(n)" /></div>
+            <div class="wide-value">
+              <CountUp :value="Number(totals.activeUsers || 0)" :formatter="(n) => admin.formatted.fmtNumber(n)" />
+            </div>
             <div class="stat-trend trend-up"><span>+{{ Math.max(0, admin.trends.value.users) }}%</span></div>
           </div>
           <div class="stat-icon tint-cyan" aria-hidden="true"><i class="fa-solid fa-user-group"></i></div>
@@ -345,7 +451,9 @@ watch(
         <div class="wide-stat">
           <div>
             <div class="stat-label">NEWLY JOINED TODAY</div>
-            <div class="wide-value"><CountUp :value="Number(totals.joinedToday || 0)" :formatter="(n) => admin.formatted.fmtNumber(n)" /></div>
+            <div class="wide-value">
+              <CountUp :value="Number(totals.joinedToday || 0)" :formatter="(n) => admin.formatted.fmtNumber(n)" />
+            </div>
             <div class="stat-trend trend-up"><span>+8</span></div>
           </div>
           <div class="stat-icon tint-green" aria-hidden="true"><i class="fa-solid fa-user-check"></i></div>
@@ -360,8 +468,39 @@ watch(
           <p class="card-subtitle"><strong>94%</strong> Active Rate</p>
         </div>
         <div class="filters">
-          <button type="button" class="btn btn-chip">All Roles <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
-          <button type="button" class="btn btn-chip">Any Status <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+          <div class="filter-dropdown" @click.stop>
+            <button type="button" class="btn btn-chip" :aria-expanded="showRoleMenu" @click="toggleRoleMenu">
+              {{ selectedRoleLabel }} <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div v-if="showRoleMenu" class="filter-menu" role="menu">
+              <button
+                v-for="opt in roleOptions"
+                :key="opt.value || 'all'"
+                type="button"
+                :class="{ 'is-active': String(selectedRole || '') === String(opt.value || '') }"
+                @click="selectedRole = opt.value; closeFilterMenus()"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-dropdown" @click.stop>
+            <button type="button" class="btn btn-chip" :aria-expanded="showStatusMenu" @click="toggleStatusMenu">
+              {{ selectedStatusLabel }} <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+            <div v-if="showStatusMenu" class="filter-menu" role="menu">
+              <button
+                v-for="opt in statusOptions"
+                :key="opt.value || 'any'"
+                type="button"
+                :class="{ 'is-active': String(selectedStatus || '') === String(opt.value || '') }"
+                @click="selectedStatus = opt.value; closeFilterMenus()"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -391,23 +530,17 @@ watch(
               <td><span :class="roleBadgeClass(user.role)">{{ String(user.role || '').toUpperCase() }}</span></td>
               <td><span :class="statusClass(user)">{{ statusText(user) }}</span></td>
               <td class="actions">
-                <button type="button" class="icon-action" title="View" @click="openView(user)"><i class="fa-regular fa-eye"></i></button>
-                <button type="button" class="icon-action" title="Edit" @click="openEdit(user)"><i class="fa-regular fa-pen-to-square"></i></button>
-                <button type="button" class="icon-action" title="Delete" @click="requestDelete(user)"><i class="fa-regular fa-trash-can"></i></button>
-                <button
-                  v-if="statusText(user) === 'BLOCKED'"
-                  type="button"
-                  class="btn btn-soft"
-                  @click="toggleBlock(user)"
-                >
+                <button type="button" class="icon-action" title="View" @click="openView(user)"><i
+                    class="fa-regular fa-eye"></i></button>
+                <button type="button" class="icon-action" title="Edit" @click="openEdit(user)"><i
+                    class="fa-regular fa-pen-to-square"></i></button>
+                <button type="button" class="icon-action" title="Delete" @click="requestDelete(user)"><i
+                    class="fa-regular fa-trash-can"></i></button>
+                <button v-if="statusText(user) === 'BLOCKED'" type="button" class="btn btn-soft"
+                  @click="toggleBlock(user)">
                   Unblock/Verify
                 </button>
-                <button
-                  v-else
-                  type="button"
-                  class="btn btn-soft warn"
-                  @click="toggleBlock(user)"
-                >
+                <button v-else type="button" class="btn btn-soft warn" @click="toggleBlock(user)">
                   Block/Unverify
                 </button>
               </td>
@@ -479,7 +612,8 @@ watch(
             <div class="modal-title">Create User</div>
             <div class="modal-sub">Add a new platform user.</div>
           </div>
-          <button type="button" class="icon-action" title="Close" @click="closeCreate"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="icon-action" title="Close" @click="closeCreate"><i
+              class="fa-solid fa-xmark"></i></button>
         </div>
 
         <div class="modal-body form-grid">
@@ -524,7 +658,8 @@ watch(
             <div class="modal-title">User Details</div>
             <div class="modal-sub">Read-only view</div>
           </div>
-          <button type="button" class="icon-action" title="Close" @click="showView = false"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="icon-action" title="Close" @click="showView = false"><i
+              class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
           <pre class="code-block">{{ JSON.stringify(selectedUser, null, 2) }}</pre>
@@ -539,7 +674,8 @@ watch(
             <div class="modal-title">Edit User</div>
             <div class="modal-sub">Update user profile and role.</div>
           </div>
-          <button type="button" class="icon-action" title="Close" @click="closeEdit"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="icon-action" title="Close" @click="closeEdit"><i
+              class="fa-solid fa-xmark"></i></button>
         </div>
 
         <div class="modal-body form-grid">
@@ -571,15 +707,8 @@ watch(
       </div>
     </div>
 
-    <ConfirmModal
-      v-model="showDeleteConfirm"
-      title="Delete User"
-      :message="deleteMessage"
-      cancel-text="Cancel"
-      confirm-text="Yes"
-      variant="danger"
-      @confirm="confirmDelete"
-    />
+    <ConfirmModal v-model="showDeleteConfirm" title="Delete User" :message="deleteMessage" cancel-text="Cancel"
+      confirm-text="Yes" variant="danger" @confirm="confirmDelete" />
   </section>
 </template>
 

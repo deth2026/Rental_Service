@@ -399,7 +399,7 @@ onMounted(() => {
 
         <div class="toolbar-right">
           <div class="sort">
-            <span class="muted">Sort by:</span>
+            <!-- <span class="muted">Sort by:</span> -->
             <div class="sort-dropdown">
               <button type="button" class="btn btn-chip" @click="showSortMenu = !showSortMenu">
                 {{ sortKey === 'newest' ? 'Newest' : sortKey === 'oldest' ? 'Oldest' : sortKey === 'name_asc' ? 'Name (A-Z)' : sortKey === 'name_desc' ? 'Name (Z-A)' : 'Newest' }} 
@@ -586,3 +586,12 @@ onMounted(() => {
     />
   </section>
 </template>
+
+<style>
+.sort-menu {
+  padding: 10px;
+}
+.sort-menu  button {
+margin: 4px;
+}
+</style>

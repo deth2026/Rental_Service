@@ -5,8 +5,8 @@ import CountUp from '../../components/CountUp.vue'
 
 const admin = useAdminStore()
 
-const STORAGE_KEY = 'motopremium_payouts_v1'
-const LAST_PAYOUT_KEY = 'motopremium_last_payout_date'
+const STORAGE_KEY = 'chong_choul_payouts_v1'
+const LAST_PAYOUT_KEY = 'chong_choul_last_payout_date'
 
 const state = ref({ processed_shop_ids: [] })
 const isProcessingAll = ref(false)

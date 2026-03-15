@@ -51,7 +51,7 @@ const { toasts, removeToast } = useToast()
 }
 
 .toast-message {
-  font-size: 14px;
+  font-size: 16px;
   line-height: 2;
   font-weight: 600;
   overflow-wrap: anywhere;
@@ -73,7 +73,7 @@ const { toasts, removeToast } = useToast()
 
 .toast.success {
   border-color: rgba(34, 197, 94, 0.32);
-  background: rgba(34, 197, 94, 0.12);
+  /* background: rgba(34, 197, 94, 0.12); */
   color: #14532d;
 }
 

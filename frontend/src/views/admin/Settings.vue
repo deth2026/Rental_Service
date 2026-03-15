@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { adminDataSource } from '../../services/adminDataSource.js'
 import { useToast } from '../../composables/useToast.js'
 
-const STORAGE_KEY = 'motopremium_admin_settings_v1'
+const STORAGE_KEY = 'chong_choul_admin_settings_v1'
 
 const saving = ref(false)
 const showResetConfirm = ref(false)
@@ -59,8 +59,8 @@ const save = async () => {
 const resetDemoData = () => {
   showResetConfirm.value = false
   adminDataSource.persistDemo(null)
-  localStorage.removeItem('motopremium_payouts_v1')
-  localStorage.removeItem('motopremium_last_payout_date')
+  localStorage.removeItem('chong_choul_payouts_v1')
+  localStorage.removeItem('chong_choul_last_payout_date')
   toast.success('Platform demo data reset.')
 }
 

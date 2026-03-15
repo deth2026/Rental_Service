@@ -1,6 +1,6 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
-const STORAGE_KEY = 'motopremium_theme'
+const STORAGE_KEY = 'chong_choul_theme'
 
 const resolveInitialTheme = () => {
   const saved = localStorage.getItem(STORAGE_KEY)
@@ -40,4 +40,3 @@ export const useTheme = () => {
     toggleTheme,
   }
 }
-
