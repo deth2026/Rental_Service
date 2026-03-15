@@ -12,7 +12,6 @@ import Setting from './setting.vue'
 import ActivityHistory from './ActivityHistory.vue'
 import api, { shopApi, vehicleApi } from '@/services/api'
 import { getSessionUser, logoutUser } from '@/services/auth'
-import CommonFooter from '../../components/CommonFooter.vue'
 
 // Toast notifications
 const router = useRouter()
@@ -73,9 +72,44 @@ const normalizeVehicleImageUrl = (url) => {
   if (!url) return ''
   if (/^https?:\/\//.test(url) || /^data:image\//.test(url)) return url
   const normalized = String(url).replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  if (normalized.startsWith('vehicles/')) return `/storage/${normalized}`
-  return `/${normalized}`
+  if (normalized.startsWith('storage/')) return `${apiOrigin.value}/${normalized}`
+  if (normalized.startsWith('vehicles/')) return `${apiOrigin.value}/storage/${normalized}`
+  return `${apiOrigin.value}/${normalized}`
+}
+
+const parseVehiclePhotos = (value) => {
+  if (!value) return []
+  if (Array.isArray(value)) return value.filter(Boolean)
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (Array.isArray(parsed)) return parsed.filter(Boolean)
+      if (typeof parsed === 'string' && parsed.trim()) return [parsed.trim()]
+    } catch {
+      return [trimmed]
+    }
+    return [trimmed]
+  }
+  return []
+}
+
+const resolveVehicleImage = (vehicle) => {
+  const photos = parseVehiclePhotos(vehicle?.photos)
+  const photoUrls = Array.isArray(vehicle?.photo_urls) ? vehicle.photo_urls : []
+  const candidate =
+    vehicle?.image_url_full ||
+    vehicle?.image_url ||
+    photoUrls[0] ||
+    photos[0] ||
+    vehicle?.previewUrl ||
+    vehicle?.image ||
+    ''
+  return {
+    image: normalizeVehicleImageUrl(candidate),
+    photos
+  }
 }
 
 const displayAvatarUrl = computed(() => {
@@ -386,10 +420,24 @@ fetchCities()
 // Fetch vehicles from database
 const fetchVehicles = async () => {
   try {
-    const response = await vehicleApi.getAll()
+    let ownerShop = null
+    try {
+      ownerShop = await resolveOwnerShop()
+    } catch (error) {
+      console.error('Error resolving owner shop for vehicles:', error)
+    }
+
+    if (!ownerShop?.id) {
+      vehicles.value = []
+      return
+    }
+
+    const params = { shop_id: ownerShop.id }
+    const response = await vehicleApi.getAll(params)
     vehicles.value = (response.data.data || response.data || []).map((v) => {
       const normalizedStatus = typeof v.status === 'string' ? v.status.trim() : v.status
       const createdAtValue = v.created_at || v.create_at || v.createdAt || ''
+      const { image, photos } = resolveVehicleImage(v)
       return {
         ...v,
         name: v.name,
@@ -408,8 +456,9 @@ const fetchVehicles = async () => {
         transmission: v.transmission,
         createdAt: createdAtValue,
         updatedAt: v.updated_at,
-        image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ''),
-        image_url: v.image_url_full || normalizeVehicleImageUrl(v.image_url || '')
+        image,
+        image_url: image,
+        photos
       }
     })
   } catch (error) {
@@ -552,7 +601,22 @@ const getStatusClass = (status) => {
   return ''
 }
 
-const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
+const sampleThumb = `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
+    <defs>
+      <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0%" stop-color="#f8fafc"/>
+        <stop offset="100%" stop-color="#e2e8f0"/>
+      </linearGradient>
+    </defs>
+    <rect width="320" height="200" rx="12" fill="url(#bg)"/>
+    <rect x="36" y="70" width="248" height="60" rx="12" fill="#cbd5f5"/>
+    <circle cx="92" cy="140" r="14" fill="#64748b"/>
+    <circle cx="228" cy="140" r="14" fill="#64748b"/>
+    <rect x="86" y="92" width="148" height="20" rx="6" fill="#f8fafc"/>
+    <text x="50%" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#64748b">Vehicle</text>
+  </svg>`
+)}`
 
 const today = computed(() => khTime().split(' ')[0])
 const filteredVehicles = computed(() => {
@@ -599,7 +663,7 @@ const openCreate = async () => {
 
   editId.value = null
   Object.assign(form, {
-    name: '', type: '', brand: '', plate: '', price: '', fuel: '', transmission: '',
+    name: '', type: categories[0] || '', brand: '', plate: '', price: '', fuel: '', transmission: '',
     status: 'Available', description: '', shop: currentShopName.value, image: '',
     createdAt: khTime(), updatedAt: khTime()
   })
@@ -609,7 +673,7 @@ const openCreate = async () => {
 const openEdit = (v) => {
   editId.value = v.id
   Object.assign(form, {
-    name: v.name || '', type: v.type || '', brand: v.brand || '', plate: v.plate || '',
+    name: v.name || '', type: v.type || v.category || '', brand: v.brand || '', plate: v.plate || '',
     price: v.price || '', fuel: v.fuel || '', transmission: v.transmission || '',
     status: v.status || 'Available', description: v.description || '', shop: v.shop || currentShopName.value,
     image: v.image || '', createdAt: v.createdAt || '', updatedAt: khTime()
@@ -618,8 +682,12 @@ const openEdit = (v) => {
 }
 
 const saveVehicle = async () => {
-  if (!form.name || !form.type || !form.price) {
-    showToast('Please fill in all required fields: Name, Type, and Price', 'error')
+  const nameValue = String(form.name || '').trim()
+  const typeValue = String(form.type || '').trim()
+  const priceValue = Number(form.price)
+
+  if (!nameValue || !typeValue || !Number.isFinite(priceValue) || priceValue <= 0) {
+    showToast('Please fill in all required fields: Name, Category, and Price', 'error')
     return
   }
 
@@ -638,11 +706,12 @@ const saveVehicle = async () => {
   }
 
   const payload = {
-    name: form.name,
-    category: form.type,
+    name: nameValue,
+    type: typeValue,
+    category: typeValue,
     brand: form.brand,
     plate: form.plate,
-    price: Number(form.price),
+    price: priceValue,
     status: form.status,
     description: form.description,
     shop: form.shop,
@@ -656,13 +725,16 @@ const saveVehicle = async () => {
   try {
     if (editId.value) {
       // Update existing vehicle
-      await vehicleApi.update(editId.value, payload)
+      const response = await vehicleApi.update(editId.value, payload)
+      const updated = response?.data?.data || response?.data || {}
+      const updatedImage = normalizeVehicleImageUrl(updated.image_url_full || updated.image_url || payload.previewUrl || '')
       const index = vehicles.value.findIndex((v) => v.id === editId.value)
       if (index >= 0) {
         vehicles.value[index] = {
           ...vehicles.value[index],
           ...payload,
-          image: form.image,
+          image: updatedImage || form.image,
+          image_url: updatedImage || form.image,
           updatedAt: khTime()
         }
       }
@@ -671,12 +743,15 @@ const saveVehicle = async () => {
     } else {
       // Create new vehicle - wait for API response
       const response = await vehicleApi.create(payload)
+      const created = response?.data?.data || response?.data || {}
+      const createdImage = normalizeVehicleImageUrl(created.image_url_full || created.image_url || payload.previewUrl || '')
       
       // Add vehicle to list with real ID from server
       vehicles.value.unshift({
-        id: response.data.id,
+        id: created.id || response.data?.id,
         ...payload,
-        image: form.image,
+        image: createdImage || form.image,
+        image_url: createdImage || form.image,
         createdAt: khTime(),
         updatedAt: khTime()
       })
@@ -730,7 +805,8 @@ const removeVehicle = async () => {
     showToast('Vehicle deleted successfully!', 'success')
   } catch (error) {
     console.error('Error deleting vehicle:', error)
-    showToast('Failed to delete vehicle. Please try again.', 'error')
+    const serverMessage = error?.response?.data?.message
+    showToast(serverMessage || 'Failed to delete vehicle. Please try again.', 'error')
   } finally {
     cancelDelete()
   }
@@ -754,6 +830,15 @@ const onPhotoDrop = (e) => {
     }
     reader.readAsDataURL(file)
   }
+}
+
+const onVehicleImageError = (event) => {
+  const target = event?.target
+  if (!target || !sampleThumb) return
+  if (target.dataset?.fallbackApplied === 'true') return
+  if (typeof target.src === 'string' && target.src.includes(sampleThumb)) return
+  target.dataset.fallbackApplied = 'true'
+  target.src = sampleThumb
 }
 
 const iconSvg = (name) => {
@@ -781,7 +866,8 @@ const iconSvg = (name) => {
 </script>
 
 <template>
-  <div class="page" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+  <div class="dashboard-shell">
+    <div class="page" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
     <aside class="sidebar" :style="{ width: `${sidebarWidth}px`, flexBasis: `${sidebarWidth}px` }">
       <button class="sidebar-toggle" @click="isSidebarCollapsed = !isSidebarCollapsed"
         :title="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'">
@@ -1001,7 +1087,7 @@ const iconSvg = (name) => {
             <tbody>
               <tr v-for="v in filteredVehicles" :key="v.id">
                 <td>
-                  <img :src="v.image || sampleThumb" alt="Vehicle"
+                  <img :src="v.image || sampleThumb" alt="Vehicle" @error="onVehicleImageError"
                     style="width: 50px; height: 35px; object-fit: cover; border-radius: 4px;" />
                 </td>
                 <td>
@@ -1329,10 +1415,9 @@ const iconSvg = (name) => {
         </button>
       </div>
     </div>
+    </div>
+    
   </div>
-  
-  <!-- Common Footer -->
-  <CommonFooter />
 </template>
 
 <style>

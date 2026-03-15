@@ -74,8 +74,8 @@
                 <span>per day</span>
               </div>
             </div>
+          </div>
           </article>
-        </div>
       </section>
 
       <section class="map-section">
@@ -90,10 +90,9 @@
         </div>
       </section>
     </main>
+    <!-- Common Footer -->
+    <CommonFooter />
   </div>
-
-  <!-- Common Footer -->
-  <CommonFooter />
 </template>
 
 
@@ -119,31 +118,18 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const navItems = ['Home', 'Viewdetails', 'Bookings'];
 const router = useRouter();
+const navItems = ['Home', 'My Bookings', 'Promotion'];
 const activeNav = ref('Home');
 const actionMessage = ref('');
-<<<<<<< HEAD
-const avatarLoadFailed = ref(false);
-<<<<<<< HEAD
-=======
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 const activeFilter = ref('all');
 const filterItems = [
   { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
   { id: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
   { id: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
   { id: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
-=======
-const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
-const selectedType = ref('all');
-const vehicleTypes = [
-  { key: 'all', label: 'All' },
-  { key: 'motorbike', label: 'Motorbikes' },
-  { key: 'bicycle', label: 'Bicycles' },
-  { key: 'car', label: 'Cars' }
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 ];
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
 
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
@@ -156,8 +142,13 @@ const normalizeType = (raw, fallback = '') => {
   return t;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
+const apiOrigin = computed(() => {
+  try {
+    return new URL(api.defaults.baseURL, window.location.origin).origin;
+  } catch {
+    return window.location.origin;
+  }
+});
 const fallbackImageByType = {
   motorbike: 'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
   bicycle: 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
@@ -263,24 +254,59 @@ const displayedVehicles = computed(() => {
   return filteredVehicles.value.slice(0, limit);
 });
 
+const parseVehiclePhotos = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      if (typeof parsed === 'string' && parsed.trim()) return [parsed.trim()];
+    } catch {
+      return [trimmed];
+    }
+    return [trimmed];
+  }
+  return [];
+};
+
+const resolveVehicleImageUrl = (value) => {
+  if (!value || typeof value !== 'string') return '';
+  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:') || value.startsWith('blob:')) {
+    return value;
+  }
+  const clean = value.replace(/^\/+/, '');
+  if (clean.startsWith('storage/')) {
+    return `${apiOrigin.value}/${clean}`;
+  }
+  return `${apiOrigin.value}/storage/${clean}`;
+};
+
 const getVehicleImage = (vehicle) => {
-  const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
-  if (image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) return image;
-    if (image.startsWith('/')) return `${API_ROOT}${image}`;
-    return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+  const photos = parseVehiclePhotos(vehicle?.photos);
+  const photoUrls = Array.isArray(vehicle?.photo_urls) ? vehicle.photo_urls : [];
+  const candidate =
+    vehicle?.image_url_full ||
+    vehicle?.image_url ||
+    photoUrls[0] ||
+    photos[0] ||
+    '';
+  if (candidate) {
+    return resolveVehicleImageUrl(candidate);
   }
   const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
 };
 
-const loadAllPages = async (resource) => {
+const loadAllPages = async (resource, extraParams = {}) => {
   let page = 1;
   let lastPage = 1;
   const results = [];
 
   while (page <= lastPage) {
-    const response = await api.get(`/${resource}`, { params: { page } });
+    const response = await api.get(`/${resource}`, { params: { page, ...extraParams } });
     const payload = response.data;
     const data = Array.isArray(payload) ? payload : payload?.data || [];
     // Normalize types up front so filters work even if API returns "Motorbikes" etc.
@@ -301,8 +327,9 @@ const loadVehiclesAndShops = async () => {
   isLoading.value = true;
   loadingError.value = '';
   try {
+    const shopIdParam = selectedShopId.value ? { shop_id: selectedShopId.value } : {};
     const [vehicleList, shopList] = await Promise.all([
-      loadAllPages('vehicles'),
+      loadAllPages('vehicles', shopIdParam),
       loadAllPages('shops')
     ]);
 
@@ -337,7 +364,6 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
-<<<<<<< HEAD
   if (item === 'My Bookings') {
     router.push('/bookings');
     return;
@@ -346,17 +372,13 @@ const setActiveNav = (item) => {
     router.push('/promotions');
     return;
   }
-  actionMessage.value = `${item} opened.`;
-=======
   actionMessage.value = `${item} is not available yet.`;
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 };
 
 const handleSearch = () => {
   actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
 };
 
-<<<<<<< HEAD
 const openMainLocation = () => {
   const coords = selectedShopCoords.value;
   const shopAddress = selectedShopAddress.value;
@@ -380,8 +402,7 @@ const openCustomLocation = () => {
   const target = link.startsWith('http') ? link : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(link)}`;
   window.open(target, '_blank');
 };
-=======
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
+
 
 const notify = (message) => {
   actionMessage.value = message;
@@ -878,7 +899,6 @@ onUnmounted(() => {
   border: 0;
 }
 
-<<<<<<< HEAD
 .open-map-btn {
   position: absolute;
   left: 12px;
@@ -894,8 +914,8 @@ onUnmounted(() => {
 .open-map-btn.secondary {
   left: auto;
   right: 12px;
-=======
 
+}
 .footer {
   margin-top: 28px;
   width: calc(100% + 80px);
@@ -932,7 +952,6 @@ onUnmounted(() => {
   display: block;
   margin: 0 0 8px;
   color: #52627b;
->>>>>>> d5d34964390a75201619cdca357990cd8f9fbdf5
 }
 
 @media (max-width: 1080px) {

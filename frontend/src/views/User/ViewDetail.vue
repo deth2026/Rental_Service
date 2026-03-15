@@ -19,9 +19,10 @@
           </button>
         </nav>
 
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+        <div class="top-actions">
+          <span class="user-display-name">{{ userDisplayName }}</span>
+          <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+        </div>
       </div>
     </header>
 
@@ -167,7 +168,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <span>© 2026 Chong Choul. All rights reserved.</span>
+        <span>&copy; 2026 Chong Choul. All rights reserved.</span>
         <div class="footer-bottom-links">
           <span>Security</span>
           <span>Accessibility</span>
@@ -175,10 +176,9 @@
         </div>
       </div>
     </footer>
+    <!-- Common Footer -->
+    <CommonFooter />
   </div>
-
-  <!-- Common Footer -->
-  <CommonFooter />
 </template>
 
 <script setup>
@@ -192,22 +192,9 @@ import UserProfileMenu from '@/components/UserProfileMenu.vue';
 const router = useRouter();
 const route = useRoute();
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
-const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
-const fallbackImage = 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg';
-
-const resolveImageUrl = (value) => {
-  const image = value ? String(value).trim() : '';
-  if (!image) return fallbackImage;
-  if (image.startsWith('http://') || image.startsWith('https://')) return image;
-  if (image.startsWith('/')) return `${API_ROOT}${image}`;
-  return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
-};
-
-const vehicle = ref(null);
-const isLoading = ref(false);
-const loadError = ref('');
-const shopNamesById = ref({});
+const navItems = ['Home', 'My Bookings', 'Promotion'];
+const activeNav = ref('Home');
+const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
 
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -218,7 +205,13 @@ const setActiveNav = (item) => {
     router.replace('/view_shop');
     return;
   }
-  actionMessage.value = `${item} is not available yet.`;
+  if (item === 'My Bookings') {
+    router.push('/bookings');
+    return;
+  }
+  if (item === 'Promotion') {
+    router.push('/promotions');
+  }
 };
 
 const openProfile = () => {
@@ -773,7 +766,7 @@ onMounted(() => {
 }
 
 .rental-terms li::before {
-  content: "✓";
+  content: "\2713";
   color: #1d4ed8;
   font-weight: 700;
   font-size: 1.2rem;

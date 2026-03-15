@@ -32,13 +32,14 @@ export const registerUser = async (payload) => {
     } catch (error) {
       lastError = error;
       const status = error?.response?.status;
-      if (status !== 404 && status !== 405 && status !== 500) {
+      // If there's no response (network/CORS/proxy issues), try fallbacks below.
+      if (status && status !== 404 && status !== 405 && status !== 500) {
         throw error;
       }
     }
   }
 
-  const directBases = ['http://127.0.0.1:8000/api', 'http://localhost:8000/api'];
+  const directBases = ['/api', 'http://127.0.0.1:8000/api', 'http://localhost:8000/api'];
   for (const base of directBases) {
     for (const path of registerPaths) {
       try {
@@ -83,15 +84,15 @@ export const loginUser = async (payload) => {
     } catch (error) {
       lastError = error;
       const status = error?.response?.status;
-      // Retry only when endpoint may not exist or server-side route mapping differs.
-      if (status !== 404 && status !== 405 && status !== 500) {
+      // Retry only when endpoint may not exist, or when there's no response at all.
+      if (status && status !== 404 && status !== 405 && status !== 500) {
         throw error;
       }
     }
   }
 
   // Fallback for local dev when Vite proxy is unavailable/misconfigured.
-  const directBases = ['http://127.0.0.1:8000/api', 'http://localhost:8000/api'];
+  const directBases = ['/api', 'http://127.0.0.1:8000/api', 'http://localhost:8000/api'];
   for (const base of directBases) {
     for (const path of loginPaths) {
       try {

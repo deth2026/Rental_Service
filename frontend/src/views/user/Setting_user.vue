@@ -432,6 +432,7 @@ const openProfile = () => {
 onMounted(fetchProfile)
 </script>
 <template>
+    <div class="settings-shell">
     <header class="topbar">
             <div class="brand">
                 <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
@@ -764,7 +765,7 @@ onMounted(fetchProfile)
                             <span :class="[styles['strength__label'], styles[`strength__label--${pwdStrength.level}`]]">{{
                                 pwdStrength.label }}</span>
                         </div>
-                        <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars · Uppercase · Lowercase · Number · Special character</p>
+                        <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars - Uppercase - Lowercase - Number - Special character</p>
                         <p v-if="passwordErrors.new_password" :class="styles['field-error']">{{ passwordErrors.new_password }}</p>
                     </div>
                     <div :class="styles['field-group']">
@@ -799,14 +800,14 @@ onMounted(fetchProfile)
                 <button :class="[styles['btn-primary'], loading.password && styles['btn-primary--loading']]" type="button"
                     :disabled="loading.password" @click="changePassword">
                     <span :class="styles['spinner']" v-if="loading.password"></span>
-                    {{ loading.password ? 'Updating…' : 'Update Password' }}
+                    {{ loading.password ? 'Updating...' : 'Update Password' }}
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Common Footer -->
     <CommonFooter />
+    </div>
 </template>
 <style module>
 /* ─── Page Layout ──────────────────────────────────────────── */

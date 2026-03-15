@@ -1,10 +1,25 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { shopApi } from '@/services/api'
+import api, { shopApi } from '@/services/api'
 import '../../css/Myshop.css'
 
 const shop = ref(null)
 const ownerName = ref('')
+const apiOrigin = computed(() => {
+  try {
+    return new URL(api.defaults.baseURL, window.location.origin).origin
+  } catch {
+    return window.location.origin
+  }
+})
+
+const getShopImageUrl = (value) => {
+  if (!value) return ''
+  if (/^https?:\/\//.test(value) || /^data:image\//.test(value)) return value
+  const normalized = String(value).replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `${apiOrigin.value}/${normalized}`
+  return `${apiOrigin.value}/storage/${normalized}`
+}
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value)
@@ -20,6 +35,8 @@ const shopImageInputRef = ref(null)
 const isShopImageDragOver = ref(false)
 const changeImageInputRef = ref(null)
 const isUpdatingImage = ref(false)
+const isDisplayImageBroken = ref(false)
+const shopImageSource = computed(() => shopImagePreview.value || shop.value?.img_url || '')
 
 const createForm = reactive({
   name: '',
@@ -226,7 +243,6 @@ const applyShopImageFile = (file) => {
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value)
   }
-  selectedImage.value = file
   shopImageFile.value = file
   createForm.img_url = ''
   shopImagePreview.value = URL.createObjectURL(file)
@@ -443,7 +459,13 @@ onBeforeUnmount(() => {
         <div class="shop-header-row">
           <div class="shop-image-section">
             <div class="shop-avatar-stack">
-              <img v-if="shop.img_url" :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
+              <img
+                v-if="shop.img_url && !isDisplayImageBroken"
+                :src="getShopImageUrl(shop.img_url)"
+                alt="Shop Image"
+                class="shop-cover-image"
+                @error="onDisplayShopImageError"
+              />
               <div v-else class="shop-cover-placeholder">
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>

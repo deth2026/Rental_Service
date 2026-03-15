@@ -265,164 +265,164 @@ onBeforeUnmount(() => {
 <template>
   <div class="rides-page">
     <div class="rides-shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-          <span>Chong Choul</span>
-        </div>
-
-        <nav class="nav-links">
-          <button
-            v-for="item in navItems"
-            :key="item.label"
-            class="btn-reset nav-link"
-            :class="{ active: activeNav === item.label }"
-            @click="setActiveNav(item)"
-          >
-            {{ item.label }}
-          </button>
-        </nav>
-
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-        </div>
-      </header>
-
-      <section class="slideshow-section">
-      <div class="containers">
-        <div class="slide">
-          <article
-            v-for="(slide, index) in orderedSlides"
-            :key="slide.id"
-            class="item"
-            :class="`item-${index + 1}`"
-            :style="`background-image: url('${slide.image}')`"
-          >
-            <div class="content">
-              <div class="name">{{ slide.title }}</div>
-              <div class="des">{{ slide.description }}</div>
-              <button type="button">See More</button>
-            </div>
-          </article>
-        </div>
-          <div class="button">
-            <button class="btn-reset prev" type="button" aria-label="Previous slide" @click="handlePrevSlide">
-              <i class="fa-solid fa-arrow-left"></i>
-            </button>
-            <button class="btn-reset next" type="button" aria-label="Next slide" @click="handleNextSlide">
-              <i class="fa-solid fa-arrow-right"></i>
-            </button>
+        <header class="topbar">
+          <div class="brand">
+            <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+            <span>Chong Choul</span>
           </div>
-        </div>
-      </section>
 
-      <section class="shops-section">
-        <div class="results-head">
-          <div class="choose-shop-box">
-            <h2>Choose a Shop</h2>
-            <p>Select one shop to view its vehicles.</p>
-          </div>
-        </div>
-
-        <div v-if="isLoadingShops" class="status-box">Loading shops...</div>
-        <div v-else-if="shopsError" class="status-box error">{{ shopsError }}</div>
-        <div v-else-if="shops.length === 0" class="status-box">No shops found in the system.</div>
-
-        <div v-else class="shops-grid">
-          <article
-            v-for="shop in visibleShops"
-            :key="shop.id"
-            :class="['shop-card', { 'shop-card--collapsed': !isShopExpanded(shop.id) }]"
-          >
-            <div class="shop-card-image">
-              <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
-              <div v-else class="status-box" style="margin: 10px">No shop image</div>
-              <span :class="'status-badge status-' + (shop.status || 'active')">
-                <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
-                {{ shop.status || 'active' }}
-              </span>
-            </div>
-            <div class="shop-card-top">
-              <div class="shop-brand-mark">
-                <img
-                  v-if="shop.ownerAvatar"
-                  :src="resolveShopImageUrl(shop.ownerAvatar)"
-                  :alt="shop.ownerName || shop.name"
-                  class="shop-owner-avatar-img"
-                />
-                <span v-else>{{ getInitials(shop.ownerName || shop.name, 'S') }}</span>
-              </div>
-              <div class="shop-title-block">
-                <p class="shop-profile-eyebrow">Rental Shop</p>
-                <h3>{{ shop.name }}</h3>
-              </div>
-            </div>
-
-            <div
-              class="shop-card-details"
-              :class="{ 'shop-card-details--collapsed': !isShopExpanded(shop.id) }"
+          <nav class="nav-links">
+            <button
+              v-for="item in navItems"
+              :key="item.label"
+              class="btn-reset nav-link"
+              :class="{ active: activeNav === item.label }"
+              @click="setActiveNav(item)"
             >
-              <div class="shop-contact-grid">
-                <div class="shop-info">
-                  <span>Email</span>
-                  <strong>{{ shop.email }}</strong>
-                </div>
-                <div class="shop-info">
-                  <span> Phone</span>
-                  <strong>{{ shop.phone }}</strong>
-                </div>
-                <div class="shop-info" style="grid-column: span 2">
-                  <span>Address</span>
-                  <strong>{{ shop.address }}</strong>
-                </div>
-              </div>
+              {{ item.label }}
+            </button>
+          </nav>
 
-              <div class="shop-kpi-row">
-                <div class="shop-kpi">
-                  <span>Customer Rating</span>
-                  <strong>&#9733; {{ shop.rating.toFixed(1) }}</strong>
-                </div>
-                <div class="shop-kpi">
-                  <span>Shop Status</span>
-                  <strong>{{ shop.status === 'active' ? 'Open' : 'Closed' }}</strong>
-                </div>
-              </div>
-            </div>
+          <div class="top-actions">
+            <span class="user-display-name">{{ userDisplayName }}</span>
+            <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+          </div>
+        </header>
 
-            <div class="shop-card-footer">
-              <button class="shop-card-toggle" type="button" @click="toggleShopDetails(shop.id)">
-                {{ isShopExpanded(shop.id) ? 'Hide information' : 'See more' }}
+        <section class="slideshow-section">
+        <div class="containers">
+          <div class="slide">
+            <article
+              v-for="(slide, index) in orderedSlides"
+              :key="slide.id"
+              class="item"
+              :class="`item-${index + 1}`"
+              :style="`background-image: url('${slide.image}')`"
+            >
+              <div class="content">
+                <div class="name">{{ slide.title }}</div>
+                <div class="des">{{ slide.description }}</div>
+                <button type="button">See More</button>
+              </div>
+            </article>
+          </div>
+            <div class="button">
+              <button class="btn-reset prev" type="button" aria-label="Previous slide" @click="handlePrevSlide">
+                <i class="fa-solid fa-arrow-left"></i>
               </button>
-              <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
+              <button class="btn-reset next" type="button" aria-label="Next slide" @click="handleNextSlide">
+                <i class="fa-solid fa-arrow-right"></i>
+              </button>
             </div>
-          </article>
-        </div>
+          </div>
+        </section>
 
-        <div v-if="hasMoreShops" class="shops-grid-footer">
-          <button class="btn-reset see-more-shops" type="button" @click="toggleShopGrid">
-            {{ showAllShops ? 'Show less shops' : 'See more shops' }}
-          </button>
-        </div>
-      </section>
+        <section class="shops-section">
+          <div class="results-head">
+            <div class="choose-shop-box">
+              <h2>Choose a Shop</h2>
+              <p>Select one shop to view its vehicles.</p>
+            </div>
+          </div>
+
+          <div v-if="isLoadingShops" class="status-box">Loading shops...</div>
+          <div v-else-if="shopsError" class="status-box error">{{ shopsError }}</div>
+          <div v-else-if="shops.length === 0" class="status-box">No shops found in the system.</div>
+
+          <div v-else class="shops-grid">
+            <article
+              v-for="shop in visibleShops"
+              :key="shop.id"
+              :class="['shop-card', { 'shop-card--collapsed': !isShopExpanded(shop.id) }]"
+            >
+              <div class="shop-card-image">
+                <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
+                <div v-else class="status-box" style="margin: 10px">No shop image</div>
+                <span :class="'status-badge status-' + (shop.status || 'active')">
+                  <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
+                  {{ shop.status || 'active' }}
+                </span>
+              </div>
+              <div class="shop-card-top">
+                <div class="shop-brand-mark">
+                  <img
+                    v-if="shop.ownerAvatar"
+                    :src="resolveShopImageUrl(shop.ownerAvatar)"
+                    :alt="shop.ownerName || shop.name"
+                    class="shop-owner-avatar-img"
+                  />
+                  <span v-else>{{ getInitials(shop.ownerName || shop.name, 'S') }}</span>
+                </div>
+                <div class="shop-title-block">
+                  <p class="shop-profile-eyebrow">Rental Shop</p>
+                  <h3>{{ shop.name }}</h3>
+                </div>
+              </div>
+
+              <div
+                class="shop-card-details"
+                :class="{ 'shop-card-details--collapsed': !isShopExpanded(shop.id) }"
+              >
+                <div class="shop-contact-grid">
+                  <div class="shop-info">
+                    <span>Email</span>
+                    <strong>{{ shop.email }}</strong>
+                  </div>
+                  <div class="shop-info">
+                    <span> Phone</span>
+                    <strong>{{ shop.phone }}</strong>
+                  </div>
+                  <div class="shop-info" style="grid-column: span 2">
+                    <span>Address</span>
+                    <strong>{{ shop.address }}</strong>
+                  </div>
+                </div>
+
+                <div class="shop-kpi-row">
+                  <div class="shop-kpi">
+                    <span>Customer Rating</span>
+                    <strong>&#9733; {{ shop.rating.toFixed(1) }}</strong>
+                  </div>
+                  <div class="shop-kpi">
+                    <span>Shop Status</span>
+                    <strong>{{ shop.status === 'active' ? 'Open' : 'Closed' }}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="shop-card-footer">
+                <button class="shop-card-toggle" type="button" @click="toggleShopDetails(shop.id)">
+                  {{ isShopExpanded(shop.id) ? 'Hide information' : 'See more' }}
+                </button>
+                <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
+              </div>
+            </article>
+          </div>
+
+          <div v-if="hasMoreShops" class="shops-grid-footer">
+            <button class="btn-reset see-more-shops" type="button" @click="toggleShopGrid">
+              {{ showAllShops ? 'Show less shops' : 'See more shops' }}
+            </button>
+          </div>
+        </section>
     </div>
-  </div>
 
-  <!-- Logout Confirmation Modal -->
-  <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
-    <div class="confirm-modal" @click.stop>
-      <div class="confirm-icon">
-        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-      </div>
-      <p class="confirm-title">Logout</p>
-      <p class="confirm-text">Are you sure you want to logout?</p>
-      <div class="confirm-actions">
-        <button class="confirm-cancel-btn" @click="cancelLogout">No</button>
-        <button class="confirm-logout-btn" @click="confirmLogout">Yes</button>
+    <!-- Logout Confirmation Modal -->
+    <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-icon">
+          <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+        </div>
+        <p class="confirm-title">Logout</p>
+        <p class="confirm-text">Are you sure you want to logout?</p>
+        <div class="confirm-actions">
+          <button class="confirm-cancel-btn" @click="cancelLogout">No</button>
+          <button class="confirm-logout-btn" @click="confirmLogout">Yes</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Common Footer -->
-  <CommonFooter />
+    <!-- Common Footer -->
+    <CommonFooter />
+  </div>
 </template>
