@@ -1,3 +1,4 @@
+
 <template>
   <div class="vehicles-page">
     <header class="topbar">
@@ -20,14 +21,7 @@
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -43,15 +37,15 @@
           <p>Available for your selected dates ({{ dateRange }})</p>
 
           <div class="filter-row">
-            <button
-              v-for="type in vehicleTypes"
-              :key="type.key"
+           <button  
+              v-for="item in filterItems"
+              :key="item.id"
               class="filter-pill"
-              :class="{ active: selectedType === type.key }"
-              @click="selectedType = type.key"
+              :class="{ active: activeFilter === item.id }"
+              @click="activeFilter = item.id"
             >
-              <i :class="type.icon"></i>
-              <span>{{ type.label }}</span>
+              <i :class="item.icon"></i>
+              <span>{{ item.label }}</span>
             </button>
           </div>
         </div>
@@ -111,30 +105,10 @@
         </div>
       </section>
     </main>
-
-    <footer class="footer">
-      <div class="footer-brand">
-        <strong>Cambodia<span>Rides</span></strong>
-        <p>
-          Connecting adventurous travelers with the best local rentals across Cambodia.
-        </p>
-      </div>
-
-      <div class="footer-links">
-        <h4>Quick Links</h4>
-        <button class="btn-reset" @click="notify('How it works clicked')">How it works</button>
-        <button class="btn-reset" @click="notify('Trust & Safety clicked')">Trust & Safety</button>
-        <button class="btn-reset" @click="notify('Rental Policies clicked')">Rental Policies</button>
-      </div>
-
-      <div class="footer-links">
-        <h4>Support</h4>
-        <button class="btn-reset" @click="notify('Help Center clicked')">Help Center</button>
-        <button class="btn-reset" @click="notify('Become a Partner clicked')">Become a Partner</button>
-        <button class="btn-reset" @click="notify('Contact Us clicked')">Contact Us</button>
-      </div>
-    </footer>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 
@@ -143,8 +117,13 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
+<<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
+=======
+import CommonFooter from '../../components/CommonFooter.vue'
+>>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 import '../../css/VehicleByShop.css'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -163,13 +142,12 @@ const navItems = ['Home', 'My Bookings', 'Promotion'];
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
-const avatarLoadFailed = ref(false);
-const selectedType = ref('all');
-const vehicleTypes = [
-  { key: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
-  { key: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
-  { key: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
-  { key: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
+const activeFilter = ref('all');
+const filterItems = [
+  { id: 'all', label: 'All', icon: 'fa-solid fa-circle-dot' },
+  { id: 'motorbike', label: 'Motorbikes', icon: 'fa-solid fa-motorcycle' },
+  { id: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
+  { id: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
 ];
 
 const normalizeType = (raw, fallback = '') => {
@@ -262,31 +240,6 @@ const mapEmbedUrl = computed(() => {
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
 
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
-
 const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
 const getVehicleShop = (vehicle) => {
   if (!vehicle.shop_id) return 'Unknown Shop';
@@ -302,16 +255,16 @@ const filteredVehicles = computed(() => {
     ? vehicles.value.filter((v) => Number(v.shop_id) === selectedShopId.value)
     : vehicles.value;
 
-  if (selectedType.value === 'all') {
+if (activeFilter.value === 'all') {
     return source;
   }
   return source.filter(
-    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === selectedType.value
+    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === activeFilter.value
   );
 });
 
 const displayedVehicles = computed(() => {
-  const limit = selectedType.value === 'all' ? 8 : 20;
+  const limit = activeFilter.value === 'all' ? 8 : 20;
   return filteredVehicles.value.slice(0, limit);
 });
 
@@ -380,6 +333,10 @@ const setActiveNav = (item) => {
     router.push('/view_shop');
     return;
   }
+  if (item === 'My Bookings') {
+    router.push('/bookings');
+    return;
+  }
   if (item === 'Promotion') {
     router.push('/promotions');
     return;
@@ -429,7 +386,7 @@ const handleLogout = async () => {
 };
 
 const runFilterSearch = () => {
-  actionMessage.value = `Search clicked for ${selectedType.value === 'all' ? 'all vehicles' : selectedType.value}.`;
+  actionMessage.value = `Search clicked for ${activeFilter.value === 'all' ? 'all vehicles' : activeFilter.value}.`;
 };
 
 const toggleFavorite = (id, name) => {
@@ -506,6 +463,23 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
+}
+
+.book-btn {
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1b75ff, #0d62df);
+  color: #fff;
+  padding: 13px 20px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.book-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(27, 117, 255, 0.35);
 }
 
 .brand {
@@ -636,6 +610,31 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.filter-pill{
+   display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill.active{
+   background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
+}
+.filter-pill:hover {
+  background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
 }
 
 .chip,
@@ -847,44 +846,6 @@ onUnmounted(() => {
   right: 12px;
 }
 
-.footer {
-  margin-top: 28px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 24px 20px;
-  background: #fff;
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 28px;
-}
-
-.footer-brand strong {
-  font-size: 24px;
-}
-
-.footer-brand strong span {
-  color: var(--brand);
-}
-
-.footer-brand p {
-  margin: 8px 0 0;
-  max-width: 420px;
-  color: #66758d;
-}
-
-.footer-links h4 {
-  margin: 2px 0 10px;
-  font-size: 15px;
-}
-
-.footer-links button {
-  display: block;
-  margin: 0 0 8px;
-  color: #52627b;
-}
-
 @media (max-width: 1080px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -901,10 +862,6 @@ onUnmounted(() => {
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .footer {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -931,11 +888,6 @@ onUnmounted(() => {
   .grid {
     grid-template-columns: 1fr;
   }
-
-  .footer {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-  }
 }
+
 </style>

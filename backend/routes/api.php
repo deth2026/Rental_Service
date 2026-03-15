@@ -104,5 +104,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Customer routes (accessible by all authenticated users)
 Route::middleware('auth:sanctum')->group(function () {
-    // Add customer-specific routes here if needed
+    // Customer can view their own bookings
+    Route::get('/my-bookings', [BookingController::class, 'customerBookings']);
 });

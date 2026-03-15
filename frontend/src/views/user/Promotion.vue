@@ -3,8 +3,13 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+<<<<<<< HEAD
 import Logo from '@/components/Logo.vue'
 import logoUrl from '@/assets/Logo.png'
+=======
+import CommonFooter from '../../components/CommonFooter.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
+>>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 
 const router = useRouter()
 const route = useRoute()
@@ -17,7 +22,7 @@ const dealsSection = ref(null)
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '' },
+  { label: 'My Bookings', route: '/bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -90,38 +95,12 @@ const fallbackCoupons = [
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-const avatarLoadFailed = ref(false)
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return ''
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
-}
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return ''
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || ''
-  return normalizeAvatarUrl(src)
-})
-
-const userInitials = computed(() => {
-  const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return 'GU'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
-})
 
 const activeNav = computed(() => {
   const currentPath = route.path
   const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
   return matchedItem?.label || 'Promotions'
 })
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true
-}
 
 const notify = (message) => {
   window.alert(message)
@@ -318,14 +297,7 @@ onMounted(fetchPromotions)
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-          <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -415,14 +387,12 @@ onMounted(fetchPromotions)
           </article>
           </div>
         </div>
-
-        <div class="section-footer">
-          <p>&copy; 2026 RideRent. All rights reserved.</p>
-          <p>{{ activePromotionCount }} active coupon{{ activePromotionCount === 1 ? '' : 's' }} from database</p>
-        </div>
       </section>
     </main>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 <style scoped>
@@ -821,15 +791,6 @@ onMounted(fetchPromotions)
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.section-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 36px 6px 0;
-  color: #64748b;
-  font-size: 0.95rem;
 }
 
 @media (max-width: 1100px) {

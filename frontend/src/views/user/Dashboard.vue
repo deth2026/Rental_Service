@@ -4,79 +4,60 @@ import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import logoUrl from '@/assets/Logo.png'
 import '../../css/userDashboard.css'
+import CommonFooter from '../../components/CommonFooter.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const router = useRouter()
 const route = useRoute()
 
-const shops = ref([])
-const isLoadingShops = ref(false)
-const shopsError = ref('')
-const isMobileMenuOpen = ref(false)
-const showLogoutConfirm = ref(false)
-const showAllShops = ref(false)
-const expandedShops = ref(new Set())
-
-// Navbar state
-const location = ref('Phnom Penh')
-const dateRange = ref('Mar 15 - Mar 18')
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '' },
+  { label: 'My Bookings', route: '/bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
 const activeNav = computed(() => {
-  const currentPath = route.path
-  const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
   return matchedItem?.label || 'Home'
 })
+
+const notify = (message) => console.log(message)
 
 const setActiveNav = (item) => {
   if (item.route) {
     router.push(item.route)
-    closeMobileMenu()
     return
   }
-
   notify('My Bookings page is not available yet.')
-}
-
-const handleSearch = () => {
-  console.log('Search clicked')
-}
-
-const notify = (message) => {
-  console.log(message)
 }
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-const avatarLoadFailed = ref(false)
 
-const normalizeAvatarUrl = (url) => {
-  if (!url) return ''
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
+const showLogoutConfirm = ref(false)
+const handleLogout = () => {
+  showLogoutConfirm.value = true
 }
 
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return ''
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || ''
-  return normalizeAvatarUrl(src)
-})
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true
+const confirmLogout = async () => {
+  showLogoutConfirm.value = false
+  await userService.logout()
+  router.push('/login')
 }
 
-const userInitials = computed(() => {
-  const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return 'GU'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
-})
+const cancelLogout = () => {
+  showLogoutConfirm.value = false
+}
+
+const openProfile = () => {
+  router.push('/user/profile')
+}
+
+const shops = ref([])
+const isLoadingShops = ref(false)
+const shopsError = ref('')
+const showAllShops = ref(false)
+const expandedShops = ref(new Set())
 
 const withCacheBust = (url, version) => {
   if (!url || typeof url !== 'string') return url
@@ -156,10 +137,10 @@ const loadShops = async () => {
 
 const visibleShops = computed(() => {
   if (showAllShops.value) return shops.value
-  return shops.value.slice(0, 8)
+  return shops.value.slice(0, 6)
 })
 
-const hasMoreShops = computed(() => shops.value.length > 8)
+const hasMoreShops = computed(() => shops.value.length > 6)
 
 const toggleShopGrid = () => {
   showAllShops.value = !showAllShops.value
@@ -185,28 +166,6 @@ watch(shops, () => {
   expandedShops.value = new Set()
   showAllShops.value = false
 })
-
-const handleLogout = () => {
-  showLogoutConfirm.value = true
-}
-
-const confirmLogout = async () => {
-  showLogoutConfirm.value = false
-  await userService.logout()
-  router.push('/login')
-}
-
-const cancelLogout = () => {
-  showLogoutConfirm.value = false
-}
-
-const openProfile = () => {
-  router.push('/user/profile')
-}
-
-const goToShopExplorer = () => {
-  router.push('/view_shop')
-}
 
 const slides = ref([
   {
@@ -294,14 +253,6 @@ const restartSlideTimer = () => {
   startSlideTimer()
 }
 
-const toggleMobileMenu = () => {
-  isMobileMenuOpen.value = !isMobileMenuOpen.value
-}
-
-const closeMobileMenu = () => {
-  isMobileMenuOpen.value = false
-}
-
 onMounted(() => {
   loadShops()
   startSlideTimer()
@@ -334,17 +285,13 @@ onBeforeUnmount(() => {
 
         <div class="top-actions">
           <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">
-            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-            <span v-else>{{ userInitials }}</span>
-          </button>
-          <button class="btn-reset logout-btn" @click="handleLogout"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span></button>
+          <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
         </div>
       </header>
 
       <section class="slideshow-section">
-        <div class="containers">
-          <div class="slide">
+      <div class="containers">
+        <div class="slide">
           <article
             v-for="(slide, index) in orderedSlides"
             :key="slide.id"
@@ -352,13 +299,13 @@ onBeforeUnmount(() => {
             :class="`item-${index + 1}`"
             :style="`background-image: url('${slide.image}')`"
           >
-              <div class="content">
-                <div class="name">{{ slide.title }}</div>
-                <div class="des">{{ slide.description }}</div>
-                <button type="button">See More</button>
-              </div>
-            </article>
-          </div>
+            <div class="content">
+              <div class="name">{{ slide.title }}</div>
+              <div class="des">{{ slide.description }}</div>
+              <button type="button">See More</button>
+            </div>
+          </article>
+        </div>
           <div class="button">
             <button class="btn-reset prev" type="button" aria-label="Previous slide" @click="handlePrevSlide">
               <i class="fa-solid fa-arrow-left"></i>
@@ -458,48 +405,6 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </section>
-
-      <footer class="page-footer">
-        <div class="footer-top">
-          <div class="footer-brand">
-            <div class="brand">
-              <span>Chong Choul</span>
-          </div>
-            <p>
-              Connecting adventurous travelers with the best local vehicle rentals across the
-              Kingdom of Wonder
-            </p>
-          </div>
-
-          <div class="footer-col">
-            <h5>Quick Links</h5>
-            <a href="#">Home</a>
-            <a href="#">My booking</a>
-            <a href="#">Promotions</a>
-          </div>
-
-          <div class="footer-col">
-            <h5>Payment Methods</h5>
-            <a href="#">Visa</a>
-            <a href="#">Mastercard</a>
-            <a href="#">Bank Transfer</a>
-          </div>
-          <div class="footer-col">
-            <h5>Social Medias</h5>
-            <a href="#"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i> Facebook</a>
-            <a href="#"><i class="fa-brands fa-instagram" aria-hidden="true"></i> Instagram</a>
-            <a href="#"><i class="fa-brands fa-tiktok" aria-hidden="true"></i> TikTok</a>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <p class="footer-copy">&copy; 2026 Chong Choul Rides. Made with ❤️ in SiemReap.</p>
-          <div class="footer-legal">
-            <i>Privacy Policy</i>
-            <i>Terms of Service</i>
-          </div>
-        </div>
-      </footer>
     </div>
   </div>
 
@@ -507,16 +412,17 @@ onBeforeUnmount(() => {
   <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
     <div class="confirm-modal" @click.stop>
       <div class="confirm-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
+        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
       </div>
       <p class="confirm-title">Logout</p>
-      <p class="confirm-text">Are you sure you want to logout from your account?</p>
+      <p class="confirm-text">Are you sure you want to logout?</p>
       <div class="confirm-actions">
         <button class="confirm-cancel-btn" @click="cancelLogout">No</button>
-        <button class="confirm-logout-btn" @click="confirmLogout">Yes,Logout</button>
+        <button class="confirm-logout-btn" @click="confirmLogout">Yes</button>
       </div>
     </div>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>

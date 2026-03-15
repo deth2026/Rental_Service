@@ -3,8 +3,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+<<<<<<< HEAD
 import logoUrl from '@/assets/Logo.png'
+=======
+import CommonFooter from '../../components/CommonFooter.vue'
+>>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 import '../../css/ShopVehicle.css'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,32 +38,21 @@ const getShopFromStorage = () => {
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-const avatarLoadFailed = ref(false)
 
-const normalizeAvatarUrl = (url) => {
-  if (!url) return ''
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `/${normalized}`
-  return `/storage/${normalized}`
-}
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return ''
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || ''
-  return normalizeAvatarUrl(src)
+const isOwnerRole = computed(() => {
+  const role = String(currentUser.value?.role || '').toLowerCase()
+  return role === 'shop_owner' || role === 'owner'
 })
 
-const onAvatarError = () => {
-  avatarLoadFailed.value = true
+const getShopImage = () => {
+  if (!shop.value) return ''
+  const img = shop.value.img_url || shop.value.image || shop.value.cover || ''
+  if (!img) return ''
+  if (/^(https?:\/\/|data:|blob:)/i.test(img)) return img
+  const normalized = String(img).replace(/^\/+/, '')
+  if (normalized.startsWith('storage/')) return `${getApiOrigin()}/${normalized}`
+  return `${getApiOrigin()}/storage/${normalized.replace(/^storage\//, '')}`
 }
-
-const userInitials = computed(() => {
-  const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return 'GU'
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
-})
 
 const getApiOrigin = () => {
   try {
@@ -287,13 +281,7 @@ const openMap = () => {
 
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-        <button class="btn-reset avatar" @click="openProfile">
-          <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-          <span v-else>{{ userInitials }}</span>
-        </button>
-        <button class="btn-reset logout-btn" @click="handleLogout">
-          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span>
-        </button>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -301,6 +289,42 @@ const openMap = () => {
       <div class="page-header">
         <h1>Available Vehicles</h1>
         <p>Browse vehicles from this shop</p>
+      </div>
+
+      <div v-if="isOwnerRole" class="owner-shop-card">
+        <div class="owner-top-row">
+          <div class="owner-avatar">
+            <img v-if="getShopImage()" :src="getShopImage()" alt="Shop" />
+            <div v-else class="owner-avatar-placeholder">
+              {{ shop?.name?.slice(0, 1) || 'S' }}
+            </div>
+          </div>
+          <div class="owner-actions">
+            <button class="owner-btn primary-btn" type="button">Change Image</button>
+            <button class="owner-btn secondary-btn" type="button">Delete Image</button>
+          </div>
+          <span class="owner-status" :class="shop?.status === 'active' ? 'is-active' : 'is-inactive'">
+            {{ shop?.status ? shop.status.charAt(0).toUpperCase() + shop.status.slice(1) : 'Draft' }}
+          </span>
+        </div>
+        <div class="owner-info-grid">
+          <div class="owner-info-card">
+            <p>Shop Name</p>
+            <strong>{{ shop?.name || 'Your Shop' }}</strong>
+          </div>
+          <div class="owner-info-card">
+            <p>Owner</p>
+            <strong>{{ shop?.owner_name || 'Owner Name' }}</strong>
+          </div>
+          <div class="owner-info-card">
+            <p>Phone</p>
+            <strong>{{ shop?.phone || 'N/A' }}</strong>
+          </div>
+          <div class="owner-info-card">
+            <p>Address</p>
+            <strong>{{ shop?.address || 'Add address' }}</strong>
+          </div>
+        </div>
       </div>
 
       <div class="filters-row" v-if="vehicles.length">
@@ -395,8 +419,14 @@ const openMap = () => {
       </section>
     </main>
   </div>
-</template>
 
+  <!-- Common Footer -->
+  <CommonFooter />
+</template>
+<<<<<<< HEAD
+
+=======
+>>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 <style scoped>
 .topbar {
   display: flex;
@@ -489,23 +519,6 @@ const openMap = () => {
   object-fit: cover;
 }
 
-.logout-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background-color 0.2s;
-}
-
-.logout-btn:hover {
-  background: #fecaca;
-}
 
 .vehicles-content {
   padding: 2rem;
@@ -525,6 +538,132 @@ const openMap = () => {
 
 .page-header p {
   color: #666;
+}
+
+.owner-shop-card {
+  margin-bottom: 2rem;
+  background: linear-gradient(180deg, #fafbff 0%, #f4f7ff 100%);
+  border-radius: 26px;
+  padding: 28px 32px;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.15);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.owner-top-row {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.owner-avatar {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  padding: 6px;
+  background: #fff;
+  border: 4px solid rgba(37, 99, 235, 0.25);
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.2);
+}
+
+.owner-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+  object-fit: cover;
+}
+
+.owner-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #2563eb;
+  font-weight: 700;
+  background: radial-gradient(circle, #e0eeff 0%, #cdd8f6 70%);
+}
+
+.owner-actions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.owner-btn {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  border-radius: 28px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+}
+
+.secondary-btn {
+  background: #e2e8f0;
+  color: #1f2937;
+  border: 1px solid #cfd7ea;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.owner-status {
+  margin-left: auto;
+  padding: 0.5rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: #ecffef;
+  color: #047857;
+  border: 1px solid rgba(4, 120, 87, 0.3);
+}
+
+.owner-status.is-inactive {
+  background: #ffe8e8;
+  color: #991b1b;
+  border-color: rgba(153, 27, 27, 0.3);
+}
+
+.owner-info-grid {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.owner-info-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 12px 16px;
+  border: 1px solid #e0e6f6;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.owner-info-card p {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.owner-info-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.05rem;
+  color: #111827;
+  font-weight: 600;
 }
 
 .filters-row {

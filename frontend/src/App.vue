@@ -1,6 +1,21 @@
+<script setup>
+import { computed } from 'vue'
+
+const getUserRole = () => {
+  try {
+    const raw = localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.role || null
+  } catch {
+    return null
+  }
+}
+</script>
+
 <template>
   <div id="app">
-    <router-view/>
+    <router-view />
   </div>
 </template>
 

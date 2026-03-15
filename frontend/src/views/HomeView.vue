@@ -106,6 +106,7 @@
       </div>
     </section>
 
+<<<<<<< HEAD
     <footer class="footer">
       <div class="footer-main">
         <div>
@@ -138,6 +139,10 @@
       </div>
     </footer>
   </main>
+=======
+
+  </div>
+>>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
 </template>
 
 <script>

@@ -153,7 +153,11 @@
   font-size: 1rem;
 }
 
-.filter-pill.active,
+.filter-pill.active{
+   background: #1d6fff;
+  border-color: #1d6fff;
+  color: #fff;
+}
 .filter-pill:hover {
   background: #1d6fff;
   border-color: #1d6fff;
@@ -230,7 +234,7 @@
 /* Grid layout */
 .promo-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
 }
 
@@ -329,7 +333,9 @@
 }
 
 .promo-body {
-  padding: 22px 18px 16px;
+  /* padding: 22px 18px 16px; */
+  width: 100%;
+  
 }
 
 .promo-body h3 {
