@@ -1,29 +1,14 @@
 
 <template>
   <div class="vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserHeaderBar
+      :nav-items="navItems"
+      :active-nav="activeNav"
+      :user-display-name="userDisplayName"
+      @nav-select="setActiveNav"
+      @settings="openProfile"
+      @logout="handleLogout"
+    />
 
     <main class="content">
       <section class="deals-section">
@@ -119,7 +104,7 @@ import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/VehicleByShop.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserHeaderBar from '@/components/UserHeaderBar.vue'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>

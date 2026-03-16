@@ -1,7 +1,43 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { vehicleService } from '../../services/database.js'
+import { useRouter } from 'vue-router'
+import { vehicleService, userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
+
+const router = useRouter()
+
+const currentUser = computed(() => userService.getCurrentUser())
+const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+
+const openProfile = () => {
+  router.push('/user/profile')
+}
+
+const handleLogout = () => {
+  userService.logout()
+  router.push('/login')
+}
+
+const goBack = () => {
+  router.back()
+}
+
+const navItems = ['Home', 'My Bookings', 'Promotions']
+const activeNav = ref('My Bookings')
+
+const setActiveNav = (item) => {
+  activeNav.value = item
+  const navRoutes = {
+    Home: '/view_shop',
+    'My Bookings': '/bookings',
+    Promotions: '/promotions',
+  }
+  const target = navRoutes[item]
+  if (target) {
+    router.push(target)
+  }
+}
 
 const activeTab = ref('all')
 const searchQuery = ref('')
@@ -205,6 +241,28 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
 
 <template>
   <div class="bookings-page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <span>Chong Choul</span>
+      </div>
+
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item }"
+          @click="setActiveNav(item)"
+        >
+          {{ item }}
+        </button>
+      </nav>
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+      </div>
+    </header>
     <section class="bookings-panel">
       <div class="panel-head">
         <h1>My Bookings</h1>
