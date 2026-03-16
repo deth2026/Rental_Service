@@ -1,10 +1,20 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { shopApi } from "@/services/api";
+import userService from "@/services/userService";
 import "../../css/Myshop.css";
 
 const shop = ref(null);
-const ownerName = ref("");
+const currentUser = ref(null);
+const ownerName = computed(() => {
+  if (shop.value?.owner?.name) {
+    return shop.value.owner.name;
+  }
+  if (currentUser.value?.name) {
+    return currentUser.value.name;
+  }
+  return "N/A";
+});
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
@@ -73,54 +83,6 @@ const setAccentColor = (color) => {
   createForm.accent_color = color;
 };
 
-const getCachedShop = (ownerId) => {
-  if (!ownerId) return null;
-  try {
-    const raw = localStorage.getItem(`myshop_cache_${ownerId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const setCachedShop = (ownerId, shopData) => {
-  if (!ownerId) return;
-  try {
-    if (!shopData) {
-      localStorage.removeItem(`myshop_cache_${ownerId}`);
-      return;
-    }
-    localStorage.setItem(`myshop_cache_${ownerId}`, JSON.stringify(shopData));
-  } catch {
-    // Ignore cache write errors.
-  }
-};
-
-const getStoredUser = () => {
-  try {
-    const rawUser = localStorage.getItem("user");
-    if (!rawUser) return null;
-    const parsed = JSON.parse(rawUser);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const getUserId = () => {
-  const rawUser = localStorage.getItem("user");
-  if (!rawUser) return 1;
-
-  try {
-    const parsed = JSON.parse(rawUser);
-    return parsed.id || 1;
-  } catch {
-    return 1;
-  }
-};
-
 const asArray = (payload) => payload?.data || payload || [];
 
 const formatDateTime = (value) => {
@@ -128,6 +90,16 @@ const formatDateTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleDateString();
+};
+
+const ensureCurrentUser = async () => {
+  if (currentUser.value) return currentUser.value;
+  try {
+    currentUser.value = await userService.getAuthUser();
+  } catch (e) {
+    console.error("Unable to fetch authenticated user", e);
+  }
+  return currentUser.value;
 };
 
 const API_BASE_URL =
@@ -157,15 +129,14 @@ const getShopImageUrl = (url) => {
 };
 
 const loadMyShop = async () => {
-  const ownerId = getUserId();
-  const storedUser = getStoredUser();
-  ownerName.value = storedUser?.name || "N/A";
-
-  // Clear shop first to ensure we get fresh data
+  error.value = "";
   shop.value = null;
-  const cachedShop = getCachedShop(ownerId);
-  if (cachedShop) {
-    shop.value = cachedShop;
+  const user = await ensureCurrentUser();
+  const ownerId = user?.id;
+
+  if (!ownerId) {
+    error.value = "Unable to determine your owner account. Please log in.";
+    return;
   }
 
   try {
@@ -177,7 +148,6 @@ const loadMyShop = async () => {
 
     if (!myShops.length) {
       shop.value = null;
-      setCachedShop(ownerId, null);
       return;
     }
 
@@ -191,18 +161,10 @@ const loadMyShop = async () => {
 
     shop.value = myShops[0];
     shopImageLoadFailed.value = false;
-    setCachedShop(ownerId, shop.value);
-    ownerName.value =
-      shop.value?.owner_name ||
-      shop.value?.owner?.name ||
-      storedUser?.name ||
-      "N/A";
   } catch (e) {
     console.error("Failed to load shop", e);
-    if (!cachedShop) {
-      shop.value = null;
-    }
-    ownerName.value = storedUser?.name || "N/A";
+    shop.value = null;
+    error.value = "Could not load your shop. Please try again later.";
   }
 };
 
@@ -306,9 +268,8 @@ const onShopImageDrop = (event) => {
 const openCreateModal = () => {
   resetForm();
   // Pre-fill phone from user if available
-  const storedUser = getStoredUser();
-  if (storedUser?.phone) {
-    createForm.phone = storedUser.phone;
+  if (currentUser.value?.phone) {
+    createForm.phone = currentUser.value.phone;
   }
   showCreateModal.value = true;
 };
@@ -361,7 +322,6 @@ const updateShopImage = async (file) => {
     const updatedShop = data?.data || data || null;
     if (updatedShop && typeof updatedShop === "object") {
       shop.value = updatedShop;
-      setCachedShop(getUserId(), updatedShop);
     }
     await loadMyShop();
     if (changeImagePreview.value) {
@@ -391,6 +351,10 @@ const onShopImageError = () => {
 const shopImageSrc = computed(() => {
   if (changeImagePreview.value) return changeImagePreview.value;
   if (shopImageLoadFailed.value) return "";
+  // First check for img_url_full (provided by backend accessor)
+  if (shop.value?.img_url_full) {
+    return shop.value.img_url_full
+  }
   const raw =
     shop.value?.img_url ||
     shop.value?.image_url ||
@@ -417,7 +381,6 @@ const removeShopImage = async () => {
     const updatedShop = data?.data || data || null;
     if (updatedShop && typeof updatedShop === "object") {
       shop.value = updatedShop;
-      setCachedShop(getUserId(), updatedShop);
     }
     await loadMyShop();
   } catch (e) {
@@ -438,11 +401,18 @@ const createShop = async () => {
   error.value = "";
 
   try {
+    const user = await ensureCurrentUser();
+    const ownerId = user?.id;
+    if (!ownerId) {
+      error.value = "Unable to determine owner account. Please log in again.";
+      return;
+    }
+
     let payload;
     // if an image file has been selected, use FormData to send multipart request
     if (shopImageFile.value) {
       payload = new FormData();
-      payload.append("owner_id", getUserId());
+      payload.append("owner_id", ownerId);
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
@@ -457,7 +427,7 @@ const createShop = async () => {
       payload.append("img_url", shopImageFile.value);
     } else {
       payload = {
-        owner_id: getUserId(),
+        owner_id: ownerId,
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
@@ -474,7 +444,6 @@ const createShop = async () => {
     const createdShop = created?.data || created || null;
     if (createdShop && typeof createdShop === "object") {
       shop.value = createdShop;
-      setCachedShop(getUserId(), createdShop);
     }
     await loadMyShop();
 

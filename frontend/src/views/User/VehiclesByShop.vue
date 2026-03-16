@@ -267,6 +267,15 @@ const displayedVehicles = computed(() => {
 });
 
 const getVehicleImage = (vehicle) => {
+  // First check for full URL (provided by backend accessor)
+  if (vehicle.image_url_full) {
+    return vehicle.image_url_full;
+  }
+  // Check photo_urls array for multiple images
+  if (vehicle.photo_urls && Array.isArray(vehicle.photo_urls) && vehicle.photo_urls.length > 0) {
+    return vehicle.photo_urls[0];
+  }
+  // Fallback to image_url processing
   const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
   if (image) {
     if (image.startsWith('http://') || image.startsWith('https://')) return image;
