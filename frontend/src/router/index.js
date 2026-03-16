@@ -1,13 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import HomeView from '../views/HomeView.vue';
-import ChooseRole from '../views/ChooseRole.vue';
-import Login from '../views/auth/Login.vue';
-import Register from '../views/auth/Register.vue';
-import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/user/Dashboard.vue';
-import PromotionView from '../views/user/Promotion.vue';
-import SettingUser from '../views/user/Setting_user.vue';
+
+
+
+
+
+
+
+
 import AdminLayout from '../views/admin/AdminLayout.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import AdminShopManagement from '../views/admin/ShopManagement.vue';
@@ -20,9 +20,9 @@ import AdminCityManagement from '../views/admin/CityManagement.vue';
 import AdminFinancials from '../views/admin/Financials.vue';
 import AdminReports from '../views/admin/Reports.vue';
 import AdminSettings from '../views/admin/Settings.vue';
-import ShopVehicles from '../views/user/ShopVehicles.vue';
-import VehiclesByShop from '../views/user/VehiclesByShop.vue';
-import ViewDetail from '../views/user/ViewDetail.vue';
+
+
+
 
 // Check if user is authenticated
 const isAuthenticated = () => {
