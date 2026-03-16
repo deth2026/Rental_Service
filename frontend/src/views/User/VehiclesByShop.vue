@@ -26,56 +26,65 @@
     </header>
 
     <main class="content">
-      <div class="results-head">
-        <h1>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h1>
-        <p>Available for your selected dates ({{ dateRange }})</p>
-      </div>
+      <section class="deals-section">
+        <div class="section-header">
+          <div class="section-badge">
+            <i class="fa-solid fa-car"></i>
+            <span>AVAILABLE VEHICLES</span>
+          </div>
 
-      <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
-      <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
-      <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+          <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
+          <p>Available for your selected dates ({{ dateRange }})</p>
 
-      <section class="grid">
-        <article class="card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
-          <span v-if="vehicle.bestValue" class="badge">BEST VALUE</span>
-
-          <button
-            class="btn-reset fav-btn"
-            :class="{ active: favoriteIds.has(vehicle.id) }"
-            @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))"
-            :aria-label="`Save ${getVehicleName(vehicle)}`"
-          >
-            <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
-          </button>
-
-          <div class="card-image">
-            <button
-              class="btn-reset card-image-btn"
-              @click="viewDetails(vehicle)"
-              :aria-label="`View details for ${getVehicleName(vehicle)}`"
+          <div class="filter-row">
+           <button  
+              v-for="item in filterItems"
+              :key="item.id"
+              class="filter-pill"
+              :class="{ active: activeFilter === item.id }"
+              @click="activeFilter = item.id"
             >
-              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+              <i :class="item.icon"></i>
+              <span>{{ item.label }}</span>
             </button>
           </div>
+        </div>
 
-          <div class="card-body">
-            <div class="card-top">
-              <h3>
-                <button
-                  class="btn-reset card-title-btn"
-                  @click="viewDetails(vehicle)"
-                  :aria-label="`View details for ${getVehicleName(vehicle)}`"
-                >
-                  {{ getVehicleName(vehicle) }}
-                </button>
-              </h3>
-              <div class="price">
-                <strong>${{ vehicle.price_per_day }}</strong>
-                <span>per day</span>
+        <p v-if="isLoading" class="action-message">Loading vehicles from database...</p>
+        <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+        <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
+
+        <div class="promo-grid">
+          <article class="promo-card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
+            <div class="promo-media">
+              <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
+              <span v-if="vehicle.bestValue" class="promo-ribbon">BEST VALUE</span>
+              <span class="promo-type" @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))" style="cursor: pointer;">
+                <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
+              </span>
+            </div>
+
+            <div class="promo-body">
+              <h3>{{ getVehicleName(vehicle) }}</h3>
+
+              <div class="vehicle-meta">
+                <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
+                <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
+                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
+              </div>
+
+              <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
+
+              <div class="promo-meta">
+                <div class="promo-value">
+                  <strong>${{ vehicle.price_per_day }}</strong>
+                  <span>per day</span>
+                </div>
+                <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
               </div>
             </div>
-          </div>
           </article>
+        </div>
       </section>
 
       <section class="map-section">
@@ -87,12 +96,19 @@
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
+          <button class="btn-reset open-map-btn" @click="openMainLocation">
+            Open in Google Maps
+          </button>
+          <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
+            Open Saved Location
+          </button>
         </div>
       </section>
     </main>
-    <!-- Common Footer -->
-    <CommonFooter />
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
 
@@ -118,8 +134,8 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const router = useRouter();
 const navItems = ['Home', 'My Bookings', 'Promotion'];
+const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const activeFilter = ref('all');
@@ -129,7 +145,6 @@ const filterItems = [
   { id: 'bicycle', label: 'Bicycles', icon: 'fa-solid fa-bicycle' },
   { id: 'car', label: 'Cars', icon: 'fa-solid fa-car-side' }
 ];
-const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
 
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
@@ -142,13 +157,8 @@ const normalizeType = (raw, fallback = '') => {
   return t;
 };
 
-const apiOrigin = computed(() => {
-  try {
-    return new URL(api.defaults.baseURL, window.location.origin).origin;
-  } catch {
-    return window.location.origin;
-  }
-});
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
 const fallbackImageByType = {
   motorbike: 'https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg',
   bicycle: 'https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg',
@@ -254,59 +264,24 @@ const displayedVehicles = computed(() => {
   return filteredVehicles.value.slice(0, limit);
 });
 
-const parseVehiclePhotos = (value) => {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) return parsed.filter(Boolean);
-      if (typeof parsed === 'string' && parsed.trim()) return [parsed.trim()];
-    } catch {
-      return [trimmed];
-    }
-    return [trimmed];
-  }
-  return [];
-};
-
-const resolveVehicleImageUrl = (value) => {
-  if (!value || typeof value !== 'string') return '';
-  if (value.startsWith('http://') || value.startsWith('https://') || value.startsWith('data:') || value.startsWith('blob:')) {
-    return value;
-  }
-  const clean = value.replace(/^\/+/, '');
-  if (clean.startsWith('storage/')) {
-    return `${apiOrigin.value}/${clean}`;
-  }
-  return `${apiOrigin.value}/storage/${clean}`;
-};
-
 const getVehicleImage = (vehicle) => {
-  const photos = parseVehiclePhotos(vehicle?.photos);
-  const photoUrls = Array.isArray(vehicle?.photo_urls) ? vehicle.photo_urls : [];
-  const candidate =
-    vehicle?.image_url_full ||
-    vehicle?.image_url ||
-    photoUrls[0] ||
-    photos[0] ||
-    '';
-  if (candidate) {
-    return resolveVehicleImageUrl(candidate);
+  const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
+  if (image) {
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    if (image.startsWith('/')) return `${API_ROOT}${image}`;
+    return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
   }
   const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
 };
 
-const loadAllPages = async (resource, extraParams = {}) => {
+const loadAllPages = async (resource) => {
   let page = 1;
   let lastPage = 1;
   const results = [];
 
   while (page <= lastPage) {
-    const response = await api.get(`/${resource}`, { params: { page, ...extraParams } });
+    const response = await api.get(`/${resource}`, { params: { page } });
     const payload = response.data;
     const data = Array.isArray(payload) ? payload : payload?.data || [];
     // Normalize types up front so filters work even if API returns "Motorbikes" etc.
@@ -327,9 +302,8 @@ const loadVehiclesAndShops = async () => {
   isLoading.value = true;
   loadingError.value = '';
   try {
-    const shopIdParam = selectedShopId.value ? { shop_id: selectedShopId.value } : {};
     const [vehicleList, shopList] = await Promise.all([
-      loadAllPages('vehicles', shopIdParam),
+      loadAllPages('vehicles'),
       loadAllPages('shops')
     ]);
 
@@ -342,17 +316,8 @@ const loadVehiclesAndShops = async () => {
       return acc;
     }, {});
   } catch (error) {
-    const status = error?.response?.status;
-    const message = error?.response?.data?.message || error.message;
-    console.error('API Error:', status, message);
-    
-    if (status === 401) {
-      loadingError.value = 'Authentication required. Please log in.';
-    } else if (status === 500) {
-      loadingError.value = 'Server error. Please try again later.';
-    } else {
-      loadingError.value = `Could not load vehicles (${status || 'network error'}). Check backend server.`;
-    }
+    loadingError.value = 'Could not load vehicles from database. Check backend server and API URL.';
+    console.error(error);
   } finally {
     isLoading.value = false;
   }
@@ -372,7 +337,7 @@ const setActiveNav = (item) => {
     router.push('/promotions');
     return;
   }
-  actionMessage.value = `${item} is not available yet.`;
+  actionMessage.value = `${item} opened.`;
 };
 
 const handleSearch = () => {
@@ -403,7 +368,6 @@ const openCustomLocation = () => {
   window.open(target, '_blank');
 };
 
-
 const notify = (message) => {
   actionMessage.value = message;
 };
@@ -421,33 +385,6 @@ const runFilterSearch = () => {
   actionMessage.value = `Search clicked for ${activeFilter.value === 'all' ? 'all vehicles' : activeFilter.value}.`;
 };
 
-const buildVehicleDetailRoute = (vehicle) => {
-  if (!vehicle || !vehicle.id) return null;
-  return {
-    name: 'vehicle-detail',
-    params: { id: vehicle.id },
-    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
-  };
-};
-
-const setLastVehicleId = (id) => {
-  if (!id) return;
-  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
-};
-
-const getLastVehicleId = () => {
-  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
-
-const viewDetails = (vehicle) => {
-  const routeTarget = buildVehicleDetailRoute(vehicle);
-  if (!routeTarget) return;
-  setLastVehicleId(vehicle.id);
-  router.push(routeTarget);
-};
-
 const toggleFavorite = (id, name) => {
   if (favoriteIds.has(id)) {
     favoriteIds.delete(id);
@@ -461,10 +398,11 @@ const toggleFavorite = (id, name) => {
 const bookNow = (vehicle) => {
   const vehicleName = getVehicleName(vehicle);
   actionMessage.value = `Booking started for ${vehicleName}.`;
-  const routeTarget = buildVehicleDetailRoute(vehicle);
-  if (!routeTarget) return;
-  setLastVehicleId(vehicle.id);
-  router.push(routeTarget);
+  router.push({
+    name: 'vehicle-detail',
+    params: { id: vehicle.id },
+    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
+  });
 };
 
 onMounted(() => {
@@ -586,7 +524,6 @@ onUnmounted(() => {
   background: #eef7ff;
   color: #2563eb;
 }
-
 
 .brand-icon i {
   color: #2563eb;
@@ -797,13 +734,6 @@ onUnmounted(() => {
   /* padding: 0px; */
 }
 
-.card-image-btn {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-}
-
 .card-image img {
   width: 100%;
   max-height: 152px;
@@ -825,17 +755,6 @@ onUnmounted(() => {
   margin: 0;
   font-size: 24px;
   line-height: 1.3;
-}
-
-.card-title-btn {
-  text-align: left;
-  font-size: inherit;
-  font-weight: inherit;
-  color: inherit;
-}
-
-.card-title-btn:hover {
-  text-decoration: underline;
 }
 
 .price {
@@ -914,44 +833,6 @@ onUnmounted(() => {
 .open-map-btn.secondary {
   left: auto;
   right: 12px;
-
-}
-.footer {
-  margin-top: 28px;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 24px 20px;
-  background: #fff;
-  border-top: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 28px;
-}
-
-.footer-brand strong {
-  font-size: 24px;
-}
-
-.footer-brand strong span {
-  color: var(--brand);
-}
-
-.footer-brand p {
-  margin: 8px 0 0;
-  max-width: 420px;
-  color: #66758d;
-}
-
-.footer-links h4 {
-  margin: 2px 0 10px;
-  font-size: 15px;
-}
-
-.footer-links button {
-  display: block;
-  margin: 0 0 8px;
-  color: #52627b;
 }
 
 @media (max-width: 1080px) {

@@ -1,8 +1,8 @@
 ﻿<script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { vehicleApi, api } from '@/services/api'
+import { vehicleApi, shopApi, api } from '@/services/api'
 import { getSessionUser } from '@/services/auth'
-import '../../css/Vehicles.css'
+import '../../css/Vehicles/css'
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
@@ -20,57 +20,6 @@ const currentShopId = ref(null)
 
 // Get current user
 const sessionUser = ref(getSessionUser() || {})
-
-const apiOrigin = computed(() => {
-    try {
-        return new URL(api.defaults.baseURL, window.location.origin).origin
-    } catch {
-        return window.location.origin
-    }
-})
-
-const normalizeVehicleImageUrl = (url) => {
-    if (!url) return ''
-    if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url
-    const normalized = String(url).replace(/^\/+/, '')
-    if (normalized.startsWith('storage/')) return `${apiOrigin.value}/${normalized}`
-    if (normalized.startsWith('vehicles/')) return `${apiOrigin.value}/storage/${normalized}`
-    return `${apiOrigin.value}/${normalized}`
-}
-
-const parseVehiclePhotos = (value) => {
-    if (!value) return []
-    if (Array.isArray(value)) return value.filter(Boolean)
-    if (typeof value === 'string') {
-        const trimmed = value.trim()
-        if (!trimmed) return []
-        try {
-            const parsed = JSON.parse(trimmed)
-            if (Array.isArray(parsed)) return parsed.filter(Boolean)
-            if (typeof parsed === 'string' && parsed.trim()) return [parsed.trim()]
-        } catch {
-            return [trimmed]
-        }
-        return [trimmed]
-    }
-    return []
-}
-
-const resolveVehiclePreview = (vehicle) => {
-    const photos = parseVehiclePhotos(vehicle?.photos)
-    const photoUrls = Array.isArray(vehicle?.photo_urls) ? vehicle.photo_urls : []
-    const candidate =
-        vehicle?.image_url_full ||
-        vehicle?.image_url ||
-        photoUrls[0] ||
-        photos[0] ||
-        vehicle?.previewUrl ||
-        ''
-    return {
-        previewUrl: normalizeVehicleImageUrl(candidate),
-        photos
-    }
-}
 
 // Delete confirmation modal
 const showDeleteModal = ref(false)
@@ -107,19 +56,28 @@ const vehicles = ref([])
 const fetchVehicles = async () => {
     try {
         loading.value = true
-        if (!currentShopId.value) {
-            vehicles.value = []
-            return
-        }
-
-        const params = { shop_id: currentShopId.value }
-        const response = await vehicleApi.getAll(params)
+        const response = await vehicleApi.getAll()
         // Handle paginated response
         vehicles.value = response.data.data || response.data || []
         // Map database fields to frontend fields
         vehicles.value = vehicles.value.map(v => {
+            let parsedPhotos = []
+            try {
+                if (v.photos) {
+                    if (Array.isArray(v.photos)) {
+                        parsedPhotos = v.photos
+                    } else if (typeof v.photos === 'string') {
+                        parsedPhotos = JSON.parse(v.photos)
+                    }
+                }
+            } catch {
+                parsedPhotos = []
+            }
+
             const source = v?.data?.attributes ? v.data.attributes : v
-            const { previewUrl, photos } = resolveVehiclePreview(source)
+            const imageUrl = source.image_url_full || source.image_url || ''
+            const baseUrl = api.defaults.baseURL?.replace(/\\/api\\/?$/, '') || ''
+            const resolvedPreview = imageUrl ? `${baseUrl}/${imageUrl}`.replace(/\\/\\/+/g, '/') : (parsedPhotos[0] || sampleThumb)
 
             return {
                 ...source,
@@ -129,9 +87,9 @@ const fetchVehicles = async () => {
                 status: (source.status || 'Available').trim(),
                 createdAt: source.created_at || source.create_at,
                 updatedAt: source.updated_at,
-                previewUrl: previewUrl || sampleThumb,
-                photos,
-                base64Photos: photos
+                previewUrl: resolvedPreview,
+                photos: parsedPhotos,
+                base64Photos: parsedPhotos
             }
         })
     } catch (error) {
@@ -147,22 +105,7 @@ onMounted(async () => {
     fetchVehicles()
 })
 
-const sampleThumb = `data:image/svg+xml;utf8,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200">
-    <defs>
-      <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-        <stop offset="0%" stop-color="#f8fafc"/>
-        <stop offset="100%" stop-color="#e2e8f0"/>
-      </linearGradient>
-    </defs>
-    <rect width="320" height="200" rx="12" fill="url(#bg)"/>
-    <rect x="36" y="70" width="248" height="60" rx="12" fill="#cbd5f5"/>
-    <circle cx="92" cy="140" r="14" fill="#64748b"/>
-    <circle cx="228" cy="140" r="14" fill="#64748b"/>
-    <rect x="86" y="92" width="148" height="20" rx="6" fill="#f8fafc"/>
-    <text x="50%" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#64748b">Vehicle</text>
-  </svg>`
-)}`
+const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
 const photoPreview = ref(sampleThumb)
 const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
 
@@ -285,10 +228,8 @@ const openEdit = (v) => {
         }
     }
     
-    // Use stored image or preview
-    const imageUrl = normalizeVehicleImageUrl(
-        v.image_url_full || v.image_url || v.previewUrl || (Array.isArray(v.photos) ? v.photos[0] : '')
-    )
+    // Use image_url_full if available, otherwise fall back to previewUrl
+    const imageUrl = v.image_url_full || v.previewUrl || ''
     
     Object.assign(form, {
         name: v.name || '',
@@ -351,11 +292,11 @@ const saveVehicle = async () => {
         if (editId.value) {
             // Update existing vehicle
             const response = await vehicleApi.update(editId.value, payload)
-            const updatedData = response.data?.data || response.data || {}
+            const updatedData = response.data
             const index = vehicles.value.findIndex(v => v.id === editId.value)
             if (index >= 0) {
                 // Use image_url_full from API response if available
-                const imageUrl = normalizeVehicleImageUrl(updatedData.image_url_full || updatedData.image_url || payload.previewUrl || '')
+                const imageUrl = updatedData.image_url_full || updatedData.image_url || ''
                 vehicles.value[index] = {
                     ...vehicles.value[index],
                     name: updatedData.name,
@@ -380,7 +321,7 @@ const saveVehicle = async () => {
         } else {
             // Create new vehicle - wait for API response first
             const response = await vehicleApi.create(payload)
-            const newData = response.data?.data || response.data || {}
+            const newData = response.data
             
             // Add vehicle to list with real data from server
             const newVehicle = {
@@ -396,7 +337,7 @@ const saveVehicle = async () => {
                 fuel: newData.fuel_type,
                 transmission: newData.transmission,
                 // Use full image URL from API response
-                previewUrl: normalizeVehicleImageUrl(newData.image_url_full || newData.image_url || photoPreview.value),
+                previewUrl: newData.image_url_full || newData.image_url || photoPreview.value,
                 image_url_full: newData.image_url_full,
                 photos: form.base64Photos || [],
                 base64Photos: form.base64Photos || [],
@@ -445,8 +386,7 @@ const removeVehicle = async () => {
         showToast('Vehicle deleted successfully!', 'success')
     } catch (error) {
         console.error('Error deleting vehicle:', error)
-        const serverMessage = error?.response?.data?.message
-        showToast(serverMessage || 'Failed to delete vehicle. Please try again.', 'error')
+        showToast('Failed to delete vehicle. Please try again.', 'error')
     } finally {
         cancelDelete()
     }
@@ -514,20 +454,10 @@ const onPhotoDrop = async (e) => {
         if (files.length) photoPreview.value = URL.createObjectURL(files[0])
     }
 }
-
-const onVehicleImageError = (event) => {
-    const target = event?.target
-    if (!target || !sampleThumb) return
-    if (target.dataset?.fallbackApplied === 'true') return
-    if (typeof target.src === 'string' && target.src.includes(sampleThumb)) return
-    target.dataset.fallbackApplied = 'true'
-    target.src = sampleThumb
-}
 </script>
 
 <template>
-    <div class="vehicles-shell">
-        <div class="panel vehicles-page">
+    <div class="panel vehicles-page">
         <div class="line top-line">
             <div>
                 <h3>Manage Vehicles</h3>
@@ -622,7 +552,7 @@ const onVehicleImageError = (event) => {
                 <tbody>
                     <tr v-for="v in filteredVehicles" :key="v.id">
                         <td>
-                            <img :src="v.previewUrl || sampleThumb" alt="Vehicle" @error="onVehicleImageError" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" />
+                            <img :src="v.previewUrl || sampleThumb" alt="Vehicle" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" />
                         </td>
                         <td class="vehicle-name-cell">
                             <i :class="['vehicle-category-icon', getCategoryIcon(v.category)]" aria-hidden="true"></i>
@@ -805,33 +735,32 @@ const onVehicleImageError = (event) => {
         </div>
     </div>
 
-        <!-- Delete Confirmation Modal -->
-        <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
-            <div class="delete-modal">
-                <div class="delete-icon-wrapper">
-                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        <line x1="10" y1="11" x2="10" y2="17"></line>
-                        <line x1="14" y1="11" x2="14" y2="17"></line>
-                    </svg>
-                </div>
-                <h3 class="delete-title">Delete Vehicle</h3>
-                <p class="delete-message">Are you sure you want to delete this vehicle?</p>
-                <p class="delete-vehicle-name">{{ deleteVehicleName }}</p>
-                <p class="delete-warning">This action cannot be undone. All associated data (maintenance history, documents, photos, assignments) will be permanently removed.</p>
-                <div class="delete-actions">
-                    <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
-                    <button class="delete-confirm-btn" @click="removeVehicle">Delete</button>
-                </div>
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+        <div class="delete-modal">
+            <div class="delete-icon-wrapper">
+                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                </svg>
             </div>
-        </div>
-
-        <!-- Toast Notification -->
-        <div v-if="toast.show" :class="['toast', toast.type]">
-            {{ toast.message }}
+            <h3 class="delete-title">Delete Vehicle</h3>
+            <p class="delete-message">Are you sure you want to delete this vehicle?</p>
+            <p class="delete-vehicle-name">{{ deleteVehicleName }}</p>
+            <p class="delete-warning">This action cannot be undone. All associated data (maintenance history, documents, photos, assignments) will be permanently removed.</p>
+            <div class="delete-actions">
+                <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
+                <button class="delete-confirm-btn" @click="removeVehicle">Delete</button>
+            </div>
         </div>
     </div>
 </template>
+
+<!-- Toast Notification -->
+<div v-if="toast.show" :class="['toast', toast.type]">
+    {{ toast.message }}
+</div>
 
 

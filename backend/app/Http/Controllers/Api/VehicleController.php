@@ -148,9 +148,8 @@ class VehicleController extends Controller
         
         // If user is authenticated, filter vehicles by their shop
         $user = $request->user();
-        $isShopOwner = $user && in_array($user->role, ['shop_owner', 'owner'], true);
-
-        if ($isShopOwner) {
+        
+        if ($user && $user->role === 'shop_owner') {
             // Get all shops owned by this user
             $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
             

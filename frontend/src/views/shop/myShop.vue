@@ -1,25 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import api, { shopApi } from '@/services/api'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { shopApi } from '@/services/api'
 import '../../css/Myshop.css'
 
 const shop = ref(null)
 const ownerName = ref('')
-const apiOrigin = computed(() => {
-  try {
-    return new URL(api.defaults.baseURL, window.location.origin).origin
-  } catch {
-    return window.location.origin
-  }
-})
-
-const getShopImageUrl = (value) => {
-  if (!value) return ''
-  if (/^https?:\/\//.test(value) || /^data:image\//.test(value)) return value
-  const normalized = String(value).replace(/^\/+/, '')
-  if (normalized.startsWith('storage/')) return `${apiOrigin.value}/${normalized}`
-  return `${apiOrigin.value}/storage/${normalized}`
-}
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value)
@@ -35,8 +20,6 @@ const shopImageInputRef = ref(null)
 const isShopImageDragOver = ref(false)
 const changeImageInputRef = ref(null)
 const isUpdatingImage = ref(false)
-const isDisplayImageBroken = ref(false)
-const shopImageSource = computed(() => shopImagePreview.value || shop.value?.img_url || '')
 
 const createForm = reactive({
   name: '',
@@ -129,6 +112,31 @@ const formatDateTime = (value) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleDateString()
+}
+
+// Normalize shop image URL
+const getApiOrigin = () => {
+  try {
+    // For production, use the current origin
+    // For development, we need to use the Laravel backend port (8000)
+    const currentOrigin = window.location.origin
+    if (currentOrigin.includes('5173')) {
+      return 'http://127.0.0.1:8000'
+    }
+    return currentOrigin
+  } catch {
+    return 'http://127.0.0.1:8000'
+  }
+}
+
+const getShopImageUrl = (url) => {
+  if (!url) return ''
+  // If it's already a data URL or full URL, return as-is
+  if (/^data:image/.test(url)) return url
+  if (/^https?:\/\//.test(url)) return url
+  // For relative paths, prepend the storage URL
+  const cleanUrl = url.replace(/^\/+/, '')
+  return `${getApiOrigin()}/storage/${cleanUrl}`
 }
 
 const loadMyShop = async () => {
@@ -246,8 +254,6 @@ const applyShopImageFile = (file) => {
   shopImageFile.value = file
   createForm.img_url = ''
   shopImagePreview.value = URL.createObjectURL(file)
-  // File upload takes priority over manual URL input.
-  createForm.img_url = ''
   error.value = ''
 }
 
@@ -267,10 +273,6 @@ const onShopImageDrop = (event) => {
   isShopImageDragOver.value = false
   const file = event.dataTransfer?.files?.[0] || null
   applyShopImageFile(file)
-}
-
-const onDisplayShopImageError = () => {
-  isDisplayImageBroken.value = true
 }
 
 const openCreateModal = () => {
@@ -401,12 +403,11 @@ const createShop = async () => {
       }
     }
 
-    const response = await shopApi.create(payload)
-
-    const savedShop = response?.data?.data || response?.data || null
-    if (savedShop && typeof savedShop === 'object') {
-      shop.value = savedShop
-      setCachedShop(getUserId(), savedShop)
+    const { data: created } = await shopApi.create(payload)
+    const createdShop = created?.data || created || null
+    if (createdShop && typeof createdShop === 'object') {
+      shop.value = createdShop
+      setCachedShop(getUserId(), createdShop)
     }
     await loadMyShop()
 
@@ -427,10 +428,6 @@ const createShop = async () => {
 
 onMounted(async () => {
   await loadMyShop()
-})
-
-watch(shopImageSource, () => {
-  isDisplayImageBroken.value = false
 })
 
 onBeforeUnmount(() => {
@@ -459,13 +456,7 @@ onBeforeUnmount(() => {
         <div class="shop-header-row">
           <div class="shop-image-section">
             <div class="shop-avatar-stack">
-              <img
-                v-if="shop.img_url && !isDisplayImageBroken"
-                :src="getShopImageUrl(shop.img_url)"
-                alt="Shop Image"
-                class="shop-cover-image"
-                @error="onDisplayShopImageError"
-              />
+              <img v-if="shop.img_url" :src="getShopImageUrl(shop.img_url)" alt="Shop Image" class="shop-cover-image" />
               <div v-else class="shop-cover-placeholder">
                 <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#94a3b8" stroke-width="1.5">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>

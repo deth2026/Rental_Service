@@ -237,14 +237,7 @@ const handleLogin = async () => {
         : responseData.errors[firstField]
       : '';
     const apiMessage = fieldMessage || responseData?.message;
-    const rawMessage = String(error?.message || '');
-    const isNetworkError =
-      !error?.response &&
-      (rawMessage.toLowerCase().includes('network') || rawMessage.toLowerCase().includes('fetch'));
-    const networkMessage =
-      'Unable to reach the server. Please make sure the backend is running and the API URL is correct.';
-    generalError.value =
-      apiMessage || (isNetworkError ? networkMessage : '') || error.message || 'Invalid email or password';
+    generalError.value = apiMessage || error.message || 'Invalid email or password';
   } finally {
     isLoading.value = false;
   }

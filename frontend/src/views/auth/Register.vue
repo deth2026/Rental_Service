@@ -1,5 +1,5 @@
 <template>
-  <div class="container" style="min-height: 130vh">
+  <div class="container" style="min-height: 100vh">
     <!-- LEFT SIDE -->
     <div class="left">
       <div class="overlay">
@@ -100,10 +100,10 @@
         <!-- Error Message -->
         <div
           class="message-block error"
-          v-if="(Object.keys(errors).length > 0 || generalError) && !successMessage"
+          v-if="Object.keys(errors).length > 0 && !successMessage"
         >
           <span class="message-icon">✗</span>
-          <span class="message-text">{{ generalError || 'Please fix errors below to continue.' }}</span>
+          <span class="message-text">Please fix errors below to continue.</span>
         </div>
 
         <form @submit.prevent="handleRegister" novalidate>
@@ -317,7 +317,6 @@ const router = useRouter();
 const route = useRoute();
 const isLoading = ref(false);
 const errors = ref({});
-const generalError = ref("");
 const successMessage = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
@@ -372,7 +371,6 @@ const validateForm = () => {
 };
 
 const handleRegister = async () => {
-  generalError.value = "";
   if (!validateForm()) {
     return;
   }
@@ -380,7 +378,6 @@ const handleRegister = async () => {
   isLoading.value = true;
   successMessage.value = "";
   errors.value = {};
-  generalError.value = "";
 
   try {
     const payload = {
@@ -392,41 +389,61 @@ const handleRegister = async () => {
       role: selectedRole.value || 'customer',
     };
 
-    await registerUser(payload);
+    console.log("Registering with payload:", payload);
 
-    form.fullName = "";
-    form.email = "";
-    form.phone = "";
-    form.password = "";
-    form.confirmPassword = "";
-    generalError.value = "";
+    const requestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    };
 
-    successMessage.value = "Registration successful! Redirecting to login...";
-    setTimeout(() => {
-      router.push("/login");
-    }, 1500);
+    // Try /api/register first (points to AuthController)
+    let response = await fetch("/api/register", requestInit);
+    console.log("Response status:", response.status);
+    
+    // If 404, try /api/users/register as fallback
+    if (response.status === 404) {
+      response = await fetch("/api/users/register", requestInit);
+      console.log("Fallback response status:", response.status);
+    }
+
+    const data = await response.json().catch(() => ({}));
+    console.log("Response data:", data);
+
+    if (response.ok) {
+      // Reset form
+      form.fullName = "";
+      form.email = "";
+      form.phone = "";
+      form.password = "";
+      form.confirmPassword = "";
+
+      // Show success message and redirect to login
+      successMessage.value = "Registration successful! Redirecting to login...";
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+    } else {
+      // Handle validation errors from backend
+      if (data.errors) {
+        const newErrors = {};
+        Object.keys(data.errors).forEach((field) => {
+          newErrors[field === "name" ? "fullName" : field] =
+            Array.isArray(data.errors[field]) 
+              ? data.errors[field][0] 
+              : data.errors[field];
+        });
+        errors.value = newErrors;
+      } else {
+        errors.value.email = data.message || "Registration failed. Please try again.";
+      }
+    }
   } catch (error) {
     console.error("Registration error:", error);
-    const responseData = error?.response?.data;
-    const responseText = typeof responseData === "string" ? responseData : "";
-    const responseMessage = typeof responseData === "object" ? responseData?.message || "" : "";
-    const firstField = responseData?.errors ? Object.keys(responseData.errors)[0] : null;
-    const fieldMessage = firstField ? responseData?.errors?.[firstField]?.[0] : null;
-    const proxyConnectionError =
-      responseText.includes("ECONNREFUSED") ||
-      responseText.includes("proxy error") ||
-      responseText.includes("connect ECONNREFUSED") ||
-      responseMessage.includes("ECONNREFUSED") ||
-      responseMessage.includes("proxy error") ||
-      responseMessage.includes("connect ECONNREFUSED") ||
-      error?.message === "Failed to fetch";
-
-    generalError.value =
-      fieldMessage ||
-      responseData?.message ||
-      (proxyConnectionError ? "Cannot reach backend server. Start Laravel server on http://127.0.0.1:8000." : "") ||
-      error.message ||
-      "Network error. Please check if backend is running.";
+    errors.value.email = error.message || "Network error. Please check if backend is running.";
   } finally {
     isLoading.value = false;
   }
