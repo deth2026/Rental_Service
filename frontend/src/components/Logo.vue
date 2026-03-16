@@ -5,16 +5,15 @@
     :class="[`app-logo--${theme}`, `app-logo--${size}`]"
     aria-label="Chong Choul"
   >
-    <span class="app-logo__mark" aria-hidden="true">
-      <img class="app-logo__img" :src="logoUrl" alt="" />
-    </span>
-
     <span class="app-logo__text">
       <span class="app-logo__name" :class="{ 'app-logo__name--stacked': stacked }">
         <span class="brand-main">CHONG</span>
         <span class="brand-accent">CHOUL</span>
       </span>
       <span v-if="showTagline" class="app-logo__tagline">{{ tagline }}</span>
+    </span>
+    <span class="app-logo__mark" aria-hidden="true">
+      <img class="app-logo__img" :src="logoUrl" alt="" />
     </span>
   </RouterLink>
 </template>

@@ -176,9 +176,54 @@
 }
 
 .hero {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  margin-bottom: 20px;
-  background: #0f172a;
+  min-height: 560px;
+  
+  position: relative;
+  background:
+    url('https://i.pinimg.com/1200x/ed/bf/73/edbf7353393cc3d039792dc89a0dd4b6.jpg') center / cover no-repeat;
+}
+
+.hero-overlay {
+  width: 100%;
+  min-height: 560px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.hero-content {
+  width: min(1140px, 100%);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  color: #47d3c0;
+}
+
+.hero-content h1 {
+  font-size: 60px;
+  line-height: 1.15;
+  color: rgb(251, 252, 252);
+  text-align: center;
+  margin: 0;
+}
+
+.hero-content h1 .hero-line {
+  display: block;
+  white-space: nowrap;
+  color: #ffffff;
+  text-align: center;
+}
+
+.hero-content h1 span {
+  color: #00d4ff;
 }
 
 .hero-slider {
