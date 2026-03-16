@@ -1,66 +1,94 @@
-<script setup>
-import { useRouter } from "vue-router";
-import "../css/chooserole.css";
-
-const router = useRouter();
-
-const selectRole = (role) => {
-  localStorage.setItem("selectedRole", role);
-  router.push(`/register?role=${role}`);
-};
-</script>
 <template>
-  <main class="role-page">
-    <section class="role-box">
-      <h1>Welcome to ChooseRole</h1>
-      <p class="subtitle">Select your role to continue</p>
+  <div class="choose-role-container">
+    <div class="brand-section">
+      <div class="logo">
+        <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect width="120" height="120" rx="20" fill="url(#bgGrad)"/>
+          <g transform="translate(30, 45)">
+            <path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/>
+            <path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/>
+            <g transform="translate(15, -5)">
+              <rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/>
+              <circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/>
+              <circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/>
+              <path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <h1 class="brand-name">Chong Choul</h1>
+      <p class="brand-subtitle">Vehicle Rental Platform</p>
+    </div>
 
-      <div class="roles">
-        <button type="button" class="role-card" @click="selectRole('customer')">
-          <span class="icon-wrap user-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path
-                d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.314 0-6 2.015-6 4.5a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1C18 16.015 15.314 14 12 14Z"
-              />
-            </svg>
-          </span>
-          <span class="role-title">Customer</span>
-          <span class="role-desc">Browse and book vehicles for your needs</span>
-        </button>
+    <div class="role-selector">
+      <div class="header">
+        <h2>Choose your role</h2>
+        <p>Join as a customer or shop owner</p>
+      </div>
 
-        <button
-          type="button"
-          class="role-card"
-          @click="selectRole('shop_owner')"
-        >
-          <span class="icon-wrap owner-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path
-                d="M4 10h16v9a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1v-9Zm1.2-5h13.6l1.2 3H4l1.2-3ZM11 20v-3h2v3h-2Z"
-              />
-            </svg>
-          </span>
-          <span class="role-title">Shop Owner</span>
-          <span class="role-desc">Manage your vehicles and shop</span>
-        </button>
+      <div class="role-cards">
+        <div class="role-card customer" @click="selectRole('customer')">
+          <div class="role-icon">👤</div>
+          <h3>Customer</h3>
+          <p>Rent vehicles for your trips and adventures</p>
+          <div class="role-features">
+            <span>📱 Browse catalog</span>
+            <span>🚗 Book instantly</span>
+            <span>💳 Easy payments</span>
+          </div>
+        </div>
 
-        <button type="button" class="role-card" @click="selectRole('admin')">
-          <span class="icon-wrap admin-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <path
-                d="m19.43 12.98 1.34-1.03a.8.8 0 0 0 .2-1.04l-1.27-2.2a.8.8 0 0 0-.97-.36l-1.58.64a6.8 6.8 0 0 0-1.12-.65l-.24-1.67a.8.8 0 0 0-.79-.67h-2.54a.8.8 0 0 0-.79.67l-.24 1.67c-.39.16-.77.37-1.12.65l-1.58-.64a.8.8 0 0 0-.97.36l-1.27 2.2a.8.8 0 0 0 .2 1.04l1.34 1.03a6.85 6.85 0 0 0 0 1.3l-1.34 1.03a.8.8 0 0 0-.2 1.04l1.27 2.2a.8.8 0 0 0 .97.36l1.58-.64c.35.28.73.49 1.12.65l.24 1.67a.8.8 0 0 0 .79.67h2.54a.8.8 0 0 0 .79-.67l.24-1.67c.39-.16.77-.37 1.12-.65l1.58.64a.8.8 0 0 0 .97-.36l1.27-2.2a.8.8 0 0 0-.2-1.04l-1.34-1.03c.06-.43.06-.87 0-1.3ZM12 15.2a3.2 3.2 0 1 1 0-6.4 3.2 3.2 0 0 1 0 6.4Z"
-              />
-            </svg>
-          </span>
-          <span class="role-title">Admin</span>
-          <span class="role-desc">Full system administration access</span>
+        <div class="role-card shop" @click="selectRole('shop_owner')">
+          <div class="role-icon">🏪</div>
+          <h3>Shop Owner</h3>
+          <p>List your vehicles and manage bookings</p>
+          <div class="role-features">
+            <span>🚙 Add vehicles</span>
+            <span>📅 Manage bookings</span>
+            <span>💰 Receive payments</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="continue-btn" v-if="selectedRole">
+        <button @click="continueRegistration" :disabled="!selectedRole">
+          Continue as {{ selectedRole === 'customer' ? 'Customer' : 'Shop Owner' }}
         </button>
       </div>
 
-      <p class="hint">
-        Choose your role to access the appropriate registration page
-      </p>
-      <RouterLink class="back-home" to="/">Back to Home</RouterLink>
-    </section>
-  </main>
+      <div class="have-account">
+        <p>Already have an account? <RouterLink to="/login">Sign in</RouterLink></p>
+      </div>
+    </div>
+  </div>
 </template>
+
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const selectedRole = ref('')
+
+const selectRole = (role) => {
+  selectedRole.value = role
+}
+
+const continueRegistration = () => {
+  if (selectedRole.value) {
+    localStorage.setItem('selectedRole', selectedRole.value)
+    router.push('/register')
+  }
+}
+</script>
+
+<style scoped>
+@import '../assets/chooserole.css';
+</style>
+

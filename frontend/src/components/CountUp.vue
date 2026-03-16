@@ -1,4 +1,5 @@
 <script setup>
+<<<<<<< HEAD
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 const props = defineProps({
@@ -72,3 +73,24 @@ const text = computed(() => {
   <span>{{ text }}</span>
 </template>
 
+=======
+import { computed } from 'vue'
+
+const props = defineProps({
+  value: {
+    type: [Number, String],
+    default: 0,
+  },
+  formatter: {
+    type: Function,
+    default: (val) => val,
+  },
+})
+
+const displayed = computed(() => props.formatter(Number(props.value) || 0))
+</script>
+
+<template>
+  <span>{{ displayed }}</span>
+</template>
+>>>>>>> 8271724c22765314e6947ff91487c4007960f0d9

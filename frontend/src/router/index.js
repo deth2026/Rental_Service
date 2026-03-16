@@ -6,6 +6,7 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
+<<<<<<< HEAD
 
 import UserDashboard from '../views/user/Dashboard.vue';
 import UserBookings from '../views/user/Bookings.vue';
@@ -16,6 +17,12 @@ import VehiclesByShop from '../views/user/VehiclesByShop.vue';
 import ViewDetail from '../views/user/ViewDetail.vue';
 
 import AdminLayout from '../views/admin/AdminLayout.vue';
+=======
+import UserDashboard from '../views/User/Dashboard.vue';
+import UserBookings from '../views/User/Booking.vue';
+import PromotionView from '../views/User/Promotion.vue';
+import SettingUser from '../views/User/Setting_user.vue';
+>>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import AdminShopManagement from '../views/admin/ShopManagement.vue';
 import AdminUserManagement from '../views/admin/UserManagement.vue';
@@ -89,8 +96,8 @@ const router = createRouter({
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] },
     },
     {
-      path: '/bookings',
-      name: 'user-bookings',
+      path: '/bookings/:id?',
+      name: 'user-booking',
       component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] },
     },
@@ -133,6 +140,12 @@ const router = createRouter({
       ],
     },
 
+    {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('../views/admin/User_management.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] }
+    },
     {
       path: '/vehicles',
       name: 'vehicles-by-shop',
