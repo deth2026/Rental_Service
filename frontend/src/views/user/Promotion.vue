@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
-import Logo from '@/components/Logo.vue'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
@@ -106,9 +105,7 @@ const openProfile = () => {
   router.push('/user/profile')
 }
 
-const showLogoutConfirm = ref(false)
-const handleLogout = () => { showLogoutConfirm.value = true }
-const confirmLogout = async () => {
+const handleLogout = async () => {
   await userService.logout()
   localStorage.removeItem('auth_token')
   localStorage.removeItem('token')
@@ -141,6 +138,7 @@ const titleFromCode = (code, category) => {
     .replace(/[_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+
 
   if (cleaned) {
     return cleaned.replace(/\b\w/g, (char) => char.toUpperCase())
@@ -272,10 +270,14 @@ const copyCouponCode = async (code) => {
 onMounted(fetchPromotions)
 </script>
 
-  <template>
-   <div class="promotions">
-     <header class="topbar">
-       <Logo class="brand" to="/view_shop" size="md" />
+<template>
+  <div class="promotion-page">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <span>Chong Choul</span>
+      </div>
+
 
       <nav class="nav-links">
         <button
@@ -383,16 +385,6 @@ onMounted(fetchPromotions)
         </div>
       </section>
     </main>
-
-    <ConfirmModal
-      v-model="showLogoutConfirm"
-      title="Logout"
-      message="Are you sure you want to logout?"
-      cancel-text="Cancel"
-      confirm-text="Yes"
-      variant="danger"
-      @confirm="confirmLogout"
-    />
   </div>
 
   <!-- Common Footer -->
@@ -426,6 +418,7 @@ onMounted(fetchPromotions)
   backdrop-filter: blur(14px);
 }
 
+
 .brand {
   display: flex;
   align-items: center;
@@ -441,13 +434,6 @@ onMounted(fetchPromotions)
   height: 42px;
   border-radius: 14px;
   color: #fff;
-}
-
-.brand-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
 }
 
 .nav-links {
@@ -665,6 +651,7 @@ onMounted(fetchPromotions)
   border-color: #1d6fff;
   color: #fff;
 }
+
 
 .status-card {
   padding: 34px 20px;

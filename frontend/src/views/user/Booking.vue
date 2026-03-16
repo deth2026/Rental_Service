@@ -1,1055 +1,950 @@
+<script setup>
+import { computed, ref } from 'vue'
+import { vehicleService } from '../../services/database.js'
+import CommonFooter from '../../components/CommonFooter.vue'
+
+const activeTab = ref('all')
+const searchQuery = ref('')
+const showDetailModal = ref(false)
+const detailLoading = ref(false)
+const detailError = ref('')
+const selectedBooking = ref(null)
+const selectedVehicle = ref(null)
+
+const bookings = ref([
+  {
+    id: 1,
+    vehicle_id: 101,
+    vehicle_name: 'BOO COO 2008',
+    booking_code: 'BK-20260307-0008',
+    shop_name: 'City Bike & Car Rental',
+    start_date: '2026-03-07',
+    end_date: '2026-03-08',
+    total_price: 20,
+    status: 'pending',
+    image: 'https://images.unsplash.com/photo-1493238792000-8113da705763?auto=format&fit=crop&w=700&q=80',
+  },
+  {
+    id: 2,
+    vehicle_id: 102,
+    vehicle_name: 'Toyota Corolla Cross 2023',
+    booking_code: 'BK-20260307-0007',
+    shop_name: 'City Bike & Car Rental',
+    start_date: '2026-03-08',
+    end_date: '2026-03-14',
+    total_price: 525,
+    status: 'confirmed',
+    image: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=700&q=80',
+  },
+])
+
+const filteredBookings = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  return bookings.value.filter((b) => {
+    const statusMatch = activeTab.value === 'all' || b.status === activeTab.value
+    if (!statusMatch) return false
+    if (!q) return true
+
+    const haystack = [
+      b.vehicle_name,
+      b.booking_code,
+      b.shop_name,
+      b.status,
+      formatDate(b.start_date),
+      formatDate(b.end_date),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+
+    return haystack.includes(q)
+  })
+})
+
+const getStatusClass = (status) => {
+  const statusMap = {
+    pending: 'status-pending',
+    confirmed: 'status-confirmed',
+    completed: 'status-completed',
+    cancelled: 'status-cancelled',
+  }
+  return statusMap[status?.toLowerCase()] || 'status-pending'
+}
+
+const getStatusLabel = (status) => {
+  const labels = {
+    pending: 'Pending',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+  }
+  return labels[status?.toLowerCase()] || 'Pending'
+}
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+const formatCurrency = (value) => {
+  const amount = Number(value || 0)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+const getTotalDays = (start, end) => {
+  if (!start || !end) return 0
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const diffTime = Math.abs(endDate - startDate)
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1
+}
+
+const getBookingImage = (booking) => {
+  if (!booking) return ''
+  return booking.vehicle_image || booking.image_url || booking.image || ''
+}
+
+const normalizeVehicle = (vehicle) => {
+  if (!vehicle) return null
+  return {
+    id: vehicle.id || null,
+    brand: vehicle.brand || '',
+    model: vehicle.model || '',
+    category: vehicle.category || vehicle.type || '',
+    year: vehicle.year || '',
+    fuel_type: vehicle.fuel_type || vehicle.fuel || '',
+    transmission: vehicle.transmission || '',
+    seats: vehicle.seats || '',
+    plate: vehicle.plate_number || vehicle.plate || '',
+    price_per_day: Number(vehicle.price_per_day || vehicle.price || 0),
+    status: vehicle.status || '',
+    image_url: vehicle.image_url || vehicle.image || '',
+    description: vehicle.description || '',
+  }
+}
+
+const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
+
+const fetchVehicleFromApi = async (id) => {
+  const token = getStoredToken()
+  const headers = { Accept: 'application/json' }
+  if (token) headers.Authorization = `Bearer ${token}`
+
+
+  const response = await fetch(`/api/vehicles/${id}`, { headers })
+  if (!response.ok) {
+    throw new Error('Failed to load vehicle from API')
+  }
+  const data = await response.json()
+  return normalizeVehicle(data?.data || data)
+}
+
+const closeDetails = () => {
+  showDetailModal.value = false
+  selectedBooking.value = null
+  selectedVehicle.value = null
+  detailError.value = ''
+}
+
+const openDetails = async (booking) => {
+  selectedBooking.value = booking
+  selectedVehicle.value = null
+  detailError.value = ''
+  detailLoading.value = true
+
+  try {
+    const vehicleId = Number(booking?.vehicle_id || 0)
+    if (vehicleId) {
+      try {
+        selectedVehicle.value = await fetchVehicleFromApi(vehicleId)
+      } catch {
+        selectedVehicle.value = normalizeVehicle(await vehicleService.getVehicle(vehicleId))
+      }
+    } else {
+      detailError.value = 'Vehicle ID not found for this booking.'
+    }
+  } catch {
+    detailError.value = 'Unable to load vehicle details.'
+  } finally {
+    detailLoading.value = false
+    showDetailModal.value = true
+  }
+}
+
+const detailTitle = computed(() => {
+  if (selectedVehicle.value?.brand || selectedVehicle.value?.model) {
+    return `${selectedVehicle.value.brand || ''} ${selectedVehicle.value.model || ''}`.trim()
+  }
+  return selectedBooking.value?.vehicle_name || 'Vehicle'
+})
+
+const detailDays = computed(() => {
+  if (!selectedBooking.value) return 1
+  return getTotalDays(selectedBooking.value.start_date, selectedBooking.value.end_date) || 1
+})
+
+const detailPricePerDay = computed(() => {
+  const fromVehicle = Number(selectedVehicle.value?.price_per_day || 0)
+  if (fromVehicle > 0) return fromVehicle
+  const total = Number(selectedBooking.value?.total_price || 0)
+  const days = Number(detailDays.value || 1)
+  return days > 0 ? total / days : total
+})
+
+const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_price || 0))
+</script>
+
 <template>
-  <div class="booking-checkout-page">
-    <header class="topbar">
-      <div class="topbar-inner">
-        <Logo class="brand" to="/view_shop" size="sm" />
+  <div class="bookings-page">
+    <section class="bookings-panel">
+      <div class="panel-head">
+        <h1>My Bookings</h1>
+        <p>View and manage your vehicle rentals.</p>
+      </div>
 
-        <nav class="nav-links">
-          <button
-            v-for="item in navItems"
-            :key="item"
-            class="btn-reset nav-link"
-            :class="{ active: activeNav === item }"
-            @click="setActiveNav(item)"
-          >
-            {{ item }}
+      <div class="controls-row">
+        <div class="tabs-row">
+          <button class="tab-btn" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">All Bookings</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'pending' }" @click="activeTab = 'pending'">Pending</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'confirmed' }" @click="activeTab = 'confirmed'">Confirmed</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'completed' }" @click="activeTab = 'completed'">Completed</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'cancelled' }" @click="activeTab = 'cancelled'">Cancelled</button>
+        </div>
+
+        <div class="search-row">
+          <input
+            v-model="searchQuery"
+            type="text"
+            class="search-input"
+            placeholder="Search booking, shop, status, or date..."
+          />
+          <button type="button" class="search-btn" aria-label="Search">
+            <svg class="search-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+            </svg>
           </button>
-        </nav>
-
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">
-            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-            <span v-else>{{ userInitials }}</span>
-          </button>
-          <button class="btn-reset logout-btn" @click="handleLogout">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            <span>Logout</span>
-          </button>
         </div>
       </div>
-    </header>
+    </section>
 
-    <div class="page-container">
-
-      <div class="page-heading-row">
-        <h1>Checkout</h1>
-        <span class="step-pill">Step 2 of 3</span>
+    <section class="booking-list-wrap">
+      <div v-if="filteredBookings.length === 0" class="empty-state">
+        No bookings found for your search.
       </div>
-
-      <div class="checkout-progress" aria-hidden="true">
-        <span class="progress-value"></span>
-      </div>
-
-      <p v-if="isLoading" class="page-subtitle">Loading vehicle details...</p>
-      <p v-else-if="loadingError" class="page-subtitle">{{ loadingError }}</p>
-      <p v-else class="page-subtitle">
-        Securely complete your rental booking for the {{ rental.title }}
-      </p>
-
-      <div class="checkout-layout">
-        <aside class="sidebar">
-          <div class="card summary-card">
-            <div class="motorcycle-image">
-              <img
-                :src="vehicleImage"
-                :alt="vehicleName"
-              />
-              <span class="vehicle-tag">{{ vehicleTag }}</span>
-            </div>
-
-            <h2 class="item-title">{{ rental.title }}</h2>
-            <p class="item-location">{{ rental.location }}</p>
-
-            <div class="detail-list">
-              <div class="row">
-                <span class="label">Rental Period</span>
-                <span class="value">{{ rental.period || "Select dates below" }}</span>
-              </div>
-              <div class="row">
-                <span class="label">Rider Details</span>
-                <span class="value">{{ rental.riders }}</span>
-              </div>
-              <div class="row">
-                <span class="label">Daily Rate</span>
-                <span class="value">${{ rental.dailyRate.toFixed(2) }}/day</span>
-              </div>
-            </div>
-
-          <div class="pricing-list">
-            <div class="row">
-              <span>Daily Rate x {{ calculateDays() }} day(s) x {{ riderCount }} rider(s)</span>
-              <span>${{ rental.subtotal.toFixed(2) }}</span>
-            </div>
-              <div class="row">
-                <span>Insurance</span>
-                <span>${{ rental.insurance.toFixed(2) }}</span>
-              </div>
-              <div class="row">
-                <span>Taxes & Fees</span>
-                <span>${{ rental.taxes.toFixed(2) }}</span>
-              </div>
-              <hr class="dashed-divider" />
-              <div class="row total-row">
-                <span>Total Amount</span>
-                <span class="total-price">${{ totalAmount.toFixed(2) }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="card promo-card">
-            <h3>Have a promo code?</h3>
-            <div class="promo-input-group">
-              <input
-                type="text"
-                placeholder="Enter code"
-                v-model="promoCode"
-              />
-              <button class="btn-secondary" type="button">Apply</button>
-            </div>
-          </div>
-
-          <div class="card encryption-card">
-            <h4>Secure Transaction</h4>
-            <p>
-              Your payment is encrypted and protected. We do not store your full
-              payment details.
-            </p>
-          </div>
-        </aside>
-
-        <main class="payment-main">
-          <div class="card checkout-form-card">
-            <div class="checkout-header">
-              <h2>{{ methodTitle }}</h2>
-              <p>{{ methodDescription }}</p>
-            </div>
-
-
-            <div class="form-divider">
-              <span>OR PAY WITH CARD</span>
-            </div>
-
-            <div class="payment-tabs">
-              <button
-                class="tab"
-                :class="{ active: method === 'card' }"
-                type="button"
-                @click="method = 'card'"
-              >
-                Credit Card
-              </button>
-              <button
-                class="tab"
-                :class="{ active: method === 'qr' }"
-                type="button"
-                @click="method = 'qr'"
-              >
-                QR Code
-              </button>
-            </div>
-
-            <div class="date-selection">
-              <h3>Rental dates</h3>
-              <div class="date-inputs">
-                <div class="input-group">
-                  <label>Pick-up</label>
-                  <input
-                    type="date"
-                    v-model="rental.startDate"
-                    :min="minDate"
-                    @change="validateDates"
-                    required
-                  />
-                </div>
-                <div class="input-group">
-                  <label>Drop-off</label>
-                  <input
-                    type="date"
-                    v-model="rental.endDate"
-                    :min="rental.startDate || minDate"
-                    @change="validateDates"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="date-summary" v-if="rental.startDate && rental.endDate">
-                <span class="days-count">{{ calculateDays() }} days</span>
-                <span class="daily-rate">${{ rental.dailyRate.toFixed(2) }}/day</span>
-              </div>
-
-              <p class="date-error" v-if="dateError">{{ dateError }}</p>
-            </div>
-
-            <form
-              v-if="method === 'card'"
-              class="card-details-form"
-              autocomplete="on"
-              @submit.prevent="handlePayment"
-            >
-              <div class="input-group">
-                <label>Cardholder Name</label>
-                <input type="text" placeholder="Johnathan Doe" required />
-              </div>
-
-              <div class="input-group">
-                <label>Card Number</label>
-                <input
-                  type="text"
-                  name="cc-number"
-                  autocomplete="cc-number"
-                  inputmode="numeric"
-                  placeholder="0000 0000 0000 0000"
-                  required
-                />
-              </div>
-
-              <div class="input-row">
-                <div class="input-group">
-                  <label>Expiry Date</label>
-                  <input
-                    type="text"
-                    name="cc-exp"
-                    autocomplete="cc-exp"
-                    inputmode="numeric"
-                    placeholder="MM / YY"
-                    pattern="(0[1-9]|1[0-2])\s?\/\s?\d{2}"
-                    required
-                  />
-                </div>
-                <div class="input-group">
-                  <label>CVV / CVC</label>
-                  <input
-                    type="password"
-                    name="cc-csc"
-                    autocomplete="cc-csc"
-                    inputmode="numeric"
-                    placeholder="***"
-                    maxlength="3"
-                    pattern="\d{3}"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="secure-info-box">
-                <p>
-                  Your payment is processed securely via 256-bit SSL encryption.
-                  We never store your full card details.
-                </p>
-              </div>
-
-              <button
-                type="submit"
-                class="btn-primary-pay"
-                :disabled="!isFormValid"
-              >
-                Pay ${{ totalAmount.toFixed(2) }} Now
-              </button>
-            </form>
-
-            <div v-if="method === 'bank'" class="bank-transfer-payment">
-              <div class="bank-header">
-                <h3>Bank Transfer Payment</h3>
-                <p>Transfer funds directly to our bank account.</p>
-              </div>
-
-              <div class="bank-info-card">
-                <div class="bank-row">
-                  <span class="bank-label">Account Name</span>
-                  <span class="bank-value">Moto Rental Pty Ltd</span>
-                </div>
-                <div class="bank-row">
-                  <span class="bank-label">Bank</span>
-                  <span class="bank-value">National Australia Bank</span>
-                </div>
-                <div class="bank-row">
-                  <span class="bank-label">BSB</span>
-                  <span class="bank-value">082-123</span>
-                </div>
-                <div class="bank-row">
-                  <span class="bank-label">Account</span>
-                  <span class="bank-value">1234 5678 9012</span>
-                </div>
-                <div class="bank-row">
-                  <span class="bank-label">Reference</span>
-                  <span class="bank-value reference">{{ paymentId }}</span>
-                </div>
-              </div>
-
-              <div class="transfer-instructions">
-                <h4>How to pay</h4>
-                <ol>
-                  <li>Open your bank app and start a transfer.</li>
-                  <li>Send exactly ${{ totalAmount.toFixed(2) }}.</li>
-                  <li>Use <strong>{{ paymentId }}</strong> as your reference.</li>
-                  <li>Click confirm below after transfer.</li>
-                </ol>
-              </div>
-
-              <div class="important-note">
-                <div class="note-content">
-                  Payment verification may take 1-2 business days.
-                </div>
-              </div>
-
-              <button
-                type="button"
-                class="btn-primary-pay"
-                :disabled="!isFormValid"
-                @click="handleBankTransfer"
-              >
-                Confirm bank transfer
-              </button>
-            </div>
-
-            <div v-if="method === 'qr'" class="qr-payment">
-              <div class="qr-payment-card">
-                <div class="qr-header">
-                  <h3>QR Code Payment</h3>
-                  <p>Pay directly with your banking app.</p>
-                </div>
-
-                <div class="qr-amount-section">
-                  <span class="amount-label">Total Amount</span>
-                  <span class="amount-value">${{ totalAmount.toFixed(2) }}</span>
-                </div>
-
-                <div class="qr-code-section">
-                  <div v-if="!showQR" class="qr-placeholder">
-                    <h4>Ready to generate your QR code</h4>
-                    <p>Click below and scan it with your mobile banking app.</p>
-
-                    <button
-                      type="button"
-                      class="qr-generate-btn"
-                      :disabled="!isFormValid"
-                      @click="generateQRCode"
-                    >
-                      Generate QR Code
-                    </button>
-                  </div>
-
-                  <div v-else class="qr-active">
-                    <img
-                      v-if="qrCodeUrl"
-                      :src="qrCodeUrl"
-                      alt="Payment QR Code"
-                      class="qr-code-image"
-                    />
-
-                    <p class="payment-reference">Reference: {{ paymentId }}</p>
-
-                    <div class="timer-pill">Code expires in 14:59</div>
-
-                    <div class="steps-grid" style="margin-bottom: 20px;">
-                      <div class="step-item">
-                        <span class="step-number">1</span>
-                        <p>Open your banking app</p>
-                      </div>
-                      <div class="step-item">
-                        <span class="step-number">2</span>
-                        <p>Scan the QR code</p>
-                      </div>
-                      <div class="step-item">
-                        <span class="step-number">3</span>
-                        <p>Confirm payment of ${{ totalAmount.toFixed(2) }}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      class="btn-primary-pay"
-                      @click="handlePayment"
-                    >
-                      I have paid
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="pci-footer">
-            <span class="pci-check">PCI Compliant</span>
-          </div>
-        </main>
-      </div>
-    </div>
-
-    <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <Logo class="booking-footer-logo" theme="light" size="md" :showTagline="false" />
-          <p>Secure, fast, and transparent bookings across Cambodia.</p>
-          <div class="footer-badges">
-            <span class="badge-pill">Secure Checkout</span>
-            <span class="badge-pill">PCI Compliant</span>
-          </div>
-        </div>
-        <div class="footer-links">
-          <h4>Support</h4>
-          <p>Help Center</p>
-          <p>Cancel your booking</p>
-          <p>Contact Us</p>
-        </div>
-        <div class="footer-links">
-          <h4>Terms &amp; Privacy</h4>
-          <p>Terms of Service</p>
-          <p>Privacy Policy</p>
-          <p>Cookie Policy</p>
-        </div>
-        <div class="footer-links">
-          <h4>Company</h4>
-          <p>About</p>
-          <p>Partners</p>
-          <p>Careers</p>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Chong Choul. All rights reserved.</span>
-        <div class="footer-bottom-links">
-          <span>Security</span>
-          <span>Accessibility</span>
-          <span>Legal</span>
-        </div>
-      </div>
-    </footer>
-
-    <div
-      v-if="showSuccessModal"
-      class="success-modal-overlay"
-      @click="closeSuccessModal"
-    >
-      <div class="success-modal" @click.stop>
-        <h2>Payment Successful</h2>
-        <p>Your booking has been confirmed.</p>
-
-        <div class="transaction-receipt">
-          <div class="receipt-row">
-            <span class="label">Booking ID</span>
-            <span class="value">{{ bookingId }}</span>
-          </div>
-          <div class="receipt-row">
-            <span class="label">Transaction ID</span>
-            <span class="value">{{ transactionId }}</span>
-          </div>
-          <div class="receipt-row">
-            <span class="label">Payment Method</span>
-            <span class="value">{{ receiptPaymentLabel }}</span>
-          </div>
-          <div class="receipt-row">
-            <span class="label">Amount Paid</span>
-            <span class="value amount">${{ totalAmount.toFixed(2) }}</span>
-          </div>
-          <div class="receipt-row">
-            <span class="label">Date</span>
-            <span class="value">{{ transactionDateTime }}</span>
-          </div>
+      <article v-for="booking in filteredBookings" :key="booking.id" class="booking-card">
+        <div class="booking-image">
+          <img :src="getBookingImage(booking)" :alt="booking.vehicle_name" class="vehicle-img" />
         </div>
 
-        <div class="modal-actions">
-          <button class="btn-download" type="button" @click="downloadReceipt">
-            Download receipt
-          </button>
-          <button class="btn-close" type="button" @click="closeSuccessModal">
-            Close
-          </button>
+
+        <div class="booking-info">
+          <div class="booking-header">
+            <h3 class="vehicle-name">{{ booking.vehicle_name }}</h3>
+            <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
+          </div>
+
+          <p><span class="meta-label">Booking ID:</span> {{ booking.booking_code }}</p>
+          <p><span class="meta-label">Shop:</span> {{ booking.shop_name }}</p>
+          <p>
+            <span class="meta-label">Date:</span>
+            {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
+            ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
+          </p>
+
+          <button class="details-btn" @click="openDetails(booking)">View Details</button>
+        </div>
+
+        <div class="booking-price">
+          <span class="price-value">{{ formatCurrency(booking.total_price) }}</span>
+        </div>
+      </article>
+    </section>
+
+    <div v-if="showDetailModal" class="detail-overlay" @click.self="closeDetails">
+      <div class="detail-modal">
+        <button class="detail-close" type="button" @click="closeDetails" aria-label="Close details">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+          </svg>
+        </button>
+
+        <div v-if="detailError" class="detail-state detail-error">{{ detailError }}</div>
+        <div v-else-if="selectedVehicle" class="detail-content">
+          <div class="detail-image-wrap">
+            <img
+              class="detail-image"
+              :src="getBookingImage(selectedBooking) || selectedVehicle.image_url"
+              :alt="detailTitle"
+            />
+          </div>
+
+          <div class="detail-title-row">
+            <div>
+              <h2>{{ detailTitle }}</h2>
+              <p class="detail-booking-code">{{ selectedBooking?.booking_code || `BK-${selectedBooking?.id || ''}` }}</p>
+            </div>
+            <span class="detail-status-badge" :class="getStatusClass(selectedBooking?.status)">
+              {{ getStatusLabel(selectedBooking?.status) }}
+            </span>
+          </div>
+
+          <div class="detail-section">
+            <h3>Vehicle Details</h3>
+            <div class="detail-grid">
+              <div class="detail-item"><span>Type</span><strong>{{ selectedVehicle.category || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Year</span><strong>{{ selectedVehicle.year || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Brand</span><strong>{{ selectedVehicle.brand || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Model</span><strong>{{ selectedVehicle.model || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Fuel Type</span><strong>{{ selectedVehicle.fuel_type || 'N/A' }}</strong></div>
+              <div class="detail-item"><span>Transmission</span><strong>{{ selectedVehicle.transmission || 'N/A' }}</strong></div>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h3>Booking Details</h3>
+            <div class="detail-rows">
+              <div class="detail-row"><span>Shop</span><strong>{{ selectedBooking?.shop_name || 'N/A' }}</strong></div>
+              <div class="detail-row"><span>Rental Date</span><strong>{{ formatDate(selectedBooking?.start_date) }} - {{ formatDate(selectedBooking?.end_date) }}</strong></div>
+              <div class="detail-row"><span>Duration</span><strong>{{ detailDays }} day(s)</strong></div>
+            </div>
+          </div>
+
+
+          <div class="detail-section">
+            <h3>Payment Summary</h3>
+            <div class="detail-rows">
+              <div class="detail-row"><span>Price per day</span><strong>{{ formatCurrency(detailPricePerDay) }}</strong></div>
+              <div class="detail-row"><span>Days</span><strong>x {{ detailDays }}</strong></div>
+            </div>
+            <div class="detail-total-row">
+              <span>Total Amount</span>
+              <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
+            </div>
+          </div>
+
+          <p v-if="selectedVehicle.description" class="detail-description">{{ selectedVehicle.description }}</p>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>
 
-<script setup>
-import { computed, onMounted, ref, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
-import api from "@/services/api";
-import { userService } from "../../services/database.js";
-import Logo from "@/components/Logo.vue";
-import "../../assets/user/booking.css";
+<style scoped>
+@import "../../css/bookings.css";
+</style>
+.bookings-page {
+  min-height: 100vh;
+  background: #ffffff;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 40px 24px;
+  color: #102f56;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-// Navigation
-const router = useRouter();
-const route = useRoute();
+.bookings-panel {
+  background: #f7f9fc;
+  border: 1px solid #d3dce8;
+  border-radius: 14px;
+  padding: 16px 16px 14px;
+}
 
-// Header data from VehiclesByShop.vue
-const navItems = ['Home', 'Viewdetails', 'Bookings'];
-const activeNav = ref('Home');
-const actionMessage = ref('');
-const avatarLoadFailed = ref(false);
-const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
+.panel-head h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  line-height: 1.08;
+  color: #22232b;
+  letter-spacing: -0.02em;
+}
 
-const currentUser = computed(() => userService.getCurrentUser());
-const userDisplayName = computed(() => currentUser.value?.name || 'customer');
+.panel-head p {
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+  color: #385f89;
+}
 
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
+.controls-row {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
 
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
+.tabs-row {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
+.tab-btn {
+  border: none;
+  border-radius: 16px;
+  background: #dfe4ea;
+  color: #3f638d;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
 
-// Header functions
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.replace('/view_shop');
-    return;
+.tab-btn.active {
+  background: #39a9e1;
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(57, 169, 225, 0.35);
+}
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: min(340px, 100%);
+  max-width: 100%;
+  margin-left: auto;
+  flex: 0 0 auto;
+  height: 42px;
+  border-radius: 999px;
+  border: 2px solid #0b86c9;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: #ffffff;
+  color: #102f56;
+  border-radius: 0;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.search-input:focus {
+  box-shadow: none;
+}
+
+.search-btn {
+  border: none;
+  background: #f7fbff;
+  border-left: 2px solid #0b86c9;
+  color: #2f3a48;
+  width: 38px;
+  flex: 0 0 38px;
+  align-self: center;
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  line-height: 0;
+}
+
+.search-icon-svg {
+  width: 15px;
+  height: 15px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.search-row:focus-within {
+  box-shadow: 0 0 0 4px rgba(11, 134, 201, 0.22);
+}
+
+.booking-list-wrap {
+  margin-top: 12px;
+  background: #f7f9fc;
+  border: 1px solid #d3dce8;
+  border-radius: 14px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.empty-state {
+  border: 1px dashed #c9d3e0;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  color: #5d7698;
+  background: #eef2f7;
+}
+
+.booking-card {
+  display: grid;
+  grid-template-columns: 210px 1fr auto;
+  gap: 12px;
+  background: #eef2f7;
+  border: 1px solid #cfd8e4;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.booking-image {
+  width: 210px;
+  height: 128px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.vehicle-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.booking-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.92rem;
+  color: #4a6990;
+}
+
+.booking-info p {
+  margin: 0;
+}
+
+.booking-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vehicle-name {
+  margin: 0;
+  font-size: 1.55rem;
+  line-height: 1.1;
+  color: #0f2f5c;
+  font-weight: 800;
+}
+
+.status-pill {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.status-pending {
+  background: #f5dfbf;
+  color: #a25f15;
+}
+
+.status-confirmed {
+  background: #ccdaf2;
+  color: #1c4fcc;
+}
+
+.status-completed {
+  background: #d3f4df;
+  color: #0f8c4c;
+}
+
+.status-cancelled {
+  background: #f4cfd4;
+  color: #b11f38;
+}
+
+.meta-label {
+  color: #3f618a;
+  font-weight: 500;
+}
+
+.details-btn {
+  margin-top: 3px;
+  align-self: flex-start;
+  border: none;
+  border-radius: 12px;
+  background: #2f6eea;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+.booking-price {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+
+.price-value {
+  background: #f6d9dc;
+  color: #d42324;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 1.35rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.detail-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px;
+  z-index: 999;
+  overflow-y: auto;
+}
+
+.detail-modal {
+  width: min(640px, 100%);
+  max-height: none;
+  overflow: visible;
+  background: #f2f4f8;
+  border-radius: 14px;
+  border: 1px solid #d7e0ec;
+  padding: 14px;
+  position: relative;
+  margin: 8px 0;
+}
+
+.detail-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  color: #1d2f49;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.detail-close:hover {
+  background: #2f6eea;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(47, 110, 234, 0.35);
+  transform: translateY(-1px);
+}
+
+.detail-close:active {
+  background: #1f55c2;
+  color: #ffffff;
+  transform: scale(0.96);
+}
+
+.detail-close:focus-visible {
+  outline: 2px solid #2f6eea;
+  outline-offset: 2px;
+}
+
+.detail-close svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  display: block;
+}
+
+.detail-state {
+  padding: 18px;
+  border-radius: 12px;
+  background: #f2f6fb;
+  color: #405f85;
+}
+
+.detail-error {
+  background: #fdecec;
+  color: #b4232f;
+}
+
+.detail-content {
+  display: grid;
+  gap: 8px;
+  padding: 2px 4px 4px;
+}
+
+.detail-image-wrap {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #d3dce8;
+}
+
+.detail-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.detail-title-row h2 {
+  margin: 0;
+  color: #0d2a56;
+  font-size: 1.2rem;
+  line-height: 1.08;
+}
+
+.detail-booking-code {
+  margin: 6px 0 0;
+  color: #5d7698;
+  font-size: 0.75rem;
+}
+
+.detail-status-badge {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.detail-status-badge.status-pending {
+  background: #f5dfbf;
+  color: #9a5b15;
+}
+
+.detail-status-badge.status-confirmed {
+  background: #cfeedd;
+  color: #0f7e4d;
+}
+
+.detail-status-badge.status-completed {
+  background: #d6f5e3;
+  color: #117b50;
+}
+
+.detail-status-badge.status-cancelled {
+  background: #f4d6da;
+  color: #b11f38;
+}
+
+.detail-section {
+  border: 1px solid #d3dce8;
+  border-radius: 12px;
+  background: #f5f7fb;
+  padding: 6px;
+}
+
+.detail-section h3 {
+  margin: 0 0 5px;
+  font-size: 0.85rem;
+  color: #09254c;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.detail-item {
+  border: 1px solid #d4ddea;
+  background: #f1f4f9;
+  border-radius: 8px;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.detail-item span {
+  font-size: 0.74rem;
+  color: #5f7898;
+}
+
+.detail-item strong {
+  font-size: 1.05rem;
+  color: #0f2850;
+  text-align: right;
+}
+
+.detail-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #d7dfeb;
+  padding: 5px 2px;
+  gap: 10px;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-row span {
+  color: #5b7596;
+  font-size: 0.82rem;
+}
+
+.detail-row strong {
+  color: #0d2851;
+  font-size: 0.9rem;
+}
+
+.detail-total-row {
+  margin-top: 8px;
+  border-top: 2px solid #d4dce8;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.detail-total-row span {
+  color: #0f2d57;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.detail-total-row strong {
+  color: #0f7e7b;
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+
+.detail-description {
+  margin: 0;
+  border: 1px solid #dae3ee;
+  border-radius: 10px;
+  padding: 10px;
+  color: #2f4f77;
+  background: #f9fbfd;
+}
+
+@media (max-width: 1200px) {
+  .panel-head h1 {
+    font-size: 2rem;
   }
-  actionMessage.value = `${item} is not available yet.`;
-};
 
-const openProfile = () => {
-  router.push('/user/profile');
-};
-
-const handleLogout = async () => {
-  await userService.logout();
-  router.push('/login');
-};
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
-const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, "");
-const fallbackImageByType = {
-  motorbike: "https://i.pinimg.com/1200x/61/68/42/61684256edbd26664520bdfcf379c762.jpg",
-  bicycle: "https://i.pinimg.com/1200x/2c/90/78/2c9078d8032d2e4ae3e737684317f814.jpg",
-  car: "https://i.pinimg.com/1200x/d9/9e/06/d99e06bd9dd77fb2581170af2063b3b5.jpg",
-};
-
-const vehicle = ref(null);
-const shopsById = ref({});
-const isLoading = ref(false);
-const loadingError = ref("");
-const vehicleId = computed(() => {
-  const value = Number(route.params.id);
-  return Number.isFinite(value) && value > 0 ? value : null;
-});
-
-const setLastVehicleId = (id) => {
-  if (!id) return;
-  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
-};
-
-const getLastVehicleId = () => {
-  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
-
-const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
-const getVehicleImage = (item) => {
-  const image = item?.image_url ? String(item.image_url).trim() : "";
-  if (image) {
-    if (image.startsWith("http://") || image.startsWith("https://")) return image;
-    if (image.startsWith("/")) return `${API_ROOT}${image}`;
-    return `${API_ROOT}/storage/${image.replace(/^storage\//, "")}`;
-  }
-  const normalizedType = String(item?.type || "").toLowerCase();
-  return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
-};
-
-const stripMapLinks = (value) => {
-  if (!value) return "";
-  return String(value)
-    .replace(/https?:\/\/maps\.app\.goo\.gl\/\S+/gi, "")
-    .replace(/https?:\/\/(www\.)?google\.com\/maps\/\S+/gi, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-};
-
-const getShopLocation = (shop) => {
-  const raw = shop?.address || shop?.name || "Unknown Shop";
-  const cleaned = stripMapLinks(raw);
-  if (cleaned) return cleaned;
-  return shop?.name || "Unknown Shop";
-};
-
-const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
-const vehicleType = computed(() => vehicle.value?.type || "");
-const vehicleTag = computed(() => (vehicleType.value ? String(vehicleType.value).toUpperCase() : "RENTAL"));
-const vehicleImage = computed(() => getVehicleImage(vehicle.value));
-const vehicleLocation = computed(() => {
-  const shop = vehicle.value?.shop_id ? shopsById.value[vehicle.value.shop_id] : null;
-  return getShopLocation(shop);
-});
-
-const loadAllPages = async (resource) => {
-  let page = 1;
-  let lastPage = 1;
-  const results = [];
-
-  while (page <= lastPage) {
-    const response = await api.get(`/${resource}`, { params: { page } });
-    const payload = response.data;
-    const data = Array.isArray(payload) ? payload : payload?.data || [];
-    results.push(...data);
-    lastPage = payload?.last_page || 1;
-    page += 1;
+  .panel-head p,
+  .tab-btn,
+  .booking-info,
+  .status-pill,
+  .details-btn {
+    font-size: 0.95rem;
   }
 
-  return results;
-};
-
-const loadVehicleDetail = async () => {
-  if (!vehicleId.value) {
-    loadingError.value = "Vehicle not found.";
-    return;
+  .vehicle-name {
+    font-size: 1.35rem;
   }
 
-  isLoading.value = true;
-  loadingError.value = "";
-
-  try {
-    const [vehicleList, shopList] = await Promise.all([
-      loadAllPages("vehicles"),
-      loadAllPages("shops"),
-    ]);
-
-    shopsById.value = shopList.reduce((acc, shop) => {
-      acc[shop.id] = shop;
-      return acc;
-    }, {});
-
-    const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
-    if (!found) {
-      throw new Error("Vehicle not found.");
-    }
-
-    vehicle.value = found;
-    rental.value.title = getVehicleName(found) || rental.value.title;
-    rental.value.location = vehicleLocation.value;
-    rental.value.dailyRate = Number(found.price_per_day || 0);
-  } catch (error) {
-    const status = error?.response?.status;
-    const message = error?.response?.data?.message || error.message;
-    console.error("API Error:", status, message);
-
-    if (status === 401) {
-      loadingError.value = "Authentication required. Please log in.";
-    } else if (status === 500) {
-      loadingError.value = "Server error. Please try again later.";
-    } else {
-      loadingError.value = `Could not load vehicle (${status || "network error"}). Check backend server.`;
-    }
-  } finally {
-    isLoading.value = false;
+  .price-value {
+    font-size: 1.2rem;
   }
-};
+}
 
-const method = ref("card");
-const promoCode = ref("");
-const showQR = ref(false);
-const showSuccessModal = ref(false);
-const dateError = ref("");
-const bookingId = ref("");
-const paymentId = ref(
-  "PAY" + Math.random().toString(36).slice(2, 11).toUpperCase()
-);
-const transactionId = ref(
-  "TXN" + Math.random().toString(36).slice(2, 14).toUpperCase()
-);
-const qrCodeUrl = ref("");
-
-const rental = ref({
-  title: "Vehicle",
-  location: "Unknown Shop",
-  startDate: "",
-  endDate: "",
-  period: "",
-  riders: "1 Rider",
-  dailyRate: 0,
-  subtotal: 0,
-  insurance: 75,
-  taxes: 0,
-});
-
-const parseNumberFromQuery = (value) => {
-  if (value === null || value === undefined) return null;
-  const raw = Array.isArray(value) ? value[0] : value;
-  if (raw === "") return null;
-  const num = Number(raw);
-  return Number.isFinite(num) ? num : null;
-};
-
-const parseRiderDetailsFromQuery = (value) => {
-  if (value === null || value === undefined) return null;
-  const raw = Array.isArray(value) ? value[0] : value;
-  const text = String(raw).trim();
-  if (!text) return null;
-  if (/^\d+$/.test(text)) {
-    const count = Number(text);
-    if (!Number.isFinite(count) || count <= 0) return null;
-    return `${count} ${count === 1 ? "Rider" : "Riders"}`;
-  }
-  return text;
-};
-
-const applyRouteDefaults = () => {
-  const insuranceFromQuery = parseNumberFromQuery(route.query.insuranceFee);
-  if (insuranceFromQuery !== null) {
-    rental.value.insurance = insuranceFromQuery;
+@media (max-width: 900px) {
+  .bookings-page {
+    max-width: 100%;
+    padding: 14px 18px 18px;
   }
 
-  const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
-  if (riderFromQuery) {
-    rental.value.riders = riderFromQuery;
-  }
-};
-
-const methodTitle = computed(() => {
-  if (method.value === "qr") return "QR Code Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Secure Checkout";
-});
-
-const methodDescription = computed(() => {
-  if (method.value === "qr") {
-    return "Pay directly using your banking app.";
-  }
-  if (method.value === "bank") {
-    return "Complete payment using a direct bank transfer.";
-  }
-  return "Complete your rental booking by choosing a payment method below.";
-});
-
-const receiptPaymentLabel = computed(() => {
-  if (method.value === "qr") return "QR Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Credit Card";
-});
-
-const minDate = computed(() => {
-  const today = new Date();
-  return today.toISOString().split("T")[0];
-});
-
-const calculateDays = () => {
-  if (!rental.value.startDate || !rental.value.endDate) return 0;
-
-  const start = new Date(rental.value.startDate);
-  const end = new Date(rental.value.endDate);
-  const diff = end.getTime() - start.getTime();
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-  return days > 0 ? days : 0;
-};
-
-const riderCount = computed(() => {
-  const match = String(rental.value.riders).match(/^\s*(\d+)/);
-  if (!match) return 1;
-  const count = Number(match[1]);
-  return Number.isFinite(count) && count > 0 ? count : 1;
-});
-
-const totalAmount = computed(() => {
-  const days = calculateDays();
-  const riders = riderCount.value;
-  const subtotal = days * rental.value.dailyRate * riders;
-  rental.value.subtotal = subtotal;
-  rental.value.taxes = subtotal * 0.1;
-  return rental.value.subtotal + rental.value.insurance + rental.value.taxes;
-});
-
-const isFormValid = computed(() => {
-  return (
-    !!rental.value.startDate &&
-    !!rental.value.endDate &&
-    calculateDays() > 0 &&
-    !dateError.value
-  );
-});
-
-const transactionDateTime = computed(() => {
-  return new Date().toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-});
-
-const formatPeriod = () => {
-  const start = new Date(rental.value.startDate);
-  const end = new Date(rental.value.endDate);
-  const opts = { month: "short", day: "numeric", year: "numeric" };
-  const days = calculateDays();
-  rental.value.period = `${start.toLocaleDateString("en-US", opts)} - ${end.toLocaleDateString("en-US", opts)} (${days} ${days === 1 ? "day" : "days"})`;
-};
-
-const isDateAvailable = async (startDate, endDate) => {
-  const existingBookings = [
-    { startDate: "2026-04-10", endDate: "2026-04-12" },
-    { startDate: "2026-04-20", endDate: "2026-04-23" },
-  ];
-
-  const requestedStart = new Date(startDate);
-  const requestedEnd = new Date(endDate);
-
-  return existingBookings.every((booking) => {
-    const existingStart = new Date(booking.startDate);
-    const existingEnd = new Date(booking.endDate);
-    return requestedEnd < existingStart || requestedStart > existingEnd;
-  });
-};
-
-const validateDates = async () => {
-  dateError.value = "";
-
-  if (!rental.value.startDate || !rental.value.endDate) return;
-
-  const start = new Date(rental.value.startDate);
-  const end = new Date(rental.value.endDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (start < today) {
-    dateError.value = "Pick-up date cannot be in the past.";
-    return;
+  .booking-card {
+    grid-template-columns: 1fr;
   }
 
-  if (end <= start) {
-    dateError.value = "Drop-off date must be after pick-up date.";
-    return;
+  .booking-image {
+    width: 100%;
+    height: 210px;
   }
 
-  const available = await isDateAvailable(rental.value.startDate, rental.value.endDate);
-  if (!available) {
-    dateError.value = "Selected dates are not available. Please choose different dates.";
-    return;
+  .booking-price {
+    justify-content: flex-start;
   }
 
-  formatPeriod();
-};
-
-const saveBookingToDatabase = async (bookingData) => {
-  const currentUser = userService.getCurrentUser();
-  if (!currentUser?.id) {
-    return { success: false, message: "Please login first." };
+  .controls-row {
+    align-items: stretch;
+    gap: 10px;
   }
 
-  if (!vehicleId.value) {
-    return { success: false, message: "Vehicle not found." };
+  .tabs-row {
+    overflow-x: auto;
+    flex-wrap: nowrap;
   }
 
-  const payload = {
-    user_id: currentUser.id,
-    vehicle_id: vehicleId.value,
-    coupon_id: null,
-    start_date: rental.value.startDate,
-    total_days: calculateDays(),
-    total_price: totalAmount.value,
-    status: bookingData?.status || "pending",
-    deposit_amount: 0,
-    deposit_status: "unpaid",
-    rider_details: rental.value.riders,
-    daily_rate: rental.value.dailyRate,
-    insurance_fee: rental.value.insurance,
-    taxes_fee: rental.value.taxes,
-  };
-
-  try {
-    const response = await api.post("/bookings", payload);
-    const record = response?.data?.data || response?.data;
-    const recordId = record?.id;
-    const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
-
-    return {
-      success: true,
-      bookingId: nextBookingId || "",
-    };
-  } catch (error) {
-    console.error("Booking create error:", error);
-    const message =
-      error?.response?.data?.message ||
-      error?.message ||
-      "Failed to create booking.";
-    return { success: false, message };
-  }
-};
-
-const buildBookingData = (paymentMethod, status) => ({
-  bookingId: bookingId.value,
-  transactionId: transactionId.value,
-  paymentId: paymentId.value,
-  rental: {
-    title: rental.value.title,
-    location: rental.value.location,
-    startDate: rental.value.startDate,
-    endDate: rental.value.endDate,
-    dailyRate: rental.value.dailyRate,
-    days: calculateDays(),
-    subtotal: rental.value.subtotal,
-    insurance: rental.value.insurance,
-    taxes: rental.value.taxes,
-    totalAmount: totalAmount.value,
-  },
-  paymentMethod,
-  status,
-  createdAt: new Date().toISOString(),
-});
-
-const handlePayment = async () => {
-  await validateDates();
-  if (dateError.value) return;
-
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
-
-  if (result.success) {
-    bookingId.value = result.bookingId;
-    showSuccessModal.value = true;
-  } else {
-    alert(result.message || "Payment failed. Please try again.");
-  }
-};
-
-const handleBankTransfer = async () => {
-  await validateDates();
-  if (dateError.value) return;
-
-  const result = await saveBookingToDatabase(
-    buildBookingData("bank_transfer", "pending_payment")
-  );
-
-  if (!result.success) {
-    alert(result.message || "Failed to create bank transfer instructions.");
-    return;
+  .tab-btn {
+    flex-shrink: 0;
   }
 
-  bookingId.value = result.bookingId;
-
-  const instructions = `
-BANK TRANSFER INSTRUCTIONS
-============================
-Payment ID: ${paymentId.value}
-Amount: $${totalAmount.value.toFixed(2)}
-Booking ID: ${bookingId.value}
-
-BANK DETAILS:
-- Account Name: Moto Rental Pty Ltd
-- Bank: National Australia Bank
-- BSB: 082-123
-- Account: 1234 5678 9012
-- Reference: ${paymentId.value}
-  `.trim();
-
-  const blob = new Blob([instructions], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `bank_transfer_${paymentId.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-
-  showSuccessModal.value = true;
-};
-
-const generateABAQRData = () => {
-  const qrData = {
-    merchant: "MOTORAL-001",
-    name: "Moto Rental",
-    amount: totalAmount.value.toFixed(2),
-    currency: "USD",
-    ref: paymentId.value,
-    desc: `Payment for ${rental.value.title}`,
-    time: new Date().toISOString(),
-  };
-
-  return `aba://payment?merchant=${qrData.merchant}&name=${encodeURIComponent(
-    qrData.name
-  )}&amount=${qrData.amount}&currency=${qrData.currency}&ref=${qrData.ref}&desc=${encodeURIComponent(
-    qrData.desc
-  )}&time=${qrData.time}`;
-};
-
-const generateQRCode = async () => {
-  await validateDates();
-  if (dateError.value) return;
-
-  const qrPayload = generateABAQRData();
-  qrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    qrPayload
-  )}`;
-
-  showQR.value = true;
-};
-
-const closeSuccessModal = () => {
-  showSuccessModal.value = false;
-};
-
-const downloadReceipt = () => {
-  const receipt = `
-BOOKING RECEIPT
-================
-Booking ID: ${bookingId.value}
-Transaction ID: ${transactionId.value}
-Payment Method: ${receiptPaymentLabel.value}
-Amount Paid: $${totalAmount.value.toFixed(2)}
-Date: ${transactionDateTime.value}
-
-Booking: ${rental.value.title}
-Location: ${rental.value.location}
-Period: ${rental.value.period}
-  `.trim();
-
-  const blob = new Blob([receipt], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `receipt_${transactionId.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-};
-
-const initDates = () => {
-  const start = new Date();
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-
-  rental.value.startDate = start.toISOString().split("T")[0];
-  rental.value.endDate = end.toISOString().split("T")[0];
-  formatPeriod();
-};
-
-onMounted(() => {
-  loadVehicleDetail();
-  if (vehicleId.value) {
-    setLastVehicleId(vehicleId.value);
+  .search-row {
+    justify-content: flex-start;
+    width: 100%;
   }
-});
 
-watch(
-  () => route.query.insuranceFee,
-  () => {
-    applyRouteDefaults();
-  },
-  { immediate: true }
-);
-initDates();
-</script>
+  .search-input {
+    width: 100%;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .detail-title-row h2 {
+    font-size: 1.7rem;
+  }
+
+  .detail-item strong {
+    font-size: 1.35rem;
+  }
+
+  .detail-total-row span {
+    font-size: 1.3rem;
+  }
+
+  .detail-total-row strong {
+    font-size: 1.65rem;
+  }
+}
