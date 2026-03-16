@@ -1,5 +1,6 @@
 <template>
 <<<<<<< HEAD
+<<<<<<< HEAD
   <section class="dashboard">
     <h2>Admin Dashboard</h2>
     <p>Admin area is loading correctly.</p>
@@ -100,6 +101,13 @@
       </main>
     </div>
   </template>
+=======
+  <section class="dashboard">
+    <h1>Admin Dashboard</h1>
+    <p>This page is ready.</p>
+  </section>
+</template>
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
 
 <script setup>
 import { useRouter } from 'vue-router';
@@ -147,4 +155,50 @@ const handleLogout = async () => {
   }
 };
 </script>
+<<<<<<< HEAD
 >>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
+=======
+
+<style scoped>
+.dashboard {
+  padding: 2rem;
+  min-height: 100vh;
+  background: #f1f5f9;
+}
+
+.dashboard h1 {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #1e293b;
+}
+
+.dashboard p {
+  color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1.5rem;
+  }
+
+  .dashboard h1 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard {
+    padding: 1rem;
+  }
+
+  .dashboard h1 {
+    font-size: 1.25rem;
+  }
+
+  .dashboard p {
+    font-size: 0.9rem;
+  }
+}
+</style>
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67

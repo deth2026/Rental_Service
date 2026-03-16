@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 <template>
   <main class="home">
     <h1>Rental Service</h1>
@@ -40,12 +41,38 @@
 <script>
 import { reactive } from "vue";
 import "../assets/HomeView.css";
+=======
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
 
-</script>
+
 <template>
   <div class="home-page">
     <header class="top-nav">
-      <div class="brand">Chong Choul</div>
+      <div class="brand-container">
+        <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect width="120" height="120" rx="20" fill="url(#bgGrad)"/>
+          <g transform="translate(30, 45)">
+            <path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/>
+            <path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/>
+            <g transform="translate(15, -5)">
+              <rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/>
+              <circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/>
+              <circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/>
+              <path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/>
+            </g>
+          </g>
+        </svg>
+        <div class="brand-text">
+          <div class="brand">Chong Choul</div>
+          <!-- <div class="brand-tagline">Vehicle Rental</div> -->
+        </div>
+      </div>
 
       <div class="nav-auth">
         <RouterLink class="link-login" to="/login">Login</RouterLink>
@@ -57,43 +84,9 @@ import "../assets/HomeView.css";
       <div class="hero-overlay">
         <div class="hero-content">
           <h1>
-            Find Your Perfect Ride and Explore
-            <br />
-            <span>Cambodia</span> in Style!
-            <!-- <br/>
-             <span> Cambodia</span> -->
+            <span class="hero-line">Find Your Perfect Ride and Explore</span>
+            <span class="hero-line"><span>Cambodia</span> in Style!</span>
           </h1>
-          <p>
-            Choose from hundreds of cars, motorbikes, and bicycles from verified
-            local shops in Cambodia.
-          </p>
-
-          <form class="search-panel">
-            <div class="search-item">
-              <label>Vehicle Type</label>
-              <select v-model="search.type">
-                <option>All Vehicles</option>
-                <option>Cars</option>
-                <option>Motorbikes</option>
-                <option>Bicycles</option>
-              </select>
-            </div>
-            <div class="search-item">
-              <label>Location</label>
-              <select v-model="search.location">
-                <option>Siem Reap</option>
-              </select>
-            </div>
-            <div class="search-item">
-              <label>Pick-Up Date</label>
-              <input
-                v-model="search.pickupDate"
-                type="text"
-                placeholder="Select Date"
-              />
-            </div>
-            <button class="search-btn" type="button">Search</button>
-          </form>
         </div>
       </div>
     </section>
@@ -104,7 +97,7 @@ import "../assets/HomeView.css";
           <h2>Browse by Category</h2>
           <p>Find the right ride for your journey</p>
         </div>
-        <a href="#">View All</a>
+        
       </div>
 
       <div class="category-grid">
@@ -126,16 +119,28 @@ import "../assets/HomeView.css";
 
     <section class="features">
       <div class="features-inner">
-        <h2 class="features-title">How it works</h2>
+        <div class="trending-head">
+          <h2>Browse by Category</h2>
+        </div>
+        <div class="features-divider"></div>
         <div class="features-grid">
           <article
             v-for="feature in features"
             :key="feature.title"
             class="feature-item"
           >
-            <div class="feature-icon">{{ feature.icon }}</div>
-            <h4>{{ feature.title }}</h4>
-            <p>{{ feature.description }}</p>
+            <div class="feature-content">
+              <div class="feature-icon" aria-hidden="true">
+                <span>{{ feature.icon }}</span>
+              </div>
+              <div class="feature-copy">
+                <h4>
+                  <span class="feature-step">{{ feature.step }}</span>
+                  <span class="feature-title-text">{{ feature.title }}</span>
+                </h4>
+                <p>{{ feature.description }}</p>
+              </div>
+            </div>
           </article>
         </div>
       </div>
@@ -155,7 +160,6 @@ import "../assets/HomeView.css";
               <span
                 ><strong>${{ ride.price }}</strong> /day</span
               >
-              <span class="rating">{{ ride.rating }}</span>
             </div>
           </div>
         </article>
@@ -170,49 +174,20 @@ import "../assets/HomeView.css";
             Join Cambodia's largest vehicle rental network and connect with more
             customers.
           </p>
-          <button type="button">Register Your Shop</button>
+          <RouterLink to="/register"><button type="button">Register Your Shop</button></RouterLink>
         </div>
         <div class="cta-device"></div>
       </div>
     </section>
 
+    <CommonFooter />
 
-    <footer class="footer">
-      <div class="footer-main">
-        <div>
-          <h4>Chong Choul</h4>
-          <p>The premier vehicle rental marketplace in Cambodia.</p>
-        </div>
-        <div>
-          <h5>Company</h5>
-          <a href="#">About Us</a>
-          <a href="#">How it Works</a>
-          <a href="#">Press</a>
-        </div>
-        <div>
-          <h5>Support</h5>
-          <a href="#">Help Center</a>
-          <a href="#">Safety Information</a>
-          <a href="#">Contact Us</a>
-        </div>
-        <div>
-          <h5>Newsletter</h5>
-          <p>Stay updated with latest offers.</p>
-          <div class="newsletter">
-            <input type="text" placeholder="Your email" />
-            <button type="button">Send</button>
-          </div>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <small> 2026 Chong Choul. All rights reserved.</small>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script setup>
 import { reactive } from 'vue'
+import CommonFooter from '../components/CommonFooter.vue'
 
 const search = reactive({
   type: 'All Vehicles',
@@ -241,17 +216,20 @@ const categories = [
 const features = [
   {
     icon: 'Q',
-    title: '1. Browse & Select',
+    step: '1.',
+    title: 'Browse & Select',
     description: 'Filter by vehicle type, location, and your travel dates to find the best match.'
   },
   {
     icon: 'C',
-    title: '2. Secure Booking',
+    step: '2.',
+    title: 'Secure Booking',
     description: 'Book instantly using ABA, Wing, or international cards. No hidden fees.'
   },
   {
     icon: 'K',
-    title: '3. Pick Up & Go',
+    step: '3.',
+    title: 'Pick Up & Go',
     description: 'Meet your host at the shop or get the vehicle delivered to your hotel.'
   }
 ]
@@ -288,4 +266,17 @@ const rides = [
 ]
 </script>
 
+<<<<<<< HEAD
 >>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
+=======
+<style>
+@import "../css/HomeView.css";
+
+.home-page .common-footer {
+  margin-top: 0;
+}
+</style>
+
+
+
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67

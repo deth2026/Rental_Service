@@ -5,12 +5,22 @@ import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import UserDashboard from '../views/user/Dashboard.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 =======
 import Dashboard from '../views/shop/Dashboard.vue';
+=======
+import ShopDashboard from '../views/shop/DashboardLayout.vue';
+import UserDashboard from '../views/User/Dashboard.vue';
+import UserBookings from '../views/User/Bookings.vue';
+import PromotionView from '../views/User/Promotion.vue';
+import SettingUser from '../views/User/Setting_user.vue';
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import VehicleDetail from '../views/vehicle/VehicleDetail.vue';
+import ShopVehicles from '../views/User/ShopVehicles.vue';
+import VehiclesByShop from '../views/User/VehiclesByShop.vue';
+import ViewDetail from '../views/User/ViewDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -38,6 +48,10 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/home',
+      redirect: '/'
+    },
+    {
       path: '/chooserole',
       name: 'chooserole',
       component: ChooseRole,
@@ -59,6 +73,7 @@ const router = createRouter({
       path: '/dashboard',
       name: 'dashboard',
 <<<<<<< HEAD
+<<<<<<< HEAD
       component: UserDashboard
     },
     {
@@ -68,7 +83,39 @@ const router = createRouter({
     },
 =======
       component: Dashboard,
+=======
+      component: ShopDashboard,
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
+    },
+    {
+      path: '/view_shop',
+      name: 'view_shop',
+      component: UserDashboard,
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/bookings',
+      name: 'user-bookings',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/user/profile',
+      name: 'user-profile',
+      component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/promotions',
+      name: 'promotions',
+      component: PromotionView,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingUser
     },
     {
       path: '/admin',
@@ -77,15 +124,30 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] }
     },
     {
+      path: '/vehicles',
+      name: 'vehicles-by-shop',
+      component: VehiclesByShop,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
       path: '/vehicles/:id',
       name: 'vehicle-detail',
-      component: VehicleDetail,
+      component: ViewDetail,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'shop_owner', 'admin'] }
+    },
+    {
+      path: '/shop/:id/vehicles',
+      name: 'shop-vehicles',
+      component: ShopVehicles,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     }
+<<<<<<< HEAD
 >>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
    
+=======
+>>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
   ]
-})
+});
 
 // Navigation guard to check authentication and authorization
 router.beforeEach((to, from, next) => {
@@ -115,7 +177,7 @@ router.beforeEach((to, from, next) => {
     } else if (userRole === 'shop_owner') {
       next('/dashboard');
     } else {
-      next('/');
+      next('/view_shop');
     }
     return;
   }
@@ -129,7 +191,7 @@ router.beforeEach((to, from, next) => {
       } else if (userRole === 'shop_owner') {
         next('/dashboard');
       } else {
-        next('/');
+        next('/view_shop');
       }
       return;
     }

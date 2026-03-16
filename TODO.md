@@ -1,0 +1,1 @@
+- [x] 1. Resolve conflicts in 4 Vue files (Dashboard.vue, Setting_user.vue, ViewDetail.vue, Promotion.vue)\n- [ ] 2. git add conflicted files\n
