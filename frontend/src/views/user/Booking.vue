@@ -1,35 +1,26 @@
 <template>
   <div class="booking-checkout-page">
     <header class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">
-          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-          <span>Chong Choul</span>
-        </div>
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <span>Chong Choul</span>
+      </div>
 
-        <nav class="nav-links">
-          <button
-            v-for="item in navItems"
-            :key="item"
-            class="btn-reset nav-link"
-            :class="{ active: activeNav === item }"
-            @click="setActiveNav(item)"
-          >
-            {{ item }}
-          </button>
-        </nav>
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item }"
+          @click="setActiveNav(item)"
+        >
+          {{ item }}
+        </button>
+      </nav>
 
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">
-            <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
-            <span v-else>{{ userInitials }}</span>
-          </button>
-          <button class="btn-reset logout-btn" @click="handleLogout">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            <span>Logout</span>
-          </button>
-        </div>
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -470,6 +461,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
@@ -477,7 +469,7 @@ const router = useRouter();
 const route = useRoute();
 
 // Header data from VehiclesByShop.vue
-const navItems = ['Home', 'Viewdetails', 'Bookings'];
+const navItems = ['Home', 'View Details', 'Bookings'];
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);

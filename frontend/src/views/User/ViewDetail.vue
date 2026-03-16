@@ -1,43 +1,27 @@
+
 <template>
   <div class="motoride-container">
     <header class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">
-          <div class="brand-icon">
-            <i class="fa-solid fa-gift" aria-hidden="true"></i>
-          </div>
-          <span>Chong Choul</span>
-        </div>
+      <div class="brand">
+        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+        <span>Chong Choul</span>
+      </div>
 
-        <nav class="nav-links">
-          <button
-            v-for="item in navItems"
-            :key="item"
-            class="btn-reset nav-link"
-            :class="{ active: activeNav === item }"
-            @click="setActiveNav(item)"
-          >
-            {{ item }}
-          </button>
-        </nav>
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item }"
+          @click="setActiveNav(item)"
+        >
+          {{ item }}
+        </button>
+      </nav>
 
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <button class="btn-reset avatar" @click="openProfile">
-            <img
-              v-if="userAvatarUrl"
-              :src="userAvatarUrl"
-              alt="Profile photo"
-              class="avatar-image"
-              @error="onAvatarError"
-            />
-            <span v-else>{{ userInitials }}</span>
-          </button>
-          <button class="btn-reset logout-btn" @click="handleLogout">
-            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-            <span>Logout</span>
-          </button>
-        </div>
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
     </header>
 
@@ -217,11 +201,12 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
 
 const router = useRouter();
 const route = useRoute();
 
-const navItems = ["Home", "Viewdetails", "Bookings"];
+const navItems = ["Home", "View Details", "Bookings"];
 const activeNav = ref("Home");
 const actionMessage = ref("");
 const avatarLoadFailed = ref(false);
@@ -474,18 +459,13 @@ onMounted(() => {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: #fff;
-  border-bottom: 1px solid #d8dee7;
-}
-
-.topbar-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 14px 2rem;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 32px;
   align-items: center;
+  padding: 14px 40px;
+  background: #fff;
+  border-bottom: 1px solid #d8dee7;
   box-sizing: border-box;
 }
 
@@ -1263,7 +1243,7 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .topbar-inner {
+  .topbar {
     grid-template-columns: 1fr;
     gap: 10px;
     padding: 12px 16px;
@@ -1302,7 +1282,7 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
-  .topbar-inner {
+  .topbar {
     padding: 12px 16px;
   }
 

@@ -303,8 +303,7 @@
 
 .motorcycle-image {
   position: relative;
-
-  height: 200px;
+  height: 250px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -316,7 +315,6 @@
   min-height: 20vh;
   max-height: 30vh;
   object-fit: cover;
-  margin: 5vh 0vh 5vh 0vh;
 }
 
 .vehicle-tag {
@@ -1326,7 +1324,7 @@
   font-size: 1.55rem;
 }
 
-.success-modal > p {
+.success-modal>p {
   margin: 8px 0 16px;
 
   color: #5f7189;
@@ -1470,20 +1468,14 @@
   position: sticky;
   top: 0;
   z-index: 5;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-}
-
-.topbar-inner {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 14px 24px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 32px;
   align-items: center;
+  padding: 14px 40px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
   box-sizing: border-box;
-  width: 100%;
 }
 
 .brand {
@@ -1494,10 +1486,11 @@
   font-weight: 700;
   color: #2563eb;
   white-space: nowrap;
-  padding-left: 16vh;
+  padding-left: 12vh;
 }
+
 .brand span {
-  margin-right: 32vh;
+  margin-right: 20vh;
 }
 
 .brand-icon {
@@ -1518,7 +1511,7 @@
   gap: 50px;
   justify-self: center;
   align-items: center;
-  margin-right: 22vh;
+  margin-right: 20vh;
 }
 
 .nav-link {
@@ -1548,6 +1541,7 @@
   font-size: 16px;
   font-weight: 800;
   color: #33435d;
+  margin-right: 12vh;
 }
 
 .avatar {
@@ -1588,7 +1582,7 @@
 }
 
 @media (max-width: 1080px) {
-  .topbar-inner {
+  .topbar {
     grid-template-columns: 1fr;
     gap: 10px;
   }
@@ -1600,13 +1594,13 @@
 }
 
 @media (max-width: 992px) {
-  .topbar-inner {
+  .topbar {
     padding: 12px 14px;
   }
 }
 
 @media (max-width: 640px) {
-  .topbar-inner {
+  .topbar {
     padding: 12px;
   }
 

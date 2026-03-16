@@ -20,7 +20,12 @@ const getUserRole = () => {
 </template>
 
 <style>
-html,
+html {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+}
+
 body,
 #app {
   width: 100%;

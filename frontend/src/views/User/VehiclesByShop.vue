@@ -1,5 +1,6 @@
 
 <template>
+  <div>
   <div class="vehicles-page">
     <header class="topbar">
       <div class="brand">
@@ -109,6 +110,7 @@
 
   <!-- Common Footer -->
   <CommonFooter />
+  </div>
 </template>
 
 
@@ -134,7 +136,7 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const navItems = ['Home', 'My Bookings', 'Promotion'];
+const navItems = ['Home', 'View Details', 'Bookings'];
 const router = useRouter();
 const activeNav = ref('Home');
 const actionMessage = ref('');
