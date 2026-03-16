@@ -2,10 +2,7 @@
   <div class="booking-checkout-page">
     <header class="topbar">
       <div class="topbar-inner">
-        <div class="brand">
-          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-          <span>Chong Choul</span>
-        </div>
+        <Logo class="brand" to="/view_shop" size="sm" />
 
         <nav class="nav-links">
           <button
@@ -384,7 +381,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div class="footer-brand">
-          <strong>Chong Choul<span>Rides</span></strong>
+          <Logo class="booking-footer-logo" theme="light" size="md" :showTagline="false" />
           <p>Secure, fast, and transparent bookings across Cambodia.</p>
           <div class="footer-badges">
             <span class="badge-pill">Secure Checkout</span>
@@ -470,6 +467,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
+import Logo from "@/components/Logo.vue";
 import "../../assets/user/booking.css";
 
 // Navigation

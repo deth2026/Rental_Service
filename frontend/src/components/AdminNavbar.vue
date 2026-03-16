@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import userService from '@/services/userService'
+import Logo from '@/components/Logo.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -113,7 +114,7 @@ const navLinks = [
 <template>
   <nav class="admin-navbar">
     <div class="admin-navbar__brand">
-      <strong>Chong Choul Admin</strong>
+      <Logo class="admin-navbar__logo" to="/admin/dashboard" theme="dark" size="sm" :showTagline="false" />
       <small>Control Center</small>
     </div>
     <div class="admin-navbar__links">
@@ -189,6 +190,15 @@ const navLinks = [
   flex-direction: column;
   gap: 2px;
   line-height: 1;
+}
+
+.admin-navbar__logo {
+  margin-bottom: 2px;
+}
+
+.admin-navbar__brand :deep(.app-logo__mark) {
+  width: 44px;
+  height: 44px;
 }
 
 .admin-navbar__brand strong {

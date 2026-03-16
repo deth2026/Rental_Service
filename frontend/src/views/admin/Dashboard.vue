@@ -1,18 +1,3 @@
-<<<<<<< HEAD
-=======
-<template>
-  <section class="dashboard">
-    <div class="dashboard-header">
-      <div>
-        <h1>Admin Dashboard</h1>
-        <p>This page is ready.</p>
-      </div>
-      <router-link to="/admin/users" class="action-button">User Management</router-link>
-    </div>
-  </section>
-</template>
-
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -271,41 +256,10 @@ watch(
           </div>
         </div>
 
-<<<<<<< HEAD
         <div class="stat-value"><CountUp :value="card.raw" :formatter="card.formatter" /></div>
         <div class="stat-label">{{ card.label }}</div>
       </article>
     </div>
-=======
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.action-button {
-  background: #1f9ae5;
-  color: #fff;
-  border-radius: 999px;
-  padding: 0.65rem 1.6rem;
-  font-weight: 600;
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.action-button:hover {
-  background: #1682be;
-  transform: translateY(-1px);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .dashboard {
-    padding: 1.5rem;
-  }
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
 
     <section class="card">
       <div class="card-head">

@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
+import Logo from './Logo.vue'
 
 const quickLinks = [
   { label: 'Home', to: '/' },
@@ -19,7 +20,7 @@ const currentYear = new Date().getFullYear()
   <footer class="common-footer">
     <div class="common-footer__content">
       <div class="common-footer__brand">
-        <h4>Chong Choul</h4>
+        <Logo class="common-footer__logo" theme="light" size="md" :showTagline="true" />
         <p>
           Connecting adventurous travelers with the best local vehicle rentals across the Kingdom of Wonder.
         </p>
@@ -64,9 +65,7 @@ const currentYear = new Date().getFullYear()
 
     <div class="common-footer__bottom">
       <span>
-        &copy; {{ currentYear }} Chong Choul Rides. Made with
-        <span class="common-footer__heart" aria-hidden="true">&hearts;</span>
-        in Siem Reap.
+        &copy; {{ currentYear }} Chong Choul. All rights reserved.
       </span>
       <div class="common-footer__legal">
         <a href="#" class="common-footer__legal-link">Privacy Policy</a>
@@ -96,11 +95,13 @@ const currentYear = new Date().getFullYear()
   align-items: flex-start;
 }
 
-.common-footer__brand h4 {
-  margin: 0 0 6px;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0083ff;
+.common-footer__logo {
+  margin-bottom: 10px;
+}
+
+.common-footer__brand :deep(.app-logo__mark) {
+  width: 70px;
+  height: 70px;
 }
 
 .common-footer__brand p {

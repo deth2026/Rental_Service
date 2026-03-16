@@ -90,7 +90,6 @@ export const paymentApi = {
   delete: (id) => api.delete(`/payments/${id}`)
 };
 
-<<<<<<< HEAD
 // Booking API calls
 export const bookingApi = {
   getAll: () => api.get('/bookings'),
@@ -98,13 +97,14 @@ export const bookingApi = {
   create: (data) => api.post('/bookings', data),
   update: (id, data) => api.put(`/bookings/${id}`, data),
   delete: (id) => api.delete(`/bookings/${id}`),
-=======
+};
+
+// User API calls
 export const userApi = {
   getAll: (params = {}) => api.get('/users', { params }),
   create: (payload) => api.post('/users', payload),
   update: (id, payload) => api.put(`/users/${id}`, payload),
   delete: (id) => api.delete(`/users/${id}`)
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
 };
 
 // Coupon API calls

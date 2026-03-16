@@ -1,29 +1,7 @@
 <template>
   <div class="choose-role-container">
     <div class="brand-section">
-      <div class="logo">
-        <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
-            </linearGradient>
-          </defs>
-          <rect width="120" height="120" rx="20" fill="url(#bgGrad)"/>
-          <g transform="translate(30, 45)">
-            <path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/>
-            <path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/>
-            <g transform="translate(15, -5)">
-              <rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/>
-              <circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/>
-              <circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/>
-              <path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/>
-            </g>
-          </g>
-        </svg>
-      </div>
-      <h1 class="brand-name">Chong Choul</h1>
-      <p class="brand-subtitle">Vehicle Rental Platform</p>
+      <Logo class="choose-role-logo" theme="light" size="lg" :showTagline="true" tagline="Vehicle Rental Platform" />
     </div>
 
     <div class="role-selector">
@@ -72,6 +50,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import Logo from '@/components/Logo.vue'
 
 const router = useRouter()
 const selectedRole = ref('')

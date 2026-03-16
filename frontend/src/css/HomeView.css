@@ -24,6 +24,16 @@
   gap: 10px;
 }
 
+.home-brand .app-logo__mark {
+  width: 88px;
+  height: 88px;
+  border-radius: 18px;
+}
+
+.home-brand .app-logo__img {
+  filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.14));
+}
+
 .brand-mark {
   width: 88px;
   height: 88px;
@@ -309,7 +319,6 @@
   background: rgba(255, 255, 255, 0.25);
 }
 
-<<<<<<< HEAD
 .hero-content h1 span {
   
   color: #00d4ff;
@@ -365,8 +374,6 @@
 
 
 
-=======
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
 
 .section {
   width: min(1160px, 100%);
@@ -715,8 +722,17 @@
 .footer-brand-head {
   display: flex;
   align-items: center;
-  /* gap: 16px; */
+  gap: 16px;
   margin-bottom: 18px;
+}
+
+.footer-brand-logo .app-logo__mark {
+  width: 130px;
+  height: 130px;
+}
+
+.footer-brand-logo .app-logo__img {
+  filter: drop-shadow(0 12px 22px rgba(2, 6, 23, 0.35));
 }
 
 .footer-logo-wrap {
@@ -1049,22 +1065,9 @@
     height: 480px;
   }
 
-<<<<<<< HEAD
   .hero-sub {
     font-size: 0.95rem;
     margin-bottom: 20px;
-=======
-  .hero-item-content h1 {
-    font-size: 1.4rem;
-  }
-
-  .hero-item-content p {
-    font-size: 0.75rem;
-  }
-
-  .hero-slider-controls {
-    bottom: 12px;
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
   }
 
   .search-btn {
@@ -1181,30 +1184,8 @@
     min-height: 360px;
   }
 
-<<<<<<< HEAD
   .hero-sub {
     font-size: 0.85rem;
-=======
-  .hero-containers {
-    height: 360px;
-  }
-
-  .hero-item-content {
-    top: 48%;
-  }
-
-  .hero-item-content h1 {
-    font-size: 1.1rem;
-  }
-
-  .hero-item-content p {
-    font-size: 0.65rem;
-  }
-
-  .hero-slide-button {
-    padding: 5px 14px;
-    font-size: 0.65rem;
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
   }
 
   .section-head h2 {

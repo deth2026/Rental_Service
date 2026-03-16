@@ -6,10 +6,9 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-<<<<<<< HEAD
 
 import UserDashboard from '../views/user/Dashboard.vue';
-import UserBookings from '../views/user/Bookings.vue';
+import UserBookings from '../views/user/Booking.vue';
 import PromotionView from '../views/user/Promotion.vue';
 import SettingUser from '../views/user/Setting_user.vue';
 import ShopVehicles from '../views/user/ShopVehicles.vue';
@@ -17,12 +16,6 @@ import VehiclesByShop from '../views/user/VehiclesByShop.vue';
 import ViewDetail from '../views/user/ViewDetail.vue';
 
 import AdminLayout from '../views/admin/AdminLayout.vue';
-=======
-import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Booking.vue';
-import PromotionView from '../views/User/Promotion.vue';
-import SettingUser from '../views/User/Setting_user.vue';
->>>>>>> 8271724c22765314e6947ff91487c4007960f0d9
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import AdminShopManagement from '../views/admin/ShopManagement.vue';
 import AdminUserManagement from '../views/admin/UserManagement.vue';
@@ -44,8 +37,13 @@ const isAuthenticated = () => {
 const getUserRole = () => {
   const userStr = localStorage.getItem('user');
   if (userStr) {
-    const user = JSON.parse(userStr);
-    return user.role || 'customer';
+    try {
+      const user = JSON.parse(userStr);
+      const role = String(user?.role || '').trim().toLowerCase();
+      return role || 'customer';
+    } catch {
+      return 'customer';
+    }
   }
   return null;
 };
@@ -141,10 +139,8 @@ const router = createRouter({
     },
 
     {
-      path: '/admin/users',
-      name: 'admin-users',
-      component: () => import('../views/admin/User_management.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['admin'] }
+      path: '/admin/daahboard',
+      redirect: '/admin/dashboard',
     },
     {
       path: '/vehicles',
@@ -163,6 +159,13 @@ const router = createRouter({
       name: 'shop-vehicles',
       component: ShopVehicles,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] },
+    },
+
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'not-found',
+      component: () => import('../views/NotFound.vue'),
+      meta: { requiresAuth: false },
     },
   ],
 });

@@ -1236,6 +1236,15 @@
   color: var(--primary);
 }
 
+.booking-footer-logo {
+  margin-bottom: 8px;
+}
+
+.booking-footer-logo .app-logo__mark {
+  width: 62px;
+  height: 62px;
+}
+
 .footer-brand p {
   margin: 8px 0 14px;
   color: #61748f;

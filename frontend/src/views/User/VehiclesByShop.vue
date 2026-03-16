@@ -2,10 +2,7 @@
 <template>
   <div class="vehicles-page">
     <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
-        <span>Chong Choul</span>
-      </div>
+      <Logo class="brand" to="/view_shop" size="sm" />
       <nav class="nav-links">
         <button v-for="item in navItems" :key="item" class="btn-reset nav-link" :class="{ active: activeNav === item }"
           @click="setActiveNav(item)">
@@ -117,6 +114,7 @@ import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import ConfirmModal from '../../components/ConfirmModal.vue';
+import Logo from '@/components/Logo.vue';
 import '../../css/VehicleByShop.css';
 
 const location = ref('Siem Reap');

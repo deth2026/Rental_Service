@@ -13,6 +13,7 @@ import ActivityHistory from './ActivityHistory.vue'
 import api, { bookingApi, shopApi, vehicleApi } from '@/services/api'
 import { getSessionUser, logoutUser } from '@/services/auth'
 import CommonFooter from '../../components/CommonFooter.vue'
+import Logo from '@/components/Logo.vue'
 
 // Toast notifications
 const router = useRouter()
@@ -794,7 +795,12 @@ const iconSvg = (name) => {
           </svg>
         </span>
       </button>
-<div class="menu-area">
+
+      <div class="brand">
+        <Logo class="shop-brand-logo" to="/dashboard" theme="dark" size="md" :stacked="true" :showTagline="false" />
+      </div>
+
+ <div class="menu-area">
         <div class="menu-title">MENU</div>
         <button v-for="item in sections" :key="item.id" class="menu-item" :class="{ active: item.id === active }"
           @click="onMenuClick(item)">
@@ -1346,6 +1352,128 @@ const iconSvg = (name) => {
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
+:deep(.shop-section) {
+  padding: 0 20px 22px;
+  max-width: 1200px;
+}
+
+:deep(.shop-section .section-head) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+:deep(.shop-section .section-head h2) {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+:deep(.shop-section .section-head p) {
+  margin: 4px 0 0;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+:deep(.shop-section .section-btn) {
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #39a9e1, #2563eb);
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+:deep(.shop-section .section-grid) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+:deep(.shop-section .section-card) {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 14px 14px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+:deep(.shop-section .card-label) {
+  color: #64748b;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+}
+
+:deep(.shop-section .card-value) {
+  margin-top: 6px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+:deep(.shop-section .table-card .table-head) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+:deep(.shop-section .table-card h3) {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+:deep(.shop-section .empty-state) {
+  padding: 18px 14px;
+  border-radius: 14px;
+  border: 1px dashed #cbd5e1;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 650;
+}
+
+:deep(.shop-section .list) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+:deep(.shop-section .list-row) {
+  padding: 12px 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+:deep(.shop-section .list-title) {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+:deep(.shop-section .list-meta) {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 900px) {
+  :deep(.shop-section .section-grid) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .toast {
   position: fixed;
   bottom: 20px;
@@ -1565,6 +1693,21 @@ const iconSvg = (name) => {
   padding: 2px 8px 16px;
   border-bottom: 1px solid #1a2a52;
   margin-bottom: 14px;
+}
+
+.brand :deep(.app-logo__mark) {
+  width: 64px;
+  height: 64px;
+}
+
+.page.sidebar-collapsed .brand {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.page.sidebar-collapsed .brand :deep(.app-logo__text) {
+  display: none;
 }
 
 .brand-icon {
