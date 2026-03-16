@@ -1,7 +1,12 @@
 <template>
   <section class="dashboard">
-    <h1>Admin Dashboard</h1>
-    <p>This page is ready.</p>
+    <div class="dashboard-header">
+      <div>
+        <h1>Admin Dashboard</h1>
+        <p>This page is ready.</p>
+      </div>
+      <router-link to="/admin/users" class="action-button">User Management</router-link>
+    </div>
   </section>
 </template>
 
@@ -67,6 +72,29 @@ const handleLogout = async () => {
 
 .dashboard p {
   color: #64748b;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  background: #1f9ae5;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.65rem 1.6rem;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.action-button:hover {
+  background: #1682be;
+  transform: translateY(-1px);
 }
 
 /* Responsive */

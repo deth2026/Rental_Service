@@ -76,6 +76,13 @@ export const paymentApi = {
   delete: (id) => api.delete(`/payments/${id}`)
 };
 
+export const userApi = {
+  getAll: (params = {}) => api.get('/users', { params }),
+  create: (payload) => api.post('/users', payload),
+  update: (id, payload) => api.put(`/users/${id}`, payload),
+  delete: (id) => api.delete(`/users/${id}`)
+};
+
 // Coupon API calls
 export const couponApi = {
   getAll: () => api.get('/coupons'),
