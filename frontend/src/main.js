@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-
-=======
 import './css/HomeView.css'
 import './css/chooserole.css'
 import './css/register.css'
@@ -26,4 +23,3 @@ router.afterEach(() => {
     }, delay)
   })
 })
->>>>>>> feature/test
