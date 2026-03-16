@@ -1,29 +1,22 @@
-<template>
-  <main>
-    <Logo />
+﻿<template>
+  <main class="home-page">
     <header class="top-nav">
       <div class="brand-container">
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< HEAD
-        <img class="brand-logo" src="@/assets/Logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
-=======
-        <img class="brand-logo" src="/images/chong-choul-logo.svg" alt="CHONG CHOUL VEHICLE SERVICES" />
->>>>>>> dashboard/admin
-=======
-        <img class="brand-logo" src="@/assets/logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
->>>>>>> Stashed changes
-=======
-        <img class="brand-logo" src="@/assets/logo.png" alt="CHONG CHOUL VEHICLE SERVICES" />
->>>>>>> Stashed changes
+        <div class="brand-mark" aria-hidden="true">
+          <img class="brand-logo" :src="logoUrl" alt="" />
+        </div>
         <div class="brand-text">
-          <div class="brand">Chong Choul</div>
-          <!-- <div class="brand-tagline">Vehicle Rental</div> -->
+          <div class="brand" aria-label="Chong Choul">
+            <span class="brand-main">CHONG</span>
+            <span class="brand-accent">CHOUL</span>
+          </div>
+          <div class="brand-tagline">Vehicle Services</div>
         </div>
       </div>
 
       <div class="nav-auth">
         <RouterLink class="link-login" to="/login">Login</RouterLink>
+        <span class="nav-sep" aria-hidden="true">|</span>
         <RouterLink class="btn-signup" to="/chooserole">Sign Up</RouterLink>
       </div>
     </header>
@@ -35,12 +28,19 @@
             <span class="hero-line">Find Your Perfect Ride and Explore</span>
             <span class="hero-line"><span>Cambodia</span> in Style!</span>
           </h1>
+          <p class="hero-sub">
+            Rent motorbikes, cars, and bicycles from trusted local shops—fast booking, fair prices, and flexible plans.
+          </p>
+          <div class="hero-actions">
+            <RouterLink class="hero-btn primary" to="/view_shop">Explore Vehicles</RouterLink>
+            <RouterLink class="hero-btn ghost" to="/register">List Your Shop</RouterLink>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="section-head">
+      <div class="section-head section-head-center">
         <div>
           <h2>Browse by Category</h2>
           <p>Find the right ride for your journey</p>
@@ -97,6 +97,7 @@
             <h4>{{ ride.name }}</h4>
             <p>{{ ride.detail }}</p>
             <div class="ride-bottom">
+              <span class="rating"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ ride.rating }}</span>
               <span><strong>${{ ride.price }}</strong> /day</span>
             </div>
           </div>
@@ -118,70 +119,76 @@
       </div>
     </section>
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> dashboard/admin
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
     <footer class="footer">
       <div class="footer-main">
-        <div>
-          <h4>Chong Choul</h4>
-          <p>The premier vehicle rental marketplace in Cambodia.</p>
-        </div>
-        <div>
-          <h5>Payment Methods</h5>
-          <a href="#">Visa </a>
-          <a href="#">Mastercard</a>
-          <a href="#">Bank Transfer</a>
-        </div>
-        <div>
-          <h5>Social Medias</h5>
-          <a href="#">Facebook</a>
-          <a href="#">Instagram</a>
-          <a href="#">TikTok</a>
-        </div>
-        <div>
-          <h5>Newsletter</h5>
-          <p>Stay updated with latest offers.</p>
-          <div class="newsletter">
-            <input type="text" placeholder="Your email" />
-            <button type="button">Send</button>
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <div class="footer-logo-wrap" aria-hidden="true">
+              <img class="footer-logo" :src="logoUrl" alt="" />
+            </div>
+            <div class="footer-brand-text">
+              <div class="footer-brand-name" aria-label="Chong Choul">
+                <span class="brand-main">CHONG</span>
+                <span class="brand-accent">CHOUL</span>
+              </div>
+              <div class="footer-brand-sub">Vehicle Services</div>
+            </div>
           </div>
+          <p class="footer-desc">The premier vehicle rental marketplace in Cambodia.</p>
+          <div class="footer-social" aria-label="Social media">
+            <a class="footer-social-link" href="#" @click.prevent aria-label="Facebook">
+              <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+            </a>
+            <a class="footer-social-link" href="#" @click.prevent aria-label="Instagram">
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+            </a>
+            <a class="footer-social-link" href="#" @click.prevent aria-label="TikTok">
+              <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
+            </a>
+            <a class="footer-social-link" href="#" @click.prevent aria-label="X">
+              <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+            </a>
+          </div>
+          <small class="footer-legal">© 2026 Chong Choul. All rights reserved.</small>
         </div>
-      </div>
-      <div class="footer-bottom">
-        <small> 2026 Chong Choul. All rights reserved.</small>
+        <div class="footer-col">
+          <h5 class="footer-title">Payment Methods</h5>
+          <ul class="footer-list">
+            <li><span>Visa</span></li>
+            <li><span>Mastercard</span></li>
+            <li><span>Bank Transfer</span></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5 class="footer-title">Quick Links</h5>
+          <ul class="footer-list">
+            <li><RouterLink class="footer-link" to="/">Home</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/view_shop">Explore Vehicles</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/register">List Your Shop</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/login">Login</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/chooserole">Sign Up</RouterLink></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h5 class="footer-title">Newsletter</h5>
+          <p class="footer-note">Stay updated with the latest offers.</p>
+          <form class="newsletter" @submit.prevent>
+            <input type="email" placeholder="Your email" autocomplete="email" />
+            <button type="submit">Send</button>
+          </form>
+        </div>
       </div>
     </footer>
   </main>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< HEAD
-=======
-
-  </div>
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
-=======
->>>>>>> dashboard/admin
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 </template>
 
 <script>
-import Logo from '@/components/Logo.vue';
+ import logoUrl from '@/assets/logo-removebg.png';
 
 export default {
-  components: { Logo },
   data() {
     return {
+      logoUrl,
       search: {
         type: 'All Vehicles',
         location: 'Phnom Penh',
@@ -189,16 +196,19 @@ export default {
       },
       categories: [
         {
+          tag: 'CITY',
           title: 'Cars',
           availability: '120+ Vehicles Available',
           image: 'https://i.pinimg.com/1200x/76/4d/1e/764d1e19a2fb69a9046e53ceb4381391.jpg'
         },
         {
+          tag: 'POPULAR',
           title: 'Motorbikes',
           availability: '450+ Vehicles Available',
           image: 'https://i.pinimg.com/1200x/b3/a3/84/b3a384d5a8624aba2943bf7d41edd5e2.jpg'
         },
         {
+          tag: 'ECO',
           title: 'Bicycles',
           availability: '85+ Vehicles Available',
           image: 'https://i.pinimg.com/1200x/9d/a8/87/9da8873b9c5bfdc2ac0dd4915e594d02.jpg'

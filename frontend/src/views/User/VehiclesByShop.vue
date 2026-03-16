@@ -1,13 +1,9 @@
-
+﻿
 <template>
   <div class="vehicles-page">
     <header class="topbar">
       <div class="brand">
-<<<<<<< HEAD
-        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
-=======
         <div class="brand-icon"><i class="fa-solid fa-gift"></i></div>
->>>>>>> dashboard/admin
         <span>Chong Choul</span>
       </div>
       <nav class="nav-links">
@@ -18,9 +14,6 @@
       </nav>
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-<<<<<<< HEAD
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-=======
         <button class="btn-reset avatar" @click="openProfile">
           <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile" class="avatar-image" @error="onAvatarError" />
           <span v-else>{{ userInitials }}</span>
@@ -29,7 +22,6 @@
           <i class="fa-solid fa-right-from-bracket"></i>
           <span>Logout</span>
         </button>
->>>>>>> dashboard/admin
       </div>
     </header>
 
@@ -43,22 +35,10 @@
           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
           <p>Available for your selected dates ({{ dateRange }})</p>
           <div class="filter-row">
-<<<<<<< HEAD
-           <button  
-              v-for="item in filterItems"
-              :key="item.id"
-              class="filter-pill"
-              :class="{ active: activeFilter === item.id }"
-              @click="activeFilter = item.id"
-            >
-              <i :class="item.icon"></i>
-              <span>{{ item.label }}</span>
-=======
             <button v-for="type in vehicleTypes" :key="type.key" class="filter-pill"
               :class="{ active: selectedType === type.key }" @click="selectedType = type.key">
               <i :class="type.icon"></i>
               <span>{{ type.label }}</span>
->>>>>>> dashboard/admin
             </button>
           </div>
         </div>
@@ -76,10 +56,6 @@
             </div>
             <div class="promo-body">
               <h3>{{ getVehicleName(vehicle) }}</h3>
-<<<<<<< HEAD
-
-=======
->>>>>>> dashboard/admin
               <div class="vehicle-meta">
                 <span><i class="fa-solid fa-gear"></i> {{ vehicle.transmission }}</span>
                 <span><i class="fa-solid fa-gas-pump"></i> {{ vehicle.fuel_type }}</span>
@@ -107,8 +83,6 @@
         </div>
       </section>
     </main>
-<<<<<<< HEAD
-=======
     <footer class="footer">
       <div class="footer-brand">
         <strong>Cambodia<span>Rides</span></strong>
@@ -130,7 +104,6 @@
 
     <ConfirmModal v-model="showLogoutConfirm" title="Logout" message="Are you sure you want to logout?"
       cancel-text="Cancel" confirm-text="Yes" variant="danger" @confirm="confirmLogout" />
->>>>>>> dashboard/admin
   </div>
 
   <!-- Common Footer -->
@@ -143,28 +116,8 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< HEAD
-<<<<<<< HEAD
-import logoUrl from '@/assets/Logo.png'
-=======
-import CommonFooter from '../../components/CommonFooter.vue'
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
-=======
-import logoUrl from '@/assets/logo.png';
-import CommonFooter from '../../components/CommonFooter.vue';
->>>>>>> Stashed changes
-=======
-import logoUrl from '@/assets/logo.png';
-import CommonFooter from '../../components/CommonFooter.vue';
->>>>>>> Stashed changes
-import '../../css/VehicleByShop.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
-=======
 import ConfirmModal from '../../components/ConfirmModal.vue';
 import '../../css/VehicleByShop.css';
->>>>>>> dashboard/admin
 
 const location = ref('Siem Reap');
 const formatDate = (date) => `${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date)}/${date.getDate()}/${date.getFullYear()}`;
@@ -275,8 +228,6 @@ const mapEmbedUrl = computed(() => {
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
 
-<<<<<<< HEAD
-=======
 const normalizeAvatarUrl = (url) => {
   if (!url) return '';
   if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
@@ -300,7 +251,6 @@ const userInitials = computed(() => {
   return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
 });
 
->>>>>>> dashboard/admin
 const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
 const getVehicleShop = (vehicle) => {
   if (!vehicle.shop_id) return 'Unknown Shop';
@@ -312,22 +262,9 @@ const getVehicleShop = (vehicle) => {
 const favoriteIds = reactive(new Set());
 
 const filteredVehicles = computed(() => {
-<<<<<<< HEAD
-  const source = selectedShopId.value
-    ? vehicles.value.filter((v) => Number(v.shop_id) === selectedShopId.value)
-    : vehicles.value;
-
-if (activeFilter.value === 'all') {
-    return source;
-  }
-  return source.filter(
-    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === activeFilter.value
-  );
-=======
   const source = selectedShopId.value ? vehicles.value.filter((v) => Number(v.shop_id) === selectedShopId.value) : vehicles.value;
   if (selectedType.value === 'all') return source;
   return source.filter((v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === selectedType.value);
->>>>>>> dashboard/admin
 });
 
 const displayedVehicles = computed(() => {
@@ -378,23 +315,8 @@ const loadVehiclesAndShops = async () => {
 
 const setActiveNav = (item) => {
   activeNav.value = item;
-<<<<<<< HEAD
-  if (item === 'Home') {
-    router.push('/view_shop');
-    return;
-  }
-  if (item === 'My Bookings') {
-    router.push('/bookings');
-    return;
-  }
-  if (item === 'Promotion') {
-    router.push('/promotions');
-    return;
-  }
-=======
   if (item === 'Home') { router.push('/view_shop'); return; }
   if (item === 'Promotion') { router.push('/promotions'); return; }
->>>>>>> dashboard/admin
   actionMessage.value = `${item} opened.`;
 };
 
@@ -418,30 +340,11 @@ const openCustomLocation = () => {
   window.open(target, '_blank');
 };
 
-<<<<<<< HEAD
-const notify = (message) => {
-  actionMessage.value = message;
-};
-
-const openProfile = () => {
-  router.push('/user/profile');
-};
-
-const handleLogout = async () => {
-  await userService.logout();
-  router.push('/login');
-};
-
-const runFilterSearch = () => {
-  actionMessage.value = `Search clicked for ${activeFilter.value === 'all' ? 'all vehicles' : activeFilter.value}.`;
-};
-=======
 const notify = (message) => { actionMessage.value = message; };
 const openProfile = () => { router.push('/user/profile'); };
 const showLogoutConfirm = ref(false);
 const handleLogout = () => { showLogoutConfirm.value = true; };
 const confirmLogout = async () => { await userService.logout(); router.push('/login'); };
->>>>>>> dashboard/admin
 
 const toggleFavorite = (id, name) => {
   if (favoriteIds.has(id)) { favoriteIds.delete(id); actionMessage.value = `${name} removed from favorites.`; }
@@ -531,16 +434,8 @@ onUnmounted(() => { if (dateRangeTimer) window.clearInterval(dateRangeTimer); })
   background: #dbeafe;
 }
 
-<<<<<<< HEAD
-.brand-icon img {
-  width: 70%;
-  height: 70%;
-  object-fit: contain;
-  display: block;
-=======
 .brand-icon i {
   color: #2563eb;
->>>>>>> dashboard/admin
 }
 
 .top-actions {
@@ -614,95 +509,6 @@ onUnmounted(() => { if (dateRangeTimer) window.clearInterval(dateRangeTimer); })
   background: #1d4ed8;
 }
 
-<<<<<<< HEAD
-.fav-btn i {
-  font-size: 16px;
-}
-
-.shop i,
-.meta i {
-  margin-right: 4px;
-}
-
-.meta .fa-star {
-  color: #f6b200;
-}
-
-.filters {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 20px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-}
-
-.type-filters,
-.option-filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.filter-pill{
-   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-  color: #334155;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.filter-pill.active{
-   background: #1d6fff;
-  border-color: #1d6fff;
-  color: #fff;
-}
-.filter-pill:hover {
-  background: #1d6fff;
-  border-color: #1d6fff;
-  color: #fff;
-}
-
-.chip,
-.select-chip {
-  padding: 8px 14px;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: #f5f7fa;
-  font-size: 14px;
-}
-
-.chip.active {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
-}
-
-.select-chip {
-  background: #fff;
-}
-
-.search-filter-btn {
-  min-width: 92px;
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
-  font-weight: 600;
-}
-
-.search-filter-btn:hover {
-  background: var(--brand-dark);
-  border-color: var(--brand-dark);
-}
-
-=======
->>>>>>> dashboard/admin
 .content {
   max-width: 1240px;
   margin: 0 auto;
@@ -940,8 +746,6 @@ onUnmounted(() => { if (dateRangeTimer) window.clearInterval(dateRangeTimer); })
   right: 12px;
 }
 
-<<<<<<< HEAD
-=======
 .footer {
   margin-top: 28px;
   width: calc(100% + 80px);
@@ -980,7 +784,6 @@ onUnmounted(() => { if (dateRangeTimer) window.clearInterval(dateRangeTimer); })
   color: #52627b;
 }
 
->>>>>>> dashboard/admin
 @media (max-width: 1080px) {
   .topbar {
     grid-template-columns: 1fr;
@@ -994,13 +797,8 @@ onUnmounted(() => { if (dateRangeTimer) window.clearInterval(dateRangeTimer); })
     justify-self: start;
   }
 
-<<<<<<< HEAD
-  .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-=======
   .footer {
     grid-template-columns: 1fr;
->>>>>>> dashboard/admin
   }
 }
 
@@ -1022,14 +820,11 @@ onUnmounted(() => { if (dateRangeTimer) window.clearInterval(dateRangeTimer); })
   .promo-grid {
     grid-template-columns: 1fr;
   }
-<<<<<<< HEAD
-=======
 
   .footer {
     width: 100%;
     margin: 0;
   }
->>>>>>> dashboard/admin
 }
 
 </style>

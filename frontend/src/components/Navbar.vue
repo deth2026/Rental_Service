@@ -1,8 +1,7 @@
 <template>
-  <nav>
-    <Logo />
-    <header class="navbar">
-      <nav class="nav-links">
+  <header class="navbar">
+    <Logo class="navbar-logo" theme="dark" size="sm" :showTagline="false" />
+    <nav class="nav-links">
         <RouterLink to="/" class="nav-link">{{ t('home') }}</RouterLink>
         <RouterLink to="/login" class="nav-link">{{ t('login') }}</RouterLink>
         <RouterLink to="/register" class="nav-link">{{ t('register') }}</RouterLink>
@@ -52,9 +51,8 @@
             </div>
           </transition>
         </div>
-      </nav>
-    </header>
-  </nav>
+    </nav>
+  </header>
 
   <ConfirmModal
     v-model="showLogoutConfirm"

@@ -8,7 +8,7 @@ import { useAdminStore } from '../../stores/adminStore.js'
 import { CAMBODIA_TIMEZONE, cambodiaDateTimeLabel, cambodiaYear } from '../../utils/cambodiaTime.js'
 import '../../css/DashboardAdmin.css'
 import ConfirmModal from '../../components/ConfirmModal.vue'
-import logoUrl from '../../assets/logo.png'
+import Logo from '../../components/Logo.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -154,12 +154,7 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
   <div class="admin-app">
     <aside class="admin-sidebar">
       <div class="admin-brand">
-        <div class="brand-badge" aria-hidden="true">
-          <img class="brand-logo" :src="logoUrl" alt="CHONG CHOUL" />
-        </div>
-        <div class="brand-text">
-          <span class="brand-name">CHONG <span class="brand-cyan">CHOUL</span></span>
-        </div>
+        <Logo class="admin-brand-logo" to="/admin/dashboard" theme="dark" size="md" :stacked="true" :showTagline="false" />
       </div>
 
       <nav class="admin-nav">

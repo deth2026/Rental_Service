@@ -13,6 +13,7 @@ const route = useRoute()
 const page = ref(1)
 const perPage = 8
 
+
 const showView = ref(false)
 const showEdit = ref(false)
 const showDeleteConfirm = ref(false)

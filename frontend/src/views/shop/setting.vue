@@ -1,33 +1,12 @@
-<template>
+﻿<template>
   <section class="setting-page">
     <div class="frame">
       <main class="panel">
         <section class="content-card">
           <div class="section-head">
-<<<<<<< HEAD
-            <p class="section-title">{{ t('Ownershop setting') }}</p>
-            <div class="avatar-panel">
-              <div class="avatar-row">
-                <img
-                  :key="displayImageUrl"
-                  :src="displayImageUrl"
-                  alt="Profile photo"
-                  class="profile-avatar"
-                  @error="onAvatarError"
-                />
-                <div class="avatar-actions">
-                  <button type="button" class="btn btn-primary" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="triggerAvatarPicker">
-                    {{ avatarUploadLoading ? t('uploading') : t('uploadProfile') }}
-                  </button>
-                  <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
-                    {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
-                  </button>
-                </div>
-              </div>
-=======
             <p class="section-title">{{ t('setting Ownership') }}</p>
             <button type="button" class="btn btn-logout creative-logout-btn" @click="openLogoutConfirm">
-              <span class="logout-icon">↪</span>
+              <span class="logout-icon">â†ª</span>
               <span>{{ t('logout') }}</span>
             </button>
           </div>
@@ -47,7 +26,6 @@
               <button type="button" class="btn btn-muted" :disabled="avatarUploadLoading || avatarRemoveLoading" @click="openRemoveConfirm">
                 {{ avatarRemoveLoading ? t('removing') : t('removeProfile') }}
               </button>
->>>>>>> dashboard/admin
             </div>
           </div>
           <input ref="avatarInputRef" type="file" accept="image/*" class="sr-only-file" @change="onAvatarChange" />
@@ -185,7 +163,7 @@
 
     <div v-if="showToast" class="settings-toast" :class="toastType === 'error' ? 'is-error' : 'is-success'" role="status" aria-live="polite">
       <span>{{ toastMessage }}</span>
-      <button type="button" class="settings-toast-close" @click="closeToast">×</button>
+      <button type="button" class="settings-toast-close" @click="closeToast">Ã—</button>
     </div>
 
     <div v-if="showRemoveConfirm" class="confirm-overlay" @click="closeRemoveConfirm">

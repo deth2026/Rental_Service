@@ -1,32 +1,11 @@
-<script setup>
+﻿<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> Stashed changes
 import Logo from '@/components/Logo.vue'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
-<<<<<<< Updated upstream
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
-=======
-import Logo from '@/components/Logo.vue'
-import ConfirmModal from '../../components/ConfirmModal.vue'
->>>>>>> dashboard/admin
-=======
-import logoUrl from '@/assets/logo.png'
->>>>>>> Stashed changes
-=======
-import Logo from '@/components/Logo.vue'
-import CommonFooter from '../../components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
-import logoUrl from '@/assets/logo.png'
->>>>>>> Stashed changes
 
 const router = useRouter()
 const route = useRoute()
@@ -293,14 +272,10 @@ const copyCouponCode = async (code) => {
 onMounted(fetchPromotions)
 </script>
 
-<template>
-  <div class="promotions">
-    <Logo />
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
-        <span>Chong Choul</span>
-      </div>
+  <template>
+   <div class="promotions">
+     <header class="topbar">
+       <Logo class="brand" to="/view_shop" size="md" />
 
       <nav class="nav-links">
         <button

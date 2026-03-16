@@ -1,9 +1,9 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
-import logoUrl from '@/assets/logo.png'
+import Logo from '@/components/Logo.vue'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
@@ -251,14 +251,10 @@ const openMap = () => {
         <button class="back-btn" @click="goBack">
           <i class="fa-solid fa-arrow-left"></i>
         </button>
-        <div class="brand-icon"><img :src="logoUrl" alt="Chong Choul Logo" /></div>
-        <span>Shop Vehicles</span>
+        <Logo class="brand-logo" to="/view_shop" size="md" :showTagline="false" />
       </div>
       <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
-<<<<<<< HEAD
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-=======
         <button class="btn-reset avatar" @click="openProfile">
           <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image"
             @error="onAvatarError" />
@@ -267,7 +263,6 @@ const openMap = () => {
         <button class="btn-reset logout-btn" @click="handleLogout">
           <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> <span>Logout</span>
         </button>
->>>>>>> dashboard/admin
       </div>
     </header>
 
@@ -369,27 +364,9 @@ const openMap = () => {
   <!-- Common Footer -->
   <CommonFooter />
 </template>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
->>>>>>> 4ffa805566421966ff5189a6e66dbebf88990d05
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
-<style scoped>
-=======
-
-<<<<<<< HEAD
-<style scoped>
-=======
 
 <style>
->>>>>>> d9e7426d2ad61e95ce8e61d567caedbd5cc98485
->>>>>>> dashboard/admin
 .topbar {
   display: flex;
   justify-content: space-between;
