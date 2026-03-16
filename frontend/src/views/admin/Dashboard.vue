@@ -1,113 +1,87 @@
 <template>
-<<<<<<< HEAD
-<<<<<<< HEAD
-  <section class="dashboard">
-    <h2>Admin Dashboard</h2>
-    <p>Admin area is loading correctly.</p>
-    <router-link to="/">Back to Home</router-link>
-  </section>
-</template>
-
-<style scoped>
-.dashboard {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  gap: 10px;
-  text-align: center;
-}
-</style>
-=======
   <div class="flex flex-col md:flex-row min-h-screen bg-gray-50 font-sans">
+    
+    <aside class="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col">
+      <div class="flex items-center gap-2 mb-10 text-xl font-bold">
+        <div class="p-2 bg-red-500 rounded-lg">⚙️</div> ADMIN PANEL
+      </div>
       
-      <aside class="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col">
-        <div class="flex items-center gap-2 mb-10 text-xl font-bold">
-          <div class="p-2 bg-red-500 rounded-lg">⚙️</div> ADMIN PANEL
-        </div>
-        
-        <nav class="flex-1 space-y-4">
-          <a v-for="item in menu" :key="item" href="#" 
-             :class="item === 'Dashboard' ? 'bg-red-500' : 'hover:bg-slate-800'"
-             class="flex items-center p-3 rounded-lg transition-colors">
-            {{ item }}
-          </a>
-        </nav>
+      <nav class="flex-1 space-y-4">
+        <a v-for="item in menu" :key="item" href="#" 
+           :class="item === 'Dashboard' ? 'bg-red-500' : 'hover:bg-slate-800'"
+           class="flex items-center p-3 rounded-lg transition-colors">
+          {{ item }}
+        </a>
+      </nav>
 
-        <button @click="handleLogout" class="mt-auto pt-6 text-gray-400 hover:text-white flex items-center gap-2">
-          <span>Logout</span>
+      <button @click="handleLogout" class="mt-auto pt-6 text-gray-400 hover:text-white flex items-center gap-2">
+        <span>Logout</span>
+      </button>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-8">
+      
+      <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+          <p class="text-gray-500">Welcome back, Admin. Here's what's happening today.</p>
+        </div>
+        <button class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg flex items-center gap-2">
+          <span>+</span> Add New Admin
         </button>
-      </aside>
+      </header>
 
-      <main class="flex-1 p-4 md:p-8">
-        
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-            <p class="text-gray-500">Welcome back, Admin. Here's what's happening today.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div v-for="stat in stats" :key="stat.label" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div class="flex justify-between items-start mb-4">
+            <span class="p-2 rounded-lg" :class="stat.bg">{{ stat.icon }}</span>
+            <span :class="stat.trend > 0 ? 'text-green-500' : 'text-red-500'" class="text-xs font-bold">
+              {{ stat.trend > 0 ? '+' : '' }}{{ stat.trend }}%
+            </span>
           </div>
-          <button class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg flex items-center gap-2">
-            <span>+</span> Add New Admin
-          </button>
-        </header>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          <div v-for="stat in stats" :key="stat.label" class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div class="flex justify-between items-start mb-4">
-              <span class="p-2 rounded-lg" :class="stat.bg">{{ stat.icon }}</span>
-              <span :class="stat.trend > 0 ? 'text-green-500' : 'text-red-500'" class="text-xs font-bold">
-                {{ stat.trend > 0 ? '+' : '' }}{{ stat.trend }}%
-              </span>
-            </div>
-            <p class="text-xs text-gray-400 uppercase font-bold">{{ stat.label }}</p>
-            <h2 class="text-2xl font-bold text-gray-800">{{ stat.value }}</h2>
-          </div>
+          <p class="text-xs text-gray-400 uppercase font-bold">{{ stat.label }}</p>
+          <h2 class="text-2xl font-bold text-gray-800">{{ stat.value }}</h2>
         </div>
+      </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
-          <div class="p-6 border-b border-gray-50 flex justify-between items-center">
-            <h3 class="font-bold">Recent User Registrations</h3>
-            <select class="text-sm border rounded p-1 text-gray-500"><option>All Status</option></select>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
-                <tr>
-                  <th class="p-4">User Name</th>
-                  <th class="p-4">Email</th>
-                  <th class="p-4">Role</th>
-                  <th class="p-4">Status</th>
-                  <th class="p-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="text-sm">
-                <tr v-for="user in users" :key="user.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td class="p-4 font-semibold">{{ user.name }}</td>
-                  <td class="p-4 text-gray-600">{{ user.email }}</td>
-                  <td class="p-4 font-medium">{{ user.role }}</td>
-                  <td class="p-4">
-                    <span :class="statusClass(user.status)" class="px-3 py-1 rounded-full text-xs font-bold uppercase">
-                      {{ user.status }}
-                    </span>
-                  </td>
-                  <td class="p-4 text-right">
-                    <button class="text-blue-500 hover:underline">View</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div class="p-6 border-b border-gray-50 flex justify-between items-center">
+          <h3 class="font-bold">Recent User Registrations</h3>
+          <select class="text-sm border rounded p-1 text-gray-500"><option>All Status</option></select>
         </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+              <tr>
+                <th class="p-4">User Name</th>
+                <th class="p-4">Email</th>
+                <th class="p-4">Role</th>
+                <th class="p-4">Status</th>
+                <th class="p-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="text-sm">
+              <tr v-for="user in users" :key="user.id" class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <td class="p-4 font-semibold">{{ user.name }}</td>
+                <td class="p-4 text-gray-600">{{ user.email }}</td>
+                <td class="p-4 font-medium">{{ user.role }}</td>
+                <td class="p-4">
+                  <span :class="statusClass(user.status)" class="px-3 py-1 rounded-full text-xs font-bold uppercase">
+                    {{ user.status }}
+                  </span>
+                </td>
+                <td class="p-4 text-right">
+                  <button class="text-blue-500 hover:underline">View</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-      </main>
-    </div>
-  </template>
-=======
-  <section class="dashboard">
-    <h1>Admin Dashboard</h1>
-    <p>This page is ready.</p>
-  </section>
+    </main>
+  </div>
 </template>
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
 
 <script setup>
 import { useRouter } from 'vue-router';
@@ -155,50 +129,3 @@ const handleLogout = async () => {
   }
 };
 </script>
-<<<<<<< HEAD
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
-=======
-
-<style scoped>
-.dashboard {
-  padding: 2rem;
-  min-height: 100vh;
-  background: #f1f5f9;
-}
-
-.dashboard h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: #1e293b;
-}
-
-.dashboard p {
-  color: #64748b;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .dashboard {
-    padding: 1.5rem;
-  }
-
-  .dashboard h1 {
-    font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .dashboard {
-    padding: 1rem;
-  }
-
-  .dashboard h1 {
-    font-size: 1.25rem;
-  }
-
-  .dashboard p {
-    font-size: 0.9rem;
-  }
-}
-</style>
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67

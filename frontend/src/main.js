@@ -1,16 +1,7 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-import './assets/HomeView.css'
-import './assets/chooserole.css'
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
-import './assets/register.css'
-=======
 import './css/HomeView.css'
 import './css/chooserole.css'
 import './css/register.css'
 import './css/setting.css'
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
 
 import { createApp } from 'vue'
 import App from './App.vue'

@@ -4,23 +4,15 @@ import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
-<<<<<<< HEAD
-<<<<<<< HEAD
-import UserDashboard from '../views/user/Dashboard.vue';
-import AdminDashboard from '../views/admin/Dashboard.vue';
-=======
-import Dashboard from '../views/shop/Dashboard.vue';
-=======
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Bookings.vue';
-import PromotionView from '../views/User/Promotion.vue';
-import SettingUser from '../views/User/Setting_user.vue';
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
+import UserDashboard from '../views/user/Dashboard.vue';
+import UserBookings from '../views/user/Bookings.vue';
+import PromotionView from '../views/user/Promotion.vue';
+import SettingUser from '../views/user/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/User/ShopVehicles.vue';
-import VehiclesByShop from '../views/User/VehiclesByShop.vue';
-import ViewDetail from '../views/User/ViewDetail.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -36,7 +28,6 @@ const getUserRole = () => {
   }
   return null;
 };
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -72,20 +63,7 @@ const router = createRouter({
     {
       path: '/dashboard',
       name: 'dashboard',
-<<<<<<< HEAD
-<<<<<<< HEAD
-      component: UserDashboard
-    },
-    {
-      path: '/admin/dashboard',
-      name: 'admin-dashboard',
-      component: AdminDashboard
-    },
-=======
-      component: Dashboard,
-=======
       component: ShopDashboard,
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
     {
@@ -141,11 +119,6 @@ const router = createRouter({
       component: ShopVehicles,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     }
-<<<<<<< HEAD
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
-   
-=======
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
   ]
 });
 
