@@ -189,19 +189,25 @@
           <!-- Profile Summary Card -->
           <div class="card profile-card">
             <div class="profile-avatar-large">
-              <span>AD</span>
+              <img v-if="profileAvatarUrl" :src="profileAvatarUrl" alt="Profile photo">
+              <span v-else>{{ profileInitials }}</span>
             </div>
-            <h3 class="profile-name">Admin User</h3>
-            <p class="profile-email">admin@chongchoul.com</p>
+            <h3 class="profile-name">{{ userProfile.name || 'Admin User' }}</h3>
+            <p class="profile-email">{{ userProfile.email || 'admin@chongchoul.com' }}</p>
+            <p class="profile-meta">
+              {{ userProfile.jobTitle || 'Super Admin' }}
+              <span v-if="userProfile.phone"> · {{ userProfile.phone }}</span>
+            </p>
+            <p class="profile-bio" v-if="userProfile.bio">{{ userProfile.bio }}</p>
             <button class="btn-primary" @click="goToUpdateProfile">{{ $t('updateProfile') }}</button>
             <div class="profile-stats">
               <div class="stat-item">
-                <span class="stat-value">12</span>
+                <span class="stat-value">{{ totalShops }}</span>
                 <span class="stat-label">{{ $t('totalShops') }}</span>
               </div>
               <div class="stat-divider"></div>
               <div class="stat-item">
-                <span class="stat-value">4.9</span>
+                <span class="stat-value">{{ averageRating }}</span>
                 <span class="stat-label">{{ $t('rating') }}</span>
               </div>
             </div>
@@ -348,7 +354,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLanguage } from '@/i18n'
@@ -362,6 +368,80 @@ const activeLanguage = ref('English')
 const activeTheme = ref('Light')
 const currentDateTime = ref('')
 const userUsagePercent = ref(0)
+const userProfile = ref({
+  name: localStorage.getItem('user_name') || '',
+  email: localStorage.getItem('user_email') || '',
+  phone: localStorage.getItem('user_phone') || '',
+  jobTitle: localStorage.getItem('user_job_title') || 'Super Admin',
+  bio: localStorage.getItem('user_bio') || '',
+  profile_picture: localStorage.getItem('user_profile_picture') || ''
+})
+
+const resolveImageUrl = (path) => {
+  if (!path) return ''
+  return path.startsWith('http') ? path : `/storage/${path}`
+}
+
+const profileAvatarUrl = computed(() => resolveImageUrl(userProfile.value.profile_picture))
+const profileInitials = computed(() => {
+  if (!userProfile.value.name) return 'AD'
+  return userProfile.value.name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+})
+
+// Stats data from API
+const totalShops = ref(0)
+const averageRating = ref(0)
+
+// Fetch admin stats from API
+const fetchAdminStats = async () => {
+  try {
+    const response = await fetch('/api/admin/stats')
+    const data = await response.json()
+    totalShops.value = data.total_shops
+    averageRating.value = data.average_rating
+  } catch (error) {
+    console.error('Failed to fetch admin stats:', error)
+  }
+}
+
+// Load current admin profile
+const fetchUserProfile = async () => {
+  const token = localStorage.getItem('auth_token')
+  if (!token) return
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    })
+    if (!response.ok) return
+    const data = await response.json()
+    const user = data.user || {}
+    userProfile.value = {
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      jobTitle: user.job_title || user.role || 'Super Admin',
+      bio: user.bio || '',
+      profile_picture: user.profile_picture || user.avatar_url || ''
+    }
+    localStorage.setItem('user_name', userProfile.value.name)
+    localStorage.setItem('user_email', userProfile.value.email)
+    localStorage.setItem('user_phone', userProfile.value.phone)
+    localStorage.setItem('user_job_title', userProfile.value.jobTitle)
+    localStorage.setItem('user_bio', userProfile.value.bio)
+    localStorage.setItem('user_profile_picture', userProfile.value.profile_picture)
+  } catch (error) {
+    console.error('Failed to fetch profile:', error)
+  }
+}
 
 // Get current date and time in Cambodia timezone (UTC+7)
 const getCurrentDateTime = () => {
@@ -404,6 +484,8 @@ const setInitialLanguage = () => {
 onMounted(() => {
   setInitialLanguage()
   currentDateTime.value = getCurrentDateTime()
+  fetchAdminStats()
+  fetchUserProfile()
 })
 
 // Watch for route changes
@@ -902,6 +984,13 @@ const logout = () => {
   box-shadow: 0 8px 16px rgba(0, 102, 255, 0.25);
 }
 
+.profile-avatar-large img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
+}
+
 .profile-name {
   font-size: 1.125rem;
   font-weight: 700;
@@ -912,6 +1001,18 @@ const logout = () => {
 .profile-email {
   font-size: 0.8125rem;
   color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.profile-meta {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.profile-bio {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   margin-bottom: 12px;
 }
 

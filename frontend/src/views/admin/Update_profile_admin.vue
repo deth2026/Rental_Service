@@ -1,5 +1,5 @@
 <template>
-  <div class="update-profile-page">
+  <div class="admin-layout">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -147,24 +147,28 @@
       <!-- Top Header -->
       <header class="top-header">
         <div class="header-actions">
-          <button class="header-icon-btn">
+          <button class="icon-btn notification-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
             <span class="notification-badge">3</span>
           </button>
-          <button class="header-icon-btn">
+          <button class="icon-btn help-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="12" r="10"/>
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
               <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
           </button>
-          <div class="header-divider"></div>
-          <span class="page-title">Update Profile</span>
-          <div class="header-avatar">
-            <img src="https://ui-avatars.com/api/?name=Sovann&background=0066FF&color=fff" alt="User" />
+          <div class="user-profile">
+            <div class="user-avatar">
+              <img :src="photoPreview || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || 'Admin')}&background=0066FF&color=fff`" alt="User" />
+            </div>
+            <div class="user-info">
+              <span class="user-name">Admin Panel</span>
+              <span class="user-role">Administrator</span>
+            </div>
           </div>
         </div>
       </header>
@@ -182,17 +186,32 @@
           <!-- Left Column - Profile Photo Card -->
           <div class="profile-photo-card">
             <div class="profile-photo-container">
-              <div class="profile-photo-placeholder">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
+              <div class="profile-photo-wrapper" @click="triggerFileDialog">
+                <img
+                  v-if="photoPreview"
+                  :src="photoPreview"
+                  alt="Profile photo"
+                  class="profile-photo-img"
+                />
+                <div v-else class="profile-photo-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </div>
               </div>
+              <input
+                ref="fileInput"
+                type="file"
+                accept="image/*"
+                class="sr-only"
+                @change="onFileChange"
+              />
             </div>
             <div class="profile-photo-label">Your Photo</div>
             <div class="profile-photo-hint">Recommended: 400x400px (JPG, PNG)</div>
             
-            <button class="btn-primary">
+            <button class="btn-primary" type="button" @click="triggerFileDialog" :disabled="loading">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="17 8 12 3 7 8"/>
@@ -201,7 +220,7 @@
               Upload New Photo
             </button>
             
-            <button class="btn-remove">
+            <button class="btn-remove" type="button" @click="removePhoto" :disabled="removingPhoto || loading || !photoPreview">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -215,7 +234,7 @@
               </svg>
               <div class="security-info">
                 <span class="security-label">Account Security</span>
-                <span class="security-date">Last updated: 2 days ago</span>
+                <span class="security-date">Last updated: {{ lastUpdatedLabel }}</span>
               </div>
             </div>
           </div>
@@ -224,7 +243,10 @@
           <div class="personal-info-card">
             <h2 class="card-header">Personal Information</h2>
             
-            <form class="personal-form">
+            <form class="personal-form" @submit.prevent="submitForm">
+              <div v-if="message.text" :class="['alert', message.type === 'error' ? 'alert-error' : 'alert-success']">
+                {{ message.text }}
+              </div>
               <div class="form-grid">
                 <div class="form-group">
                   <label>Full Name</label>
@@ -265,7 +287,7 @@
               
               <div class="form-actions">
                 <button type="button" class="btn-cancel" @click="navigateTo('/admin/settings')">Cancel</button>
-                <button type="submit" class="btn-save">
+                <button type="submit" class="btn-save" :disabled="loading">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                     <polyline points="17 21 17 13 7 13 7 21"/>
@@ -302,21 +324,50 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
 const formData = reactive({
-  fullName: 'Sovann',
+  fullName: '',
   jobTitle: 'Super Admin',
-  email: 'sovann.admin@chongchoul',
-  phone: '+855 12 345 678',
-  bio: 'Experienced administrator with expertise in fleet logistics and regional operations management. Dedicated to ensuring seamless rental experiences across all locations.'
+  email: '',
+  phone: '',
+  bio: '',
+});
+
+const photoFile = ref(null);
+const photoPreview = ref('');
+const userId = ref(null);
+const lastUpdated = ref(null);
+const loading = ref(false);
+const removingPhoto = ref(false);
+const message = reactive({ type: '', text: '' });
+const fileInput = ref(null);
+
+const resolveImageUrl = (path) => {
+  if (!path) return '';
+  return path.startsWith('http') ? path : `/storage/${path}`;
+};
+
+const lastUpdatedLabel = computed(() => {
+  if (!lastUpdated.value) return 'Not updated yet';
+  const delta = Date.now() - new Date(lastUpdated.value).getTime();
+  if (isNaN(delta)) return 'Not updated yet';
+  const days = Math.floor(delta / 86400000);
+  if (days <= 0) return 'Just now';
+  if (days === 1) return '1 day ago';
+  return `${days} days ago`;
 });
 
 const navigateTo = (path) => {
   router.push(path);
+};
+
+const setMessage = (type, text) => {
+  message.type = type;
+  message.text = text;
 };
 
 const handleLogout = async () => {
@@ -325,8 +376,8 @@ const handleLogout = async () => {
     await fetch('/api/users/logout', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
       },
     });
   } catch (error) {
@@ -337,703 +388,150 @@ const handleLogout = async () => {
     router.push('/login');
   }
 };
+
+const loadProfile = async () => {
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    router.push('/login');
+    return;
+  }
+  try {
+    const res = await fetch('/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!res.ok) throw new Error('Unable to load your profile');
+
+    const data = await res.json();
+    const user = data.user || {};
+
+    userId.value = user.id;
+    formData.fullName = user.name || '';
+    formData.jobTitle = user.job_title || user.role || 'Super Admin';
+    formData.email = user.email || '';
+    formData.phone = user.phone || '';
+    formData.bio = user.bio || '';
+    photoPreview.value = resolveImageUrl(user.profile_picture) || user.avatar_url || '';
+    lastUpdated.value = user.updated_at;
+  } catch (error) {
+    setMessage('error', error.message);
+  }
+};
+
+const triggerFileDialog = () => {
+  fileInput.value?.click();
+};
+
+const onFileChange = (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  photoFile.value = file;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    photoPreview.value = e.target?.result || '';
+  };
+  reader.readAsDataURL(file);
+};
+
+const persistToLocalStorage = (user) => {
+  localStorage.setItem('user_name', user.name || formData.fullName);
+  localStorage.setItem('user_email', user.email || formData.email);
+  localStorage.setItem('user_phone', user.phone || formData.phone || '');
+  localStorage.setItem('user_job_title', user.job_title || formData.jobTitle || '');
+  localStorage.setItem('user_bio', user.bio || formData.bio || '');
+  localStorage.setItem('user_profile_picture', user.profile_picture || '');
+};
+
+const submitForm = async () => {
+  if (!userId.value) return;
+  loading.value = true;
+  setMessage('', '');
+  try {
+    const token = localStorage.getItem('auth_token');
+    const form = new FormData();
+    form.append('name', formData.fullName);
+    form.append('job_title', formData.jobTitle || '');
+    form.append('email', formData.email);
+    form.append('phone', formData.phone || '');
+    form.append('bio', formData.bio || '');
+    if (photoFile.value) {
+      form.append('profile_picture', photoFile.value);
+    }
+
+    const res = await fetch(`/api/users/${userId.value}/update-profile`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+      body: form,
+    });
+
+    const responseData = await res.json();
+    if (!res.ok) {
+      throw new Error(responseData.message || 'Failed to save changes');
+    }
+
+    const user = responseData.user || {};
+    formData.fullName = user.name ?? formData.fullName;
+    formData.jobTitle = user.job_title ?? formData.jobTitle;
+    formData.email = user.email ?? formData.email;
+    formData.phone = user.phone ?? formData.phone;
+    formData.bio = user.bio ?? formData.bio;
+    photoPreview.value = resolveImageUrl(user.profile_picture) || photoPreview.value;
+    lastUpdated.value = user.updated_at || new Date().toISOString();
+    photoFile.value = null;
+    if (fileInput.value) fileInput.value.value = '';
+    persistToLocalStorage(user);
+    setMessage('success', 'Profile updated successfully.');
+    setTimeout(() => router.push('/admin/settings'), 600);
+  } catch (error) {
+    setMessage('error', error.message);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const removePhoto = async () => {
+  if (!userId.value || !photoPreview.value) return;
+  removingPhoto.value = true;
+  setMessage('', '');
+  try {
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch(`/api/users/${userId.value}/avatar`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json',
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.message || 'Unable to remove photo');
+    }
+
+    photoPreview.value = '';
+    photoFile.value = null;
+    if (fileInput.value) fileInput.value.value = '';
+    persistToLocalStorage({ profile_picture: '' });
+    lastUpdated.value = new Date().toISOString();
+    setMessage('success', 'Photo removed.');
+  } catch (error) {
+    setMessage('error', error.message);
+  } finally {
+    removingPhoto.value = false;
+  }
+};
+
+onMounted(() => {
+  loadProfile();
+});
 </script>
 
-<style scoped>
-/* CSS Variables */
-.update-profile-page {
-  --primary-color: #0066FF;
-  --primary-hover: #0052CC;
-  --bg-main: #F8FAFC;
-  --sidebar-bg: #1A222F;
-  --sidebar-text: #94A3B8;
-  --sidebar-active: #0066FF;
-  --sidebar-active-text: #FFFFFF;
-  --input-bg: #E0E7FF;
-  --input-border: #C7D2FE;
-  --card-bg: #FFFFFF;
-  --text-primary: #1E293B;
-  --text-secondary: #64748B;
-  --text-muted: #94A3B8;
-  --notification-bg: #F5F3FF;
-  --notification-icon-bg: #8B5CF6;
-  --danger-color: #EF4444;
-  --success-color: #10B981;
-  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --radius-card: 12px;
-  --radius-input: 8px;
-}
 
-.update-profile-page {
-  display: flex;
-  min-height: 100vh;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg-main);
-}
 
-/* Sidebar */
-.sidebar {
-  width: 220px;
-  background: var(--sidebar-bg);
-  display: flex;
-  flex-direction: column;
-  position: fixed;
-  height: 100vh;
-  left: 0;
-  top: 0;
-}
 
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.brand-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, #3B82F6 100%);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
-
-.brand-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.brand-title {
-  font-size: 1rem;
-  font-weight: 700;
-  color: white;
-  letter-spacing: -0.025em;
-}
-
-.brand-subtitle {
-  font-size: 11px;
-  color: var(--sidebar-text);
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: 12px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  color: var(--sidebar-text);
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  margin: 0 4px;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-}
-
-.nav-item.active {
-  background: var(--sidebar-active);
-  color: var(--sidebar-active-text);
-}
-
-.nav-icon {
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.nav-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Sidebar Footer */
-.sidebar-footer {
-  padding: 12px 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.sidebar-footer .nav-item.logout {
-  color: var(--sidebar-text);
-}
-
-.sidebar-footer .nav-item.logout:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  margin-left: 220px;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Top Header */
-.top-header {
-  height: 64px;
-  background: white;
-  border-bottom: 1px solid #E2E8F0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.header-icon-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  transition: background 0.2s ease;
-}
-
-.header-icon-btn:hover {
-  background: var(--bg-main);
-}
-
-.header-icon-btn svg {
-  width: 20px;
-  height: 20px;
-  color: var(--text-secondary);
-}
-
-.notification-badge {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 16px;
-  height: 16px;
-  background: var(--danger-color);
-  color: white;
-  font-size: 10px;
-  font-weight: 600;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.header-divider {
-  width: 1px;
-  height: 24px;
-  background: #E2E8F0;
-}
-
-.top-header .page-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.header-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.header-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Page Content */
-.page-content {
-  padding: 32px;
-  flex: 1;
-}
-
-.page-header {
-  margin-bottom: 32px;
-}
-
-.page-title-main {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.page-subtitle {
-  font-size: 15px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-/* Content Grid */
-.content-grid {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-/* Profile Photo Card */
-.profile-photo-card {
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  padding: 32px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.profile-photo-container {
-  margin-bottom: 16px;
-}
-
-.profile-photo-placeholder {
-  width: 160px;
-  height: 160px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #E8D5C4 0%, #D4C4B0 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 4px solid white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.profile-photo-placeholder svg {
-  width: 64px;
-  height: 64px;
-  color: #8B7355;
-}
-
-.profile-photo-label {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.profile-photo-hint {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin-bottom: 24px;
-}
-
-.btn-primary {
-  width: 100%;
-  padding: 12px 20px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: var(--radius-input);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-  margin-bottom: 12px;
-}
-
-.btn-primary:hover {
-  background: var(--primary-hover);
-}
-
-.btn-primary svg {
-  width: 18px;
-  height: 18px;
-}
-
-.btn-remove {
-  width: 100%;
-  padding: 10px 20px;
-  background: transparent;
-  color: var(--danger-color);
-  border: 1px solid transparent;
-  border-radius: var(--radius-input);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-remove:hover {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: var(--danger-color);
-}
-
-.btn-remove svg {
-  width: 16px;
-  height: 16px;
-}
-
-.security-status {
-  margin-top: 24px;
-  padding: 16px;
-  background: var(--bg-main);
-  border-radius: var(--radius-input);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-}
-
-.shield-icon {
-  width: 24px;
-  height: 24px;
-  color: var(--primary-color);
-}
-
-.security-info {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
-.security-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.security-date {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* Personal Info Card */
-.personal-info-card {
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  padding: 32px;
-}
-
-.card-header {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 24px 0;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #E2E8F0;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group.full-width {
-  grid-column: 1 / -1;
-  margin-top: 4px;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.form-group input,
-.form-group textarea {
-  padding: 12px 16px;
-  background: var(--input-bg);
-  border: 1px solid var(--input-border);
-  border-radius: var(--radius-input);
-  font-size: 14px;
-  color: var(--text-primary);
-  font-family: inherit;
-  transition: all 0.2s ease;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.1);
-}
-
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-  color: var(--text-muted);
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 100px;
-}
-
-.input-with-icon {
-  position: relative;
-}
-
-.input-with-icon .input-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  color: var(--text-muted);
-}
-
-.input-with-icon input {
-  padding-left: 42px;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 32px;
-  padding-top: 24px;
-  border-top: 1px solid #E2E8F0;
-}
-
-.btn-cancel {
-  padding: 12px 24px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: none;
-  border-radius: var(--radius-input);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-cancel:hover {
-  background: var(--bg-main);
-  color: var(--text-primary);
-}
-
-.btn-save {
-  padding: 12px 24px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: var(--radius-input);
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.btn-save:hover {
-  background: var(--primary-hover);
-}
-
-.btn-save svg {
-  width: 18px;
-  height: 18px;
-}
-
-/* Notifications Card */
-.notifications-card {
-  background: var(--card-bg);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  padding: 24px 32px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.notification-content {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-.notification-icon-box {
-  width: 52px;
-  height: 52px;
-  background: var(--notification-bg);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.notification-icon-box svg {
-  width: 26px;
-  height: 26px;
-  color: var(--notification-icon-bg);
-}
-
-.notification-text h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 4px 0;
-}
-
-.notification-text p {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-/* Toggle Switch */
-.toggle-switch {
-  width: 56px;
-  height: 30px;
-  background: #CBD5E1;
-  border-radius: 15px;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.toggle-switch.on {
-  background: var(--primary-color);
-}
-
-.toggle-slider {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 24px;
-  height: 24px;
-  background: white;
-  border-radius: 50%;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.toggle-switch.on .toggle-slider {
-  left: 29px;
-}
-
-/* Responsive */
-@media (max-width: 1200px) {
-  .content-grid {
-    grid-template-columns: 280px 1fr;
-  }
-}
-
-@media (max-width: 1024px) {
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .profile-photo-card {
-    flex-direction: row;
-    flex-wrap: wrap;
-    text-align: left;
-    gap: 20px;
-  }
-  
-  .profile-photo-container {
-    margin-bottom: 0;
-  }
-  
-  .profile-photo-placeholder {
-    width: 120px;
-    height: 120px;
-  }
-  
-  .profile-photo-placeholder svg {
-    width: 48px;
-    height: 48px;
-  }
-  
-  .profile-photo-label,
-  .profile-photo-hint {
-    margin-bottom: 0;
-  }
-  
-  .btn-primary,
-  .btn-remove {
-    width: auto;
-    flex: 1;
-  }
-  
-  .security-status {
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-  
-  .main-content {
-    margin-left: 0;
-  }
-  
-  .page-content {
-    padding: 20px;
-  }
-  
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .notifications-card {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
-  }
-  
-  .notification-content {
-    flex-direction: column;
-  }
-}
-</style>

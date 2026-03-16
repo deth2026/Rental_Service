@@ -82,6 +82,9 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
+// Admin stats endpoint - public for now (can add auth later)
+Route::get('/admin/stats', [ShopController::class, 'getAdminStats']);
+
 // Public vehicle routes (for customers to view vehicles)
 Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
 

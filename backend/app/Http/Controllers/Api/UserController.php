@@ -240,6 +240,8 @@ class UserController extends Controller
             'email'           => 'sometimes|required|email|unique:users,email,' . $userId,
             'phone'           => 'nullable|string|max:30',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+            'job_title'       => 'nullable|string|max:255',
+            'bio'             => 'nullable|string|max:2000',
         ];
 
         $validated = $request->validate($validationRules);
@@ -315,4 +317,3 @@ class UserController extends Controller
         ]);
     }
 }
-

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Shop;
+use App\Models\Feedback;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -250,5 +251,23 @@ class ShopController extends Controller
         }
 
         return [$result['lat'], $result['lng']];
+    }
+
+    /**
+     * Get admin dashboard stats: total shops and average rating
+     */
+    public function getAdminStats()
+    {
+        // Get total number of shops
+        $totalShops = Shop::count();
+
+        // Get average rating from all feedback
+        $averageRating = Feedback::avg('rating');
+        $averageRating = $averageRating ? round($averageRating, 1) : 0;
+
+        return response()->json([
+            'total_shops' => $totalShops,
+            'average_rating' => $averageRating
+        ]);
     }
 }
