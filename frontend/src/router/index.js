@@ -73,7 +73,7 @@ const router = createRouter({
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
-      path: '/bookings',
+      path: '/bookings/:id?',
       name: 'user-booking',
       component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
