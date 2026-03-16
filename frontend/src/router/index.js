@@ -11,6 +11,7 @@ import PromotionView from '../views/User/Promotion.vue';
 import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import AdminSetting from '../views/admin/Admins_setting.vue';
+import UpdateProfileAdmin from '../views/admin/Update_profile_admin.vue';
 import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
@@ -100,6 +101,18 @@ const router = createRouter({
       path: '/admin/settings',
       name: 'admin-settings',
       component: AdminSetting,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/admin/settings-kh',
+      name: 'admin-settings-kh',
+      component: AdminSetting,
+      meta: { requiresAuth: false }
+    },
+    {
+      path: '/admin/profile',
+      name: 'admin-profile',
+      component: UpdateProfileAdmin,
       meta: { requiresAuth: false }
     },
     {

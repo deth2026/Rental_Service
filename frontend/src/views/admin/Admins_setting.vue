@@ -9,7 +9,10 @@
             <path d="M8 12h8M12 8v8"/>
           </svg>
         </div>
-        <span class="brand-text">Chong Choul</span>
+        <div class="brand-text">
+          <span class="brand-title">CHONG CHOUL</span>
+          <span class="brand-subtitle">{{ $t('rentalSystem') }}</span>
+        </div>
       </div>
       
       <nav class="sidebar-nav">
@@ -22,7 +25,7 @@
               <rect x="3" y="14" width="7" height="7"/>
             </svg>
           </span>
-          <span>Dashboard</span>
+          <span>{{ $t('dashboard') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -31,7 +34,7 @@
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
           </span>
-          <span>Shop Management</span>
+          <span>{{ $t('shopManagement') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -42,7 +45,7 @@
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
           </span>
-          <span>User Management</span>
+          <span>{{ $t('userManagement') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -53,7 +56,7 @@
               <path d="M6 6h8l4 5h-12"/>
             </svg>
           </span>
-          <span>Vehicle Management</span>
+          <span>{{ $t('vehicleManagement') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -64,7 +67,7 @@
               <line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </span>
-          <span>Booking Management</span>
+          <span>{{ $t('bookingManagement') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -74,7 +77,7 @@
               <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/>
             </svg>
           </span>
-          <span>Coupons</span>
+          <span>{{ $t('coupons') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -82,7 +85,7 @@
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
             </svg>
           </span>
-          <span>Categories</span>
+          <span>{{ $t('categories') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -91,7 +94,7 @@
               <circle cx="12" cy="10" r="3"/>
             </svg>
           </span>
-          <span>Cities</span>
+          <span>{{ $t('cities') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -100,7 +103,7 @@
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
             </svg>
           </span>
-          <span>Financials</span>
+          <span>{{ $t('financials') }}</span>
         </a>
         <a href="#" class="nav-item">
           <span class="nav-icon">
@@ -112,7 +115,7 @@
               <polyline points="10 9 9 9 8 9"/>
             </svg>
           </span>
-          <span>Reports</span>
+          <span>{{ $t('reports') }}</span>
         </a>
         <a href="#" class="nav-item active">
           <span class="nav-icon">
@@ -121,7 +124,7 @@
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
           </span>
-          <span>Settings</span>
+          <span>{{ $t('setting') }}</span>
         </a>
       </nav>
       
@@ -134,7 +137,7 @@
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
           </span>
-          <span>Logout</span>
+          <span>{{ $t('logout') }}</span>
         </a>
       </div>
     </aside>
@@ -174,14 +177,11 @@
       <div class="page-content">
         <!-- Page Header & Title -->
         <div class="page-header">
-          <h1 class="page-title">Essential Admin Settings</h1>
+          <h1 class="page-title">{{ $t('adminSettings') }}</h1>
         </div>
 
         <!-- Tab Navigation -->
         <div class="tabs">
-          <button class="tab active">Profile</button>
-          <button class="tab">Roles</button>
-          <button class="tab">System</button>
         </div>
 
         <!-- Settings Grid -->
@@ -193,16 +193,16 @@
             </div>
             <h3 class="profile-name">Admin User</h3>
             <p class="profile-email">admin@chongchoul.com</p>
-            <button class="btn-primary">Update Profile</button>
+            <button class="btn-primary" @click="goToUpdateProfile">{{ $t('updateProfile') }}</button>
             <div class="profile-stats">
               <div class="stat-item">
                 <span class="stat-value">12</span>
-                <span class="stat-label">Total Shops</span>
+                <span class="stat-label">{{ $t('totalShops') }}</span>
               </div>
               <div class="stat-divider"></div>
               <div class="stat-item">
                 <span class="stat-value">4.9</span>
-                <span class="stat-label">Rating</span>
+                <span class="stat-label">{{ $t('rating') }}</span>
               </div>
             </div>
           </div>
@@ -211,9 +211,9 @@
           <div class="right-column">
             <!-- General Preferences -->
             <div class="card preferences-card">
-              <h3 class="card-title">General Preferences</h3>
+              <h3 class="card-title">{{ $t('generalPreferences') }}</h3>
               <div class="preference-section">
-                <label class="preference-label">Language</label>
+                <label class="preference-label">{{ $t('language') }}</label>
                 <div class="toggle-group">
                   <button 
                     class="toggle-btn" 
@@ -228,18 +228,18 @@
                 </div>
               </div>
               <div class="preference-section">
-                <label class="preference-label">Display Theme</label>
+                <label class="preference-label">{{ $t('displayTheme') }}</label>
                 <div class="toggle-group">
                   <button 
                     class="toggle-btn" 
                     :class="{ active: activeTheme === 'Light' }"
                     @click="setTheme('Light')"
-                  >Light</button>
+                  >{{ $t('light') }}</button>
                   <button 
                     class="toggle-btn" 
                     :class="{ active: activeTheme === 'Dark' }"
                     @click="setTheme('Dark')"
-                  >Dark</button>
+                  >{{ $t('dark') }}</button>
                 </div>
               </div>
             </div>
@@ -253,13 +253,13 @@
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </div>
-                <span class="badge-recommended">Recommended</span>
+                <span class="badge-recommended">{{ $t('recommended') }}</span>
               </div>
-              <h3 class="card-title">Security Settings</h3>
+              <h3 class="card-title">{{ $t('securitySettings') }}</h3>
               <div class="security-row">
                 <div class="security-info">
-                  <span class="security-title">Two-Factor Authentication</span>
-                  <span class="security-desc">Add an extra layer of security to your account</span>
+                  <span class="security-title">{{ $t('twoFactorAuthentication') }}</span>
+                  <span class="security-desc">{{ $t('twoFactorDescription') }}</span>
                 </div>
                 <label class="toggle-switch">
                   <input type="checkbox" checked />
@@ -270,19 +270,19 @@
 
             <!-- System Roles -->
             <div class="card roles-card">
-              <h3 class="card-title">System Roles</h3>
+              <h3 class="card-title">{{ $t('systemRoles') }}</h3>
               <div class="roles-list">
                 <div class="role-item">
-                  <span class="role-name">Admin</span>
-                  <span class="role-badge admin">03 Users</span>
+                  <span class="role-name">{{ $t('admin') }}</span>
+                  <span class="role-badge admin">03 {{ $t('users') }}</span>
                 </div>
                 <div class="role-item">
-                  <span class="role-name">Shop Owner</span>
-                  <span class="role-badge shop">45 Users</span>
+                  <span class="role-name">{{ $t('shopOwner') }}</span>
+                  <span class="role-badge shop">45 {{ $t('users') }}</span>
                 </div>
                 <div class="role-item">
-                  <span class="role-name">Customer</span>
-                  <span class="role-badge customer">2,434 Users</span>
+                  <span class="role-name">{{ $t('customer') }}</span>
+                  <span class="role-badge customer">2,434 {{ $t('users') }}</span>
                 </div>
               </div>
             </div>
@@ -300,9 +300,9 @@
               </svg>
             </div>
             <div class="status-content">
-              <span class="status-label">Last Login</span>
-              <span class="status-value">Mar 15, 2026</span>
-              <span class="status-detail">09:23 AM • 192.168.1.105</span>
+              <span class="status-label">{{ $t('lastLogin') }}</span>
+              <span class="status-value">{{ currentDateTime }}</span>
+              <span class="status-detail">192.168.1.105</span>
             </div>
           </div>
 
@@ -316,26 +316,29 @@
               </svg>
             </div>
             <div class="status-content">
-              <span class="status-label">Active Sessions</span>
-              <span class="status-value">03 Devices</span>
-              <span class="status-detail">Windows • macOS • iOS</span>
+              <span class="status-label">{{ $t('activeSessions') }}</span>
+              <span class="status-value">01 {{ $t('device') }}</span>
+              <span class="status-detail">Windows</span>
             </div>
           </div>
 
-          <!-- Storage Limit -->
+          <!-- User Usage -->
           <div class="card status-card">
             <div class="status-icon storage">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
               </svg>
             </div>
             <div class="status-content">
-              <span class="status-label">Storage Limit</span>
-              <span class="status-value">85% Used</span>
+              <span class="status-label">{{ $t('userUsage') }}</span>
+              <span class="status-value">{{ userUsagePercent }}% {{ $t('used') }}</span>
               <div class="progress-container">
-                <div class="progress-bar warning"></div>
+                <div class="progress-bar" :style="{ width: userUsagePercent + '%' }"></div>
               </div>
-              <span class="status-detail">8.5 GB / 10 GB</span>
+              <span class="status-detail">{{ userUsagePercent }}%</span>
             </div>
           </div>
         </div>
@@ -345,15 +348,72 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { setLanguage } from '@/i18n'
 
+const { locale } = useI18n()
 const router = useRouter()
+const route = useRoute()
 
 const activeTab = ref('profile')
 const activeLanguage = ref('English')
 const activeTheme = ref('Light')
+const currentDateTime = ref('')
+const userUsagePercent = ref(0)
+
+// Get current date and time in Cambodia timezone (UTC+7)
+const getCurrentDateTime = () => {
+  const now = new Date()
+  // Cambodia is UTC+7
+  const cambodiaTime = new Date(now.getTime() + 7 * 60 * 60 * 1000)
+  
+  const dateOptions = { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric'
+  }
+  
+  const timeOptions = { 
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  }
+  
+  const date = cambodiaTime.toLocaleDateString('en-US', dateOptions)
+  const time = cambodiaTime.toLocaleTimeString('en-US', timeOptions)
+  
+  return `${date} ${time}`
+}
+
+// Check route path to determine initial language and set i18n
+// Set initial language based on route
+const setInitialLanguage = () => {
+  if (route.path.includes('-kh')) {
+    activeLanguage.value = 'Khmer'
+    locale.value = 'kh'
+    localStorage.setItem('app_language', 'kh')
+  } else {
+    activeLanguage.value = 'English'
+    locale.value = 'en'
+    localStorage.setItem('app_language', 'en')
+  }
+}
+
+onMounted(() => {
+  setInitialLanguage()
+  currentDateTime.value = getCurrentDateTime()
+})
+
+// Watch for route changes
+watch(() => route.path, () => {
+  setInitialLanguage()
+})
+
+const goToUpdateProfile = () => {
+  router.push('/admin/profile')
+}
 
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: 'grid' },
@@ -373,7 +433,17 @@ const handleLanguageChange = (lang) => {
   activeLanguage.value = lang
   // Use 'en' or 'kh' for the i18n function
   const i18nLang = lang === 'English' ? 'en' : 'kh'
-  setLanguage(i18nLang)
+  
+  // Set language in localStorage and i18n
+  locale.value = i18nLang
+  localStorage.setItem('app_language', i18nLang)
+  
+  // Navigate to the appropriate language route
+  if (lang === 'Khmer') {
+    router.push('/admin/settings-kh')
+  } else {
+    router.push('/admin/settings')
+  }
 }
 
 const setTheme = (theme) => {
@@ -404,6 +474,9 @@ const logout = () => {
   --primary-hover: #0052CC;
   --background: #F8FAFC;
   --sidebar-bg: #1A222F;
+  --sidebar-text: #94A3B8;
+  --sidebar-active: #0066FF;
+  --sidebar-active-text: #FFFFFF;
   --card-bg: #FFFFFF;
   --text-primary: #1E293B;
   --text-secondary: #64748B;
@@ -457,7 +530,7 @@ const logout = () => {
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 8px;
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -488,36 +561,39 @@ const logout = () => {
 .sidebar-nav {
   flex: 1;
   padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   overflow-y: auto;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: 8px 16px;
-  color: rgba(255, 255, 255, 0.65);
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0 4px;
+  color: var(--sidebar-text);
   text-decoration: none;
-  font-size: 0.8125rem;
+  font-size: 14px;
   font-weight: 500;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   transition: all var(--transition-fast);
-  margin-bottom: 2px;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
+  background: rgba(255, 255, 255, 0.05);
+  color: #FFFFFF;
 }
 
 .nav-item.active {
-  background: var(--primary);
-  color: white;
+  background: var(--sidebar-active);
+  color: var(--sidebar-active-text);
 }
 
 .nav-icon {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -525,8 +601,8 @@ const logout = () => {
 }
 
 .nav-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .sidebar-footer {
@@ -535,7 +611,7 @@ const logout = () => {
 }
 
 .nav-item.logout {
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--sidebar-text);
 }
 
 .nav-item.logout:hover {
