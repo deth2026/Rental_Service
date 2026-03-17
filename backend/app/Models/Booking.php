@@ -52,6 +52,10 @@ class Booking extends Model
     {
         return $this->belongsTo(Coupon::class);
     }
-}
 
+    public function latestStatusLog()
+    {
+        return $this->hasOne(BookingStatusLog::class)->latestOfMany('changed_at');
+    }
+}
 

@@ -180,7 +180,7 @@
               v-if="method === 'card'"
               class="card-details-form"
               autocomplete="on"
-              @submit.prevent="handlePayment"
+              @submit.prevent="openConfirmModal('card')"
             >
               <div class="input-group">
                 <label>Cardholder Name</label>
@@ -292,7 +292,7 @@
                 type="button"
                 class="btn-primary-pay"
                 :disabled="!isFormValid"
-                @click="handleBankTransfer"
+                @click="openConfirmModal('bank')"
               >
                 Confirm bank transfer
               </button>
@@ -355,7 +355,7 @@
                     <button
                       type="button"
                       class="btn-primary-pay"
-                      @click="handlePayment"
+                      @click="openConfirmModal('qr')"
                     >
                       I have paid
                     </button>
@@ -412,40 +412,80 @@
     </footer>
 
     <div
+      v-if="showConfirmModal"
+      class="confirm-modal-overlay"
+      @click="closeConfirmModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2>Confirm Payment</h2>
+        <p>Please review the details before confirming your payment.</p>
+
+        <div class="confirm-details">
+          <div class="confirm-detail">
+            <span>Amount</span>
+            <strong>${{ totalAmount.toFixed(2) }}</strong>
+          </div>
+          <div class="confirm-detail">
+            <span>Method</span>
+            <strong>{{ receiptPaymentLabel }}</strong>
+          </div>
+        </div>
+
+        <div class="confirm-actions">
+          <button class="btn-cancel" type="button" @click="closeConfirmModal">
+            Cancel
+          </button>
+          <button class="btn-confirm" type="button" @click="confirmPayment">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
       v-if="showSuccessModal"
       class="success-modal-overlay"
       @click="closeSuccessModal"
     >
       <div class="success-modal" @click.stop>
-        <h2>Payment Successful</h2>
-        <p>Your booking has been confirmed.</p>
+        <div class="success-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2>Successfully</h2>
 
-        <div class="transaction-receipt">
-          <div class="receipt-row">
-            <span class="label">Booking ID</span>
-            <span class="value">{{ bookingId }}</span>
+        <div class="success-card">
+          <div class="success-row">
+            <span>Booking ID</span>
+            <strong>{{ bookingId }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Transaction ID</span>
-            <span class="value">{{ transactionId }}</span>
+          <div class="success-row">
+            <span>Transaction ID</span>
+            <strong>{{ transactionId }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Payment Method</span>
-            <span class="value">{{ receiptPaymentLabel }}</span>
+          <div class="success-row">
+            <span>Payment Method</span>
+            <strong>{{ receiptPaymentLabel }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Amount Paid</span>
-            <span class="value amount">${{ totalAmount.toFixed(2) }}</span>
+          <div class="success-row">
+            <span>Amount Paid</span>
+            <strong>${{ totalAmount.toFixed(2) }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Date</span>
-            <span class="value">{{ transactionDateTime }}</span>
+          <div class="success-row">
+            <span>Date</span>
+            <strong>{{ transactionDateTime }}</strong>
           </div>
         </div>
 
         <div class="modal-actions">
           <button class="btn-download" type="button" @click="downloadReceipt">
-            Download receipt
+            Download
           </button>
           <button class="btn-close" type="button" @click="closeSuccessModal">
             Close
@@ -649,6 +689,8 @@ const method = ref("card");
 const promoCode = ref("");
 const showQR = ref(false);
 const showSuccessModal = ref(false);
+const showConfirmModal = ref(false);
+const pendingPaymentAction = ref(null);
 const dateError = ref("");
 const bookingId = ref("");
 const paymentId = ref(
@@ -897,6 +939,28 @@ const buildBookingData = (paymentMethod, status) => ({
   status,
   createdAt: new Date().toISOString(),
 });
+
+const openConfirmModal = (action) => {
+  pendingPaymentAction.value = action;
+  showConfirmModal.value = true;
+};
+
+const closeConfirmModal = () => {
+  showConfirmModal.value = false;
+  pendingPaymentAction.value = null;
+};
+
+const confirmPayment = async () => {
+  const action = pendingPaymentAction.value;
+  closeConfirmModal();
+
+  if (action === "bank") {
+    await handleBankTransfer();
+    return;
+  }
+
+  await handlePayment();
+};
 
 const handlePayment = async () => {
   await validateDates();
