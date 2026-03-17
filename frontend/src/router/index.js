@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
@@ -28,6 +29,10 @@ const getUserRole = () => {
   }
   return null;
 };
+=======
+import { createRouter, createWebHistory } from 'vue-router'
+import UserBookings from '../views/user/MyBookings.vue'
+>>>>>>> feature/booking-history
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
