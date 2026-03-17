@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import UserBookings from '../views/user/Bookings.vue'
+import UserBookings from '../views/user/MyBookings.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
