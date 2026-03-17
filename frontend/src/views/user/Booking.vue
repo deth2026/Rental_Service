@@ -890,7 +890,7 @@ const saveBookingToDatabase = async (bookingData) => {
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
-    status: bookingData?.status || "pending",
+    status: "pending",
     deposit_amount: 0,
     deposit_status: "unpaid",
     rider_details: rental.value.riders,

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
@@ -35,6 +36,10 @@ class ShopController extends Controller
             'status' => 'nullable|string|in:active,inactive',
             // do NOT validate img_url here; see below
         ]);
+
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
         
         // A shop owner can only create shops for themselves.
         $payload['owner_id'] = $request->user()?->id;
@@ -123,6 +128,10 @@ class ShopController extends Controller
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
 
         // validate img_url value type depending on upload or text
         if ($request->hasFile('img_url')) {
@@ -218,6 +227,18 @@ class ShopController extends Controller
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
+    }
+
+    /**
+     * Check whether the shops table contains the given column.
+     */
+    private function shopColumnExists(string $column): bool
+    {
+        static $cache = [];
+        if (!array_key_exists($column, $cache)) {
+            $cache[$column] = Schema::hasColumn('shops', $column);
+        }
+        return $cache[$column];
     }
 
     /**

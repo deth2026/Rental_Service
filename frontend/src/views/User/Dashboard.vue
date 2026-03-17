@@ -11,7 +11,7 @@ const route = useRoute()
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', route: '#' },
+  { label: 'Mybooking', route: '/my-bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 

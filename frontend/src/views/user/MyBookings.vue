@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { vehicleService } from '../../services/database.js'
+import { vehicleService, userService } from '../../services/database.js'
+import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/MyBookings.css'
 
 const activeTab = ref('all')
@@ -11,32 +12,36 @@ const detailError = ref('')
 const selectedBooking = ref(null)
 const selectedVehicle = ref(null)
 
-const bookings = ref([
-  {
-    id: 1,
-    vehicle_id: 101,
-    vehicle_name: 'BOO COO 2008',
-    booking_code: 'BK-20260307-0008',
-    shop_name: 'City Bike & Car Rental',
-    start_date: '2026-03-07',
-    end_date: '2026-03-08',
-    total_price: 20,
-    status: 'pending',
-    image: 'https://images.unsplash.com/photo-1493238792000-8113da705763?auto=format&fit=crop&w=700&q=80',
-  },
-  {
-    id: 2,
-    vehicle_id: 102,
-    vehicle_name: 'Toyota Corolla Cross 2023',
-    booking_code: 'BK-20260307-0007',
-    shop_name: 'City Bike & Car Rental',
-    start_date: '2026-03-08',
-    end_date: '2026-03-14',
-    total_price: 525,
-    status: 'confirmed',
-    image: 'https://images.unsplash.com/photo-1542282088-fe8426682b8f?auto=format&fit=crop&w=700&q=80',
-  },
-])
+const bookings = ref([])
+const loading = ref(true)
+const error = ref('')
+
+const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
+
+const fetchBookings = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    const token = getStoredToken()
+    const headers = { Accept: 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const response = await fetch('/api/my-bookings', { headers })
+    if (!response.ok) {
+      throw new Error('Failed to fetch bookings')
+    }
+    const data = await response.json()
+    bookings.value = Array.isArray(data) ? data : (data.data || [])
+  } catch (e) {
+    error.value = e.message || 'Unable to load bookings'
+    console.error('Error fetching bookings:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Fetch bookings on mount
+fetchBookings()
 
 const filteredBookings = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -132,8 +137,6 @@ const normalizeVehicle = (vehicle) => {
     description: vehicle.description || '',
   }
 }
-
-const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
 
 const fetchVehicleFromApi = async (id) => {
   const token = getStoredToken()
@@ -238,7 +241,13 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
     </section>
 
     <section class="booking-list-wrap">
-      <div v-if="filteredBookings.length === 0" class="empty-state">
+      <div v-if="loading" class="empty-state">
+        Loading bookings...
+      </div>
+      <div v-else-if="error" class="empty-state" style="color: red;">
+        {{ error }}
+      </div>
+      <div v-else-if="filteredBookings.length === 0" class="empty-state">
         No bookings found for your search.
       </div>
       <article v-for="booking in filteredBookings" :key="booking.id" class="booking-card">
@@ -279,61 +288,87 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
         </button>
 
         <div v-if="detailError" class="detail-state detail-error">{{ detailError }}</div>
-        <div v-else-if="selectedVehicle" class="detail-content">
-          <div class="detail-image-wrap">
-            <img
-              class="detail-image"
-              :src="getBookingImage(selectedBooking) || selectedVehicle.image_url"
-              :alt="detailTitle"
-            />
-          </div>
-
-          <div class="detail-title-row">
-            <div>
-              <h2>{{ detailTitle }}</h2>
-              <p class="detail-booking-code">{{ selectedBooking?.booking_code || `BK-${selectedBooking?.id || ''}` }}</p>
+        <div v-else-if="selectedVehicle" class="detail-content detail-grid-layout">
+          <div class="detail-left">
+            <div class="detail-image-wrap detail-image-main">
+              <img
+                class="detail-image"
+                :src="getBookingImage(selectedBooking) || selectedVehicle.image_url"
+                :alt="detailTitle"
+              />
             </div>
-            <span class="detail-status-badge" :class="getStatusClass(selectedBooking?.status)">
-              {{ getStatusLabel(selectedBooking?.status) }}
-            </span>
-          </div>
-
-          <div class="detail-section">
-            <h3>Vehicle Details</h3>
-            <div class="detail-grid">
-              <div class="detail-item"><span>Type</span><strong>{{ selectedVehicle.category || 'N/A' }}</strong></div>
-              <div class="detail-item"><span>Year</span><strong>{{ selectedVehicle.year || 'N/A' }}</strong></div>
-              <div class="detail-item"><span>Brand</span><strong>{{ selectedVehicle.brand || 'N/A' }}</strong></div>
-              <div class="detail-item"><span>Model</span><strong>{{ selectedVehicle.model || 'N/A' }}</strong></div>
-              <div class="detail-item"><span>Fuel Type</span><strong>{{ selectedVehicle.fuel_type || 'N/A' }}</strong></div>
-              <div class="detail-item"><span>Transmission</span><strong>{{ selectedVehicle.transmission || 'N/A' }}</strong></div>
+            <div class="detail-thumbnail-row">
+              <div v-for="n in 3" :key="n" class="thumbnail-placeholder"></div>
             </div>
           </div>
 
-          <div class="detail-section">
-            <h3>Booking Details</h3>
-            <div class="detail-rows">
+          <div class="detail-right">
+            <div class="detail-title-row">
+              <div>
+                <h2>{{ detailTitle }}</h2>
+                <p class="detail-booking-code">{{ selectedBooking?.booking_code || `BK-${selectedBooking?.id || ''}` }}</p>
+              </div>
+              <span class="detail-status-badge" :class="getStatusClass(selectedBooking?.status)">
+                {{ getStatusLabel(selectedBooking?.status) }}
+              </span>
+            </div>
+
+            <div class="detail-price-row">
+
+                <div class="detail-total-box">
+                <span>Total</span>
+                <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
+              </div>
+              <div>
+                <p class="detail-price-label">Price per day</p>
+                <strong class="detail-price">{{ formatCurrency(detailPricePerDay) }}</strong>
+                <span class="detail-price-suffix">USD</span>
+              </div>
+            
+            </div>
+
+            <div class="detail-section detail-section--compact">
+              <div class="detail-row"><span>Status</span><strong>{{ getStatusLabel(selectedBooking?.status) }}</strong></div>
               <div class="detail-row"><span>Shop</span><strong>{{ selectedBooking?.shop_name || 'N/A' }}</strong></div>
               <div class="detail-row"><span>Rental Date</span><strong>{{ formatDate(selectedBooking?.start_date) }} - {{ formatDate(selectedBooking?.end_date) }}</strong></div>
               <div class="detail-row"><span>Duration</span><strong>{{ detailDays }} day(s)</strong></div>
             </div>
-          </div>
 
-          <div class="detail-section">
-            <h3>Payment Summary</h3>
-            <div class="detail-rows">
-              <div class="detail-row"><span>Price per day</span><strong>{{ formatCurrency(detailPricePerDay) }}</strong></div>
-              <div class="detail-row"><span>Days</span><strong>x {{ detailDays }}</strong></div>
+            <div class="detail-section detail-section--full">
+              <div class="detail-grid detail-grid--info">
+                <div class="detail-item detail-item--info">
+                  <span>Type</span>
+                  <strong>{{ selectedVehicle.category || 'N/A' }}</strong>
+                </div>
+                <div class="detail-item detail-item--info">
+                  <span>Brand</span>
+                  <strong>{{ selectedVehicle.brand || 'N/A' }}</strong>
+                </div>
+                <div class="detail-item detail-item--info">
+                  <span>Fuel</span>
+                  <strong>{{ selectedVehicle.fuel_type || 'N/A' }}</strong>
+                </div>
+                <div class="detail-item detail-item--info">
+                  <span>Transmission</span>
+                  <strong>{{ selectedVehicle.transmission || 'N/A' }}</strong>
+                </div>
+                <div class="detail-item detail-item--info">
+                  <span>Plate</span>
+                  <strong>{{ selectedVehicle.plate || selectedVehicle.plate_number || 'N/A' }}</strong>
+                </div>
+                <div class="detail-item detail-item--info">
+                  <span>Status</span>
+                  <strong>{{ selectedVehicle.status || 'N/A' }}</strong>
+                </div>
+              </div>
             </div>
-            <div class="detail-total-row">
-              <span>Total Amount</span>
-              <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
-            </div>
-          </div>
 
-          <p v-if="selectedVehicle.description" class="detail-description">{{ selectedVehicle.description }}</p>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Common Footer -->
+  <CommonFooter />
 </template>

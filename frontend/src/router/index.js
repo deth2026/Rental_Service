@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { createRouter, createWebHistory } from 'vue-router';
 
 import HomeView from '../views/HomeView.vue';
@@ -7,12 +6,13 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
 import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Booking.vue';
+import UserBookings from '../views/User/MyBookings.vue';
 import PromotionView from '../views/User/Promotion.vue';
 import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
+import Booking from '../views/User/Booking.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
 
 // Check if user is authenticated
@@ -29,10 +29,6 @@ const getUserRole = () => {
   }
   return null;
 };
-=======
-import { createRouter, createWebHistory } from 'vue-router'
-import UserBookings from '../views/user/MyBookings.vue'
->>>>>>> feature/booking-history
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,8 +74,20 @@ const router = createRouter({
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
+      path: '/booking/:id?',
+      name: 'booking',
+      component: Booking,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
       path: '/bookings/:id?',
       name: 'user-booking',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/my-bookings',
+      name: 'my-bookings',
       component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },

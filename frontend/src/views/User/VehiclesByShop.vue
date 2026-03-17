@@ -341,7 +341,7 @@ const setActiveNav = (item) => {
     return;
   }
   if (item === 'My Bookings') {
-    router.push('/bookings');
+    router.push('/my-bookings');
     return;
   }
   if (item === 'Promotion') {
