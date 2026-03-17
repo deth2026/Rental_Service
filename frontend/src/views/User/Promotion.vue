@@ -406,11 +406,13 @@ onMounted(fetchPromotions)
   position: sticky;
   top: 0;
   z-index: 30;
-  display: flex;
+  width: 110%;
+  height: 80px;
+  display: flex; 
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 18px 60px;
+  /* padding: 0 30px 0 40px; */
   background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid rgba(148, 163, 184, 0.2);
   backdrop-filter: blur(14px);
@@ -422,15 +424,17 @@ onMounted(fetchPromotions)
   gap: 12px;
   font-size: 1.2rem;
   font-weight: 800;
+  margin-left: -30px;
 }
 
 .brand-icon {
-  display: grid;
+  display: flex;
   place-items: center;
   width: 42px;
   height: 42px;
   border-radius: 14px;
   color: #fff;
+
 }
 
 .nav-links {

@@ -67,6 +67,7 @@ const fontOptions = [
   "Minimalist",
   "Bold Display",
 ];
+const previewSizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
 const setPrimaryColor = (color) => {
   createForm.primary_color = color;
@@ -708,215 +709,289 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <form class="create-shop-form" @submit.prevent="createShop">
-          <div class="create-grid">
-            <section
-              class="photo-panel"
-              :class="{ dragging: isShopImageDragOver }"
-              @dragover.prevent="isShopImageDragOver = true"
-              @dragleave.prevent="isShopImageDragOver = false"
-              @drop.prevent="onShopImageDrop"
-            >
-              <div class="photo-circle">
+        <form class="myshop-create-form" @submit.prevent="createShop">
+          <div class="myshop-create-layout">
+            <div class="myshop-preview-card">
+              <div class="myshop-preview-header">
+                <p class="section-kicker">live preview</p>
+                <h4>Shop Overview</h4>
+              </div>
+              <div class="myshop-preview-image-box">
                 <img
                   v-if="shopImagePreview"
                   :src="shopImagePreview"
-                  alt="Shop preview"
+                  alt="shop preview"
                 />
-                <div v-else class="photo-placeholder">
-                  <svg
-                    viewBox="0 0 80 80"
-                    fill="none"
-                    stroke="#94a3b8"
-                    stroke-width="1.6"
-                  >
-                    <rect x="8" y="18" width="64" height="44" rx="14" />
-                    <path d="M16 38h48" />
-                    <circle cx="34" cy="31" r="5" />
-                    <path d="M34 45h12" />
-                  </svg>
+                <div v-else class="myshop-preview-placeholder">
+                  <span>Logo Preview</span>
                 </div>
               </div>
-              <div class="photo-note">
-                <p>Shop Profile Image</p>
+              <h3>{{ createForm.name || "Shop Name" }}</h3>
+              <p class="myshop-preview-description">
+                {{
+                  createForm.description ||
+                  "Describe your shop so customers get a sense of your story."
+                }}
+              </p>
+              <div class="myshop-preview-meta">
+                <span>
+                  <strong>Status:</strong>
+                  <span
+                    :class="['status-text', (createForm.status || 'inactive').toLowerCase()]"
+                  >
+                    {{ createForm.status || 'inactive' }}
+                  </span>
+                </span>
+                <span><strong>Phone:</strong> {{ createForm.phone || '—' }}</span>
+              </div>
+              <p class="myshop-preview-address">
+                <strong>Address:</strong>
+                {{ createForm.address || 'Add your location' }}
+              </p>
+              <div class="myshop-preview-colors">
+                <span>Palette</span>
+                <div class="myshop-color-chip-preview">
+                  <span
+                    class="chip"
+                    :style="{ backgroundColor: createForm.primary_color }"
+                  ></span>
+                  <span
+                    class="chip"
+                    :style="{ backgroundColor: createForm.accent_color }"
+                  ></span>
+                </div>
+              </div>
+              <div class="myshop-preview-price-row">
+                <div class="myshop-preview-price">
+                  <span class="myshop-preview-price-value">$199.00</span>
+                  <span class="myshop-preview-price-label">Starting price</span>
+                </div>
+                <div class="myshop-preview-rating">
+                  <span>4.8/5</span>
+                  <small>(2.1k reviews)</small>
+                </div>
+              </div>
+              <div class="myshop-preview-sizes">
+                <p>Sizes</p>
+                <div class="myshop-size-chips">
+                  <span v-for="size in previewSizes" :key="size" class="myshop-size-chip">{{
+                    size
+                  }}</span>
+                </div>
+              </div>
+              <div class="myshop-preview-color-row">
+                <p>Colors</p>
+                <div class="myshop-preview-color-swatches">
+                  <span
+                    v-for="color in colorPalette"
+                    :key="`preview-${color}`"
+                    class="myshop-color-dot"
+                    :style="{ backgroundColor: color }"
+                  ></span>
+                </div>
+              </div>
+              <p class="myshop-preview-font">Font · {{ createForm.font }}</p>
+              <div class="myshop-preview-card-actions">
                 <button
                   type="button"
-                  class="upload-btn"
-                  @click="triggerShopImagePicker"
+                  class="ghost-btn"
+                  @click="closeCreateModal"
+                  :disabled="loading"
                 >
-                  {{ shopImageFile ? "Change Photo" : "Upload Photo" }}
+                  Cancel
                 </button>
-                <p class="upload-help">
-                  Drag and drop or click to upload your shop's logo (PNG, JPG,
-                  WEBP).
-                </p>
+                <button type="submit" class="primary-btn" :disabled="loading">
+                  {{ loading ? "Creating..." : "Create Shop" }}
+                </button>
               </div>
-              <input
-                ref="shopImageInputRef"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                class="hidden-file-input"
-                @change="onShopImageChange"
-              />
-            </section>
+            </div>
 
-            <section class="brand-panel">
-              <div class="section-title-row">
-                <div>
-                  <p class="section-kicker">Customization & Branding</p>
-                  <h4>Shop Color Palette</h4>
-                </div>
-                <p class="section-subtext">Pick a tone for your store front</p>
-              </div>
-
-              <div class="color-group">
-                <div class="color-label">Primary Colour</div>
-                <div class="color-palette-grid">
-                  <button
-                    v-for="color in colorPalette"
-                    :key="`primary-${color}`"
-                    type="button"
-                    class="color-chip"
-                    :style="{ backgroundColor: color }"
-                    :class="{ selected: createForm.primary_color === color }"
-                    @click="setPrimaryColor(color)"
-                  ></button>
-                </div>
-              </div>
-
-              <div class="color-group">
-                <div class="color-label">Accent Colour</div>
-                <div class="color-palette-grid">
-                  <button
-                    v-for="color in accentPalette"
-                    :key="`accent-${color}`"
-                    type="button"
-                    class="color-chip accent"
-                    :style="{ backgroundColor: color }"
-                    :class="{ selected: createForm.accent_color === color }"
-                    @click="setAccentColor(color)"
-                  ></button>
-                </div>
-              </div>
-
-              <label class="font-select">
-                <span>Shop Font</span>
-                <select v-model="createForm.font">
-                  <option v-for="font in fontOptions" :key="font" :value="font">
-                    {{ font }}
-                  </option>
-                </select>
-              </label>
-
-              <label class="about-field">
-                <span>About Us Section</span>
-                <textarea
-                  v-model="createForm.description"
-                  rows="3"
-                  placeholder="Share your passion and the story behind your shop"
-                  @input="clearFieldError('description')"
-                ></textarea>
-                <small v-if="fieldErrors.description" class="field-error">{{
-                  fieldErrors.description
-                }}</small>
-              </label>
-
-              <div class="basic-info-grid">
-                <label>
-                  <span>Shop Name *</span>
-                  <input
-                    v-model="createForm.name"
-                    required
-                    type="text"
-                    placeholder="Enter shop name"
-                    @input="clearFieldError('name')"
-                  />
-                  <small v-if="fieldErrors.name" class="field-error">{{
-                    fieldErrors.name
-                  }}</small>
-                </label>
-
-                <label>
-                  <span>Status *</span>
-                  <select
-                    v-model="createForm.status"
-                    @change="clearFieldError('status')"
+            <div class="myshop-form-column">
+              <section
+                class="myshop-upload-section"
+                :class="{ dragging: isShopImageDragOver }"
+                @dragover.prevent="isShopImageDragOver = true"
+                @dragleave.prevent="isShopImageDragOver = false"
+                @drop.prevent="onShopImageDrop"
+              >
+                <div class="myshop-upload-content">
+                  <svg
+                    viewBox="0 0 64 64"
+                    fill="none"
+                    stroke="#f97316"
+                    stroke-width="1.8"
                   >
-                    <option value="active">active</option>
-                    <option value="inactive">inactive</option>
+                    <path d="M32 18v26" />
+                    <path d="M24 30l8-8 8 8" />
+                    <path d="M18 38h28" />
+                  </svg>
+                  <p class="myshop-upload-title">Add shop logo</p>
+                  <p class="myshop-upload-hint">
+                    Drop your image here, or click to browse (PNG, JPG, WEBP).
+                  </p>
+                  <button
+                    type="button"
+                    class="myshop-upload-btn"
+                    @click="triggerShopImagePicker"
+                  >
+                    {{ shopImageFile ? "Change Photo" : "Upload Photo" }}
+                  </button>
+                </div>
+                <input
+                  ref="shopImageInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  class="hidden-file-input"
+                  @change="onShopImageChange"
+                />
+              </section>
+
+              <div class="myshop-form-body">
+                <div class="myshop-field-grid">
+                  <label>
+                    <span>Shop Name *</span>
+                    <input
+                      v-model="createForm.name"
+                      required
+                      type="text"
+                      placeholder="Enter shop name"
+                      @input="clearFieldError('name')"
+                    />
+                    <small v-if="fieldErrors.name" class="field-error">
+                      {{ fieldErrors.name }}
+                    </small>
+                  </label>
+
+                  <label>
+                    <span>Status *</span>
+                    <select
+                      v-model="createForm.status"
+                      @change="clearFieldError('status')"
+                    >
+                      <option value="active">active</option>
+                      <option value="inactive">inactive</option>
+                    </select>
+                    <small v-if="fieldErrors.status" class="field-error">
+                      {{ fieldErrors.status }}
+                    </small>
+                  </label>
+
+                  <label class="wide">
+                    <span>Address *</span>
+                    <input
+                      v-model="createForm.address"
+                      required
+                      type="text"
+                      placeholder="Enter address"
+                      @input="clearFieldError('address')"
+                    />
+                    <small v-if="fieldErrors.address" class="field-error">
+                      {{ fieldErrors.address }}
+                    </small>
+                  </label>
+
+                  <label>
+                    <span>Phone *</span>
+                    <input
+                      v-model="createForm.phone"
+                      required
+                      type="text"
+                      placeholder="Enter phone number"
+                      @input="clearFieldError('phone')"
+                    />
+                    <small v-if="fieldErrors.phone" class="field-error">
+                      {{ fieldErrors.phone }}
+                    </small>
+                  </label>
+                </div>
+
+                <div class="myshop-palette-section">
+                  <div>
+                    <p class="section-kicker">Colors</p>
+                    <h4>Shop Palette</h4>
+                  </div>
+                  <div class="myshop-color-group">
+                    <div class="myshop-color-label">Primary Colour</div>
+                    <div class="myshop-color-palette-grid">
+                      <button
+                        v-for="color in colorPalette"
+                        :key="`primary-${color}`"
+                        type="button"
+                        class="myshop-color-chip"
+                        :style="{ backgroundColor: color }"
+                        :class="{ selected: createForm.primary_color === color }"
+                        @click="setPrimaryColor(color)"
+                      ></button>
+                    </div>
+                  </div>
+                  <div class="myshop-color-group">
+                    <div class="myshop-color-label">Accent Colour</div>
+                    <div class="myshop-color-palette-grid">
+                      <button
+                        v-for="color in accentPalette"
+                        :key="`accent-${color}`"
+                        type="button"
+                        class="myshop-color-chip accent"
+                        :style="{ backgroundColor: color }"
+                        :class="{ selected: createForm.accent_color === color }"
+                        @click="setAccentColor(color)"
+                      ></button>
+                    </div>
+                  </div>
+                </div>
+
+                <label class="myshop-font-select">
+                  <span>Shop Font</span>
+                  <select v-model="createForm.font">
+                    <option v-for="font in fontOptions" :key="font" :value="font">
+                      {{ font }}
+                    </option>
                   </select>
-                  <small v-if="fieldErrors.status" class="field-error">{{
-                    fieldErrors.status
-                  }}</small>
                 </label>
 
-                <label class="wide">
-                  <span>Address *</span>
-                  <input
-                    v-model="createForm.address"
-                    required
-                    type="text"
-                    placeholder="Enter address"
-                    @input="clearFieldError('address')"
-                  />
-                  <small v-if="fieldErrors.address" class="field-error">{{
-                    fieldErrors.address
-                  }}</small>
+                <label class="myshop-about-field">
+                  <span>About Us Section</span>
+                  <textarea
+                    v-model="createForm.description"
+                    rows="3"
+                    placeholder="Share your passion and the story behind your shop"
+                    @input="clearFieldError('description')"
+                  ></textarea>
+                  <small v-if="fieldErrors.description" class="field-error">
+                    {{ fieldErrors.description }}
+                  </small>
                 </label>
 
-                <label>
-                  <span>Phone *</span>
-                  <input
-                    v-model="createForm.phone"
-                    required
-                    type="text"
-                    placeholder="Enter phone number"
-                    @input="clearFieldError('phone')"
-                  />
-                  <small v-if="fieldErrors.phone" class="field-error">{{
-                    fieldErrors.phone
-                  }}</small>
-                </label>
+                <div class="myshop-social-section">
+                  <p>Social Links</p>
+                  <label>
+                    <span>Instagram</span>
+                    <div class="myshop-addon-input">
+                      <span>@</span>
+                      <input
+                        v-model="createForm.instagram"
+                        type="text"
+                        placeholder="yourhandle"
+                      />
+                    </div>
+                  </label>
+                  <label>
+                    <span>Facebook</span>
+                    <div class="myshop-addon-input">
+                      <span>facebook.com/</span>
+                      <input
+                        v-model="createForm.facebook"
+                        type="text"
+                        placeholder="yourhandle"
+                      />
+                    </div>
+                  </label>
+                </div>
               </div>
-
-              <div class="social-section">
-                <p>Social Links</p>
-                <label>
-                  <span>Instagram</span>
-                  <div class="addon-input">
-                    <span>@</span>
-                    <input
-                      v-model="createForm.instagram"
-                      type="text"
-                      placeholder="yourhandle"
-                    />
-                  </div>
-                </label>
-                <label>
-                  <span>Facebook</span>
-                  <div class="addon-input">
-                    <span>facebook.com/</span>
-                    <input
-                      v-model="createForm.facebook"
-                      type="text"
-                      placeholder="yourhandle"
-                    />
-                  </div>
-                </label>
-              </div>
-            </section>
+            </div>
           </div>
 
           <p v-if="error" class="error-text form-error">{{ error }}</p>
-
-          <div class="form-actions">
-            <button type="button" class="ghost-btn" @click="closeCreateModal">
-              Cancel
-            </button>
-            <button type="submit" class="primary-btn" :disabled="loading">
-              {{ loading ? "Creating..." : "Create Shop" }}
-            </button>
-          </div>
         </form>
       </div>
     </div>

@@ -811,6 +811,14 @@ onMounted(fetchProfile)
     </div>
 </template>
 <style module>
+/* Make the topbar layout responsive and evenly spaced */
+:global(.topbar) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+}
+
 /* ─── Page Layout ──────────────────────────────────────────── */
 .page {
     min-height: 100vh;
@@ -824,7 +832,6 @@ onMounted(fetchProfile)
     margin-top: 20px;
     margin-bottom: 20px;
 }
-
 
 
 .section-header__title {
@@ -907,8 +914,8 @@ onMounted(fetchProfile)
 }
 
 .hero-avatar {
-    width: 180px;
-    height: 180px;
+    width: 150px;
+    height: 150px;
     border-radius: 50%;
     background: #eef1f7;
     display: grid;

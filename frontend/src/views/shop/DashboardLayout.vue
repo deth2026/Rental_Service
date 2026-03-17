@@ -1,4 +1,5 @@
 <script setup>
+<<<<<<< HEAD
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
@@ -12,6 +13,22 @@ import Setting from "./setting.vue";
 import ActivityHistory from "./ActivityHistory.vue";
 import api, { shopApi, vehicleApi } from "@/services/api";
 import { getSessionUser, logoutUser } from "@/services/auth";
+=======
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import Bookings from './Bookings.vue'
+import Payments from './Payments.vue'
+import DamageReports from './Demage_reports.vue'
+import ReviewsFeedback from './Review_Feedback.vue'
+import Coupons from './Coupons.vue'
+import MyShop from './myShop.vue'
+import LoyaltyPoints from './Loyalty_points.vue'
+import Setting from './setting.vue'
+import ActivityHistory from './ActivityHistory.vue'
+import api, { shopApi, vehicleApi } from '@/services/api'
+import { getSessionUser, logoutUser } from '@/services/auth'
+import '../../css/CreateShopForm.css'
+>>>>>>> b428d72 (fix)
 
 // Toast notifications
 const router = useRouter();
@@ -225,6 +242,7 @@ const shopModal = ref(false);
 const shopForm = reactive({
   name: "",
   city_id: null,
+<<<<<<< HEAD
   description: "",
   address: "",
   location: "",
@@ -234,6 +252,48 @@ const shopForm = reactive({
 });
 const cities = ref([]);
 const isLoadingShop = ref(false);
+=======
+  description: '',
+  address: '',
+  location: '',
+  latitude: '',
+  longitude: '',
+  phone: '',
+  status: 'active',
+  created_at: new Date().toISOString(),
+  img_url: ''
+})
+const cities = ref([])
+const isLoadingShop = ref(false)
+>>>>>>> b428d72 (fix)
+
+const formatDateTime = (value) => {
+  if (!value) return 'N/A'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return String(value)
+  return date.toLocaleDateString()
+}
+
+const ownerName = computed(() => {
+  return (
+    shop.value?.owner_name ||
+    shop.value?.owner?.name ||
+    sessionUser.value?.name ||
+    'N/A'
+  )
+})
+
+const shopStatus = computed(() => {
+  const rawStatus = shopForm.status || shop.value?.status || 'inactive'
+  return rawStatus.toString().toLowerCase()
+})
+
+const statusLabel = computed(() => {
+  const status = shopStatus.value || 'inactive'
+  return status.charAt(0).toUpperCase() + status.slice(1)
+})
+
+const createdLabel = computed(() => formatDateTime(shop.value?.created_at))
 
 // Image upload handling for shop
 const shopImageFile = ref(null);
@@ -283,6 +343,18 @@ const triggerShopImagePicker = () => {
   }
 };
 
+const clearNewShopImage = () => {
+  if (shopImagePreview.value) {
+    URL.revokeObjectURL(shopImagePreview.value)
+    shopImagePreview.value = ''
+  }
+  shopImageFile.value = null
+  shopForm.img_url = ''
+  if (shopImageInputRef.value) {
+    shopImageInputRef.value.value = ''
+  }
+}
+
 // Fetch shop data
 const fetchShop = async () => {
   try {
@@ -320,6 +392,7 @@ const fetchCities = async () => {
 
 // Open create shop modal
 const openShopModal = () => {
+<<<<<<< HEAD
   shopForm.name = shop.value?.name || "";
   shopForm.city_id = shop.value?.city_id || null;
   shopForm.description = shop.value?.description || "";
@@ -328,6 +401,19 @@ const openShopModal = () => {
   shopForm.latitude = shop.value?.latitude || "";
   shopForm.longitude = shop.value?.longitude || "";
   shopForm.img_url = shop.value?.img_url || "";
+=======
+  shopForm.name = shop.value?.name || ''
+  shopForm.city_id = shop.value?.city_id || null
+  shopForm.description = shop.value?.description || ''
+  shopForm.address = shop.value?.address || ''
+  shopForm.location = shop.value?.location || ''
+  shopForm.latitude = shop.value?.latitude || ''
+  shopForm.longitude = shop.value?.longitude || ''
+  shopForm.phone = shop.value?.phone || ''
+  shopForm.status = shop.value?.status || 'active'
+  shopForm.created_at = shop.value?.created_at || new Date().toISOString()
+  shopForm.img_url = shop.value?.img_url || ''
+>>>>>>> b428d72 (fix)
   // Reset image fields
   shopImageFile.value = null;
   shopImagePreview.value = "";
@@ -346,6 +432,7 @@ const saveShop = async () => {
     const ownerId = Number(sessionUser.value?.id || getUserId());
 
     // If an image file has been selected, use FormData to send multipart request
+<<<<<<< HEAD
     if (shopImageFile.value) {
       const formData = new FormData();
       formData.append("owner_id", ownerId);
@@ -362,6 +449,25 @@ const saveShop = async () => {
       // the backend expects the field name img_url
       formData.append("img_url", shopImageFile.value);
 
+=======
+      if (shopImageFile.value) {
+        const formData = new FormData()
+        formData.append('owner_id', ownerId)
+        formData.append('name', shopForm.name)
+        if (shopForm.city_id) {
+          formData.append('city_id', shopForm.city_id)
+        }
+        formData.append('description', shopForm.description)
+        formData.append('address', shopForm.address)
+        if (shopForm.location) formData.append('location', shopForm.location)
+        if (shopForm.latitude) formData.append('latitude', shopForm.latitude)
+        if (shopForm.longitude) formData.append('longitude', shopForm.longitude)
+        formData.append('phone', shopForm.phone)
+        formData.append('status', shopForm.status || 'active')
+        // the backend expects the field name img_url
+        formData.append('img_url', shopImageFile.value)
+      
+>>>>>>> b428d72 (fix)
       if (shop.value?.id) {
         // Update existing shop
         await api.post(`/shops/${shop.value.id}?_method=PUT`, formData, {
@@ -387,10 +493,18 @@ const saveShop = async () => {
         location: shopForm.location || null,
         latitude: shopForm.latitude || null,
         longitude: shopForm.longitude || null,
+<<<<<<< HEAD
         status: "active",
         img_url: shopForm.img_url || null,
       };
 
+=======
+        phone: shopForm.phone,
+        status: shopForm.status || 'active',
+        img_url: shopForm.img_url || null
+      }
+      
+>>>>>>> b428d72 (fix)
       if (shop.value?.id) {
         // Update existing shop
         await api.put(`/shops/${shop.value.id}`, payload);
@@ -1523,6 +1637,7 @@ const iconSvg = (name) => {
       {{ toast.message }}
     </div>
 
+<<<<<<< HEAD
     <!-- Delete Confirmation Modal -->
     <div
       v-if="showDeleteModal"
@@ -1642,10 +1757,75 @@ const iconSvg = (name) => {
               class="shop-image-upload"
               :class="{ 'has-image': shopImagePreview || shopForm.img_url }"
               @click="triggerShopImagePicker"
+=======
+  <!-- Delete Confirmation Modal -->
+  <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+    <div class="delete-modal">
+      <div class="delete-icon-wrapper">
+        <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </div>
+      <h3 class="delete-title">Delete Vehicle</h3>
+      <p class="delete-message">Are you sure you want to delete this vehicle?</p>
+      <p class="delete-vehicle-name">{{ deleteVehicleName }}</p>
+      <p class="delete-warning">This action cannot be undone. All associated data (maintenance history, documents, photos, assignments) will be permanently removed.</p>
+      <div class="delete-actions">
+        <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
+        <button class="delete-confirm-btn" @click="removeVehicle">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logout Confirmation Modal -->
+  <div v-if="showLogoutModal" class="delete-overlay" @click.self="cancelLogout">
+    <div class="delete-modal">
+      <div class="delete-icon-wrapper">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </div>
+      <h3 class="delete-title">Logout</h3>
+      <p class="delete-message">Are you sure you want to logout?</p>
+      <div class="delete-actions">
+        <button class="delete-cancel-btn" @click="cancelLogout">No</button>
+        <button class="delete-confirm-btn logout-confirm-btn" @click="confirmLogout">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Create/Edit Modal -->
+  <div v-if="shopModal" class="shop-modal-overlay" @click.self="shopModal = false">
+    <div class="shop-modal">
+      <div class="shop-modal-header">
+        <h2>{{ shop ? 'Edit Shop' : 'Create Shop' }}</h2>
+        <button class="close-btn" @click="shopModal = false">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="shop-modal-content">
+        <form class="create-shop-form" @submit.prevent="saveShop">
+          <section class="brand-panel create-shop-card">
+            <span class="create-status-pill" :class="shopStatus">
+              {{ statusLabel }}
+            </span>
+            <section
+              class="photo-panel"
+              :class="{ dragging: isShopImageDragOver }"
+>>>>>>> b428d72 (fix)
               @dragover.prevent="isShopImageDragOver = true"
               @dragleave.prevent="isShopImageDragOver = false"
               @drop.prevent="onShopImageDrop"
             >
+<<<<<<< HEAD
               <div
                 v-if="shopImagePreview || shopForm.img_url"
                 class="image-preview-container"
@@ -1673,8 +1853,68 @@ const iconSvg = (name) => {
                 </svg>
                 <p>Click to upload or drag image here</p>
                 <span>PNG / JPG / WEBP</span>
+=======
+              <div class="photo-circle">
+                <img
+                  v-if="shopImagePreview"
+                  :src="shopImagePreview"
+                  alt="Shop preview"
+                />
+                <div v-else class="photo-placeholder">
+                  <svg
+                    viewBox="0 0 80 80"
+                    fill="none"
+                    stroke="#94a3b8"
+                    stroke-width="1.6"
+                  >
+                    <rect x="8" y="18" width="64" height="44" rx="14" />
+                    <path d="M16 38h48" />
+                    <circle cx="34" cy="31" r="5" />
+                    <path d="M34 45h12" />
+                  </svg>
+                </div>
+>>>>>>> b428d72 (fix)
               </div>
+              <div class="photo-note">
+                <p>Shop Profile Image</p>
+              </div>
+              <div class="image-actions">
+                <button
+                  type="button"
+                  class="primary-image-btn"
+                  @click="triggerShopImagePicker"
+                >
+                  {{ shopImagePreview || shopForm.img_url ? 'Change Image' : 'Upload Image' }}
+                </button>
+                <button
+                  v-if="shopImagePreview || shopForm.img_url"
+                  type="button"
+                  class="secondary-image-btn"
+                  @click="clearNewShopImage"
+                >
+                  Delete Image
+                </button>
+              </div>
+              <p class="upload-help">
+                Drag or drop a square image (PNG/JPG/WEBP) for your storefront.
+              </p>
+              <input
+                ref="shopImageInputRef"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="hidden-file-input"
+                @change="onShopImageChange"
+              />
+            </section>
+
+            <div class="panel-header">
+              <div>
+                <p class="section-kicker">Tell us about it</p>
+                <h4>{{ shop ? 'Shop Details' : 'Create Shop' }}</h4>
+              </div>
+              <p class="section-subtext">Set the key info before going live</p>
             </div>
+<<<<<<< HEAD
           </div>
 
           <!-- Shop Name -->
@@ -1731,6 +1971,87 @@ const iconSvg = (name) => {
             }}
           </button>
         </div>
+=======
+
+            <div class="info-grid shop-field-grid">
+              <label class="info-card">
+                <span>Shop Name *</span>
+                <input
+                  v-model="shopForm.name"
+                  required
+                  type="text"
+                  placeholder="Enter shop name"
+                />
+              </label>
+
+              <label class="info-card">
+                <span>Status *</span>
+                <select v-model="shopForm.status">
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                </select>
+              </label>
+
+              <div class="info-card readonly">
+                <span>Owner Name</span>
+                <strong>{{ ownerName }}</strong>
+              </div>
+
+              <div class="info-card readonly">
+                <span>created_at</span>
+                <strong>{{ createdLabel }}</strong>
+              </div>
+
+              <label class="info-card">
+                <span>Phone</span>
+                <input
+                  v-model="shopForm.phone"
+                  type="text"
+                  placeholder="Enter phone number"
+                />
+              </label>
+
+              <label class="info-card">
+                <span>City</span>
+                <select v-model="shopForm.city_id">
+                  <option :value="null">Select City</option>
+                  <option v-for="city in cities" :key="city.id" :value="city.id">
+                    {{ city.name }}
+                  </option>
+                </select>
+              </label>
+
+              <label class="info-card wide">
+                <span>Address *</span>
+                <input
+                  v-model="shopForm.address"
+                  required
+                  type="text"
+                  placeholder="Enter address"
+                />
+              </label>
+
+              <label class="info-card wide">
+                <span>Description</span>
+                <textarea
+                  rows="3"
+                  v-model="shopForm.description"
+                  placeholder="Describe your shop"
+                ></textarea>
+              </label>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button type="button" class="ghost-btn" @click="shopModal = false">
+              Cancel
+            </button>
+            <button type="submit" class="primary-btn" :disabled="isLoadingShop">
+              {{ isLoadingShop ? (shop ? 'Updating...' : 'Saving...') : (shop ? 'Update Shop' : 'Create Shop') }}
+            </button>
+          </div>
+        </form>
+>>>>>>> b428d72 (fix)
       </div>
     </div>
   </div>
@@ -4173,6 +4494,7 @@ textarea {
   padding: 20px;
 }
 
+<<<<<<< HEAD
 .shop-modal {
   background: white;
   border-radius: 12px;
@@ -4355,4 +4677,6 @@ textarea {
     justify-content: center;
   }
 }
+=======
+>>>>>>> b428d72 (fix)
 </style>
