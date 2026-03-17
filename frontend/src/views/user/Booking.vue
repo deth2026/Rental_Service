@@ -900,10 +900,24 @@ const saveBookingToDatabase = async (bookingData) => {
   };
 
   try {
+    // Create the booking first
     const response = await api.post("/bookings", payload);
     const record = response?.data?.data || response?.data;
     const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
+
+    // Now save the payment record
+    const paymentPayload = {
+      booking_id: recordId,
+      transaction_id: transactionId.value || paymentId.value,
+      amount: totalAmount.value,
+      payment_method: bookingData?.paymentMethod || method.value,
+      payment_status: bookingData?.status === "confirmed" ? "paid" : "pending",
+      paid_at: bookingData?.status === "confirmed" ? new Date().toISOString() : null,
+    };
+
+    // Save payment to payments table
+    await api.post("/payments", paymentPayload);
 
     return {
       success: true,
