@@ -5,6 +5,7 @@ import "../../css/Myshop.css";
 
 const shop = ref(null);
 const ownerName = ref("");
+const ownerEmail = ref("");
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
@@ -160,6 +161,7 @@ const loadMyShop = async () => {
   const ownerId = getUserId();
   const storedUser = getStoredUser();
   ownerName.value = storedUser?.name || "N/A";
+  ownerEmail.value = storedUser?.email || "N/A";
 
   // Clear shop first to ensure we get fresh data
   shop.value = null;
@@ -196,6 +198,11 @@ const loadMyShop = async () => {
       shop.value?.owner_name ||
       shop.value?.owner?.name ||
       storedUser?.name ||
+      "N/A";
+    ownerEmail.value =
+      shop.value?.owner?.email ||
+      shop.value?.owner_email ||
+      storedUser?.email ||
       "N/A";
   } catch (e) {
     console.error("Failed to load shop", e);
@@ -519,58 +526,25 @@ onBeforeUnmount(() => {
       <p>Click Create Shop and fill in your shop information.</p>
     </div>
 
-    <div v-else class="shop-card">
-      <!-- Shop Image - Small profile style -->
-      <div class="shop-header-row">
-        <div class="shop-image-section">
-          <div class="shop-avatar-stack">
-            <img
-              v-if="shopImageSrc"
-              :src="shopImageSrc"
-              alt="Shop Image"
-              class="shop-cover-image"
-              @error="onShopImageError"
-            />
-            <div v-else class="shop-cover-placeholder">
-              <svg
-                viewBox="0 0 24 24"
-                width="32"
-                height="32"
-                fill="none"
-                stroke="#94a3b8"
-                stroke-width="1.5"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                <polyline points="21 15 16 10 5 21"></polyline>
-              </svg>
-            </div>
-          </div>
-          <input
-            ref="changeImageInputRef"
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            class="hidden-file-input"
-            @change="onChangeShopImage"
-          />
-          <div class="shop-image-actions">
-            <button
-              type="button"
-              class="change-image-btn"
-              :disabled="isUpdatingImage"
-              @click="triggerChangeImagePicker"
+    <div v-else class="shop-settings-card">
+      <div class="shop-settings-header">
+        <div class="settings-title">
+          <span class="settings-icon">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
             >
-              {{ isUpdatingImage ? "Updating..." : "Change Image" }}
-            </button>
-            <button
-              v-if="shop.img_url"
-              type="button"
-              class="delete-image-btn"
-              :disabled="isUpdatingImage"
-              @click="removeShopImage"
-            >
-              Delete Image
-            </button>
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"
+              />
+            </svg>
+          </span>
+          <div>
+            <h2>Ownership setting</h2>
+            <p>Manage your shop profile details and contact info.</p>
           </div>
         </div>
         <span
@@ -580,6 +554,58 @@ onBeforeUnmount(() => {
           {{ shop.status || "inactive" }}
         </span>
       </div>
+
+      <div class="shop-settings-profile">
+        <div class="shop-avatar-stack">
+          <img
+            v-if="shopImageSrc"
+            :src="shopImageSrc"
+            alt="Shop Image"
+            class="shop-cover-image"
+            @error="onShopImageError"
+          />
+          <div v-else class="shop-cover-placeholder">
+            <svg
+              viewBox="0 0 24 24"
+              width="32"
+              height="32"
+              fill="none"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          </div>
+        </div>
+        <input
+          ref="changeImageInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="hidden-file-input"
+          @change="onChangeShopImage"
+        />
+        <div class="profile-actions">
+          <button
+            type="button"
+            class="profile-btn primary"
+            :disabled="isUpdatingImage"
+            @click="triggerChangeImagePicker"
+          >
+            {{ isUpdatingImage ? "Updating..." : "Upload Profile" }}
+          </button>
+          <button
+            type="button"
+            class="profile-btn ghost"
+            :disabled="isUpdatingImage || !shopImageSrc"
+            @click="removeShopImage"
+          >
+            Remove Profile
+          </button>
+        </div>
+      </div>
+
       <p
         v-if="error && !showCreateModal"
         class="error-text"
@@ -588,33 +614,62 @@ onBeforeUnmount(() => {
         {{ error }}
       </p>
 
-      <div class="shop-grid">
-        <div class="field">
-          <b>Shop Name</b><span>{{ shop.name || "N/A" }}</span>
-        </div>
-        <div class="field">
-          <b>Status</b>
-          <span
-            :class="['status-text', (shop.status || 'inactive').toLowerCase()]"
-          >
-            {{ shop.status || "N/A" }}
-          </span>
-        </div>
-        <div class="field">
-          <b>Owner Name</b><span>{{ ownerName }}</span>
-        </div>
-        <div class="field">
-          <b>created_at</b><span>{{ formatDateTime(shop.created_at) }}</span>
-        </div>
-        <div class="field field-wide">
-          <b>Phone</b><span>{{ shop.phone || "N/A" }}</span>
-        </div>
-        <div class="field field-wide">
-          <b>Address</b><span>{{ shop.address || "N/A" }}</span>
-        </div>
-        <div class="field field-wide">
-          <b>Description</b><span>{{ shop.description || "N/A" }}</span>
-        </div>
+      <div class="settings-form-grid">
+        <label class="settings-field">
+          <span>Full name</span>
+          <input type="text" :value="ownerName || 'N/A'" readonly />
+        </label>
+        <label class="settings-field">
+          <span>Email address</span>
+          <div class="input-with-badge">
+            <input type="text" :value="ownerEmail || 'N/A'" readonly />
+            <span class="verified-badge">Verified</span>
+          </div>
+        </label>
+        <label class="settings-field">
+          <span>Shop name</span>
+          <input type="text" :value="shop.name || 'N/A'" readonly />
+        </label>
+        <label class="settings-field">
+          <span>Status</span>
+          <select :value="(shop.status || 'inactive').toLowerCase()" disabled>
+            <option value="active">active</option>
+            <option value="inactive">inactive</option>
+          </select>
+        </label>
+        <label class="settings-field">
+          <span>Phone number</span>
+          <input type="text" :value="shop.phone || 'N/A'" readonly />
+        </label>
+        <label class="settings-field">
+          <span>Password</span>
+          <div class="password-field">
+            <input
+              type="password"
+              placeholder="Enter new password or leave blank"
+              disabled
+            />
+            <button type="button" class="eye-btn" disabled>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
+        </label>
+        <label class="settings-field full">
+          <span>Shop Address</span>
+          <textarea
+            rows="3"
+            :value="shop.address || 'N/A'"
+            readonly
+          ></textarea>
+        </label>
       </div>
     </div>
 

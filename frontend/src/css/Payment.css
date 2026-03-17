@@ -262,7 +262,7 @@
 }
 
 /* Status Badge */
-.status-badge {
+.payments-status-badge {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 20px;
@@ -271,14 +271,34 @@
   text-transform: uppercase;
 }
 
-.status-badge.paid {
+.payments-status-badge.paid {
   background: #dcfce7;
   color: #15803d;
 }
 
-.status-badge.pending {
+.payments-status-badge.confirmed {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.payments-status-badge.completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.payments-status-badge.pending {
   background: #fef3c7;
   color: #b45309;
+}
+
+.payments-status-badge.processing {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.payments-status-badge.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 /* Loading State */

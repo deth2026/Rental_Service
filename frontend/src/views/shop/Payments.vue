@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { paymentApi } from '@/services/api'
+import api from '@/services/api'
 import '../../css/Payment.css'
 
 const filter = ref('all')
@@ -9,22 +9,101 @@ const dateTo = ref('')
 const loading = ref(true)
 const error = ref(null)
 
-// Fetch payments from database
+const normalizeStatus = (status) => {
+  const raw = (status || '').toString().trim().toLowerCase()
+  if (!raw) return 'pending'
+  const cleaned = raw.replace(/[\s-]+/g, '_')
+  const aliases = {
+    canceled: 'cancelled',
+    cancel: 'cancelled',
+    cencel: 'cancelled',
+    comfirmed: 'confirmed',
+    process: 'processing',
+    processing: 'processing',
+    in_process: 'processing',
+    in_progress: 'processing',
+    success: 'paid',
+    successful: 'paid',
+    succeeded: 'paid',
+    complete: 'completed',
+    completed: 'completed',
+    confirm: 'confirmed',
+    confirmed: 'confirmed',
+    paid: 'paid',
+    pending_payment: 'pending'
+  }
+  return aliases[cleaned] || cleaned
+}
+
+const toIsoDate = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().split('T')[0]
+}
+
+const toStatusLabel = (statusKey, rawStatus) => {
+  const labels = {
+    pending: 'Pending',
+    paid: 'Paid',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    processing: 'Processing',
+    cancelled: 'Cancelled',
+    failed: 'Failed',
+    refunded: 'Refunded'
+  }
+  if (labels[statusKey]) return labels[statusKey]
+  const fallback = (rawStatus || '').toString().trim()
+  if (!fallback) return 'Pending'
+  return fallback
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+}
+
+const mapPaymentToRow = (payment) => {
+  const bookingValue = payment?.booking_id || payment?.bookingId || payment?.booking?.id
+  const bookingId = bookingValue ? `BK${bookingValue}` : '-'
+  const paymentId = payment?.transaction_id || payment?.payment_id || (payment?.id ? `PAY-${payment.id}` : '-')
+  const amountValue = Number(payment?.amount ?? payment?.total_price ?? 0)
+  const rawStatus =
+    payment?.raw_status ??
+    payment?.booking_status ??
+    payment?.booking?.status ??
+    payment?.status ??
+    payment?.payment_status
+  const rawStatusText = (rawStatus ?? '').toString().trim()
+  const statusKey = normalizeStatus(rawStatusText || 'pending')
+  const status = toStatusLabel(statusKey, rawStatusText || 'pending')
+  const date = toIsoDate(payment?.paid_at || payment?.created_at)
+
+  return {
+    id: paymentId,
+    bookingId,
+    amount: Number.isFinite(amountValue) ? amountValue : 0,
+    date,
+    status,
+    rawStatus: rawStatusText || status,
+    statusKey
+  }
+}
+
+// Fetch payments and map to payments UI
 const fetchPayments = async () => {
   try {
     loading.value = true
-    const response = await paymentApi.getAll()
-    const data = response.data.data || response.data || []
-    
-    // Map database fields to expected format
-    payments.value = data.map(p => ({
-      id: p.transaction_id || `PAY-${p.id}`,
-      bookingId: p.booking_id,
-      amount: parseFloat(p.amount) || 0,
-      date: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : '',
-      status: p.payment_status || 'pending',
-      paidAt: p.paid_at
-    }))
+    error.value = null
+    const response = await api.get('/shop-payments')
+    const payload = response?.data
+    const data = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload?.data?.data)
+          ? payload.data.data
+          : []
+
+    payments.value = data.map(mapPaymentToRow)
   } catch (err) {
     console.error('Error fetching payments:', err)
     error.value = 'Failed to load payments data'
@@ -41,10 +120,15 @@ onMounted(() => {
 // Payments data
 const payments = ref([])
 
+const isPaidStatus = (status) => {
+  const normalized = normalizeStatus(status)
+  return normalized === 'paid' || normalized === 'confirmed' || normalized === 'completed'
+}
+
 // Computed stats
 const totalEarnings = computed(() => {
   return payments.value
-    .filter(p => p.status === 'paid' || p.status === 'Paid')
+    .filter(p => isPaidStatus(p.statusKey))
     .reduce((a, b) => a + b.amount, 0) || 0
 })
 
@@ -52,20 +136,20 @@ const monthlyIncome = computed(() => {
   const now = new Date()
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
   return payments.value
-    .filter(p => (p.status === 'paid' || p.status === 'Paid') && p.date >= firstDayOfMonth)
+    .filter(p => isPaidStatus(p.statusKey) && p.date >= firstDayOfMonth)
     .reduce((a, b) => a + b.amount, 0) || 0
 })
 
 const todayEarnings = computed(() => {
   const today = new Date().toISOString().split('T')[0]
   return payments.value
-    .filter(p => (p.status === 'paid' || p.status === 'Paid') && p.date === today)
+    .filter(p => isPaidStatus(p.statusKey) && p.date === today)
     .reduce((a, b) => a + b.amount, 0) || 0
 })
 
 const filtered = computed(() => {
   return payments.value.filter(p => {
-    if (filter.value !== 'all' && p.status.toLowerCase() !== filter.value) return false
+    if (filter.value !== 'all' && p.statusKey !== filter.value) return false
     if (dateFrom.value && p.date < dateFrom.value) return false
     if (dateTo.value && p.date > dateTo.value) return false
     return true
@@ -75,6 +159,12 @@ const filtered = computed(() => {
 // Format currency
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0)
+}
+
+const clearFilters = () => {
+  dateFrom.value = ''
+  dateTo.value = ''
+  filter.value = 'all'
 }
 </script>
 
@@ -136,12 +226,15 @@ const formatCurrency = (amount) => {
         <option value="all">All Payments</option>
         <option value="paid">Paid</option>
         <option value="pending">Pending</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
       </select>
       <div class="date-filters">
         <input type="date" v-model="dateFrom" class="date-input" placeholder="From Date" />
         <span class="date-separator">to</span>
         <input type="date" v-model="dateTo" class="date-input" placeholder="To Date" />
-        <button class="clear-btn" @click="dateFrom='';dateTo=''">Clear</button>
+        <button class="clear-btn" @click="clearFilters">Clear</button>
       </div>
     </div>
 
@@ -188,8 +281,8 @@ const formatCurrency = (amount) => {
             <td class="amount-cell">${{ p.amount }}</td>
             <td class="date-cell">{{ p.date }}</td>
             <td class="status-cell">
-              <span :class="['status-badge', p.status.toLowerCase()]">
-                {{ p.status }}
+              <span :class="['payments-status-badge', p.statusKey || 'pending']">
+                {{ p.rawStatus || p.status || 'Pending' }}
               </span>
             </td>
           </tr>
