@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
+import HomeView from '../views/HomeView.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
 import UserDashboard from '../views/User/Dashboard.vue';
 import UserBookings from '../views/User/MyBookings.vue';
@@ -36,12 +36,14 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
-      meta: { requiresAuth: false }
+      component: UserDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/home',
-      redirect: '/'
+      name: 'landing',
+      component: HomeView,
+      meta: { requiresAuth: false }
     },
     {
       path: '/chooserole',

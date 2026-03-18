@@ -1,8 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { vehicleService, userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/MyBookings.css'
+
+const router = useRouter()
 
 const activeTab = ref('all')
 const searchQuery = ref('')
@@ -158,6 +161,10 @@ const closeDetails = () => {
   detailError.value = ''
 }
 
+const goHome = () => {
+  router.push('/')
+}
+
 const openDetails = async (booking) => {
   selectedBooking.value = booking
   selectedVehicle.value = null
@@ -210,8 +217,10 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
   <div class="bookings-page">
     <section class="bookings-panel">
       <div class="panel-head">
-        <h1>My Bookings</h1>
-        <p>View and manage your vehicle rentals.</p>
+        <div class="panel-head-text">
+          <h1>My Bookings</h1>
+          <p>View and manage your vehicle rentals.</p>
+        </div>
       </div>
 
       <div class="controls-row">
@@ -241,6 +250,12 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
     </section>
 
     <section class="booking-list-wrap">
+      <div class="booking-list-header">
+        <span class="booking-list-title">Bookings</span>
+        <button class="back-home-btn" type="button" @click="goHome">
+          Back to Home
+        </button>
+      </div>
       <div v-if="loading" class="empty-state">
         Loading bookings...
       </div>

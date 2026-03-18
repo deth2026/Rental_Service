@@ -19,6 +19,10 @@
       </nav>
 
       <div class="top-actions">
+        <button class="btn-back-top" type="button" @click="goHome">
+          <span class="back-arrow" aria-hidden="true">←</span>
+          Back to Home
+        </button>
         <span class="user-display-name">{{ userDisplayName }}</span>
         <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
@@ -27,8 +31,10 @@
     <div class="page-container">
 
       <div class="page-heading-row">
-        <h1>Checkout</h1>
-        <span class="step-pill">Step 2 of 3</span>
+        <div class="title-block">
+          <h1>Checkout</h1>
+          <span class="step-pill">Step 2 of 3</span>
+        </div>
       </div>
 
       <div class="checkout-progress" aria-hidden="true">
@@ -578,6 +584,10 @@ const openProfile = () => {
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
+};
+
+const goHome = () => {
+  router.push('/');
 };
 
 const onAvatarError = () => {

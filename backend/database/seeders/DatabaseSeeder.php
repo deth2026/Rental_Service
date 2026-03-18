@@ -161,10 +161,10 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Create cities
-        \App\Models\City::create(['name' => 'Phnom Penh', 'status' => 'active']);
-        \App\Models\City::create(['name' => 'Siem Reap', 'status' => 'active']);
-        \App\Models\City::create(['name' => 'Battambang', 'status' => 'active']);
-        \App\Models\City::create(['name' => 'Sihanoukville', 'status' => 'active']);
+        \App\Models\City::create(['name' => 'Phnom Penh']);
+        \App\Models\City::create(['name' => 'Siem Reap']);
+        \App\Models\City::create(['name' => 'Battambang']);
+        \App\Models\City::create(['name' => 'Sihanoukville']);
     }
 }
 
