@@ -112,12 +112,15 @@ const normalizeShop = (shop) => ({
   ownerAvatar: shop.owner?.img_url || shop.owner?.profile_picture || shop.owner?.avatar_url || '',
   rating: Number(shop.rating || 0),
   status: shop.status || 'active',
-  image: (shop.img_url || shop.image_url || shop.image)
-    ? withCacheBust(
-        resolveShopImageUrl(shop.img_url || shop.image_url || shop.image),
-        shop.updated_at || shop.id || Date.now()
-      )
-    : '',
+  // Use img_url_full accessor from backend if available
+  image: shop.img_url_full 
+    ? withCacheBust(shop.img_url_full, shop.updated_at || shop.id || Date.now())
+    : (shop.img_url || shop.image_url || shop.image)
+      ? withCacheBust(
+          resolveShopImageUrl(shop.img_url || shop.image_url || shop.image),
+          shop.updated_at || shop.id || Date.now()
+        )
+      : '',
 })
 
 const loadShops = async () => {

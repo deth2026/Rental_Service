@@ -537,8 +537,6 @@ const navItems = ['Home', 'View Details', 'Bookings'];
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
-const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
-
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
 
@@ -603,19 +601,16 @@ const vehicleId = computed(() => {
   return Number.isFinite(value) && value > 0 ? value : null;
 });
 
-const setLastVehicleId = (id) => {
-  if (!id) return;
-  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
-};
-
-const getLastVehicleId = () => {
-  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
-
 const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
 const getVehicleImage = (item) => {
+  // First check for full URL (provided by backend accessor)
+  if (item?.image_url_full) {
+    return item.image_url_full
+  }
+  // Check photo_urls array
+  if (item?.photo_urls && Array.isArray(item.photo_urls) && item.photo_urls.length > 0) {
+    return item.photo_urls[0]
+  }
   const image = item?.image_url ? String(item.image_url).trim() : "";
   if (image) {
     if (image.startsWith("http://") || image.startsWith("https://")) return image;
@@ -962,10 +957,24 @@ const saveBookingToDatabase = async (bookingData) => {
   };
 
   try {
+    // Create the booking first
     const response = await api.post("/bookings", payload);
     const record = response?.data?.data || response?.data;
     const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
+
+    // Now save the payment record
+    const paymentPayload = {
+      booking_id: recordId,
+      transaction_id: transactionId.value || paymentId.value,
+      amount: totalAmount.value,
+      payment_method: bookingData?.paymentMethod || method.value,
+      payment_status: bookingData?.status === "confirmed" ? "paid" : "pending",
+      paid_at: bookingData?.status === "confirmed" ? new Date().toISOString() : null,
+    };
+
+    // Save payment to payments table
+    await api.post("/payments", paymentPayload);
 
     return {
       success: true,
@@ -1154,9 +1163,6 @@ const initDates = () => {
 
 onMounted(() => {
   loadVehicleDetail();
-  if (vehicleId.value) {
-    setLastVehicleId(vehicleId.value);
-  }
 });
 
 watch(

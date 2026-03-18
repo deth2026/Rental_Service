@@ -16,21 +16,8 @@ const selectedCategory = ref('all')
 const shop = ref(null)
 const isLoading = ref(true)
 const error = ref('')
+const shopError = ref('')
 const isLoadingShop = ref(false)
-
-// Get shop from localStorage or use default
-const getShopFromStorage = () => {
-  try {
-    const shopsData = localStorage.getItem('rental_shops')
-    if (shopsData) {
-      const shops = JSON.parse(shopsData)
-      return shops.find(s => s.id === Number(shopId.value))
-    }
-  } catch (e) {
-    console.error('Error getting shop:', e)
-  }
-  return null
-}
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
@@ -42,6 +29,10 @@ const isOwnerRole = computed(() => {
 
 const getShopImage = () => {
   if (!shop.value) return ''
+  // Use img_url_full accessor from backend if available
+  if (shop.value.img_url_full) {
+    return shop.value.img_url_full
+  }
   const img = shop.value.img_url || shop.value.image || shop.value.cover || ''
   if (!img) return ''
   if (/^(https?:\/\/|data:|blob:)/i.test(img)) return img
@@ -64,6 +55,7 @@ const getApiOrigin = () => {
 
 const resolveVehicleImageUrl = (value) => {
   if (!value || typeof value !== 'string') return value
+  // If it's already a full URL (http, https, data, blob), return as-is
   if (
     value.startsWith('http://') ||
     value.startsWith('https://') ||
@@ -104,7 +96,17 @@ const normalizeVehicle = (vehicle) => {
     parsedPhotos = []
   }
 
-  const imageUrl = vehicle.image_url_full || vehicle.image_url || (parsedPhotos.length > 0 ? (vehicle.photo_urls && vehicle.photo_urls[0] ? vehicle.photo_urls[0] : parsedPhotos[0]) : '')
+  // Priority: image_url_full (backend accessor) > photo_urls > image_url > photos
+  let imageUrl = ''
+  if (vehicle.image_url_full) {
+    imageUrl = vehicle.image_url_full
+  } else if (vehicle.photo_urls && Array.isArray(vehicle.photo_urls) && vehicle.photo_urls.length > 0) {
+    imageUrl = vehicle.photo_urls[0]
+  } else if (vehicle.image_url) {
+    imageUrl = vehicle.image_url
+  } else if (parsedPhotos.length > 0) {
+    imageUrl = parsedPhotos[0]
+  }
 
   const normalizedType = normalizeType(vehicle.type || vehicle.category || vehicle.vehicle_type || vehicle.kind || vehicle.name)
 
@@ -121,7 +123,8 @@ const normalizeVehicle = (vehicle) => {
     status: vehicle.status || 'Available',
     description: vehicle.description || '',
     imageUrl: resolveVehicleImageUrl(imageUrl),
-    photos: parsedPhotos
+    photos: parsedPhotos,
+    photoUrls: vehicle.photo_urls || []
   }
 }
 
@@ -143,12 +146,14 @@ const fetchVehicles = async () => {
 
 const fetchShop = async () => {
   isLoadingShop.value = true
+  shopError.value = ''
   try {
     const response = await shopApi.getById(shopId.value)
     shop.value = response.data?.data || response.data || null
   } catch (err) {
     console.error('Error fetching shop:', err)
-    shop.value = getShopFromStorage()
+    shopError.value = 'Failed to load shop details. Please try again later.'
+    shop.value = null
   } finally {
     isLoadingShop.value = false
   }
@@ -286,6 +291,10 @@ const openMap = () => {
       <div class="page-header">
         <h1>Available Vehicles</h1>
         <p>Browse vehicles from this shop</p>
+      </div>
+
+      <div v-if="shopError" class="status-box error" style="margin-bottom: 1rem;">
+        {{ shopError }}
       </div>
 
       <div v-if="isOwnerRole" class="owner-shop-card">

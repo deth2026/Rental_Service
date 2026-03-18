@@ -22,44 +22,59 @@ class PaymentController extends Controller
             return response()->json([]);
         }
 
-        $query = Booking::query()->with(['vehicle', 'latestStatusLog']);
+        // Fetch payments with their related booking and vehicle
+        $query = Payment::query()->with(['booking', 'booking.vehicle']);
 
         if ($user->role !== 'admin') {
+            // Get shop IDs owned by this user
             $shopIds = Shop::where('owner_id', $user->id)->pluck('id');
             if ($shopIds->isEmpty()) {
                 return response()->json([]);
             }
 
-            $query->whereHas('vehicle', function ($q) use ($shopIds) {
+            // Filter payments by shops owned by this user
+            $query->whereHas('booking.vehicle', function ($q) use ($shopIds) {
                 $q->whereIn('shop_id', $shopIds);
             });
         }
 
-        $bookings = $query->orderByDesc('created_at')->get();
+        $payments = $query->orderByDesc('created_at')->get();
 
-        $payload = $bookings->map(function ($booking) {
-            $status = $booking->latestStatusLog?->status ?? $booking->status ?? 'pending';
+        $payload = $payments->map(function ($payment) {
+            $booking = $payment->booking;
+            $status = $payment->payment_status ?? 'pending';
             return [
-                'id' => $booking->id,
-                'booking_id' => $booking->id,
-                'amount' => $booking->total_price,
+                'id' => $payment->id,
+                'booking_id' => $payment->booking_id,
+                'transaction_id' => $payment->transaction_id,
+                'amount' => $payment->amount,
+                'payment_method' => $payment->payment_method,
                 'raw_status' => $status,
-                'booking_status' => $status,
+                'booking_status' => $booking?->status ?? 'pending',
                 'payment_status' => $status,
                 'status' => $status,
-                'paid_at' => $booking->updated_at,
-                'created_at' => $booking->created_at,
-                'vehicle_id' => $booking->vehicle_id,
-                'user_id' => $booking->user_id,
+                'paid_at' => $payment->paid_at,
+                'created_at' => $payment->created_at,
+                'vehicle_id' => $booking?->vehicle_id,
+                'user_id' => $booking?->user_id,
             ];
         });
 
         return response()->json($payload);
     }
 
-    public function store(Request $_request)
+    public function store(Request $request)
     {
-        $record = Payment::create($_request->all());
+        $payload = $request->validate([
+            'booking_id' => 'required|integer',
+            'transaction_id' => 'required|string|max:255',
+            'amount' => 'required|numeric|min:0',
+            'payment_method' => 'required|string|max:50',
+            'payment_status' => 'nullable|string|in:pending,paid,failed',
+            'paid_at' => 'nullable|date',
+        ]);
+
+        $record = Payment::create($payload);
 
         return response()->json($record, 201);
     }

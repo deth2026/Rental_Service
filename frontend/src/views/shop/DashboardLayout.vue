@@ -79,6 +79,19 @@ const normalizeVehicleImageUrl = (url) => {
   return `/${normalized}`;
 };
 
+const normalizeShopImageUrl = (url) => {
+  if (!url) return ''
+  if (/^https?:\/\//.test(url) || /^data:image\//.test(url)) return url
+  const normalized = String(url).replace(/^\/+/, '')
+  const origin = apiOrigin.value || ''
+  if (normalized.startsWith('storage/')) return `${origin}/${normalized}`
+  if (normalized.startsWith('shops/')) return `${origin}/storage/${normalized}`
+  return `${origin}/${normalized}`
+}
+
+const shopAvatarFallback =
+  'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80'
+
 const displayAvatarUrl = computed(() => {
   if (avatarLoadFailed.value) return "";
   return normalizeAvatarUrl(
@@ -488,6 +501,11 @@ const getUserId = () => {
     return 1;
   }
 };
+
+const shopImageUrl = computed(() => {
+  if (!shop.value?.img_url) return ''
+  return normalizeShopImageUrl(shop.value.img_url)
+})
 
 const loadOwnerShopName = async () => {
   try {
