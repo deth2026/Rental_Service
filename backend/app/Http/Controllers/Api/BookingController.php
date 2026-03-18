@@ -175,7 +175,18 @@ class BookingController extends Controller
 
     public function store(Request $_request)
     {
-        $record = Booking::create($_request->all());
+        // Get the vehicle to automatically assign shop_id
+        $vehicle = \App\Models\Vehicle::find($_request->vehicle_id);
+        
+        if (!$vehicle) {
+            return response()->json(['error' => 'Vehicle not found'], 404);
+        }
+        
+        // Add shop_id from the vehicle
+        $bookingData = $_request->all();
+        $bookingData['shop_id'] = $vehicle->shop_id;
+        
+        $record = Booking::create($bookingData);
         
         // Create status log entry
         \App\Models\BookingStatusLog::create([
