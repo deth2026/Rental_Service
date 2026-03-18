@@ -71,7 +71,8 @@ const mapPaymentToRow = (payment) => {
     payment?.booking_status ??
     payment?.booking?.status ??
     payment?.status ??
-    payment?.payment_status
+    payment?.payment_status ??
+    'pending'
   const rawStatusText = (rawStatus ?? '').toString().trim()
   const statusKey = normalizeStatus(rawStatusText || 'pending')
   const status = toStatusLabel(statusKey, rawStatusText || 'pending')
@@ -84,7 +85,9 @@ const mapPaymentToRow = (payment) => {
     date,
     status,
     rawStatus: rawStatusText || status,
-    statusKey
+    statusKey,
+    customerName: payment?.booking?.user?.name || 'Unknown',
+    vehicleTitle: payment?.booking?.vehicle?.title || 'Unknown Vehicle'
   }
 }
 
@@ -93,8 +96,14 @@ const fetchPayments = async () => {
   try {
     loading.value = true
     error.value = null
+    console.log('Fetching payments from /shop-payments...')
+    
     const response = await api.get('/shop-payments')
+    console.log('API Response:', response)
+    
     const payload = response?.data
+    console.log('Payload:', payload)
+    
     const data = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.data)
@@ -103,10 +112,14 @@ const fetchPayments = async () => {
           ? payload.data.data
           : []
 
+    console.log('Final data array:', data)
     payments.value = data.map(mapPaymentToRow)
+    console.log('Mapped payments:', payments.value)
+    
   } catch (err) {
     console.error('Error fetching payments:', err)
-    error.value = 'Failed to load payments data'
+    console.error('Error response:', err.response)
+    error.value = `Failed to load payments data: ${err.response?.data?.message || err.message}`
   } finally {
     loading.value = false
   }
