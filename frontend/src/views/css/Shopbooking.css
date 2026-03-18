@@ -523,100 +523,11 @@
 }
 
 .detail-description {
-  margin: 0;
-  border: 1px solid #dae3ee;
-  border-radius: 10px;
-  padding: 10px;
-  color: #2f4f77;
-  background: #f9fbfd;
-}
-
-@media (max-width: 1200px) {
-  .panel-head h1 {
-    font-size: 2rem;
-  }
-
-  .panel-head p,
-  .tab-btn,
-  .booking-info,
-  .status-pill,
-  .details-btn {
-    font-size: 0.95rem;
-  }
-
-  .vehicle-name {
-    font-size: 1.35rem;
-  }
-
-  .price-value {
-    font-size: 1.2rem;
-  }
-}
-
-@media (max-width: 900px) {
-  .bookings-page {
-    max-width: 100%;
-    padding: 14px 18px 18px;
-  }
-
-  .booking-card {
-    grid-template-columns: 1fr;
-  }
-
-  .booking-image {
-    width: 100%;
-    height: 210px;
-  }
-
-  .booking-price {
-    justify-content: flex-start;
-  }
-
-  .controls-row {
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .tabs-row {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-  }
-
-  .tab-btn {
-    flex-shrink: 0;
-  }
-
-  .search-row {
-    justify-content: flex-start;
-    width: 100%;
-  }
-
-  .search-input {
-    width: 100%;
-  }
-
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .detail-title-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .detail-title-row h2 {
-    font-size: 1.7rem;
-  }
-
-  .detail-item strong {
-    font-size: 1.35rem;
-  }
-
-  .detail-total-row span {
-    font-size: 1.3rem;
-  }
-
-  .detail-total-row strong {
-    font-size: 1.65rem;
-  }
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  color: #4a5568;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }

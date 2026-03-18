@@ -353,5 +353,4 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
   </div>
 </template>
 
-<style scoped src="../css/bookings.css"></style>
-
+<style scoped src="../css/Shopbooking.css"></style>

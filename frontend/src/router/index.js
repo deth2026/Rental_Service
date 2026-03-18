@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import UserBookings from '../views/shop/Bookings.vue'
+import Shopbooking from '../views/shop/Shopbooking.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -7,7 +7,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'my-bookings',
-      component: UserBookings,
+      component: Shopbooking,
     },
     {
       path: '/:pathMatch(.*)*',
