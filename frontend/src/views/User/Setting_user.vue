@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import userService from '@/services/userService.js'
-import CommonFooter from '../../components/CommonFooter.vue'
+import UserFooter from '../../components/UserFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const styles = useCssModule()
@@ -432,7 +432,8 @@ const openProfile = () => {
 onMounted(fetchProfile)
 </script>
 <template>
-    <header class="topbar">
+    <div class="settings-page-root">
+        <header class="topbar">
             <div class="brand">
                 <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
                 <span>Chong Choul</span>
@@ -806,7 +807,8 @@ onMounted(fetchProfile)
     </div>
 
     <!-- Common Footer -->
-    <CommonFooter />
+    <UserFooter />
+    </div>
 </template>
 <style module>
 /* ─── Page Layout ──────────────────────────────────────────── */
