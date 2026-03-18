@@ -109,4 +109,6 @@ Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->get('/shop-payment
 Route::middleware('auth:sanctum')->group(function () {
     // Customer can view their own bookings
     Route::get('/my-bookings', [BookingController::class, 'customerBookings']);
+    // Shop owner can view bookings for their shop
+    Route::get('/shop-bookings', [BookingController::class, 'shopOwnerBookings']);
 });

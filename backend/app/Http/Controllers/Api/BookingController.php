@@ -9,9 +9,30 @@ use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Booking::paginate(15));
+        $user = $request->user();
+        
+        // If user is a shop owner or admin, only show bookings for their shops
+        if ($user && in_array($user->role, ['shop_owner', 'admin'])) {
+            // Get shops owned by this user
+            $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
+            
+            if ($shopIds->isNotEmpty()) {
+                return response()->json(
+                    Booking::with(['vehicle', 'user', 'shop'])
+                        ->whereIn('shop_id', $shopIds)
+                        ->orderBy('created_at', 'desc')
+                        ->paginate(15)
+                );
+            }
+            
+            // If user has no shops, return empty
+            return response()->json(['data' => [], 'message' => 'No shops found for this user. Please create a shop first.']);
+        }
+        
+        // For regular users, show all bookings
+        return response()->json(Booking::with(['vehicle', 'user', 'shop'])->paginate(15));
     }
 
     public function customerBookings()
@@ -70,6 +91,88 @@ class BookingController extends Controller
         }
     }
 
+    /**
+     * Get bookings for shop owner (bookings made at their shop)
+     */
+    public function shopOwnerBookings()
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            
+            // Check if user has shop_owner role
+            if (!in_array($user->role, ['shop_owner', 'admin'])) {
+                return response()->json(['error' => 'Only shop owners can view shop bookings'], 403);
+            }
+            
+            // Get all shops owned by this user
+            $shops = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
+            
+            if ($shops->isEmpty()) {
+                return response()->json([]);
+            }
+            
+            // Get bookings for these shops with related data
+            $bookings = Booking::whereIn('shop_id', $shops)
+                ->with(['vehicle', 'user', 'bookingStatusLogs'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            $formattedBookings = $bookings->map(function ($booking) {
+                $vehicle = $booking->vehicle;
+                $shop = optional($booking)->shop;
+                $vehicleImage = '';
+                if ($vehicle) {
+                    $vehicleImage = $vehicle->image_url_full ?? $vehicle->image_url ?? '';
+                }
+                
+                // Get customer info
+                $customer = $booking->user;
+                
+                // Get status logs - safely handle if null
+                $statusLogs = [];
+                if ($booking->bookingStatusLogs) {
+                    $statusLogs = $booking->bookingStatusLogs->map(function ($log) {
+                        return [
+                            'id' => $log->id,
+                            'booking_id' => $log->booking_id,
+                            'status' => $log->status,
+                            'changed_at' => $log->changed_at,
+                        ];
+                    });
+                }
+                
+                return [
+                    'id' => $booking->id,
+                    'vehicle_id' => $booking->vehicle_id,
+                    'vehicle_name' => $vehicle ? ($vehicle->brand . ' ' . $vehicle->model) : 'N/A',
+                    'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
+                    'shop_name' => $shop ? $shop->name : 'N/A',
+                    'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
+                    'start_date' => $booking->start_date,
+                    'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
+                    'total_price' => $booking->total_price,
+                    'status' => $booking->status,
+                    'image' => $vehicleImage,
+                    'total_days' => $booking->total_days,
+                    'daily_rate' => $booking->daily_rate,
+                    'status_logs' => $statusLogs,
+                    // Customer info for shop owner
+                    'customer_name' => $customer ? $customer->name : 'N/A',
+                    'customer_email' => $customer ? $customer->email : 'N/A',
+                    'customer_phone' => $customer ? $customer->phone : 'N/A',
+                ];
+            });
+            
+            return response()->json($formattedBookings);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function store(Request $_request)
     {
         $record = Booking::create($_request->all());
@@ -91,7 +194,17 @@ class BookingController extends Controller
 
     public function update(Request $_request, Booking $booking)
     {
+        $oldStatus = $booking->status;
         $booking->update($_request->all());
+        
+        // Create status log entry if status changed
+        if (isset($_request->status) && $_request->status !== $oldStatus) {
+            \App\Models\BookingStatusLog::create([
+                'booking_id' => $booking->id,
+                'status' => $_request->status,
+                'changed_at' => now(),
+            ]);
+        }
 
         return response()->json($booking->fresh());
     }
