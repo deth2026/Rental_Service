@@ -109,7 +109,7 @@
   </div>
 
   <!-- Common Footer -->
-  <CommonFooter />
+  <UserFooter />
   </div>
 </template>
 
@@ -119,7 +119,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
-import CommonFooter from '../../components/CommonFooter.vue'
+import UserFooter from '../../components/UserFooter.vue'
 import '../../css/VehicleByShop.css'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 

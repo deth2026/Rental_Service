@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
-import CommonFooter from '../../components/CommonFooter.vue'
+import UserFooter from '../../components/UserFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const router = useRouter()
@@ -466,6 +466,6 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- Common Footer -->
-  <CommonFooter />
+  <UserFooter />
   </div>
 </template>

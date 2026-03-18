@@ -77,11 +77,11 @@
             </div>
               <div class="row">
                 <span>Insurance</span>
-                <span>${{ rental.insurance.toFixed(2) }}</span>
+                <span>${{ insuranceAmount.toFixed(2) }}</span>
               </div>
               <div class="row">
                 <span>Taxes & Fees</span>
-                <span>${{ rental.taxes.toFixed(2) }}</span>
+                <span>${{ taxesAmount.toFixed(2) }}</span>
               </div>
               <hr class="dashed-divider" />
               <div class="row total-row">
@@ -373,40 +373,64 @@
     </div>
 
     <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <strong>Chong Choul<span>Rides</span></strong>
-          <p>Secure, fast, and transparent bookings across Cambodia.</p>
-          <div class="footer-badges">
-            <span class="badge-pill">Secure Checkout</span>
-            <span class="badge-pill">PCI Compliant</span>
+      <div class="footer-wrap">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <div class="footer-brand-title">CHONG CHOUL</div>
+            <div class="footer-brand-slogan">Secure rides, fast bookings.</div>
+
+            <div class="footer-social">
+              <button class="btn-reset social-btn" type="button">F</button>
+              <button class="btn-reset social-btn" type="button">T</button>
+              <button class="btn-reset social-btn" type="button">L</button>
+              <button class="btn-reset social-btn" type="button">W</button>
+              <button class="btn-reset social-btn" type="button">I</button>
+            </div>
+            <div class="footer-social-label">Follow Us</div>
+          </div>
+
+          <div class="footer-nav">
+            <div class="footer-nav-links">
+              <button class="btn-reset footer-nav-link" type="button">About</button>
+              <button class="btn-reset footer-nav-link" type="button">Blog</button>
+              <button class="btn-reset footer-nav-link" type="button">Menu</button>
+              <button class="btn-reset footer-nav-link" type="button">Services</button>
+              <button class="btn-reset footer-nav-link" type="button">FAQ</button>
+              <button class="btn-reset footer-nav-link" type="button">Support</button>
+            </div>
+
+            <div class="footer-about">
+              <div class="footer-section-title">About Us</div>
+              <p>
+                Secure, fast, and transparent bookings across Cambodia with verified partners.
+              </p>
+            </div>
+          </div>
+
+          <div class="footer-contact">
+            <div class="footer-contact-row">
+              <div class="footer-contact-label">Call :</div>
+              <div class="footer-contact-value">+0123 456 789 00</div>
+            </div>
+            <div class="footer-contact-row">
+              <div class="footer-contact-label">Email:</div>
+              <div class="footer-contact-value">user@example.com</div>
+            </div>
+
+            <div class="footer-newsletter">
+              <input class="footer-input" type="text" placeholder="Write Email" />
+              <button class="btn-reset footer-send" type="button">➤</button>
+            </div>
           </div>
         </div>
-        <div class="footer-links">
-          <h4>Support</h4>
-          <p>Help Center</p>
-          <p>Cancel your booking</p>
-          <p>Contact Us</p>
-        </div>
-        <div class="footer-links">
-          <h4>Terms &amp; Privacy</h4>
-          <p>Terms of Service</p>
-          <p>Privacy Policy</p>
-          <p>Cookie Policy</p>
-        </div>
-        <div class="footer-links">
-          <h4>Company</h4>
-          <p>About</p>
-          <p>Partners</p>
-          <p>Careers</p>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Chong Choul. All rights reserved.</span>
-        <div class="footer-bottom-links">
-          <span>Security</span>
-          <span>Accessibility</span>
-          <span>Legal</span>
+
+        <div class="footer-bottom">
+          <span>© 2026 Chong Choul. All rights reserved.</span>
+          <div class="footer-bottom-links">
+            <span>Security</span>
+            <span>Accessibility</span>
+            <span>Legal</span>
+          </div>
         </div>
       </div>
     </footer>
@@ -719,6 +743,9 @@ const rental = ref({
   taxes: 0,
 });
 
+const includeInsurance = ref(true);
+const includeTaxes = ref(true);
+
 const parseNumberFromQuery = (value) => {
   if (value === null || value === undefined) return null;
   const raw = Array.isArray(value) ? value[0] : value;
@@ -740,10 +767,30 @@ const parseRiderDetailsFromQuery = (value) => {
   return text;
 };
 
+const parseBooleanFlagFromQuery = (value) => {
+  if (value === null || value === undefined) return null;
+  const raw = Array.isArray(value) ? value[0] : value;
+  const text = String(raw).trim().toLowerCase();
+  if (!text) return null;
+  if (text === "1" || text === "true" || text === "yes" || text === "on") return true;
+  if (text === "0" || text === "false" || text === "no" || text === "off") return false;
+  return null;
+};
+
 const applyRouteDefaults = () => {
   const insuranceFromQuery = parseNumberFromQuery(route.query.insuranceFee);
   if (insuranceFromQuery !== null) {
     rental.value.insurance = insuranceFromQuery;
+  }
+
+  const includeInsuranceFromQuery = parseBooleanFlagFromQuery(route.query.includeInsurance);
+  if (includeInsuranceFromQuery !== null) {
+    includeInsurance.value = includeInsuranceFromQuery;
+  }
+
+  const includeTaxesFromQuery = parseBooleanFlagFromQuery(route.query.includeTaxes);
+  if (includeTaxesFromQuery !== null) {
+    includeTaxes.value = includeTaxesFromQuery;
   }
 
   const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
@@ -797,13 +844,23 @@ const riderCount = computed(() => {
   return Number.isFinite(count) && count > 0 ? count : 1;
 });
 
+const insuranceAmount = computed(() => {
+  const base = Number(rental.value.insurance || 0);
+  return includeInsurance.value ? base : 0;
+});
+
+const taxesAmount = computed(() => {
+  const base = Number(rental.value.taxes || 0);
+  return includeTaxes.value ? base : 0;
+});
+
 const totalAmount = computed(() => {
   const days = calculateDays();
   const riders = riderCount.value;
   const subtotal = days * rental.value.dailyRate * riders;
   rental.value.subtotal = subtotal;
   rental.value.taxes = subtotal * 0.1;
-  return rental.value.subtotal + rental.value.insurance + rental.value.taxes;
+  return rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
 });
 
 const isFormValid = computed(() => {
@@ -900,8 +957,8 @@ const saveBookingToDatabase = async (bookingData) => {
     deposit_status: "unpaid",
     rider_details: rental.value.riders,
     daily_rate: rental.value.dailyRate,
-    insurance_fee: rental.value.insurance,
-    taxes_fee: rental.value.taxes,
+    insurance_fee: insuranceAmount.value,
+    taxes_fee: taxesAmount.value,
   };
 
   try {
@@ -936,8 +993,8 @@ const buildBookingData = (paymentMethod, status) => ({
     dailyRate: rental.value.dailyRate,
     days: calculateDays(),
     subtotal: rental.value.subtotal,
-    insurance: rental.value.insurance,
-    taxes: rental.value.taxes,
+    insurance: insuranceAmount.value,
+    taxes: taxesAmount.value,
     totalAmount: totalAmount.value,
   },
   paymentMethod,
@@ -1103,7 +1160,7 @@ onMounted(() => {
 });
 
 watch(
-  () => route.query.insuranceFee,
+  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails],
   () => {
     applyRouteDefaults();
   },
