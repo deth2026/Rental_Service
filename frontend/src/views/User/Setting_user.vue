@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useCssModule } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import userService from '@/services/userService.js'
-import UserFooter from '../../components/UserFooter.vue'
+import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const styles = useCssModule()
@@ -807,7 +807,7 @@ onMounted(fetchProfile)
     </div>
 
     <!-- Common Footer -->
-    <UserFooter />
+    <CommonFooter />
     </div>
 </template>
 <style module>

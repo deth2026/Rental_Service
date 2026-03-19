@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
-import UserFooter from '../../components/UserFooter.vue'
+import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
@@ -427,7 +427,7 @@ const openMap = () => {
   </div>
 
   <!-- Common Footer -->
-  <UserFooter />
+  <CommonFooter />
   </div>
 </template>
 <style scoped>

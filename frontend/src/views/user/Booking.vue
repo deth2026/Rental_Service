@@ -523,6 +523,7 @@
         </div>
       </div>
     </div>
+    <CommonFooter />
   </div>
 </template>
 
@@ -531,6 +532,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
+import CommonFooter from '../../components/CommonFooter.vue';
 import UserProfileMenu from '@/components/UserProfileMenu.vue';
 import "../../assets/user/booking.css";
 
