@@ -396,8 +396,15 @@ watch(
 )
 
 onMounted(() => {
-  // Use cached data immediately - no loading delay
-  admin.load().catch(() => {})
+  // Use cached data first, then force-refresh if empty so Admin page always tries to recover.
+  admin.load()
+    .then(() => {
+      if ((admin.state.shops || []).length === 0) {
+        return admin.load({ force: true })
+      }
+      return null
+    })
+    .catch(() => {})
 })
 </script>
 
@@ -489,6 +496,11 @@ onMounted(() => {
                 <button v-if="statusLabel(shop.status) === 'PENDING'" type="button" class="btn btn-soft" :disabled="statusChangingShopId === shop.id || isUpdating || isCreating" @click="approve(shop)">
                   Approve
                 </button>
+              </td>
+            </tr>
+            <tr v-if="!pagedShops.length">
+              <td colspan="7" style="text-align:center; padding: 30px; color: var(--mp-muted);">
+                {{ normalizedQuery ? `No shops matched "${route.query.q}". Try clearing search.` : 'No shops found.' }}
               </td>
             </tr>
           </tbody>

@@ -256,15 +256,27 @@ onMounted(async () => {
       <article class="report-card span-2">
         <div class="card-head">
           <h2>Total Earnings & Net Payouts (Last 6 Periods)</h2>
-          <p>Showing payout history for <strong>{{ selectedCategory === ALL_CATEGORIES ? 'All Categories' : selectedCategory }}</strong></p>
+          <p>Showing payout history for <strong>{{ selectedCategory === ALL_CATEGORIES ? 'All Categories' :
+              selectedCategory }}</strong></p>
         </div>
         <svg class="chart-svg" viewBox="0 0 760 320">
-          <line v-for="n in 5" :key="`by-${n}`" x1="56" :y1="18 + (n - 1) * 62.5" x2="740" :y2="18 + (n - 1) * 62.5" stroke="#E5E7EB" stroke-dasharray="4 4" />
-          <text v-for="n in 5" :key="`bl-${n}`" x="48" :y="24 + (5 - n) * 62.5" class="axis-label" text-anchor="end">{{ money0.format((barMax / 4) * (n - 1)) }}</text>
+          <line v-for="n in 5" :key="`by-${n}`" x1="56" :y1="18 + (n - 1) * 62.5" x2="740" :y2="18 + (n - 1) * 62.5"
+            stroke="#E5E7EB" stroke-dasharray="4 4" />
+          <text v-for="n in 5" :key="`bl-${n}`" x="48" :y="24 + (5 - n) * 62.5" class="axis-label" text-anchor="end">{{
+            money0.format((barMax / 4) * (n - 1)) }}</text>
           <g v-for="(row, idx) in earningsSeries" :key="row.label">
-            <rect :x="72 + idx * 113" :y="268 - ((row.earnings / barMax) * 250)" width="18" :height="(row.earnings / barMax) * 250" fill="#1F7BFF" class="bar-shape" :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${72 + idx * 113 + 9}px 268px` }" @click="showPeriodDetail(row, 'Total Earnings')" />
-            <rect :x="95 + idx * 113" :y="268 - ((row.commission / barMax) * 250)" width="18" :height="(row.commission / barMax) * 250" fill="#F97316" class="bar-shape" :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${95 + idx * 113 + 9}px 268px` }" @click="showPeriodDetail(row, 'Platform Commission')" />
-            <rect :x="118 + idx * 113" :y="268 - ((row.net / barMax) * 250)" width="18" :height="(row.net / barMax) * 250" fill="#2BC96B" class="bar-shape" :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${118 + idx * 113 + 9}px 268px` }" @click="showPeriodDetail(row, 'Net Payout')" />
+            <rect :x="72 + idx * 113" :y="268 - ((row.earnings / barMax) * 250)" width="18"
+              :height="(row.earnings / barMax) * 250" fill="#1F7BFF" class="bar-shape"
+              :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${72 + idx * 113 + 9}px 268px` }"
+              @click="showPeriodDetail(row, 'Total Earnings')" />
+            <rect :x="95 + idx * 113" :y="268 - ((row.commission / barMax) * 250)" width="18"
+              :height="(row.commission / barMax) * 250" fill="#F97316" class="bar-shape"
+              :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${95 + idx * 113 + 9}px 268px` }"
+              @click="showPeriodDetail(row, 'Platform Commission')" />
+            <rect :x="118 + idx * 113" :y="268 - ((row.net / barMax) * 250)" width="18"
+              :height="(row.net / barMax) * 250" fill="#2BC96B" class="bar-shape"
+              :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${118 + idx * 113 + 9}px 268px` }"
+              @click="showPeriodDetail(row, 'Net Payout')" />
             <text :x="105 + idx * 113" y="296" class="axis-label x" text-anchor="middle">{{ row.label }}</text>
           </g>
         </svg>
@@ -284,21 +296,11 @@ onMounted(async () => {
           <svg class="chart-svg" viewBox="0 0 220 220">
             <circle cx="110" cy="110" r="72" fill="none" stroke="#E5E7EB" stroke-width="16" />
             <g transform="rotate(-90 110 110)">
-              <circle
-                v-for="segment in distributionSegments"
-                :key="segment.name"
-                cx="110"
-                cy="110"
-                r="72"
-                fill="none"
-                :stroke="segment.color"
-                stroke-width="16"
-                stroke-linecap="round"
-                class="donut-segment"
+              <circle v-for="segment in distributionSegments" :key="segment.name" cx="110" cy="110" r="72" fill="none"
+                :stroke="segment.color" stroke-width="16" stroke-linecap="round" class="donut-segment"
                 :class="{ active: selectedCategory === segment.name }"
                 :style="{ strokeDasharray: `${chartReady ? segment.length : 0} ${segment.circumference}`, strokeDashoffset: -segment.offset, transitionDelay: segment.delay }"
-                @click="selectCategory(segment.name)"
-              />
+                @click="selectCategory(segment.name)" />
             </g>
           </svg>
           <div class="donut-center">
@@ -307,8 +309,10 @@ onMounted(async () => {
           </div>
         </div>
         <div class="category-list">
-          <button type="button" class="category-chip" :class="{ active: selectedCategory === ALL_CATEGORIES }" @click="selectCategory(ALL_CATEGORIES)">All categories</button>
-          <button v-for="item in distributionData" :key="item.name" type="button" class="category-chip muted" :class="{ active: selectedCategory === item.name }" @click="selectCategory(item.name)">
+          <button type="button" class="category-chip" :class="{ active: selectedCategory === ALL_CATEGORIES }"
+            @click="selectCategory(ALL_CATEGORIES)">All categories</button>
+          <button v-for="item in distributionData" :key="item.name" type="button" class="category-chip muted"
+            :class="{ active: selectedCategory === item.name }" @click="selectCategory(item.name)">
             <span class="dot" :style="{ backgroundColor: item.color }"></span>
             {{ item.name }} ({{ Math.round(item.amount) }})
           </button>
@@ -318,15 +322,24 @@ onMounted(async () => {
       <article class="report-card span-2">
         <div class="card-head">
           <h2>Pending Payout Trend Over Time</h2>
-          <p>Animated trend for <strong>{{ selectedCategory === ALL_CATEGORIES ? 'All Categories' : selectedCategory }}</strong></p>
+          <p>Animated trend for <strong>{{ selectedCategory === ALL_CATEGORIES ? 'All Categories' : selectedCategory
+              }}</strong></p>
         </div>
         <svg class="chart-svg" viewBox="0 0 760 300">
-          <line v-for="n in 5" :key="`ly-${n}`" x1="56" :y1="18 + (n - 1) * 58.5" x2="740" :y2="18 + (n - 1) * 58.5" stroke="#E5E7EB" stroke-dasharray="4 4" />
-          <text v-for="n in 5" :key="`ll-${n}`" x="48" :y="24 + (5 - n) * 58.5" class="axis-label" text-anchor="end">{{ money0.format((trendMax / 4) * (n - 1)) }}</text>
-          <path :d="`M 56 252 ${trendSeries.map((point, idx) => `L ${56 + idx * 97.7} ${252 - ((point.amount / trendMax) * 234)}`).join(' ')}`" fill="none" stroke="#1F7BFF" stroke-width="3" stroke-linecap="round" class="line-main" :style="{ strokeDasharray: 1800, strokeDashoffset: chartReady ? 0 : 1800 }" />
-          <path :d="`M 56 252 ${trendSeries.map((point, idx) => `L ${56 + idx * 97.7} ${252 - ((point.amount / trendMax) * 234)}`).join(' ')} L 740 252 Z`" fill="rgba(31, 123, 255, 0.15)" class="line-area" />
+          <line v-for="n in 5" :key="`ly-${n}`" x1="56" :y1="18 + (n - 1) * 58.5" x2="740" :y2="18 + (n - 1) * 58.5"
+            stroke="#E5E7EB" stroke-dasharray="4 4" />
+          <text v-for="n in 5" :key="`ll-${n}`" x="48" :y="24 + (5 - n) * 58.5" class="axis-label" text-anchor="end">{{
+            money0.format((trendMax / 4) * (n - 1)) }}</text>
+          <path
+            :d="`M 56 252 ${trendSeries.map((point, idx) => `L ${56 + idx * 97.7} ${252 - ((point.amount / trendMax) * 234)}`).join(' ')}`"
+            fill="none" stroke="#1F7BFF" stroke-width="3" stroke-linecap="round" class="line-main"
+            :style="{ strokeDasharray: 1800, strokeDashoffset: chartReady ? 0 : 1800 }" />
+          <path
+            :d="`M 56 252 ${trendSeries.map((point, idx) => `L ${56 + idx * 97.7} ${252 - ((point.amount / trendMax) * 234)}`).join(' ')} L 740 252 Z`"
+            fill="rgba(31, 123, 255, 0.15)" class="line-area" />
           <g v-for="(point, idx) in trendSeries" :key="point.label">
-            <circle :cx="56 + idx * 97.7" :cy="252 - ((point.amount / trendMax) * 234)" r="5" class="line-point" :style="{ animationDelay: `${idx * 100}ms` }" @click="showTrendDetail(point)" />
+            <circle :cx="56 + idx * 97.7" :cy="252 - ((point.amount / trendMax) * 234)" r="5" class="line-point"
+              :style="{ animationDelay: `${idx * 100}ms` }" @click="showTrendDetail(point)" />
             <text :x="56 + idx * 97.7" y="284" class="axis-label x" text-anchor="middle">{{ point.label }}</text>
           </g>
         </svg>
@@ -341,25 +354,16 @@ onMounted(async () => {
           <svg class="chart-svg" viewBox="0 0 190 190">
             <circle cx="95" cy="95" r="56" fill="none" stroke="#E5E7EB" stroke-width="16" />
             <g transform="rotate(-90 95 95)">
-              <circle
-                v-for="segment in statusSegments"
-                :key="segment.status"
-                cx="95"
-                cy="95"
-                r="56"
-                fill="none"
-                :stroke="segment.color"
-                stroke-width="16"
-                stroke-linecap="round"
-                class="status-segment"
+              <circle v-for="segment in statusSegments" :key="segment.status" cx="95" cy="95" r="56" fill="none"
+                :stroke="segment.color" stroke-width="16" stroke-linecap="round" class="status-segment"
                 :style="{ strokeDasharray: `${chartReady ? segment.length : 0} ${segment.circumference}`, strokeDashoffset: -segment.offset, transitionDelay: segment.delay }"
-                @click="showStatusDetail(segment)"
-              />
+                @click="showStatusDetail(segment)" />
             </g>
           </svg>
         </div>
         <div class="status-list">
-          <button v-for="item in statusData" :key="item.status" type="button" class="status-item" @click="showStatusDetail(item)">
+          <button v-for="item in statusData" :key="item.status" type="button" class="status-item"
+            @click="showStatusDetail(item)">
             <span class="dot" :style="{ backgroundColor: item.color }"></span>
             <span class="status-name">{{ item.status }}</span>
             <span class="status-value">{{ item.percentage }}%</span>
@@ -412,30 +416,446 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.report-page{--bg:#f6f9ff;--card:#fff;--stroke:#e6ebf3;--text:#153252;--muted:#5f7189;--primary:#1f7bff;--success:#2bc96b;--warning:#f97316;--radius:16px;font-family:'Poppins','Nunito Sans','Segoe UI',sans-serif;color:var(--text);background:radial-gradient(circle at 20% -20%,#dbeafe 0%,transparent 45%),var(--bg);padding-bottom:.5rem}
-.report-head{margin-bottom:1rem}.report-head h1{margin:0;font-size:1.45rem}.report-head p{margin:.25rem 0 0;color:var(--muted);font-size:.95rem}
-.report-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:1rem}.report-card{background:var(--card);border:1px solid var(--stroke);border-radius:var(--radius);padding:1rem 1rem .85rem;box-shadow:0 14px 30px rgba(15,36,64,.06);animation:card-in .52s ease both}
-.report-card:nth-child(2){animation-delay:90ms}.report-card:nth-child(3){animation-delay:150ms}.report-card:nth-child(4){animation-delay:220ms}.span-2{grid-column:1}
-.card-head h2{margin:0;font-size:1.1rem;color:#1f3657}.card-head p{margin:.3rem 0 .7rem;color:var(--muted);font-size:.92rem}.chart-svg{width:100%;display:block}
-.axis-label{font-size:12px;fill:#6b7f98;font-weight:500}.axis-label.x{font-size:11px}
-.bar-shape{cursor:pointer;transition:filter .2s ease;animation:bar-grow .62s cubic-bezier(.22,1,.36,1) both}.bar-shape:hover{filter:brightness(.92)}
-.legend-row{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;padding-bottom:.6rem}.legend-chip{border:none;background:#eef4ff;color:#2f4460;font-weight:600;font-size:.8rem;border-radius:999px;padding:.32rem .66rem;display:inline-flex;align-items:center;gap:.35rem}
-.dot{width:10px;height:10px;border-radius:999px;display:inline-block}.dot.net{background:var(--success)}.dot.commission{background:var(--warning)}.dot.earning{background:var(--primary)}
-.donut-wrap{position:relative;width:min(240px,100%);margin:.2rem auto .65rem}.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;pointer-events:none}
-.donut-value{font-weight:700;font-size:1.1rem}.donut-label{color:var(--muted);font-size:.78rem}.donut-segment{cursor:pointer;transition:stroke-dasharray .72s ease,stroke-width .18s ease}.donut-segment.active{stroke-width:19}
-.category-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;margin-top:.25rem}.category-chip{border:1px solid transparent;background:var(--primary);color:#fff;padding:.5rem .66rem;border-radius:999px;font-size:.83rem;font-weight:600;display:inline-flex;gap:.42rem;align-items:center;justify-content:center;cursor:pointer;transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease}
-.category-chip.muted{color:#47617f;background:#eef2f7}.category-chip.active{box-shadow:0 8px 18px rgba(31,123,255,.24);transform:translateY(-1px);border-color:rgba(31,123,255,.35)}
-.line-main{transition:stroke-dashoffset .85s cubic-bezier(.22,1,.36,1)}.line-area{opacity:0;animation:area-in .68s ease forwards;animation-delay:220ms}
-.line-point{fill:#1f7bff;stroke:#fff;stroke-width:2;cursor:pointer;opacity:0;animation:point-pop .42s ease forwards}.line-point:hover{fill:#0b63df}
-.status-wrap{width:min(200px,100%);margin:0 auto .35rem}.status-segment{cursor:pointer;transition:stroke-dasharray .72s ease,filter .18s ease}.status-segment:hover{filter:brightness(.92)}
-.status-list{margin-top:.4rem}.status-item{width:100%;border:none;background:transparent;display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:.6rem;padding:.34rem .2rem;color:#2f4768;cursor:pointer;font-weight:500}.status-name{text-align:left}.status-value{font-weight:700}
-.detail-backdrop{position:fixed;inset:0;background:rgba(8,16,28,.45);display:flex;justify-content:center;align-items:center;z-index:1400;padding:1rem}.detail-modal{width:min(980px,100%);max-height:85vh;overflow:hidden;border-radius:16px;border:1px solid #d9e4f3;background:#fff;box-shadow:0 20px 48px rgba(7,19,34,.28)}
-.detail-head{display:flex;justify-content:space-between;align-items:flex-start;gap:.75rem;border-bottom:1px solid #e5ecf6;padding:.9rem 1rem}.detail-head h3{margin:0;font-size:1.1rem}.detail-head p{margin:.2rem 0 0;color:#61748d;font-size:.9rem}
-.close-btn{border:none;background:#edf2fa;color:#254566;font-weight:700;width:32px;height:32px;border-radius:9px;cursor:pointer}.detail-empty{padding:1rem;color:#61748d}.detail-table-wrap{overflow:auto;max-height:calc(85vh - 76px)}
-.detail-table{width:100%;border-collapse:collapse;font-size:.9rem}.detail-table th,.detail-table td{border-bottom:1px solid #edf2fa;padding:.62rem .7rem;text-align:left;white-space:nowrap}
-.detail-table th{position:sticky;top:0;background:#f7faff;z-index:1;color:#3b5575}.detail-table tbody tr:hover{background:#fbfdff}
-.modal-fade-enter-active,.modal-fade-leave-active{transition:opacity .18s ease}.modal-fade-enter-from,.modal-fade-leave-to{opacity:0}
-@keyframes card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes bar-grow{from{transform:scaleY(.06);opacity:.5}to{transform:scaleY(1);opacity:1}}
-@keyframes point-pop{from{opacity:0;transform:scale(.35)}to{opacity:1;transform:scale(1)}}@keyframes area-in{from{opacity:0}to{opacity:1}}
-@media (max-width:1100px){.report-grid{grid-template-columns:1fr}.span-2{grid-column:auto}}@media (max-width:700px){.report-card{padding:.85rem .72rem}.card-head h2{font-size:1rem}.card-head p{font-size:.84rem}.category-list{grid-template-columns:1fr}}
+.report-page {
+  --bg: #f6f9ff;
+  --card: #fff;
+  --stroke: #e6ebf3;
+  --text: #153252;
+  --muted: #5f7189;
+  --primary: #1f7bff;
+  --success: #2bc96b;
+  --warning: #f97316;
+  --radius: 16px;
+  font-family: 'Poppins', 'Nunito Sans', 'Segoe UI', sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 20% -20%, #dbeafe 0%, transparent 45%), var(--bg);
+  padding-bottom: .5rem
+}
+
+.report-head {
+  margin-bottom: 1rem
+}
+
+.report-head h1 {
+  margin: 0;
+  font-size: 1.45rem
+}
+
+.report-head p {
+  margin: .25rem 0 0;
+  color: var(--muted);
+  font-size: .95rem
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 1rem
+}
+
+.report-card {
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  padding: 1rem 1rem .85rem;
+  box-shadow: 0 14px 30px rgba(15, 36, 64, .06);
+  animation: card-in .52s ease both
+}
+
+.report-card:nth-child(2) {
+  animation-delay: 90ms
+}
+
+.report-card:nth-child(3) {
+  animation-delay: 150ms
+}
+
+.report-card:nth-child(4) {
+  animation-delay: 220ms
+}
+
+.span-2 {
+  grid-column: 1
+}
+
+.card-head h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #1f3657
+}
+
+.card-head p {
+  margin: .3rem 0 .7rem;
+  color: var(--muted);
+  font-size: .92rem
+}
+
+.chart-svg {
+  width: 100%;
+  display: block
+}
+
+.axis-label {
+  font-size: 12px;
+  fill: #6b7f98;
+  font-weight: 500
+}
+
+.axis-label.x {
+  font-size: 11px
+}
+
+.bar-shape {
+  cursor: pointer;
+  transition: filter .2s ease;
+  animation: bar-grow .62s cubic-bezier(.22, 1, .36, 1) both
+}
+
+.bar-shape:hover {
+  filter: brightness(.92)
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .5rem;
+  padding-bottom: .6rem
+}
+
+.legend-chip {
+  border: none;
+  background: #eef4ff;
+  color: #2f4460;
+  font-weight: 600;
+  font-size: .8rem;
+  border-radius: 999px;
+  padding: .32rem .66rem;
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block
+}
+
+.dot.net {
+  background: var(--success)
+}
+
+.dot.commission {
+  background: var(--warning)
+}
+
+.dot.earning {
+  background: var(--primary)
+}
+
+.donut-wrap {
+  position: relative;
+  width: min(240px, 100%);
+  margin: .2rem auto .65rem
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none
+}
+
+.donut-value {
+  font-weight: 700;
+  font-size: 1.1rem
+}
+
+.donut-label {
+  color: var(--muted);
+  font-size: .78rem
+}
+
+.donut-segment {
+  cursor: pointer;
+  transition: stroke-dasharray .72s ease, stroke-width .18s ease
+}
+
+.donut-segment.active {
+  stroke-width: 19
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  margin-top: .25rem
+}
+
+.category-chip {
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: #fff;
+  padding: .5rem .66rem;
+  border-radius: 999px;
+  font-size: .83rem;
+  font-weight: 600;
+  display: inline-flex;
+  gap: .42rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease
+}
+
+.category-chip.muted {
+  color: #47617f;
+  background: #eef2f7
+}
+
+.category-chip.active {
+  box-shadow: 0 8px 18px rgba(31, 123, 255, .24);
+  transform: translateY(-1px);
+  border-color: rgba(31, 123, 255, .35)
+}
+
+.line-main {
+  transition: stroke-dashoffset .85s cubic-bezier(.22, 1, .36, 1)
+}
+
+.line-area {
+  opacity: 0;
+  animation: area-in .68s ease forwards;
+  animation-delay: 220ms
+}
+
+.line-point {
+  fill: #1f7bff;
+  stroke: #fff;
+  stroke-width: 2;
+  cursor: pointer;
+  opacity: 0;
+  animation: point-pop .42s ease forwards
+}
+
+.line-point:hover {
+  fill: #0b63df
+}
+
+.status-wrap {
+  width: min(200px, 100%);
+  margin: 0 auto .35rem
+}
+
+.status-segment {
+  cursor: pointer;
+  transition: stroke-dasharray .72s ease, filter .18s ease
+}
+
+.status-segment:hover {
+  filter: brightness(.92)
+}
+
+.status-list {
+  margin-top: .4rem
+}
+
+.status-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: .6rem;
+  padding: .34rem .2rem;
+  color: #2f4768;
+  cursor: pointer;
+  font-weight: 500
+}
+
+.status-name {
+  text-align: left
+}
+
+.status-value {
+  font-weight: 700
+}
+
+.detail-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 16, 28, .45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1400;
+  padding: 1rem
+}
+
+.detail-modal {
+  width: min(980px, 100%);
+  max-height: 85vh;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid #d9e4f3;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(7, 19, 34, .28)
+}
+
+.detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: .75rem;
+  border-bottom: 1px solid #e5ecf6;
+  padding: .9rem 1rem
+}
+
+.detail-head h3 {
+  margin: 0;
+  font-size: 1.1rem
+}
+
+.detail-head p {
+  margin: .2rem 0 0;
+  color: #61748d;
+  font-size: .9rem
+}
+
+.close-btn {
+  border: none;
+  background: #edf2fa;
+  color: #254566;
+  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  cursor: pointer
+}
+
+.detail-empty {
+  padding: 1rem;
+  color: #61748d
+}
+
+.detail-table-wrap {
+  overflow: auto;
+  max-height: calc(85vh - 76px)
+}
+
+.detail-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem
+}
+
+.detail-table th,
+.detail-table td {
+  border-bottom: 1px solid #edf2fa;
+  padding: .62rem .7rem;
+  text-align: left;
+  white-space: nowrap
+}
+
+.detail-table th {
+  position: sticky;
+  top: 0;
+  background: #f7faff;
+  z-index: 1;
+  color: #3b5575
+}
+
+.detail-table tbody tr:hover {
+  background: #fbfdff
+}
+
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity .18s ease
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(.06);
+    opacity: .5
+  }
+
+  to {
+    transform: scaleY(1);
+    opacity: 1
+  }
+}
+
+@keyframes point-pop {
+  from {
+    opacity: 0;
+    transform: scale(.35)
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1)
+  }
+}
+
+@keyframes area-in {
+  from {
+    opacity: 0
+  }
+
+  to {
+    opacity: 1
+  }
+}
+
+@media (max-width:1100px) {
+  .report-grid {
+    grid-template-columns: 1fr
+  }
+
+  .span-2 {
+    grid-column: auto
+  }
+}
+
+@media (max-width:700px) {
+  .report-card {
+    padding: .85rem .72rem
+  }
+
+  .card-head h2 {
+    font-size: 1rem
+  }
+
+  .card-head p {
+    font-size: .84rem
+  }
+
+  .category-list {
+    grid-template-columns: 1fr
+  }
+}
 </style>
