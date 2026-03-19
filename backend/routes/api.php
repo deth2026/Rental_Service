@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Api\LoyaltyPointController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
@@ -70,6 +71,9 @@ Route::put('/users/{user}', [UserController::class, 'update']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/{user}/avatar', [UserController::class, 'uploadAvatar']);
     Route::delete('/users/{user}/avatar', [UserController::class, 'removeAvatar']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notification}', [NotificationController::class, 'update']);
+    Route::patch('/notifications/mark-all', [NotificationController::class, 'markAllAsRead']);
 });
 
 // Profile settings routes (from feature/setting.user)
