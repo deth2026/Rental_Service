@@ -12,18 +12,19 @@ const getStoredToken = () => {
   return localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
 };
 
-const token = getStoredToken();
-if (token) {
-  api.defaults.headers.common.Authorization = `Bearer ${token}`;
-}
-
 api.interceptors.request.use((config) => {
   const nextConfig = { ...config };
   const authToken = getStoredToken();
 
+  // Log for debugging
+  console.log('API Interceptor: Token from localStorage:', authToken ? 'present' : 'missing');
+
   if (authToken) {
     nextConfig.headers = nextConfig.headers || {};
     nextConfig.headers.Authorization = `Bearer ${authToken}`;
+    console.log('API Interceptor: Authorization header set');
+  } else {
+    console.log('API Interceptor: No token found, skipping Authorization header');
   }
 
   // Let browser set correct multipart boundary automatically.
@@ -65,6 +66,15 @@ export const shopApi = {
 // City API calls
 export const cityApi = {
   getAll: () => api.get('/cities')
+};
+
+// Category API calls
+export const categoryApi = {
+  getAll: () => api.get('/categories'),
+  getById: (id) => api.get(`/categories/${id}`),
+  create: (data) => api.post('/categories', data),
+  update: (id, data) => api.put(`/categories/${id}`, data),
+  delete: (id) => api.delete(`/categories/${id}`)
 };
 
 // Payment API calls

@@ -116,7 +116,8 @@ class UserController extends Controller
 
     public function index()
     {
-        return response()->json(User::paginate(15));
+        $users = User::orderByDesc('id')->get();
+        return response()->json($users);
     }
 
     public function store(Request $request)
@@ -126,7 +127,7 @@ class UserController extends Controller
             'email'    => 'required|email|unique:users,email',
             'password' => ['required', Password::min(8)->mixedCase()->numbers()->symbols()],
             'phone'    => 'nullable|string|max:30',
-            'role'     => 'nullable|string|in:customer,admin',
+            'role'     => 'nullable|string|in:customer,admin,shop_owner,shop_staff',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
@@ -315,4 +316,3 @@ class UserController extends Controller
         ]);
     }
 }
-

@@ -12,27 +12,23 @@ class BookingController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        
-        // If user is a shop owner or admin, only show bookings for their shops
-        if ($user && in_array($user->role, ['shop_owner', 'admin'])) {
-            // Get shops owned by this user
+        $query = Booking::with(['vehicle', 'user', 'shop'])
+            ->orderBy('created_at', 'desc');
+
+        if ($user && $user->role === 'shop_owner') {
             $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
-            
-            if ($shopIds->isNotEmpty()) {
-                return response()->json(
-                    Booking::with(['vehicle', 'user', 'shop'])
-                        ->whereIn('shop_id', $shopIds)
-                        ->orderBy('created_at', 'desc')
-                        ->paginate(15)
-                );
+
+            if ($shopIds->isEmpty()) {
+                return response()->json([
+                    'data' => [],
+                    'message' => 'No shops found for this user. Please create a shop first.',
+                ]);
             }
-            
-            // If user has no shops, return empty
-            return response()->json(['data' => [], 'message' => 'No shops found for this user. Please create a shop first.']);
+
+            $query->whereIn('shop_id', $shopIds);
         }
-        
-        // For regular users, show all bookings
-        return response()->json(Booking::with(['vehicle', 'user', 'shop'])->paginate(15));
+
+        return response()->json($query->paginate(15));
     }
 
     public function customerBookings()

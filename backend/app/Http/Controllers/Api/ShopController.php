@@ -12,7 +12,7 @@ class ShopController extends Controller
 {
     public function index()
     {
-        $shops = Shop::with('owner')
+        $shops = Shop::with(['owner:id,name,email,phone'])
             ->orderByDesc('id')
             ->get();
 
@@ -41,9 +41,6 @@ class ShopController extends Controller
             unset($payload['location']);
         }
         
-        // A shop owner can only create shops for themselves.
-        $payload['owner_id'] = $request->user()?->id;
-
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
             // file rule ensures it is an image and not too large
@@ -54,7 +51,7 @@ class ShopController extends Controller
             $request->validate(['img_url' => 'string']);
         }
 
-        // A shop owner can only create shops for themselves.
+        // The creator becomes the owner by default.
         $payload['owner_id'] = $request->user()?->id;
 
         // Handle image upload or URL
@@ -109,7 +106,9 @@ class ShopController extends Controller
     public function update(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if ($user && !$isAdmin && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
                 'message' => 'Unauthorized. You can only update your own shops.',
             ], 403);
@@ -218,10 +217,19 @@ class ShopController extends Controller
     public function destroy(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if ($user && !$isAdmin && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
                 'message' => 'Unauthorized. You can only delete your own shops.',
             ], 403);
+        }
+
+        if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
+            $oldPath = storage_path('app/public/' . ltrim($shop->img_url, '/'));
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
         }
 
         $shop->delete();

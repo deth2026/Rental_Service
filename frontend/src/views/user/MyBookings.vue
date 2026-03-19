@@ -21,6 +21,17 @@ const error = ref('')
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
 
+const getStoredUserRole = () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return null
+
+  try {
+    return JSON.parse(userStr)?.role ?? null
+  } catch {
+    return null
+  }
+}
+
 const fetchBookings = async () => {
   loading.value = true
   error.value = ''
@@ -162,7 +173,19 @@ const closeDetails = () => {
 }
 
 const goHome = () => {
-  router.push('/')
+  const role = getStoredUserRole()
+
+  if (role === 'admin') {
+    router.push({ name: 'admin-dashboard' })
+    return
+  }
+
+  if (role === 'shop_owner') {
+    router.push({ name: 'dashboard' })
+    return
+  }
+
+  router.push({ name: 'view_shop' })
 }
 
 const openDetails = async (booking) => {
