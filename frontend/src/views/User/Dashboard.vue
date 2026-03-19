@@ -1,9 +1,9 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
-import CommonFooter from '../../components/CommonFooter.vue'
+import UserFooter from '../../components/UserFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const router = useRouter()
@@ -55,6 +55,8 @@ const isLoadingShops = ref(false)
 const shopsError = ref('')
 const showAllShops = ref(false)
 const expandedShops = ref(new Set())
+const shopDetailRefs = new Map()
+const scrollableShopIds = ref(new Set())
 
 const withCacheBust = (url, version) => {
   if (!url || typeof url !== 'string') return url
@@ -110,12 +112,15 @@ const normalizeShop = (shop) => ({
   ownerAvatar: shop.owner?.img_url || shop.owner?.profile_picture || shop.owner?.avatar_url || '',
   rating: Number(shop.rating || 0),
   status: shop.status || 'active',
-  image: (shop.img_url || shop.image_url || shop.image)
-    ? withCacheBust(
-        resolveShopImageUrl(shop.img_url || shop.image_url || shop.image),
-        shop.updated_at || shop.id || Date.now()
-      )
-    : '',
+  // Use img_url_full accessor from backend if available
+  image: shop.img_url_full 
+    ? withCacheBust(shop.img_url_full, shop.updated_at || shop.id || Date.now())
+    : (shop.img_url || shop.image_url || shop.image)
+      ? withCacheBust(
+          resolveShopImageUrl(shop.img_url || shop.image_url || shop.image),
+          shop.updated_at || shop.id || Date.now()
+        )
+      : '',
 })
 
 const loadShops = async () => {
@@ -141,6 +146,7 @@ const hasMoreShops = computed(() => shops.value.length > 6)
 
 const toggleShopGrid = () => {
   showAllShops.value = !showAllShops.value
+  scheduleScrollableUpdate()
 }
 
 const toggleShopDetails = (shopId) => {
@@ -151,9 +157,11 @@ const toggleShopDetails = (shopId) => {
     nextSet.add(shopId)
   }
   expandedShops.value = nextSet
+  scheduleScrollableUpdate()
 }
 
 const isShopExpanded = (shopId) => expandedShops.value.has(shopId)
+const isShopScrollable = (shopId) => scrollableShopIds.value.has(shopId)
 
 const viewShopVehicles = (shop) => {
   router.push({ name: 'vehicles-by-shop', query: { shop_id: String(shop.id) } })
@@ -162,7 +170,38 @@ const viewShopVehicles = (shop) => {
 watch(shops, () => {
   expandedShops.value = new Set()
   showAllShops.value = false
+  scheduleScrollableUpdate()
 })
+
+watch([showAllShops, expandedShops], () => {
+  scheduleScrollableUpdate()
+})
+
+const setShopDetailRef = (shopId) => (el) => {
+  if (el) {
+    shopDetailRefs.set(shopId, el)
+  } else {
+    shopDetailRefs.delete(shopId)
+  }
+}
+
+const updateScrollableShops = () => {
+  const nextSet = new Set()
+  shopDetailRefs.forEach((el, shopId) => {
+    if (!el) return
+    if (!expandedShops.value.has(shopId)) return
+    const maxHeightValue = Number.parseFloat(window.getComputedStyle(el).maxHeight || '0')
+    const maxHeight = Number.isFinite(maxHeightValue) && maxHeightValue > 0 ? maxHeightValue : el.clientHeight
+    if (el.scrollHeight > maxHeight + 1) {
+      nextSet.add(shopId)
+    }
+  })
+  scrollableShopIds.value = nextSet
+}
+
+const scheduleScrollableUpdate = () => {
+  nextTick(updateScrollableShops)
+}
 
 const slides = ref([
   {
@@ -253,10 +292,12 @@ const restartSlideTimer = () => {
 onMounted(() => {
   loadShops()
   startSlideTimer()
+  window.addEventListener('resize', updateScrollableShops)
 })
 
 onBeforeUnmount(() => {
   stopSlideTimer()
+  window.removeEventListener('resize', updateScrollableShops)
 })
 </script>
 
@@ -361,7 +402,11 @@ onBeforeUnmount(() => {
             <div
               class="shop-card-details"
               :class="{ 'shop-card-details--collapsed': !isShopExpanded(shop.id) }"
+              :ref="setShopDetailRef(shop.id)"
             >
+              <div class="shop-scroll-hint" :class="{ 'shop-scroll-hint--active': isShopScrollable(shop.id) }">
+                {{ isShopScrollable(shop.id) ? 'Can scroll' : 'Cannot scroll' }}
+              </div>
               <div class="shop-contact-grid">
                 <div class="shop-info">
                   <span>Email</span>
@@ -387,6 +432,7 @@ onBeforeUnmount(() => {
                   <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
                 </div>
               </div>
+
             </div>
 
             <div class="shop-card-footer">
@@ -423,6 +469,6 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- Common Footer -->
-  <CommonFooter />
+  <UserFooter />
   </div>
 </template>

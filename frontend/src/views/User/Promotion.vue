@@ -383,10 +383,10 @@ onMounted(fetchPromotions)
         </div>
       </section>
     </main>
-  </div>
 
-  <!-- Common Footer -->
-  <CommonFooter />
+    <!-- Common Footer -->
+    <CommonFooter />
+  </div>
 </template>
 
 <style scoped>

@@ -102,6 +102,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('payments', PaymentController::class);
 });
 
+// Shop dashboard payments derived from bookings
+Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->get('/shop-payments', [BookingController::class, 'shopPayments']);
+
 // Customer routes (accessible by all authenticated users)
 Route::middleware('auth:sanctum')->group(function () {
     // Customer can view their own bookings

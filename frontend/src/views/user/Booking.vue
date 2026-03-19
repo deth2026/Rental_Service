@@ -77,11 +77,11 @@
             </div>
               <div class="row">
                 <span>Insurance</span>
-                <span>${{ rental.insurance.toFixed(2) }}</span>
+                <span>${{ insuranceAmount.toFixed(2) }}</span>
               </div>
               <div class="row">
                 <span>Taxes & Fees</span>
-                <span>${{ rental.taxes.toFixed(2) }}</span>
+                <span>${{ taxesAmount.toFixed(2) }}</span>
               </div>
               <hr class="dashed-divider" />
               <div class="row total-row">
@@ -180,7 +180,7 @@
               v-if="method === 'card'"
               class="card-details-form"
               autocomplete="on"
-              @submit.prevent="handlePayment"
+              @submit.prevent="openConfirmModal('card')"
             >
               <div class="input-group">
                 <label>Cardholder Name</label>
@@ -292,7 +292,7 @@
                 type="button"
                 class="btn-primary-pay"
                 :disabled="!isFormValid"
-                @click="handleBankTransfer"
+                @click="openConfirmModal('bank')"
               >
                 Confirm bank transfer
               </button>
@@ -355,7 +355,7 @@
                     <button
                       type="button"
                       class="btn-primary-pay"
-                      @click="handlePayment"
+                      @click="openConfirmModal('qr')"
                     >
                       I have paid
                     </button>
@@ -373,43 +373,103 @@
     </div>
 
     <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <strong>Chong Choul<span>Rides</span></strong>
-          <p>Secure, fast, and transparent bookings across Cambodia.</p>
-          <div class="footer-badges">
-            <span class="badge-pill">Secure Checkout</span>
-            <span class="badge-pill">PCI Compliant</span>
+      <div class="footer-wrap">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <div class="footer-brand-title">CHONG CHOUL</div>
+            <div class="footer-brand-slogan">Secure rides, fast bookings.</div>
+
+            <div class="footer-social">
+              <button class="btn-reset social-btn" type="button">F</button>
+              <button class="btn-reset social-btn" type="button">T</button>
+              <button class="btn-reset social-btn" type="button">L</button>
+              <button class="btn-reset social-btn" type="button">W</button>
+              <button class="btn-reset social-btn" type="button">I</button>
+            </div>
+            <div class="footer-social-label">Follow Us</div>
+          </div>
+
+          <div class="footer-nav">
+            <div class="footer-nav-links">
+              <button class="btn-reset footer-nav-link" type="button">About</button>
+              <button class="btn-reset footer-nav-link" type="button">Blog</button>
+              <button class="btn-reset footer-nav-link" type="button">Menu</button>
+              <button class="btn-reset footer-nav-link" type="button">Services</button>
+              <button class="btn-reset footer-nav-link" type="button">FAQ</button>
+              <button class="btn-reset footer-nav-link" type="button">Support</button>
+            </div>
+
+            <div class="footer-about">
+              <div class="footer-section-title">About Us</div>
+              <p>
+                Secure, fast, and transparent bookings across Cambodia with verified partners.
+              </p>
+            </div>
+          </div>
+
+          <div class="footer-contact">
+            <div class="footer-contact-row">
+              <div class="footer-contact-label">Call :</div>
+              <div class="footer-contact-value">+0123 456 789 00</div>
+            </div>
+            <div class="footer-contact-row">
+              <div class="footer-contact-label">Email:</div>
+              <div class="footer-contact-value">user@example.com</div>
+            </div>
+
+            <div class="footer-newsletter">
+              <input class="footer-input" type="text" placeholder="Write Email" />
+              <button class="btn-reset footer-send" type="button">➤</button>
+            </div>
           </div>
         </div>
-        <div class="footer-links">
-          <h4>Support</h4>
-          <p>Help Center</p>
-          <p>Cancel your booking</p>
-          <p>Contact Us</p>
-        </div>
-        <div class="footer-links">
-          <h4>Terms &amp; Privacy</h4>
-          <p>Terms of Service</p>
-          <p>Privacy Policy</p>
-          <p>Cookie Policy</p>
-        </div>
-        <div class="footer-links">
-          <h4>Company</h4>
-          <p>About</p>
-          <p>Partners</p>
-          <p>Careers</p>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Chong Choul. All rights reserved.</span>
-        <div class="footer-bottom-links">
-          <span>Security</span>
-          <span>Accessibility</span>
-          <span>Legal</span>
+
+        <div class="footer-bottom">
+          <span>© 2026 Chong Choul. All rights reserved.</span>
+          <div class="footer-bottom-links">
+            <span>Security</span>
+            <span>Accessibility</span>
+            <span>Legal</span>
+          </div>
         </div>
       </div>
     </footer>
+
+    <div
+      v-if="showConfirmModal"
+      class="confirm-modal-overlay"
+      @click="closeConfirmModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2>Confirm Payment</h2>
+        <p>Please review the details before confirming your payment.</p>
+
+        <div class="confirm-details">
+          <div class="confirm-detail">
+            <span>Amount</span>
+            <strong>${{ totalAmount.toFixed(2) }}</strong>
+          </div>
+          <div class="confirm-detail">
+            <span>Method</span>
+            <strong>{{ receiptPaymentLabel }}</strong>
+          </div>
+        </div>
+
+        <div class="confirm-actions">
+          <button class="btn-cancel" type="button" @click="closeConfirmModal">
+            Cancel
+          </button>
+          <button class="btn-confirm" type="button" @click="confirmPayment">
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div
       v-if="showSuccessModal"
@@ -417,35 +477,39 @@
       @click="closeSuccessModal"
     >
       <div class="success-modal" @click.stop>
-        <h2>Payment Successful</h2>
-        <p>Your booking has been confirmed.</p>
+        <div class="success-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2>Successfully</h2>
 
-        <div class="transaction-receipt">
-          <div class="receipt-row">
-            <span class="label">Booking ID</span>
-            <span class="value">{{ bookingId }}</span>
+        <div class="success-card">
+          <div class="success-row">
+            <span>Booking ID</span>
+            <strong>{{ bookingId }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Transaction ID</span>
-            <span class="value">{{ transactionId }}</span>
+          <div class="success-row">
+            <span>Transaction ID</span>
+            <strong>{{ transactionId }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Payment Method</span>
-            <span class="value">{{ receiptPaymentLabel }}</span>
+          <div class="success-row">
+            <span>Payment Method</span>
+            <strong>{{ receiptPaymentLabel }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Amount Paid</span>
-            <span class="value amount">${{ totalAmount.toFixed(2) }}</span>
+          <div class="success-row">
+            <span>Amount Paid</span>
+            <strong>${{ totalAmount.toFixed(2) }}</strong>
           </div>
-          <div class="receipt-row">
-            <span class="label">Date</span>
-            <span class="value">{{ transactionDateTime }}</span>
+          <div class="success-row">
+            <span>Date</span>
+            <strong>{{ transactionDateTime }}</strong>
           </div>
         </div>
 
         <div class="modal-actions">
           <button class="btn-download" type="button" @click="downloadReceipt">
-            Download receipt
+            Download
           </button>
           <button class="btn-close" type="button" @click="closeSuccessModal">
             Close
@@ -473,8 +537,6 @@ const navItems = ['Home', 'View Details', 'Bookings'];
 const activeNav = ref('Home');
 const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
-const LAST_VEHICLE_ID_KEY = 'last_vehicle_id';
-
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
 
@@ -539,19 +601,16 @@ const vehicleId = computed(() => {
   return Number.isFinite(value) && value > 0 ? value : null;
 });
 
-const setLastVehicleId = (id) => {
-  if (!id) return;
-  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
-};
-
-const getLastVehicleId = () => {
-  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
-
 const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
 const getVehicleImage = (item) => {
+  // First check for full URL (provided by backend accessor)
+  if (item?.image_url_full) {
+    return item.image_url_full
+  }
+  // Check photo_urls array
+  if (item?.photo_urls && Array.isArray(item.photo_urls) && item.photo_urls.length > 0) {
+    return item.photo_urls[0]
+  }
   const image = item?.image_url ? String(item.image_url).trim() : "";
   if (image) {
     if (image.startsWith("http://") || image.startsWith("https://")) return image;
@@ -654,6 +713,8 @@ const method = ref("card");
 const promoCode = ref("");
 const showQR = ref(false);
 const showSuccessModal = ref(false);
+const showConfirmModal = ref(false);
+const pendingPaymentAction = ref(null);
 const dateError = ref("");
 const bookingId = ref("");
 const paymentId = ref(
@@ -677,6 +738,9 @@ const rental = ref({
   taxes: 0,
 });
 
+const includeInsurance = ref(true);
+const includeTaxes = ref(true);
+
 const parseNumberFromQuery = (value) => {
   if (value === null || value === undefined) return null;
   const raw = Array.isArray(value) ? value[0] : value;
@@ -698,10 +762,30 @@ const parseRiderDetailsFromQuery = (value) => {
   return text;
 };
 
+const parseBooleanFlagFromQuery = (value) => {
+  if (value === null || value === undefined) return null;
+  const raw = Array.isArray(value) ? value[0] : value;
+  const text = String(raw).trim().toLowerCase();
+  if (!text) return null;
+  if (text === "1" || text === "true" || text === "yes" || text === "on") return true;
+  if (text === "0" || text === "false" || text === "no" || text === "off") return false;
+  return null;
+};
+
 const applyRouteDefaults = () => {
   const insuranceFromQuery = parseNumberFromQuery(route.query.insuranceFee);
   if (insuranceFromQuery !== null) {
     rental.value.insurance = insuranceFromQuery;
+  }
+
+  const includeInsuranceFromQuery = parseBooleanFlagFromQuery(route.query.includeInsurance);
+  if (includeInsuranceFromQuery !== null) {
+    includeInsurance.value = includeInsuranceFromQuery;
+  }
+
+  const includeTaxesFromQuery = parseBooleanFlagFromQuery(route.query.includeTaxes);
+  if (includeTaxesFromQuery !== null) {
+    includeTaxes.value = includeTaxesFromQuery;
   }
 
   const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
@@ -755,13 +839,23 @@ const riderCount = computed(() => {
   return Number.isFinite(count) && count > 0 ? count : 1;
 });
 
+const insuranceAmount = computed(() => {
+  const base = Number(rental.value.insurance || 0);
+  return includeInsurance.value ? base : 0;
+});
+
+const taxesAmount = computed(() => {
+  const base = Number(rental.value.taxes || 0);
+  return includeTaxes.value ? base : 0;
+});
+
 const totalAmount = computed(() => {
   const days = calculateDays();
   const riders = riderCount.value;
   const subtotal = days * rental.value.dailyRate * riders;
   rental.value.subtotal = subtotal;
   rental.value.taxes = subtotal * 0.1;
-  return rental.value.subtotal + rental.value.insurance + rental.value.taxes;
+  return rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
 });
 
 const isFormValid = computed(() => {
@@ -858,15 +952,29 @@ const saveBookingToDatabase = async (bookingData) => {
     deposit_status: "unpaid",
     rider_details: rental.value.riders,
     daily_rate: rental.value.dailyRate,
-    insurance_fee: rental.value.insurance,
-    taxes_fee: rental.value.taxes,
+    insurance_fee: insuranceAmount.value,
+    taxes_fee: taxesAmount.value,
   };
 
   try {
+    // Create the booking first
     const response = await api.post("/bookings", payload);
     const record = response?.data?.data || response?.data;
     const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
+
+    // Now save the payment record
+    const paymentPayload = {
+      booking_id: recordId,
+      transaction_id: transactionId.value || paymentId.value,
+      amount: totalAmount.value,
+      payment_method: bookingData?.paymentMethod || method.value,
+      payment_status: bookingData?.status === "confirmed" ? "paid" : "pending",
+      paid_at: bookingData?.status === "confirmed" ? new Date().toISOString() : null,
+    };
+
+    // Save payment to payments table
+    await api.post("/payments", paymentPayload);
 
     return {
       success: true,
@@ -894,14 +1002,36 @@ const buildBookingData = (paymentMethod, status) => ({
     dailyRate: rental.value.dailyRate,
     days: calculateDays(),
     subtotal: rental.value.subtotal,
-    insurance: rental.value.insurance,
-    taxes: rental.value.taxes,
+    insurance: insuranceAmount.value,
+    taxes: taxesAmount.value,
     totalAmount: totalAmount.value,
   },
   paymentMethod,
   status,
   createdAt: new Date().toISOString(),
 });
+
+const openConfirmModal = (action) => {
+  pendingPaymentAction.value = action;
+  showConfirmModal.value = true;
+};
+
+const closeConfirmModal = () => {
+  showConfirmModal.value = false;
+  pendingPaymentAction.value = null;
+};
+
+const confirmPayment = async () => {
+  const action = pendingPaymentAction.value;
+  closeConfirmModal();
+
+  if (action === "bank") {
+    await handleBankTransfer();
+    return;
+  }
+
+  await handlePayment();
+};
 
 const handlePayment = async () => {
   await validateDates();
@@ -1033,13 +1163,10 @@ const initDates = () => {
 
 onMounted(() => {
   loadVehicleDetail();
-  if (vehicleId.value) {
-    setLastVehicleId(vehicleId.value);
-  }
 });
 
 watch(
-  () => route.query.insuranceFee,
+  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails],
   () => {
     applyRouteDefaults();
   },

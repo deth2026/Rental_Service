@@ -1,4 +1,3 @@
-
 <template>
   <div class="motoride-container">
     <header class="topbar">
@@ -15,6 +14,7 @@
           :class="{ active: activeNav === item }"
           @click="setActiveNav(item)"
         >
+          <i :class="getNavIcon(item)" class="nav-icon"></i>
           {{ item }}
         </button>
       </nav>
@@ -32,29 +32,67 @@
       <template v-else>
         <!-- Top Row: Image Vehicle and Booking Details -->
         <div class="top-row">
-          <div class="gg">
-            <section class="image-vehicle" style="margin-bottom: 5vh;">
+          <div class="detail-left">
+            <section class="image-vehicle">
               <img :src="vehicleImage" :alt="vehicleName" class="main-img" />
+              <div class="image-overlay">
+                <button class="btn-reset image-zoom-btn" @click="openImageModal">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="btn-reset image-favorite-btn" @click="toggleFavorite">
+                  <i :class="isFavorite ? 'fas fa-heart' : 'far fa-heart'"></i>
+                </button>
+              </div>
               <div class="gallery-controls">
                 <div class="dots">
-                  <span></span><span class="active"></span><span></span>
+                  <span v-for="(dot, index) in 3" :key="index" 
+                        :class="{ active: index === currentImageIndex }"
+                        @click="setImageIndex(index)"></span>
                 </div>
-                <button class="view-all">View All Photos</button>
+                <button class="view-all" @click="viewAllPhotos">
+                  <i class="fas fa-images"></i>
+                  View All Photos
+                </button>
               </div>
             </section>
-            <!-- Name Label below Image Vehicle -->
-            <div class="name-label">
-              <h2>{{ vehicleName }}</h2>
-              <p class="vehicle-meta">
-                {{ vehicleShopName }} • {{ vehicleRating }} ★
-              </p>
-            </div>
+            <section class="detail-hero">
+              <div class="name-label">
+                <h2>{{ vehicleName }}</h2>
+                <p class="vehicle-meta">{{ vehicleShopName }} • {{ vehicleRating }} ★</p>
+              </div>
+
+              <div class="chip-row">
+                <span class="chip">
+                  <i class="fas fa-cog"></i>
+                  {{ vehicleTransmission }}
+                </span>
+                <span class="chip">
+                  <i class="fas fa-gas-pump"></i>
+                  {{ vehicleFuel }}
+                </span>
+                <span class="chip">
+                  <i class="fas fa-motorcycle"></i>
+                  {{ vehicleType }}
+                </span>
+              </div>
+            </section>
           </div>
 
           <aside class="booking-details">
-            <h3>Booking Details</h3>
+            <div class="booking-card-header">
+              <div class="header-icon">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div class="header-text">
+                <h3>Booking Details</h3>
+                <p class="booking-card-subtitle">Select options and review the total.</p>
+              </div>
+            </div>
             <div class="price-row">
-              <span>Rider Details</span>
+              <span class="price-label">
+                <i class="fas fa-user"></i>
+                Rider Details
+              </span>
               <select v-model="riderDetails" class="rider-select">
                 <option value="1 Rider">1 Rider</option>
                 <option value="2 Riders">2 Riders</option>
@@ -63,29 +101,51 @@
               </select>
             </div>
             <div class="price-row">
-              <span>Daily Rate (per rider)</span>
-              <span>{{ formatCurrency(dailyRate) }}</span>
+              <span class="price-label">
+                <i class="fas fa-tag"></i>
+                Daily Rate (per rider)
+              </span>
+              <span class="price-value">{{ formatCurrency(dailyRate) }}</span>
             </div>
             <div class="price-row">
-              <span>Riders</span>
-              <span
+              <span class="price-label">
+                <i class="fas fa-users"></i>
+                Riders
+              </span>
+              <span class="price-value"
                 >{{ riderCount }}
                 {{ riderCount === 1 ? "Rider" : "Riders" }}</span
               >
             </div>
-            <div class="price-row">
-              <span>Insurance fee</span>
-              <span>{{ formatCurrency(insuranceFee) }}</span>
+            <div class="price-row price-row-toggle">
+              <label class="toggle-label">
+                <input v-model="includeInsurance" class="toggle-checkbox" type="checkbox" />
+                <span class="toggle-text">
+                  <i class="fas fa-shield-alt"></i>
+                  Insurance fee
+                </span>
+              </label>
+              <span class="price-value" :class="{ muted: !includeInsurance }">{{ formatCurrency(insuranceFee) }}</span>
             </div>
-            <div class="price-row">
-              <span>Taxes & Fees</span>
-              <span>{{ formatCurrency(taxesFee) }}</span>
+            <div class="price-row price-row-toggle">
+              <label class="toggle-label">
+                <input v-model="includeTaxes" class="toggle-checkbox" type="checkbox" />
+                <span class="toggle-text">
+                  <i class="fas fa-receipt"></i>
+                  Taxes & Fees
+                </span>
+              </label>
+              <span class="price-value" :class="{ muted: !includeTaxes }">{{ formatCurrency(taxesFee) }}</span>
             </div>
             <div class="total-row">
-              <span>Total Price</span>
+              <span class="total-label">
+                <i class="fas fa-calculator"></i>
+                Total Price
+              </span>
               <span class="price-blue">{{ formatCurrency(totalPrice) }}</span>
             </div>
             <button class="book-btn" @click="goToBooking">
+              <i class="fas fa-check-circle"></i>
               Book This Bike
             </button>
             <p class="disclaimer">
@@ -99,37 +159,85 @@
           <!-- Two Side-by-Side Boxes -->
           <div class="two-box-row">
             <div class="content-box">
-              <h4>Specifications</h4>
+              <h4>
+                <i class="fas fa-list-ul"></i>
+                Specifications
+              </h4>
               <div class="spec-list">
                 <div class="spec-item">
-                  <span class="spec-label">Transmission</span>
+                  <span class="spec-label">
+                    <i class="fas fa-cog"></i>
+                    Transmission
+                  </span>
                   <span class="spec-value">{{ vehicleTransmission }}</span>
                 </div>
                 <div class="spec-item">
-                  <span class="spec-label">Fuel Type</span>
+                  <span class="spec-label">
+                    <i class="fas fa-gas-pump"></i>
+                    Fuel Type
+                  </span>
                   <span class="spec-value">{{ vehicleFuel }}</span>
                 </div>
                 <div class="spec-item">
-                  <span class="spec-label">Vehicle Type</span>
+                  <span class="spec-label">
+                    <i class="fas fa-motorcycle"></i>
+                    Vehicle Type
+                  </span>
                   <span class="spec-value">{{ vehicleType }}</span>
                 </div>
               </div>
             </div>
 
             <div class="content-box">
-              <h4>Features</h4>
+              <h4>
+                <i class="fas fa-star"></i>
+                Features
+              </h4>
               <div class="feature-list">
-                <div class="feature-item">✓ GPS Navigation</div>
-                <div class="feature-item">✓ Phone Mount</div>
-                <div class="feature-item">✓ Luggage Storage</div>
-                <div class="feature-item">✓ 24/7 Support</div>
+                <div class="feature-item">
+                  <i class="fas fa-map-marked-alt"></i>
+                  GPS Navigation
+                </div>
+                <div class="feature-item">
+                  <i class="fas fa-mobile-alt"></i>
+                  Phone Mount
+                </div>
+                <div class="feature-item">
+                  <i class="fas fa-suitcase"></i>
+                  Luggage Storage
+                </div>
+                <div class="feature-item">
+                  <i class="fas fa-headset"></i>
+                  24/7 Support
+                </div>
               </div>
             </div>
           </div>
 
           <!-- Full Width Box -->
           <div class="full-width-box">
-            <h4>Premium Rental Benefits</h4>
+            <h4>
+              <i class="fas fa-crown"></i>
+              Premium Rental Benefits
+            </h4>
+            <div class="benefits-grid">
+              <div class="benefit-item">
+                <i class="fas fa-tools"></i>
+                <span>Top-of-the-line maintenance</span>
+              </div>
+              <div class="benefit-item">
+                <i class="fas fa-shield-alt"></i>
+                <span>Comprehensive insurance coverage</span>
+              </div>
+              <div class="benefit-item">
+                <i class="fas fa-headset"></i>
+                <span>Dedicated customer support</span>
+              </div>
+              <div class="benefit-item">
+                <i class="fas fa-road"></i>
+                <span>Ultimate riding adventure</span>
+              </div>
+            </div>
             <p>
               Experience the ultimate riding adventure with our premium rental
               service. Enjoy top-of-the-line maintenance, comprehensive
@@ -142,7 +250,28 @@
         <!-- Bottom Section: Full Width Box -->
         <div class="bottom-section">
           <div class="full-width-box">
-            <h4>Description</h4>
+            <h4>
+              <i class="fas fa-info-circle"></i>
+              Description
+            </h4>
+            <div class="description-highlights">
+              <div class="highlight-item">
+                <i class="fas fa-check-circle"></i>
+                <span>Smooth {{ vehicleTransmission }} ride</span>
+              </div>
+              <div class="highlight-item">
+                <i class="fas fa-leaf"></i>
+                <span>{{ vehicleFuel }} efficiency</span>
+              </div>
+              <div class="highlight-item">
+                <i class="fas fa-city"></i>
+                <span>Perfect for urban commuting</span>
+              </div>
+              <div class="highlight-item">
+                <i class="fas fa-mountain"></i>
+                <span>Great for long-distance adventures</span>
+              </div>
+            </div>
             <p>
               Enjoy the {{ vehicleName }} from
               {{ vehicleShopName || "our partners" }} with a smooth
@@ -156,40 +285,64 @@
     </main>
 
     <footer class="site-footer">
-      <div class="footer-inner">
-        <div class="footer-brand">
-          <strong>Chong Choul<span>Rides</span></strong>
-          <p>Secure, fast, and transparent bookings across Cambodia.</p>
-          <div class="footer-badges">
-            <span class="badge-pill">Secure Checkout</span>
-            <span class="badge-pill">Verified Partners</span>
+      <div class="footer-wrap">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <div class="footer-brand-title">CHONG CHOUL</div>
+            <div class="footer-brand-slogan">Secure rides, fast bookings.</div>
+
+            <div class="footer-social">
+              <button class="btn-reset social-btn" type="button">F</button>
+              <button class="btn-reset social-btn" type="button">T</button>
+              <button class="btn-reset social-btn" type="button">L</button>
+              <button class="btn-reset social-btn" type="button">W</button>
+              <button class="btn-reset social-btn" type="button">I</button>
+            </div>
+            <div class="footer-social-label">Follow Us</div>
+          </div>
+
+          <div class="footer-nav">
+            <div class="footer-nav-links">
+              <button class="btn-reset footer-nav-link" type="button">About</button>
+              <button class="btn-reset footer-nav-link" type="button">Blog</button>
+              <button class="btn-reset footer-nav-link" type="button">Menu</button>
+              <button class="btn-reset footer-nav-link" type="button">Services</button>
+              <button class="btn-reset footer-nav-link" type="button">FAQ</button>
+              <button class="btn-reset footer-nav-link" type="button">Support</button>
+            </div>
+
+            <div class="footer-about">
+              <div class="footer-section-title">About Us</div>
+              <p>
+                Secure, fast, and transparent bookings across Cambodia with verified partners.
+              </p>
+            </div>
+          </div>
+
+          <div class="footer-contact">
+            <div class="footer-contact-row">
+              <div class="footer-contact-label">Call :</div>
+              <div class="footer-contact-value">+0123 456 789 00</div>
+            </div>
+            <div class="footer-contact-row">
+              <div class="footer-contact-label">Email:</div>
+              <div class="footer-contact-value">user@example.com</div>
+            </div>
+
+            <div class="footer-newsletter">
+              <input class="footer-input" type="text" placeholder="Write Email" />
+              <button class="btn-reset footer-send" type="button">➤</button>
+            </div>
           </div>
         </div>
-        <div class="footer-links">
-          <h4>Support</h4>
-          <p>Help Center</p>
-          <p>Cancel your booking</p>
-          <p>Contact Us</p>
-        </div>
-        <div class="footer-links">
-          <h4>Terms &amp; Privacy</h4>
-          <p>Terms of Service</p>
-          <p>Privacy Policy</p>
-          <p>Cookie Policy</p>
-        </div>
-        <div class="footer-links">
-          <h4>Company</h4>
-          <p>About</p>
-          <p>Partners</p>
-          <p>Careers</p>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 Chong Choul. All rights reserved.</span>
-        <div class="footer-bottom-links">
-          <span>Security</span>
-          <span>Accessibility</span>
-          <span>Legal</span>
+
+        <div class="footer-bottom">
+          <span>© 2026 Chong Choul. All rights reserved.</span>
+          <div class="footer-bottom-links">
+            <span>Security</span>
+            <span>Accessibility</span>
+            <span>Legal</span>
+          </div>
         </div>
       </div>
     </footer>
@@ -210,7 +363,6 @@ const navItems = ["Home", "View Details", "Bookings"];
 const activeNav = ref("Home");
 const actionMessage = ref("");
 const avatarLoadFailed = ref(false);
-const LAST_VEHICLE_ID_KEY = "last_vehicle_id";
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || "customer");
 
@@ -280,22 +432,15 @@ const shopNamesById = ref({});
 const isLoading = ref(false);
 const loadingError = ref("");
 const insuranceFee = ref(30);
+const includeInsurance = ref(false);
+const includeTaxes = ref(false);
 const riderDetails = ref("1 Rider");
+const currentImageIndex = ref(0);
+const isFavorite = ref(false);
 const vehicleId = computed(() => {
   const value = Number(route.params.id);
   return Number.isFinite(value) && value > 0 ? value : null;
 });
-
-const setLastVehicleId = (id) => {
-  if (!id) return;
-  localStorage.setItem(LAST_VEHICLE_ID_KEY, String(id));
-};
-
-const getLastVehicleId = () => {
-  const raw = localStorage.getItem(LAST_VEHICLE_ID_KEY);
-  const parsed = Number(raw);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
 
 const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
 const getVehicleShop = (item) =>
@@ -304,6 +449,14 @@ const getVehicleShop = (item) =>
     : "Unknown Shop";
 
 const getVehicleImage = (item) => {
+  // First check for full URL (provided by backend accessor)
+  if (item?.image_url_full) {
+    return item.image_url_full
+  }
+  // Check photo_urls array
+  if (item?.photo_urls && Array.isArray(item.photo_urls) && item.photo_urls.length > 0) {
+    return item.photo_urls[0]
+  }
   const image = item?.image_url ? String(item.image_url).trim() : "";
   if (image) {
     if (image.startsWith("http://") || image.startsWith("https://"))
@@ -336,9 +489,16 @@ const riderCount = computed(() => {
 });
 const baseAmount = computed(() => dailyRate.value * riderCount.value);
 const taxesFee = computed(() => baseAmount.value * 0.1);
-const totalPrice = computed(
-  () => baseAmount.value + insuranceFee.value + taxesFee.value,
+
+const insuranceAmount = computed(() =>
+  includeInsurance.value ? Number(insuranceFee.value || 0) : 0,
 );
+
+const taxesAmount = computed(() =>
+  includeTaxes.value ? Number(taxesFee.value || 0) : 0,
+);
+
+const totalPrice = computed(() => baseAmount.value + insuranceAmount.value + taxesAmount.value);
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
@@ -411,28 +571,60 @@ const loadVehicleDetail = async () => {
 
 const goToBooking = () => {
   const vehicleId = route.params.id;
-  const insuranceValue = Number(insuranceFee.value);
+  const insuranceValue = Number(insuranceAmount.value);
   const query = {};
   if (Number.isFinite(insuranceValue)) {
     query.insuranceFee = insuranceValue;
+  }
+  if (typeof includeInsurance.value === "boolean") {
+    query.includeInsurance = includeInsurance.value ? "1" : "0";
+  }
+  if (typeof includeTaxes.value === "boolean") {
+    query.includeTaxes = includeTaxes.value ? "1" : "0";
   }
   if (riderDetails.value) {
     query.riderDetails = riderDetails.value;
   }
 
   if (vehicleId) {
-    setLastVehicleId(vehicleId);
     router.push({ name: "user-booking", params: { id: vehicleId }, query });
   } else {
     router.push({ name: "user-booking", params: { id: 1 }, query }); // Fallback ID
   }
 };
 
+// New UX enhancement functions
+const getNavIcon = (item) => {
+  const iconMap = {
+    'Home': 'fas fa-home',
+    'View Details': 'fas fa-eye',
+    'Bookings': 'fas fa-calendar-alt'
+  };
+  return iconMap[item] || 'fas fa-circle';
+};
+
+const openImageModal = () => {
+  // Future: Open image modal/lightbox
+  console.log('Opening image modal');
+};
+
+const toggleFavorite = () => {
+  isFavorite.value = !isFavorite.value;
+  // Future: Save to backend/localStorage
+  console.log('Favorite toggled:', isFavorite.value);
+};
+
+const setImageIndex = (index) => {
+  currentImageIndex.value = index;
+};
+
+const viewAllPhotos = () => {
+  // Future: Navigate to photo gallery
+  console.log('Viewing all photos');
+};
+
 onMounted(() => {
   loadVehicleDetail();
-  if (vehicleId.value) {
-    setLastVehicleId(vehicleId.value);
-  }
 });
 </script>
 
@@ -463,7 +655,7 @@ onMounted(() => {
   grid-template-columns: auto 1fr auto;
   gap: 32px;
   align-items: center;
-  padding: 14px 40px;
+  padding: 14px 24px;
   background: #fff;
   border-bottom: 1px solid #d8dee7;
   box-sizing: border-box;
@@ -477,10 +669,9 @@ onMounted(() => {
   font-weight: 700;
   color: #1d4ed8;
   white-space: nowrap;
-  padding-left: 6vh;
 }
 .brand span {
-  margin-right: 35vh;
+  margin-right: 0;
 }
 
 .brand-icon {
@@ -500,7 +691,7 @@ onMounted(() => {
   display: flex;
   gap: 50px;
   justify-self: center;
-  margin-right: 28vh;
+  margin-right: 0;
 }
 
 .nav-link {
@@ -571,7 +762,7 @@ onMounted(() => {
 
 /* Main Content */
 .content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
 }
@@ -590,6 +781,11 @@ onMounted(() => {
   margin-bottom: 2rem;
 }
 
+.detail-left {
+  display: grid;
+  gap: 18px;
+}
+
 .image-vehicle {
   position: relative;
   border-radius: 24px;
@@ -599,7 +795,8 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 60vh;
+  aspect-ratio: 16 / 9;
+  max-height: 520px;
 }
 
 .image-vehicle .main-img {
@@ -623,20 +820,384 @@ onMounted(() => {
   align-items: center;
 }
 
+/* Enhanced Image Overlay */
+.image-overlay {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.image-vehicle:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-zoom-btn,
+.image-favorite-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: #1a1d23;
+}
+
+.image-zoom-btn:hover,
+.image-favorite-btn:hover {
+  background: #ffffff;
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.image-favorite-btn {
+  color: #e53e3e;
+}
+
+.image-favorite-btn:hover {
+  background: #fed7d7;
+}
+
+/* Enhanced Price Labels and Values */
+.price-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.price-label i {
+  color: #3b82f6;
+  font-size: 14px;
+}
+
+.price-value {
+  font-weight: 700;
+  color: #1a1d23;
+}
+
+.muted {
+  color: #94a3b8;
+  opacity: 0.7;
+}
+
+/* Enhanced Toggle Labels */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.toggle-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.toggle-text i {
+  color: #3b82f6;
+  font-size: 14px;
+}
+
+/* Enhanced Chips with Icons */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.chip:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.chip i {
+  font-size: 12px;
+  color: #3b82f6;
+}
+
+/* Enhanced Content Boxes */
+.content-box h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin-bottom: 16px;
+}
+
+.content-box h4 i {
+  color: #3b82f6;
+  font-size: 16px;
+}
+
+/* Enhanced Specification Items */
+.spec-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.2s ease;
+}
+
+.spec-item:hover {
+  background: #f8fafc;
+  margin: 0 -8px;
+  padding: 12px 8px;
+  border-radius: 8px;
+}
+
+.spec-item:last-child {
+  border-bottom: none;
+}
+
+.spec-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.spec-label i {
+  color: #3b82f6;
+  font-size: 14px;
+}
+
+.spec-value {
+  font-weight: 700;
+  color: #1a1d23;
+}
+
+/* Enhanced Feature Items */
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  transition: transform 0.2s ease;
+}
+
+.feature-item:hover {
+  transform: translateX(4px);
+}
+
+.feature-item i {
+  color: #10b981;
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+/* Benefits Grid */
+.benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.benefit-item:hover {
+  background: #e2e8f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.benefit-item i {
+  color: #3b82f6;
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.benefit-item span {
+  font-weight: 600;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+/* Description Highlights */
+.description-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.highlight-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border: 1px solid #bae6fd;
+  transition: all 0.2s ease;
+}
+
+.highlight-item:hover {
+  background: #e0f2fe;
+  transform: translateY(-1px);
+}
+
+.highlight-item i {
+  color: #0ea5e9;
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+}
+
+.highlight-item span {
+  font-weight: 600;
+  color: #0c4a6e;
+  font-size: 0.85rem;
+}
+
+/* Enhanced Book Button */
+.book-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+}
+
+.book-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(29, 78, 216, 0.4);
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+}
+
+.book-btn:active {
+  transform: translateY(0);
+}
+
+.book-btn i {
+  font-size: 18px;
+}
+
+/* Enhanced Gallery Dots */
+.dots {
+  display: flex;
+  gap: 8px;
+}
+
+.dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dots span.active {
+  width: 24px;
+  border-radius: 4px;
+  background: white;
+}
+
+.dots span:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Enhanced View All Button */
+.view-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  color: #1a1d23;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.view-all:hover {
+  background: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.view-all i {
+  font-size: 12px;
+}
+
+/* Enhanced Navigation Icons */
+.nav-icon {
+  margin-right: 6px;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.nav-link:hover .nav-icon {
+  transform: translateY(-1px);
+}
+
 .booking-details {
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 24px;
-  padding: 2.5rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  padding: 22px;
+  box-shadow:
+    0 18px 50px rgba(15, 23, 42, 0.12);
   height: fit-content;
+  position: sticky;
+  top: 96px;
 }
 
 .booking-details h3 {
   font-size: 1.5rem;
   font-weight: 700;
   color: #1a1d23;
-  margin: 0 0 2rem 0;
+  margin: 0;
   text-align: center;
   position: relative;
 }
@@ -653,6 +1214,53 @@ onMounted(() => {
   border-radius: 2px;
 }
 
+.booking-card-header {
+  padding: 10px 10px 18px;
+  border-bottom: 1px solid #eef2f7;
+  margin: -6px -6px 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.header-text h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0;
+  text-align: left;
+}
+
+.header-text h3::after {
+  display: none;
+}
+
+.booking-card-subtitle {
+  margin: 10px 0 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
 .middle-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -666,7 +1274,7 @@ onMounted(() => {
 }
 
 .name-label {
-  margin-bottom: 2rem;
+  margin-bottom: 12px;
   text-align: left;
 }
 
@@ -683,6 +1291,32 @@ onMounted(() => {
   color: #64748b;
   margin: 0;
   font-weight: 500;
+}
+
+.detail-hero {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 18px 20px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.85rem;
 }
 
 .two-box-row {
@@ -1003,14 +1637,39 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem 0;
-  font-size: 1rem;
+  padding: 14px 10px;
+  font-size: 0.98rem;
   border-bottom: 1px solid #f1f5f9;
+}
+
+.price-row-toggle {
+  gap: 12px;
+}
+
+.toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.toggle-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #1d4ed8;
+  cursor: pointer;
+}
+
+.muted {
+  color: #94a3b8;
 }
 
 .price-row span {
   color: #64748b;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .price-row span:last-child {
@@ -1019,16 +1678,13 @@ onMounted(() => {
   font-size: 1.05rem;
 }
 
-.total-row {
-  border-bottom: none;
-  border-top: 2px solid #e2e8f0;
-  padding-top: 1.5rem;
-  margin-top: 0.5rem;
+.price-row:first-of-type {
+  border-top: none;
 }
 
 .rider-select {
-  padding: 8px 12px;
-  border: 2px solid #e2e8f0;
+  padding: 10px 12px;
+  border: 1px solid #dbe4f0;
   border-radius: 8px;
   background: white;
   color: #1a1d23;
@@ -1036,7 +1692,8 @@ onMounted(() => {
   font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-width: 120px;
+  width: 110px;
+  min-width: 0;
 }
 
 .rider-select:focus {
@@ -1058,6 +1715,23 @@ onMounted(() => {
   font-weight: 800;
 }
 
+.total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 10px 6px;
+  border-top: 1px solid #e8eef7;
+  border-bottom: none;
+  margin-top: 6px;
+}
+
+.total-row span:first-child {
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+
 .book-btn {
   width: 100%;
   background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
@@ -1068,7 +1742,7 @@ onMounted(() => {
   font-weight: 700;
   font-size: 1.1rem;
   cursor: pointer;
-  margin-top: 2rem;
+  margin-top: 18px;
   transition: all 0.3s ease;
   box-shadow: 0 8px 25px rgba(29, 78, 216, 0.3);
 }
@@ -1154,63 +1828,183 @@ onMounted(() => {
 .site-footer {
   margin-top: 28px;
   border-top: 1px solid #d8dee7;
-  background: #fff;
+  background: #ffffff;
+  color: #0f172a;
 }
 
-.footer-inner {
-  max-width: 1400px;
+.footer-wrap {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 26px 2rem;
+  padding: 22px 2rem 0;
+}
+
+.footer-top {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: 1fr 1.6fr 1fr;
+  gap: 26px;
+  padding: 20px 0 22px;
+  border-bottom: 1px solid #e6edf6;
+  align-items: start;
 }
 
-.footer-brand strong {
-  font-size: 24px;
+.footer-brand-title {
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  color: #0f172a;
 }
 
-.footer-brand strong span {
-  color: #1d4ed8;
+.footer-brand-slogan {
+  margin-top: 6px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #3b82f6;
 }
 
-.footer-brand p {
-  margin: 8px 0 14px;
-  max-width: 420px;
-  color: #66758d;
-}
-
-.footer-badges {
+.footer-social {
+  margin-top: 14px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.badge-pill {
-  background: #eef2ff;
-  color: #1d4ed8;
-  border: 1px solid #dbe4f0;
-  padding: 6px 10px;
+.social-btn {
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  border: 1px solid #cfd9e6;
+  color: #334155;
+  font-weight: 800;
+  background: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
-.footer-links h4 {
-  margin: 2px 0 10px;
-  font-size: 15px;
+.social-btn:first-child {
+  border-color: #3b82f6;
+  background: #3b82f6;
+  color: #ffffff;
 }
 
-.footer-links p {
-  margin: 0 0 8px;
+.social-btn:hover {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.footer-social-label {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.footer-nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  justify-content: center;
+}
+
+.footer-nav-link {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #475569;
+  transition: color 0.2s ease;
+}
+
+.footer-nav-link:first-child {
+  color: #3b82f6;
+}
+
+.footer-nav-link:hover {
+  color: #3b82f6;
+}
+
+.footer-about {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #e6edf6;
+}
+
+.footer-section-title {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #0f172a;
+  text-align: center;
+}
+
+.footer-about p {
+  margin: 10px auto 0;
+  max-width: 520px;
+  text-align: center;
   color: #52627b;
+  line-height: 1.7;
+  font-size: 0.92rem;
+}
+
+.footer-contact {
+  border-left: 1px solid #e6edf6;
+  padding-left: 22px;
+}
+
+.footer-contact-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: baseline;
+}
+
+.footer-contact-label {
+  font-weight: 900;
+  color: #0f172a;
+  font-size: 0.88rem;
+}
+
+.footer-contact-value {
+  font-weight: 700;
+  color: #52627b;
+  font-size: 0.88rem;
+}
+
+.footer-newsletter {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  border: 1px solid #d8e2f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.footer-input {
+  border: 0;
+  background: transparent;
+  color: #0f172a;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.footer-input::placeholder {
+  color: #94a3b8;
+}
+
+.footer-send {
+  width: 40px;
+  background: #3b82f6;
+  color: #ffffff;
+  font-weight: 900;
 }
 
 .footer-bottom {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 14px 2rem 22px;
-  border-top: 1px solid #d8dee7;
+  margin: 0;
+  padding: 14px 0 22px;
+  border-top: 0;
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -1223,6 +2017,27 @@ onMounted(() => {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.footer-bottom-links span {
+  color: #475569;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.footer-bottom-links span:hover {
+  color: #0f172a;
+  border-color: #3b82f6;
+  background: #eff6ff;
 }
 
 /* Responsive Design */
@@ -1278,6 +2093,17 @@ onMounted(() => {
   .footer-bottom {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .footer-top {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-contact {
+    border-left: 0;
+    padding-left: 0;
+    padding-top: 18px;
+    border-top: 1px solid #e6edf6;
   }
 }
 
