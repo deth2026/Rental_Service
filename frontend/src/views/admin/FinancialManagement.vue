@@ -39,7 +39,13 @@ const payoutRows = computed(() => {
   const byShop = new Map()
   admin.state.bookings.forEach((b) => {
     const shopId = String(b.shop_id || '')
-    const gross = Number(b.gross_amount || 0)
+    const gross = Number(
+      b.total_amount ??
+      b.total_price ??
+      b.gross_amount ??
+      b.price ??
+      0
+    ) || 0
     byShop.set(shopId, (byShop.get(shopId) || 0) + gross)
   })
 

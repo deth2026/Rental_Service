@@ -17,6 +17,8 @@ const detailModalVisible = ref(false)
 const detailTitle = ref('')
 const detailSubtitle = ref('')
 const detailRows = ref([])
+const hoveredBarIndex = ref(null)
+const hoveredDonutName = ref('')
 
 const money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const money2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -53,7 +55,14 @@ const bookings = computed(() => {
   const rows = admin.state.bookings || []
   return rows.map((booking) => {
     const shop = shopsById.value.get(String(booking.shop_id || booking.shopId || ''))
-    const amount = Number(booking.total_amount ?? booking.price ?? booking.gross_amount ?? booking.amount ?? 0)
+    const amount = Number(
+      booking.total_amount ??
+      booking.total_price ??
+      booking.price ??
+      booking.gross_amount ??
+      booking.amount ??
+      0
+    )
     const commissionRate = Number(admin.state.commission_rate || 0.15)
     const commission = Math.max(0, Number(booking.commission ?? amount * commissionRate))
     const date = parseDate(booking.start_date || booking.created_at || booking.date)
@@ -70,17 +79,46 @@ const bookings = computed(() => {
   })
 })
 
-const fallbackDistribution = [
-  { name: 'Motorbike Rental', amount: 2354, rows: [] },
-  { name: 'Car Rental', amount: 3357, rows: [] },
-  { name: 'Bicycle', amount: 544, rows: [] }
-]
+const visibleCategoryOrder = ['Motorbike Rental', 'Car Rental', 'Bicycle']
+const categoryColors = {
+  'Motorbike Rental': '#1F7BFF',
+  'Car Rental': '#1DA1F2',
+  Bicycle: '#2BC96B'
+}
+const fallbackCategoryAmounts = {
+  'Motorbike Rental': 2800,
+  'Car Rental': 4000,
+  Bicycle: 800
+}
+const fallbackCategoryShops = {
+  'Motorbike Rental': 2,
+  'Car Rental': 2,
+  Bicycle: 1
+}
+const fallbackPeriodLabels = ['Aug 1-15', 'Aug 16-31', 'Sep 1-15', 'Sep 16-30', 'Oct 1-15', 'Oct 16-31']
+const fallbackCategoryProfiles = {
+  'Motorbike Rental': [1200, 1260, 1580, 1490, 2110, 2800],
+  'Car Rental': [1450, 1360, 1710, 1630, 2330, 4000],
+  Bicycle: [210, 260, 320, 390, 530, 800]
+}
+const categoryTargetMax = {
+  'Motorbike Rental': 2800,
+  'Car Rental': 4000,
+  Bicycle: 800
+}
+const fallbackAllCategoryAmount = Object.values(fallbackCategoryAmounts).reduce((sum, amount) => sum + amount, 0)
 
 const distributionData = computed(() => {
   const rows = bookings.value
   if (!rows.length) {
-    const total = fallbackDistribution.reduce((sum, item) => sum + item.amount, 0)
-    return fallbackDistribution.map((item, idx) => ({ ...item, share: item.amount / total, color: distributionColors[idx] }))
+    const total = fallbackAllCategoryAmount || 1
+    return visibleCategoryOrder.map((name, idx) => ({
+      name,
+      amount: fallbackCategoryAmounts[name] || 0,
+      rows: [],
+      share: (fallbackCategoryAmounts[name] || 0) / total,
+      color: categoryColors[name] || distributionColors[idx % distributionColors.length]
+    }))
   }
   const grouped = new Map()
   rows.forEach((row) => {
@@ -89,9 +127,17 @@ const distributionData = computed(() => {
     item.amount += row._net
     item.rows.push(row)
   })
-  const sorted = [...grouped.values()].sort((a, b) => b.amount - a.amount)
-  const total = sorted.reduce((sum, item) => sum + item.amount, 0) || 1
-  return sorted.map((item, idx) => ({ ...item, share: item.amount / total, color: distributionColors[idx % distributionColors.length] }))
+  const ordered = []
+  visibleCategoryOrder.forEach((name) => {
+    ordered.push(grouped.get(name) || { name, amount: 0, rows: [] })
+  })
+
+  const total = ordered.reduce((sum, item) => sum + item.amount, 0) || 1
+  return ordered.map((item, idx) => ({
+    ...item,
+    share: item.amount / total,
+    color: categoryColors[item.name] || distributionColors[idx % distributionColors.length]
+  }))
 })
 
 watch(distributionData, () => {
@@ -100,21 +146,34 @@ watch(distributionData, () => {
 })
 
 const filteredBookings = computed(() => selectedCategory.value === ALL_CATEGORIES ? bookings.value : bookings.value.filter((row) => row._category === selectedCategory.value))
+const buildFallbackSeries = (category) => {
+  const commissionRate = Number(admin.state.commission_rate || 0.15)
 
-const fallbackBars = [
-  { label: 'Aug 1-15', earnings: 2400, commission: 320, net: 2080, rows: [] },
-  { label: 'Aug 16-31', earnings: 2300, commission: 330, net: 1970, rows: [] },
-  { label: 'Sep 1-15', earnings: 2850, commission: 420, net: 2430, rows: [] },
-  { label: 'Sep 16-30', earnings: 2810, commission: 410, net: 2400, rows: [] },
-  { label: 'Oct 1-15', earnings: 3500, commission: 520, net: 2980, rows: [] },
-  { label: 'Oct 16-31', earnings: 7400, commission: 1100, net: 6300, rows: [] }
-]
+  const allValues = fallbackPeriodLabels.map((_, idx) => {
+    return Object.keys(fallbackCategoryProfiles).reduce((sum, key) => sum + (fallbackCategoryProfiles[key][idx] || 0), 0)
+  })
+  const profile = category === ALL_CATEGORIES
+    ? allValues
+    : (fallbackCategoryProfiles[category] || fallbackCategoryProfiles.Bicycle)
+
+  return fallbackPeriodLabels.map((label, idx) => {
+    const earnings = Number(profile[idx] || 0)
+    const commission = Math.round(earnings * commissionRate)
+    return {
+      label,
+      earnings,
+      commission,
+      net: Math.max(0, earnings - commission),
+      rows: []
+    }
+  })
+}
 
 const halfLabel = (date) => date.getDate() <= 15 ? `${monthNames[date.getMonth()]} 1-15` : `${monthNames[date.getMonth()]} 16-${new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()}`
 
 const earningsSeries = computed(() => {
   const rows = filteredBookings.value
-  if (!rows.length && selectedCategory.value === ALL_CATEGORIES) return fallbackBars
+  if (!rows.length) return buildFallbackSeries(selectedCategory.value)
   const dates = rows.map((row) => row._date).filter(Boolean).sort((a, b) => b.getTime() - a.getTime())
   const ref = dates[0] || new Date()
   const labels = []
@@ -187,7 +246,13 @@ const statusData = computed(() => {
 })
 
 const niceMax = (value, floor = 1000) => value > 0 ? Math.ceil(value / (value < 2000 ? 250 : 500)) * (value < 2000 ? 250 : 500) : floor
-const barMax = computed(() => niceMax(Math.max(...earningsSeries.value.flatMap((row) => [row.earnings, row.commission, row.net]), 0)))
+const barMax = computed(() => {
+  const raw = Math.max(...earningsSeries.value.flatMap((row) => [row.earnings, row.commission, row.net]), 0)
+  const baseline = selectedCategory.value === ALL_CATEGORIES
+    ? Math.max(...Object.values(categoryTargetMax))
+    : (categoryTargetMax[selectedCategory.value] || 0)
+  return niceMax(Math.max(raw, baseline))
+})
 const trendMax = computed(() => niceMax(Math.max(...trendSeries.value.map((row) => row.amount), 0), 500))
 
 const donutSegments = (items, radius, field = 'amount') => {
@@ -211,6 +276,119 @@ const selectedShare = computed(() => {
   return item && total > 0 ? Math.round((item.amount / total) * 100) : 0
 })
 
+const selectedCategoryTitle = computed(() => selectedCategory.value === ALL_CATEGORIES ? 'All categories' : selectedCategory.value)
+const totalNetAmount = computed(() => {
+  if (!bookings.value.length) return fallbackAllCategoryAmount
+  return Math.round(bookings.value.reduce((sum, row) => sum + row._net, 0))
+})
+
+const categoryMetrics = computed(() => {
+  const items = distributionData.value.map((item) => {
+    const uniqueShops = new Set((item.rows || []).map((row) => String(row._shop?.id || row.shop_id || row.shopId || '')).filter(Boolean))
+    const fallbackCount = fallbackCategoryShops[item.name] || 0
+    const shopsCount = item.rows?.length ? uniqueShops.size : fallbackCount
+    return {
+      name: item.name,
+      amount: Math.round(item.amount || 0),
+      shopsCount,
+      color: item.color
+    }
+  })
+
+  const allShops = new Set(bookings.value.map((row) => String(row._shop?.id || row.shop_id || row.shopId || '')).filter(Boolean))
+  const allAmount = totalNetAmount.value
+  return [
+    {
+      name: ALL_CATEGORIES,
+      amount: allAmount,
+      shopsCount: allShops.size || Object.values(fallbackCategoryShops).reduce((sum, count) => sum + count, 0),
+      color: '#1F7BFF'
+    },
+    ...items
+  ]
+})
+
+const categoryCircleFilters = computed(() => {
+  const metricsMap = new Map(categoryMetrics.value.map((item) => [item.name, item]))
+  const shortName = (name) => {
+    if (name === ALL_CATEGORIES) return 'ALL'
+    if (name === 'Motorbike Rental') return 'MOTO'
+    if (name === 'Car Rental') return 'CAR'
+    if (name === 'Bicycle') return 'BIKE'
+    return String(name).slice(0, 4).toUpperCase()
+  }
+  return [ALL_CATEGORIES, ...visibleCategoryOrder].map((name) => {
+    const item = metricsMap.get(name)
+    return {
+      name,
+      short: shortName(name),
+      amount: Math.round(item?.amount || 0),
+      color: item?.color || categoryColors[name] || '#1F7BFF'
+    }
+  })
+})
+
+const activeCategoryMetric = computed(() => {
+  const target = categoryMetrics.value.find((item) => item.name === selectedCategory.value)
+  return target || categoryMetrics.value[0] || { amount: 0, shopsCount: 0 }
+})
+
+const kpiPendingAmount = computed(() => activeCategoryMetric.value.amount || 0)
+const kpiShopsToPay = computed(() => activeCategoryMetric.value.shopsCount || 0)
+const kpiTotalShops = computed(() => {
+  const all = categoryMetrics.value.find((item) => item.name === ALL_CATEGORIES)
+  return all?.shopsCount || 0
+})
+const kpiLastPayout = computed(() => {
+  const dates = bookings.value.map((row) => row._date).filter(Boolean).sort((a, b) => b.getTime() - a.getTime())
+  const date = dates[0]
+  if (!date) return 'Oct 15, 2024'
+  return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
+})
+const kpiMomentum = computed(() => {
+  const list = earningsSeries.value
+  if (list.length < 2) return 0
+  const previous = Number(list[list.length - 2]?.earnings || 0)
+  const current = Number(list[list.length - 1]?.earnings || 0)
+  if (previous <= 0) return current > 0 ? 100 : 0
+  return Math.round(((current - previous) / previous) * 100)
+})
+
+const donutTooltipData = computed(() => {
+  if (!hoveredDonutName.value) return null
+  if (hoveredDonutName.value === ALL_CATEGORIES) {
+    return {
+      name: ALL_CATEGORIES,
+      amount: totalNetAmount.value,
+      color: '#1F7BFF'
+    }
+  }
+  const item = distributionData.value.find((entry) => entry.name === hoveredDonutName.value)
+  if (!item) return null
+  return {
+    name: item.name,
+    amount: Math.round(item.amount || 0),
+    color: item.color
+  }
+})
+
+const barTooltipData = computed(() => {
+  const idx = hoveredBarIndex.value
+  if (idx == null || idx < 0 || idx >= earningsSeries.value.length) return null
+  const row = earningsSeries.value[idx]
+  if (!row) return null
+
+  const centerX = 105 + (idx * 113)
+  const width = 190
+  const height = 94
+  const peak = Math.max(Number(row.earnings || 0), Number(row.commission || 0), Number(row.net || 0))
+  const peakY = 268 - ((peak / (barMax.value || 1)) * 250)
+  const x = Math.max(56, Math.min(centerX - (width / 2), 740 - width))
+  const y = Math.max(18, peakY - height - 12)
+
+  return { row, x, y, width, height }
+})
+
 const openDetail = (title, subtitle, rows) => {
   detailTitle.value = title
   detailSubtitle.value = subtitle
@@ -228,10 +406,22 @@ const openDetail = (title, subtitle, rows) => {
 }
 
 const closeDetail = () => { detailModalVisible.value = false; detailRows.value = [] }
-const selectCategory = (category) => { selectedCategory.value = category; openDetail(`${category} Overview`, `${(category === ALL_CATEGORIES ? bookings.value : bookings.value.filter((r) => r._category === category)).length} booking record(s)`, category === ALL_CATEGORIES ? bookings.value : bookings.value.filter((r) => r._category === category)) }
+const selectCategory = (category) => { selectedCategory.value = category; hoveredDonutName.value = '' }
+const selectCategoryAndDetail = (category) => {
+  selectCategory(category)
+  showCategoryDetail(category)
+}
+const showCategoryDetail = (category) => {
+  const rows = category === ALL_CATEGORIES ? bookings.value : bookings.value.filter((r) => r._category === category)
+  openDetail(`${category} Overview`, `${rows.length} booking record(s)`, rows)
+}
 const showPeriodDetail = (period, metric) => openDetail(`${period.label} - ${metric}`, `${period.rows.length} booking record(s) in ${selectedCategory.value}`, period.rows)
 const showTrendDetail = (point) => openDetail(`Pending Trend - ${point.label}`, `${point.rows.length} booking record(s)`, point.rows)
 const showStatusDetail = (item) => openDetail(`Payout Status - ${item.status}`, `${item.rows.length} booking record(s)`, item.rows)
+const showBarTooltip = (idx) => { hoveredBarIndex.value = idx }
+const hideBarTooltip = () => { hoveredBarIndex.value = null }
+const showDonutTooltip = (name) => { hoveredDonutName.value = name }
+const hideDonutTooltip = () => { hoveredDonutName.value = '' }
 
 onMounted(async () => {
   try {
@@ -252,19 +442,75 @@ onMounted(async () => {
       <p>Interactive payout analytics with drill-down details.</p>
     </header>
 
+    <section class="report-card category-overview">
+      <div class="category-overview-head">
+        <div>
+          <h2>Payout categories</h2>
+          <p>Click a category with pending payouts to filter the full dashboard.</p>
+        </div>
+        <div class="active-filter">Active filter: <strong>{{ selectedCategoryTitle }}</strong></div>
+      </div>
+      <div class="category-metric-grid">
+        <button
+          v-for="item in categoryMetrics"
+          :key="item.name"
+          type="button"
+          class="metric-card"
+          :class="{ active: selectedCategory === item.name }"
+          @click="selectCategory(item.name)"
+          @dblclick="showCategoryDetail(item.name)"
+        >
+          <div class="metric-title"><span class="metric-dot" :style="{ backgroundColor: item.color }"></span>{{ item.name }}</div>
+          <div class="metric-main">{{ item.shopsCount }}</div>
+          <div class="metric-sub">
+            <span>shops ready for payout</span>
+            <strong>{{ money0.format(item.amount) }}</strong>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <section class="kpi-modern-grid">
+      <article class="report-card kpi-card pending">
+        <div class="kpi-top">
+          <span class="kpi-label">Pending payout amount</span>
+          <span class="kpi-icon">$</span>
+        </div>
+        <div class="kpi-value">{{ money2.format(kpiPendingAmount) }}</div>
+        <div class="kpi-note">Next batch scheduled for Oct 31</div>
+      </article>
+
+      <article class="report-card kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Number of shops to pay</span>
+          <span class="kpi-icon">#</span>
+        </div>
+        <div class="kpi-value">{{ kpiShopsToPay }} <small>- Live</small></div>
+        <div class="kpi-note">Out of {{ kpiTotalShops }} active registered shops</div>
+      </article>
+
+      <article class="report-card kpi-card">
+        <div class="kpi-top">
+          <span class="kpi-label">Last payout date</span>
+          <span class="kpi-icon">*</span>
+        </div>
+        <div class="kpi-value">{{ kpiLastPayout }} <small>- Live</small></div>
+        <div class="kpi-note">{{ kpiMomentum >= 0 ? '+' : '' }}{{ kpiMomentum }}% vs previous period</div>
+      </article>
+    </section>
+
     <div class="report-grid">
       <article class="report-card span-2">
         <div class="card-head">
           <h2>Total Earnings & Net Payouts (Last 6 Periods)</h2>
-          <p>Showing payout history for <strong>{{ selectedCategory === ALL_CATEGORIES ? 'All Categories' :
-              selectedCategory }}</strong></p>
+          <p>Showing payout history for <strong>{{ selectedCategoryTitle }}</strong></p>
         </div>
-        <svg class="chart-svg" viewBox="0 0 760 320">
+        <svg class="chart-svg earnings-svg" viewBox="0 0 760 320" @mouseleave="hideBarTooltip">
           <line v-for="n in 5" :key="`by-${n}`" x1="56" :y1="18 + (n - 1) * 62.5" x2="740" :y2="18 + (n - 1) * 62.5"
             stroke="#E5E7EB" stroke-dasharray="4 4" />
           <text v-for="n in 5" :key="`bl-${n}`" x="48" :y="24 + (5 - n) * 62.5" class="axis-label" text-anchor="end">{{
             money0.format((barMax / 4) * (n - 1)) }}</text>
-          <g v-for="(row, idx) in earningsSeries" :key="row.label">
+          <g v-for="(row, idx) in earningsSeries" :key="row.label" @mouseenter="showBarTooltip(idx)">
             <rect :x="72 + idx * 113" :y="268 - ((row.earnings / barMax) * 250)" width="18"
               :height="(row.earnings / barMax) * 250" fill="#1F7BFF" class="bar-shape"
               :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${72 + idx * 113 + 9}px 268px` }"
@@ -277,7 +523,15 @@ onMounted(async () => {
               :height="(row.net / barMax) * 250" fill="#2BC96B" class="bar-shape"
               :style="{ animationDelay: `${chartReady ? idx * 80 : 0}ms`, transformOrigin: `${118 + idx * 113 + 9}px 268px` }"
               @click="showPeriodDetail(row, 'Net Payout')" />
+            <rect :x="66 + idx * 113" y="18" width="70" height="260" fill="transparent" class="bar-hover-hit" />
             <text :x="105 + idx * 113" y="296" class="axis-label x" text-anchor="middle">{{ row.label }}</text>
+          </g>
+          <g v-if="barTooltipData" class="bar-tooltip">
+            <rect :x="barTooltipData.x" :y="barTooltipData.y" :width="barTooltipData.width" :height="barTooltipData.height" rx="11" />
+            <text :x="barTooltipData.x + 10" :y="barTooltipData.y + 18" class="tooltip-title">{{ barTooltipData.row.label }}</text>
+            <text :x="barTooltipData.x + 10" :y="barTooltipData.y + 40" class="tooltip-net">Net Payout : {{ money0.format(barTooltipData.row.net) }}</text>
+            <text :x="barTooltipData.x + 10" :y="barTooltipData.y + 62" class="tooltip-commission">Platform Commission : {{ money0.format(barTooltipData.row.commission) }}</text>
+            <text :x="barTooltipData.x + 10" :y="barTooltipData.y + 84" class="tooltip-earnings">Total Earnings : {{ money0.format(barTooltipData.row.earnings) }}</text>
           </g>
         </svg>
         <div class="legend-row">
@@ -292,7 +546,7 @@ onMounted(async () => {
           <h2>Payout Distribution by Shop Category</h2>
           <p>Click a category to filter pending payouts.</p>
         </div>
-        <div class="donut-wrap">
+        <div class="donut-wrap" @mouseleave="hideDonutTooltip">
           <svg class="chart-svg" viewBox="0 0 220 220">
             <circle cx="110" cy="110" r="72" fill="none" stroke="#E5E7EB" stroke-width="16" />
             <g transform="rotate(-90 110 110)">
@@ -300,21 +554,45 @@ onMounted(async () => {
                 :stroke="segment.color" stroke-width="16" stroke-linecap="round" class="donut-segment"
                 :class="{ active: selectedCategory === segment.name }"
                 :style="{ strokeDasharray: `${chartReady ? segment.length : 0} ${segment.circumference}`, strokeDashoffset: -segment.offset, transitionDelay: segment.delay }"
-                @click="selectCategory(segment.name)" />
+                @mouseenter="showDonutTooltip(segment.name)"
+                @click="selectCategoryAndDetail(segment.name)" />
             </g>
           </svg>
+          <div v-if="donutTooltipData" class="donut-tooltip" :style="{ color: donutTooltipData.color }">
+            {{ donutTooltipData.name }} : {{ money0.format(donutTooltipData.amount) }}
+          </div>
           <div class="donut-center">
             <div class="donut-value">{{ selectedShare }}%</div>
             <div class="donut-label">{{ selectedCategory === ALL_CATEGORIES ? 'All categories' : 'Selected' }}</div>
           </div>
+          <div class="circle-filter-row">
+            <button
+              v-for="item in categoryCircleFilters"
+              :key="`circle-${item.name}`"
+              type="button"
+              class="circle-filter-btn"
+              :class="{ active: selectedCategory === item.name }"
+              :title="item.name"
+              @mouseenter="showDonutTooltip(item.name)"
+              @click="selectCategoryAndDetail(item.name)"
+            >
+              <span class="circle-filter-core" :style="{ borderColor: item.color, color: item.color }">{{ item.short }}</span>
+            </button>
+          </div>
         </div>
         <div class="category-list">
-          <button type="button" class="category-chip" :class="{ active: selectedCategory === ALL_CATEGORIES }"
-            @click="selectCategory(ALL_CATEGORIES)">All categories</button>
-          <button v-for="item in distributionData" :key="item.name" type="button" class="category-chip muted"
-            :class="{ active: selectedCategory === item.name }" @click="selectCategory(item.name)">
+          <button
+            v-for="item in categoryCircleFilters"
+            :key="item.name"
+            type="button"
+            class="category-chip muted"
+            :class="{ active: selectedCategory === item.name, all: item.name === ALL_CATEGORIES }"
+            :title="item.name"
+            @mouseenter="showDonutTooltip(item.name)"
+            @click="selectCategory(item.name)"
+          >
             <span class="dot" :style="{ backgroundColor: item.color }"></span>
-            {{ item.name }} ({{ Math.round(item.amount) }})
+            {{ item.name === ALL_CATEGORIES ? item.name : `${item.name} (${item.amount})` }}
           </button>
         </div>
       </article>
@@ -447,6 +725,173 @@ onMounted(async () => {
   font-size: .95rem
 }
 
+.category-overview {
+  margin-bottom: 1rem;
+}
+
+.category-overview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: .75rem;
+}
+
+.category-overview-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #1f3657;
+}
+
+.category-overview-head p {
+  margin: .22rem 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.active-filter {
+  color: #64748b;
+  font-size: .9rem;
+}
+
+.active-filter strong {
+  color: #1f3657;
+}
+
+.category-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.metric-card {
+  border: 1px solid #d8e1ef;
+  background: #f8fbff;
+  border-radius: 14px;
+  text-align: left;
+  padding: .72rem .8rem;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+}
+
+.metric-card.active {
+  background: linear-gradient(135deg, #1f7bff, #0f6be8);
+  border-color: #1f7bff;
+  color: #fff;
+  box-shadow: 0 14px 26px rgba(31, 123, 255, 0.24);
+}
+
+.metric-title {
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #56708f;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.metric-card.active .metric-title {
+  color: #dbeafe;
+}
+
+.metric-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.metric-main {
+  margin-top: .7rem;
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.metric-sub {
+  margin-top: .35rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .5rem;
+  color: #64748b;
+  font-size: .88rem;
+}
+
+.metric-sub strong {
+  color: #1f3657;
+}
+
+.metric-card.active .metric-sub,
+.metric-card.active .metric-sub strong {
+  color: #fff;
+}
+
+.kpi-modern-grid {
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.kpi-card {
+  padding-bottom: 1rem;
+}
+
+.kpi-card.pending {
+  background: linear-gradient(180deg, rgba(253, 242, 242, 0.95), #fff);
+}
+
+.kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kpi-label {
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: .14em;
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.kpi-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #eaf2ff;
+  color: #1f7bff;
+  font-weight: 800;
+}
+
+.kpi-value {
+  margin-top: .8rem;
+  font-size: 2.3rem;
+  line-height: 1;
+  font-weight: 700;
+  color: #233f62;
+}
+
+.kpi-value small {
+  font-size: 1rem;
+  color: #8a9cb2;
+  margin-left: .2rem;
+}
+
+.kpi-note {
+  margin-top: .45rem;
+  color: #6b7f98;
+  font-size: 1rem;
+}
+
 .report-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
@@ -515,6 +960,46 @@ onMounted(async () => {
   filter: brightness(.92)
 }
 
+.earnings-svg .bar-hover-hit {
+  cursor: pointer;
+}
+
+.bar-tooltip {
+  pointer-events: none;
+  animation: tooltip-pop 180ms ease;
+}
+
+.bar-tooltip rect {
+  fill: rgba(15, 23, 42, 0.92);
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 1;
+  filter: drop-shadow(0 10px 22px rgba(2, 8, 23, 0.34));
+}
+
+.tooltip-title {
+  fill: #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.tooltip-net {
+  fill: #22c55e;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tooltip-commission {
+  fill: #f97316;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tooltip-earnings {
+  fill: #3b82f6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .legend-row {
   display: flex;
   flex-wrap: wrap;
@@ -561,6 +1046,44 @@ onMounted(async () => {
   margin: .2rem auto .65rem
 }
 
+.circle-filter-row {
+  margin-top: .35rem;
+  display: flex;
+  justify-content: center;
+  gap: .45rem;
+  flex-wrap: wrap;
+}
+
+.circle-filter-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 150ms ease;
+}
+
+.circle-filter-btn:hover {
+  transform: translateY(-2px);
+}
+
+.circle-filter-btn.active .circle-filter-core {
+  background: #eef6ff;
+  box-shadow: 0 8px 18px rgba(31, 123, 255, 0.26);
+}
+
+.circle-filter-core {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 2px solid #1f7bff;
+  display: grid;
+  place-items: center;
+  font-size: .64rem;
+  letter-spacing: .08em;
+  font-weight: 800;
+  background: #fff;
+}
+
 .donut-center {
   position: absolute;
   inset: 0;
@@ -579,6 +1102,22 @@ onMounted(async () => {
 .donut-label {
   color: var(--muted);
   font-size: .78rem
+}
+
+.donut-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 10px;
+  padding: .45rem .65rem;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 14px 26px rgba(2, 8, 23, 0.3);
+  animation: tooltip-pop 170ms ease;
+  z-index: 2;
 }
 
 .donut-segment {
@@ -616,6 +1155,10 @@ onMounted(async () => {
 .category-chip.muted {
   color: #47617f;
   background: #eef2f7
+}
+
+.category-chip.all {
+  color: #34506f;
 }
 
 .category-chip.active {
@@ -821,6 +1364,17 @@ onMounted(async () => {
   }
 }
 
+@keyframes tooltip-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes area-in {
   from {
     opacity: 0
@@ -832,6 +1386,14 @@ onMounted(async () => {
 }
 
 @media (max-width:1100px) {
+  .category-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .kpi-modern-grid {
+    grid-template-columns: 1fr;
+  }
+
   .report-grid {
     grid-template-columns: 1fr
   }
@@ -842,6 +1404,14 @@ onMounted(async () => {
 }
 
 @media (max-width:700px) {
+  .category-overview-head {
+    flex-direction: column;
+  }
+
+  .category-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
   .report-card {
     padding: .85rem .72rem
   }

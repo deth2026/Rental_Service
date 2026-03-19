@@ -24,6 +24,28 @@ export const useAdminStore = defineStore('admin', () => {
     }).format(num || 0)
   }
 
+  const toAmount = (booking) => Number(
+    booking?.total_amount ??
+    booking?.total_price ??
+    booking?.price ??
+    booking?.gross_amount ??
+    booking?.amount ??
+    0
+  ) || 0
+
+  const toDate = (value) => {
+    if (!value) return null
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+
+  const percentageTrend = (current, previous) => {
+    const prev = Number(previous || 0)
+    const curr = Number(current || 0)
+    if (prev <= 0) return curr > 0 ? 100 : 0
+    return Math.round(((curr - prev) / prev) * 100)
+  }
+
   const recalculateTotals = () => {
     totals.value = {
       totalUsers: state.value.users.length,
@@ -87,6 +109,21 @@ export const useAdminStore = defineStore('admin', () => {
         nextState.bookings = Array.isArray(data) ? data : (data.data || [])
       }
 
+      // Normalize booking fields so all admin pages can read consistent values.
+      nextState.bookings = nextState.bookings.map((booking) => {
+        const amount = toAmount(booking)
+        const totalDays = Number(booking.total_days ?? booking.days ?? 1) || 1
+        return {
+          ...booking,
+          total_amount: amount,
+          total_price: Number(booking.total_price ?? amount) || amount,
+          price: Number(booking.price ?? amount) || amount,
+          gross_amount: Number(booking.gross_amount ?? amount) || amount,
+          days: totalDays,
+          total_days: totalDays,
+        }
+      })
+
       // Single-pass data processing for stats
       const counts = { motorbike: 0, bicycle: 0, car: 0, other: 0 }
       nextState.vehicles.forEach(v => {
@@ -109,9 +146,36 @@ export const useAdminStore = defineStore('admin', () => {
         const bDate = String(b.start_date || b.created_at || '').split(' ')[0]
         if (grossByDayMap.has(bDate)) {
           const entry = grossByDayMap.get(bDate)
-          entry.val += Number(b.total_amount || b.price || 0)
+          entry.val += toAmount(b)
         }
       })
+
+      // Dynamic trend tracking based on latest 7 days vs previous 7 days
+      const now = new Date()
+      const currentStart = new Date(now); currentStart.setDate(currentStart.getDate() - 6)
+      const previousStart = new Date(now); previousStart.setDate(previousStart.getDate() - 13)
+
+      const isCurrentWindow = (d) => d && d >= currentStart
+      const isPreviousWindow = (d) => d && d >= previousStart && d < currentStart
+
+      const usersCurrent = nextState.users.filter((u) => isCurrentWindow(toDate(u.created_at))).length
+      const usersPrevious = nextState.users.filter((u) => isPreviousWindow(toDate(u.created_at))).length
+
+      const shopsCurrent = nextState.shops.filter((s) => isCurrentWindow(toDate(s.created_at))).length
+      const shopsPrevious = nextState.shops.filter((s) => isPreviousWindow(toDate(s.created_at))).length
+
+      const vehiclesCurrent = nextState.vehicles.filter((v) => isCurrentWindow(toDate(v.created_at))).length
+      const vehiclesPrevious = nextState.vehicles.filter((v) => isPreviousWindow(toDate(v.created_at))).length
+
+      const bookingsCurrent = nextState.bookings.filter((b) => isCurrentWindow(toDate(b.start_date || b.created_at))).length
+      const bookingsPrevious = nextState.bookings.filter((b) => isPreviousWindow(toDate(b.start_date || b.created_at))).length
+
+      const revenueCurrent = nextState.bookings
+        .filter((b) => isCurrentWindow(toDate(b.start_date || b.created_at)))
+        .reduce((sum, b) => sum + toAmount(b), 0)
+      const revenuePrevious = nextState.bookings
+        .filter((b) => isPreviousWindow(toDate(b.start_date || b.created_at)))
+        .reduce((sum, b) => sum + toAmount(b), 0)
 
       // Update refs once all processing is done
       state.value = nextState
@@ -120,6 +184,14 @@ export const useAdminStore = defineStore('admin', () => {
       bookingGrossByDay.value = Array.from(grossByDayMap.entries())
         .map(([key, entry]) => ({ key, value: entry.val, label: entry.label }))
         .reverse()
+
+      trends.value = {
+        users: percentageTrend(usersCurrent, usersPrevious),
+        shops: percentageTrend(shopsCurrent, shopsPrevious),
+        vehicles: percentageTrend(vehiclesCurrent, vehiclesPrevious),
+        bookings: percentageTrend(bookingsCurrent, bookingsPrevious),
+        revenue: percentageTrend(revenueCurrent, revenuePrevious)
+      }
 
       refreshRecentShops()
 

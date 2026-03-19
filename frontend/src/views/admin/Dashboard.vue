@@ -26,6 +26,8 @@ const adminName = computed(() => {
 
 
 const animated = ref(false)
+const hoveredRevenueIndex = ref(null)
+const money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 
 // Optimized stats computation (Direct access, no spread if possible)
 const stats = computed(() => {
@@ -43,15 +45,61 @@ const stats = computed(() => {
   ]
 })
 
-// Memoize chart calculations
-const revenueSeries = computed(() => {
-  const points = getArr(admin.bookingGrossByDay)
-  if (!points.length) return []
-  const maxValue = Math.max(1, ...points.map(p => p.value || 0))
-  return points.map(p => ({
-    ...p,
-    pct: ((p.value || 0) / maxValue) * 100
-  }))
+const buildFallbackRevenueDays = () => {
+  const today = new Date()
+  const days = []
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date(today)
+    d.setDate(today.getDate() - i)
+    days.push({
+      key: d.toISOString().split('T')[0],
+      label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+      value: 0
+    })
+  }
+  return days
+}
+
+const commissionRate = computed(() => Number(admin.state?.commission_rate || 0.15))
+const revenueDailySeries = computed(() => {
+  const raw = getArr(admin.bookingGrossByDay)
+  const points = raw.length ? raw : buildFallbackRevenueDays()
+  return points.map((point) => {
+    const earnings = Number(point.value || 0)
+    const commission = Math.round(earnings * commissionRate.value)
+    return {
+      key: point.key,
+      label: point.label,
+      earnings,
+      commission,
+      net: Math.max(0, earnings - commission)
+    }
+  })
+})
+
+const niceMax = (value, floor = 1000) => {
+  if (value <= 0) return floor
+  if (value < 2000) return Math.ceil(value / 250) * 250
+  return Math.ceil(value / 500) * 500
+}
+
+const revenueBarMax = computed(() => {
+  const peak = Math.max(...revenueDailySeries.value.flatMap((row) => [row.earnings, row.commission, row.net]), 0)
+  return niceMax(peak, 1000)
+})
+
+const revenueTooltipData = computed(() => {
+  const idx = hoveredRevenueIndex.value
+  if (idx == null || idx < 0 || idx >= revenueDailySeries.value.length) return null
+  const row = revenueDailySeries.value[idx]
+  const centerX = 92 + (idx * 92)
+  const width = 202
+  const height = 96
+  const peak = Math.max(row.earnings, row.commission, row.net)
+  const peakY = 246 - ((peak / (revenueBarMax.value || 1)) * 210)
+  const x = Math.max(20, Math.min(centerX - (width / 2), 716 - width))
+  const y = Math.max(12, peakY - height - 10)
+  return { row, x, y, width, height }
 })
 
 const fleetTypes = computed(() => {
@@ -231,6 +279,9 @@ const submitEdit = async () => {
   }
 }
 
+const showRevenueTooltip = (idx) => { hoveredRevenueIndex.value = idx }
+const hideRevenueTooltip = () => { hoveredRevenueIndex.value = null }
+
 const triggerAnimation = () => {
   animated.value = false
   nextTick(() => { requestAnimationFrame(() => { animated.value = true }) })
@@ -241,7 +292,10 @@ onMounted(() => {
 })
 
 // Fast watch using stringified key to avoid deep watch overhead
-watch(() => admin.bookingGrossByDay.length, triggerAnimation)
+watch(
+  () => getArr(admin.bookingGrossByDay).map((d) => `${d.key}:${d.value || 0}`).join('|'),
+  triggerAnimation
+)
 </script>
 
 <template>
@@ -335,11 +389,70 @@ watch(() => admin.bookingGrossByDay.length, triggerAnimation)
           <h2 class="card-title">Revenue Overview</h2>
           <div class="card-chip">Last 7 Days</div>
         </div>
-        <div class="chart-bars" :class="{ animated }">
-          <div v-for="point in revenueSeries" :key="point.key" class="bar-col">
-            <div class="bar"><div class="bar-fill" :style="{ height: `${point.pct}%` }"></div></div>
-            <div class="bar-label">{{ point.label }}</div>
-          </div>
+        <svg class="daily-revenue-chart" viewBox="0 0 740 300" @mouseleave="hideRevenueTooltip">
+          <line
+            v-for="n in 5"
+            :key="`daily-grid-${n}`"
+            x1="44"
+            :y1="18 + (n - 1) * 57"
+            x2="720"
+            :y2="18 + (n - 1) * 57"
+            class="daily-grid"
+          />
+          <text
+            v-for="n in 5"
+            :key="`daily-label-${n}`"
+            x="36"
+            :y="24 + (5 - n) * 57"
+            class="daily-axis-label"
+            text-anchor="end"
+          >{{ money0.format((revenueBarMax / 4) * (n - 1)) }}</text>
+
+          <g
+            v-for="(row, idx) in revenueDailySeries"
+            :key="row.key"
+            @mouseenter="showRevenueTooltip(idx)"
+          >
+            <rect
+              :x="72 + idx * 92"
+              :y="246 - ((row.earnings / revenueBarMax) * 210)"
+              width="16"
+              :height="(row.earnings / revenueBarMax) * 210"
+              class="daily-bar earnings"
+              :style="{ animationDelay: `${animated ? idx * 70 : 0}ms`, transformOrigin: `${72 + idx * 92 + 8}px 246px` }"
+            />
+            <rect
+              :x="92 + idx * 92"
+              :y="246 - ((row.commission / revenueBarMax) * 210)"
+              width="16"
+              :height="(row.commission / revenueBarMax) * 210"
+              class="daily-bar commission"
+              :style="{ animationDelay: `${animated ? idx * 70 : 0}ms`, transformOrigin: `${92 + idx * 92 + 8}px 246px` }"
+            />
+            <rect
+              :x="112 + idx * 92"
+              :y="246 - ((row.net / revenueBarMax) * 210)"
+              width="16"
+              :height="(row.net / revenueBarMax) * 210"
+              class="daily-bar net"
+              :style="{ animationDelay: `${animated ? idx * 70 : 0}ms`, transformOrigin: `${112 + idx * 92 + 8}px 246px` }"
+            />
+            <rect :x="66 + idx * 92" y="18" width="68" height="230" fill="transparent" />
+            <text :x="100 + idx * 92" y="280" class="daily-axis-label x" text-anchor="middle">{{ row.label }}</text>
+          </g>
+
+          <g v-if="revenueTooltipData" class="daily-tooltip">
+            <rect :x="revenueTooltipData.x" :y="revenueTooltipData.y" :width="revenueTooltipData.width" :height="revenueTooltipData.height" rx="11" />
+            <text :x="revenueTooltipData.x + 12" :y="revenueTooltipData.y + 20" class="daily-tooltip-title">{{ revenueTooltipData.row.label }}</text>
+            <text :x="revenueTooltipData.x + 12" :y="revenueTooltipData.y + 44" class="daily-tooltip-net">Net Payout : {{ money0.format(revenueTooltipData.row.net) }}</text>
+            <text :x="revenueTooltipData.x + 12" :y="revenueTooltipData.y + 67" class="daily-tooltip-commission">Platform Commission : {{ money0.format(revenueTooltipData.row.commission) }}</text>
+            <text :x="revenueTooltipData.x + 12" :y="revenueTooltipData.y + 90" class="daily-tooltip-earnings">Total Earnings : {{ money0.format(revenueTooltipData.row.earnings) }}</text>
+          </g>
+        </svg>
+        <div class="daily-legend">
+          <span class="daily-legend-item"><i class="dot earnings"></i>Total Earnings</span>
+          <span class="daily-legend-item"><i class="dot commission"></i>Platform Commission</span>
+          <span class="daily-legend-item"><i class="dot net"></i>Net Payout</span>
         </div>
       </section>
 
@@ -423,5 +536,140 @@ watch(() => admin.bookingGrossByDay.length, triggerAnimation)
    The dashboard already shows status in the STATUS column; this removes duplicate overlay. */
 .hide-status-overlay .shop-cell .status-badge {
   display: none !important;
+}
+
+.daily-revenue-chart {
+  width: 100%;
+  display: block;
+}
+
+.daily-grid {
+  stroke: rgba(148, 163, 184, 0.28);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.daily-axis-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: #6b7f98;
+}
+
+.daily-axis-label.x {
+  font-size: 12px;
+}
+
+.daily-bar {
+  animation: daily-bar-grow 620ms cubic-bezier(.22, 1, .36, 1) both;
+  cursor: pointer;
+}
+
+.daily-bar.earnings {
+  fill: #1f7bff;
+}
+
+.daily-bar.commission {
+  fill: #f97316;
+}
+
+.daily-bar.net {
+  fill: #2bc96b;
+}
+
+.daily-tooltip {
+  pointer-events: none;
+  animation: daily-tooltip-pop 180ms ease;
+}
+
+.daily-tooltip rect {
+  fill: rgba(15, 23, 42, 0.94);
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 1;
+  filter: drop-shadow(0 12px 22px rgba(2, 8, 23, 0.35));
+}
+
+.daily-tooltip-title {
+  fill: #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.daily-tooltip-net {
+  fill: #22c55e;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-tooltip-commission {
+  fill: #f97316;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-tooltip-earnings {
+  fill: #3b82f6;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daily-legend {
+  margin-top: .3rem;
+  display: flex;
+  justify-content: center;
+  gap: .8rem;
+  flex-wrap: wrap;
+}
+
+.daily-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .78rem;
+  font-weight: 700;
+  color: #43607f;
+  background: #eef4ff;
+  border-radius: 999px;
+  padding: .3rem .62rem;
+}
+
+.daily-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.daily-legend .dot.earnings {
+  background: #1f7bff;
+}
+
+.daily-legend .dot.commission {
+  background: #f97316;
+}
+
+.daily-legend .dot.net {
+  background: #2bc96b;
+}
+
+@keyframes daily-bar-grow {
+  from {
+    transform: scaleY(.08);
+    opacity: .5;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes daily-tooltip-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 </style>
