@@ -36,14 +36,14 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: UserDashboard,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+      component: HomeView,
+      meta: { requiresAuth: false }
     },
     {
       path: '/home',
       name: 'landing',
       component: HomeView,
-      meta: { requiresAuth: false }
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/chooserole',
