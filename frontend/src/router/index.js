@@ -14,6 +14,7 @@ import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
+import UserNotifications from '../views/User/Notification.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -89,6 +90,12 @@ const router = createRouter({
       path: '/promotions',
       name: 'promotions',
       component: PromotionView,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: UserNotifications,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {

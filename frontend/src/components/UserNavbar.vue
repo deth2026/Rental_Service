@@ -1,8 +1,10 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService } from '@/services/database.js'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import NotificationMenu from '@/components/NotificationMenu.vue'
+import { useNotifications } from '@/composables/useNotifications'
 
 const defaultNavItems = [
   { label: 'Home', route: '/view_shop' },
@@ -49,6 +51,44 @@ const notify = (message) => {
   window.alert(message)
 }
 
+const { unreadCount } = useNotifications()
+const showNotifications = ref(false)
+const notificationRoot = ref(null)
+
+const badgeLabel = computed(() => {
+  if (!unreadCount.value) return ''
+  return unreadCount.value > 9 ? '9+' : String(unreadCount.value)
+})
+
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value
+}
+
+const closeNotifications = () => {
+  showNotifications.value = false
+}
+
+const handleDocumentClick = (event) => {
+  if (showNotifications.value && notificationRoot.value && !notificationRoot.value.contains(event.target)) {
+    closeNotifications()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleDocumentClick)
+})
+
+watch(
+  () => route.fullPath,
+  () => {
+    closeNotifications()
+  }
+)
+
 const handleNavClick = (item) => {
   const hasRoute = item.route && item.route !== '#'
   if (hasRoute) {
@@ -90,6 +130,22 @@ const requestLogout = () => {
 
     <div class="top-actions">
       <span class="user-display-name">{{ userDisplayName }}</span>
+      <div class="notification-wrapper" ref="notificationRoot">
+        <button
+          type="button"
+          class="icon-btn notification-btn"
+          aria-label="Open notifications"
+          @click.stop="toggleNotifications"
+        >
+          <i class="fa-regular fa-bell" aria-hidden="true"></i>
+          <span v-if="badgeLabel" class="notification-count">{{ badgeLabel }}</span>
+        </button>
+        <transition name="notification-fade">
+          <div v-if="showNotifications" class="notification-popup">
+            <NotificationMenu />
+          </div>
+        </transition>
+      </div>
       <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
     </div>
   </header>
@@ -160,6 +216,66 @@ const requestLogout = () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notification-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(99, 102, 241, 0.45);
+}
+
+.notification-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-popup {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 10px);
+  z-index: 40;
+}
+
+.notification-fade-enter-active,
+.notification-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notification-fade-enter-from,
+.notification-fade-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 .user-display-name {

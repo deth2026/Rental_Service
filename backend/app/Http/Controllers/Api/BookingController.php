@@ -26,7 +26,7 @@ class BookingController extends Controller
     {
         $user = Auth::user();
         $bookings = Booking::where('user_id', $user->id)
-            ->with(['user', 'vehicle', 'shop'])
+            ->with(['user', 'vehicle', 'shop.owner'])
             ->orderBy('created_at', 'desc')
             ->get();
         
