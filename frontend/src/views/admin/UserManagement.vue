@@ -2,21 +2,26 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
-import api from '../../services/api.js'
 import { useToast } from '../../composables/useToast.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 import CountUp from '../../components/CountUp.vue'
+import userService from '../../services/userService.js'
 
 const admin = useAdminStore()
 const route = useRoute()
 const toast = useToast()
 
 const page = ref(1)
-const perPage = 4
+const perPage = 8
 const animated = ref(false)
+const showOnlyMe = ref(false)
 
 const showCreate = ref(false)
 const createForm = ref({ name: '', email: '', phone: '', role: 'customer', password: '' })
+const isCreating = ref(false)
+const isUpdating = ref(false)
+const togglingUserId = ref(null)
+const deletingUserId = ref(null)
 
 const showView = ref(false)
 const showEdit = ref(false)
@@ -25,16 +30,19 @@ const selectedUser = ref(null)
 const deleteTarget = ref(null)
 
 const editForm = ref({ id: null, name: '', phone: '', role: 'customer', is_verified: false })
+const currentUser = computed(() => userService.getCurrentUser())
+const currentUserId = computed(() => Number(currentUser.value?.id || 0))
 
 const todayKey = () => new Date().toISOString().slice(0, 10)
 
 const totals = computed(() => {
-  const activeUsers = admin.state.users.filter((u) => {
+  const users = admin.state.users || []
+  const activeUsers = users.filter((u) => {
     const rawStatus = String(u.status || '').toUpperCase()
     if (rawStatus) return rawStatus === 'ACTIVE'
     return Boolean(u.is_verified)
   }).length
-  const joinedToday = admin.state.users.filter((u) => String(u.created_at || '').slice(0, 10) === todayKey()).length
+  const joinedToday = users.filter((u) => String(u.created_at || '').slice(0, 10) === todayKey()).length
   return { activeUsers, joinedToday }
 })
 
@@ -60,13 +68,26 @@ const toggleStatusMenu = () => {
   if (showStatusMenu.value) showRoleMenu.value = false
 }
 
+const sortedUsers = computed(() => {
+  const users = [...(admin.state.users || [])]
+  const meId = currentUserId.value
+  return users.sort((a, b) => {
+    const aIsMe = Number(a.id) === meId
+    const bIsMe = Number(b.id) === meId
+    if (aIsMe && !bIsMe) return -1
+    if (!aIsMe && bIsMe) return 1
+    return Number(b.id || 0) - Number(a.id || 0)
+  })
+})
+
 const filteredUsers = computed(() => {
   const q = query.value
   const role = String(selectedRole.value || '').trim().toUpperCase()
   const status = String(selectedStatus.value || '').trim().toUpperCase()
 
-  let items = admin.state.users
-  if (q) items = items.filter((u) => `${u.name || ''} ${u.email || ''} ${u.id || ''}`.toLowerCase().includes(q))
+  let items = sortedUsers.value
+  if (showOnlyMe.value) items = items.filter((u) => Number(u.id) === currentUserId.value)
+  if (q) items = items.filter((u) => `${u.name || ''} ${u.email || ''} ${u.phone || ''} ${u.role || ''} ${u.id || ''}`.toLowerCase().includes(q))
   if (role) items = items.filter((u) => String(u.role || '').trim().toUpperCase() === role)
   if (status) items = items.filter((u) => statusText(u) === status)
 
@@ -78,7 +99,7 @@ watch(totalPages, (next) => {
   if (page.value > next) page.value = next
 })
 
-watch([selectedRole, selectedStatus, query], () => {
+watch([selectedRole, selectedStatus, showOnlyMe, query], () => {
   page.value = 1
 })
 
@@ -126,7 +147,8 @@ const roleOptions = computed(() => {
   const seen = new Set()
   const roles = []
 
-  admin.state.users.forEach((u) => {
+  const users = admin.state.users || []
+  users.forEach((u) => {
     const role = String(u?.role || '').trim().toUpperCase()
     if (!role || seen.has(role)) return
     seen.add(role)
@@ -152,7 +174,8 @@ const statusOptions = computed(() => {
   const seen = new Set()
   const statuses = []
 
-  admin.state.users.forEach((u) => {
+  const users = admin.state.users || []
+  users.forEach((u) => {
     const s = statusText(u)
     if (!s || seen.has(s)) return
     seen.add(s)
@@ -192,6 +215,8 @@ const initials = (name) => {
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
 }
 
+const isSelf = (user) => Number(user?.id) === currentUserId.value
+
 const registrationSeries = computed(() => {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -206,7 +231,9 @@ const registrationSeries = computed(() => {
     value: 0,
   }))
   const index = new Map(buckets.map((b, i) => [b.key, i]))
-  admin.state.users.forEach((u) => {
+  
+  const users = admin.state.users || []
+  users.forEach((u) => {
     const key = String(u.created_at || '').slice(0, 10)
     const i = index.get(key)
     if (i == null) return
@@ -218,7 +245,8 @@ const registrationSeries = computed(() => {
 
 const roleDistribution = computed(() => {
   const counts = { CUSTOMER: 0, 'SHOP STAFF': 0, ADMIN: 0 }
-  admin.state.users.forEach((u) => {
+  const users = admin.state.users || []
+  users.forEach((u) => {
     const r = String(u.role || '').toUpperCase()
     if (r === 'CUSTOMER') counts.CUSTOMER += 1
     else if (r.includes('SHOP')) counts['SHOP STAFF'] += 1
@@ -252,6 +280,7 @@ const closeCreate = () => {
 
 
 const submitCreate = async () => {
+  if (isCreating.value) return
   const name = String(createForm.value.name || '').trim()
   const email = String(createForm.value.email || '').trim()
   if (!name || !email) {
@@ -260,50 +289,47 @@ const submitCreate = async () => {
   }
 
   try {
-    if (admin.state.source === 'api') {
-      const password = String(createForm.value.password || '')
-      if (!password) {
-        toast.error('Password is required to create a user.')
-        return
-      }
-      await api.post('/users', {
-        name,
-        email,
-        phone: createForm.value.phone || null,
-        role: createForm.value.role || 'customer',
-        password,
-      })
-      toast.success('User created successfully.')
-      await admin.load({ force: true }).catch(() => { })
-    } else {
-      const created = admin.addUser({ name, email, role: String(createForm.value.role || 'CUSTOMER').toUpperCase() })
-      if (!created) return
-      toast.success('User created successfully.')
+    isCreating.value = true
+    const password = String(createForm.value.password || '')
+    if (!password) {
+      toast.error('Password is required to create a user.')
+      return
     }
-
+    await admin.addUser({
+      name,
+      email,
+      phone: createForm.value.phone || null,
+      role: createForm.value.role || 'customer',
+      password,
+    })
+    toast.success('User created successfully.')
+    
     closeCreate()
     page.value = 1
     triggerAnimation()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to create user.')
+  } finally {
+    isCreating.value = false
   }
 }
 
-const toggleBlock = (user) => {
-  // API users don't have a "status" column; treat "is_verified" as the lifecycle toggle for now.
-  if (admin.state.source === 'api') {
-    const next = !Boolean(user.is_verified)
-    api.put(`/users/${user.id}`, { is_verified: next })
-      .then(() => {
-        toast.success(next ? 'User verified.' : 'User unverified.')
-        admin.load({ force: true }).catch(() => { })
-      })
-      .catch((err) => toast.error(err?.response?.data?.message || err?.message || 'Failed to update user.'))
+const toggleBlock = async (user) => {
+  if (!user?.id || togglingUserId.value) return
+  if (isSelf(user)) {
+    toast.warning('You cannot block/unverify your own account.')
     return
   }
-
-  const current = String(user.status || '').toUpperCase()
-  admin.updateUserStatus(user.id, current === 'BLOCKED' ? 'ACTIVE' : 'BLOCKED')
+  try {
+    togglingUserId.value = user.id
+    const next = !Boolean(user.is_verified)
+    await admin.updateUser(user.id, { is_verified: next, status: next ? 'active' : 'blocked' })
+    toast.success(next ? 'User verified.' : 'User unverified.')
+  } catch (err) {
+    toast.error(err?.response?.data?.message || err?.message || 'Failed to update user.')
+  } finally {
+    togglingUserId.value = null
+  }
 }
 
 const openView = (user) => {
@@ -329,6 +355,7 @@ const closeEdit = () => {
 }
 
 const submitEdit = async () => {
+  if (isUpdating.value) return
   const id = editForm.value.id
   if (!id) return
   const name = String(editForm.value.name || '').trim()
@@ -338,28 +365,21 @@ const submitEdit = async () => {
   }
 
   try {
-    if (admin.state.source === 'api') {
-      await api.put(`/users/${id}`, {
-        name,
-        phone: editForm.value.phone || null,
-        role: editForm.value.role || 'customer',
-        is_verified: Boolean(editForm.value.is_verified),
-      })
-      toast.success('User updated successfully.')
-      await admin.load({ force: true }).catch(() => { })
-    } else {
-      // Demo mode: best-effort local update
-      const idx = admin.state.users.findIndex((u) => String(u.id) === String(id))
-      if (idx >= 0) {
-        admin.state.users[idx] = { ...admin.state.users[idx], name, phone: editForm.value.phone, role: editForm.value.role }
-      }
-      toast.success('User updated successfully.')
-    }
+    isUpdating.value = true
+    await admin.updateUser(id, {
+      name,
+      phone: editForm.value.phone || null,
+      role: editForm.value.role || 'customer',
+      is_verified: Boolean(editForm.value.is_verified),
+    })
+    toast.success('User updated successfully.')
 
     closeEdit()
     triggerAnimation()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to update user.')
+  } finally {
+    isUpdating.value = false
   }
 }
 
@@ -376,20 +396,22 @@ const deleteMessage = computed(() => {
 const confirmDelete = async () => {
   const user = deleteTarget.value
   if (!user?.id) return
-
+  if (isSelf(user)) {
+    toast.warning('You cannot delete your own account.')
+    showDeleteConfirm.value = false
+    deleteTarget.value = null
+    return
+  }
+  if (deletingUserId.value) return
 
   try {
-    if (admin.state.source === 'api') {
-      await api.delete(`/users/${user.id}`)
-      toast.success('User deleted.')
-      await admin.load({ force: true }).catch(() => { })
-    } else {
-      admin.state.users = admin.state.users.filter((u) => String(u.id) !== String(user.id))
-      toast.success('User deleted.')
-    }
+    deletingUserId.value = user.id
+    await admin.deleteUser(user.id)
+    toast.success('User deleted.')
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to delete user.')
   } finally {
+    deletingUserId.value = null
     showDeleteConfirm.value = false
     deleteTarget.value = null
   }
@@ -412,7 +434,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => admin.state.users.length,
+  () => admin.state.users?.length,
   () => triggerAnimation()
 )
 </script>
@@ -444,7 +466,7 @@ watch(
             <div class="wide-value">
               <CountUp :value="Number(totals.activeUsers || 0)" :formatter="(n) => admin.formatted.fmtNumber(n)" />
             </div>
-            <div class="stat-trend trend-up"><span>+{{ Math.max(0, admin.trends.value.users) }}%</span></div>
+            <div class="stat-trend trend-up"><span>+{{ Math.max(0, admin.trends.users) }}%</span></div>
           </div>
           <div class="stat-icon tint-cyan" aria-hidden="true"><i class="fa-solid fa-user-group"></i></div>
         </div>
@@ -471,6 +493,14 @@ watch(
           <p class="card-subtitle"><strong>94%</strong> Active Rate</p>
         </div>
         <div class="filters">
+          <button
+            type="button"
+            class="btn btn-chip"
+            :class="{ 'is-active': showOnlyMe }"
+            @click="showOnlyMe = !showOnlyMe"
+          >
+            {{ showOnlyMe ? 'Showing: My Account' : 'My Account' }}
+          </button>
           <div class="filter-dropdown" @click.stop>
             <button type="button" class="btn btn-chip" :aria-expanded="showRoleMenu" @click="toggleRoleMenu">
               {{ selectedRoleLabel }} <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
@@ -525,7 +555,10 @@ watch(
               <td class="shop-cell">
                 <span class="user-bubble" aria-hidden="true">{{ initials(user.name) }}</span>
                 <div class="shop-meta">
-                  <div class="shop-name">{{ user.name }}</div>
+                  <div class="shop-name">
+                    {{ user.name }}
+                    <span v-if="isSelf(user)" class="badge badge-blue" style="margin-left:8px;">YOU</span>
+                  </div>
                   <div class="shop-id">ID: {{ user.id }}</div>
                 </div>
               </td>
@@ -536,16 +569,16 @@ watch(
               <td class="actions">
                 <button type="button" class="icon-action" title="View" @click="openView(user)"><i
                     class="fa-regular fa-eye"></i></button>
-                <button type="button" class="icon-action" title="Edit" @click="openEdit(user)"><i
+                <button type="button" class="icon-action" title="Edit" :disabled="isUpdating || togglingUserId === user.id || deletingUserId === user.id" @click="openEdit(user)"><i
                     class="fa-regular fa-pen-to-square"></i></button>
-                <button type="button" class="icon-action" title="Delete" @click="requestDelete(user)"><i
+                <button type="button" class="icon-action" title="Delete" :disabled="isSelf(user) || deletingUserId === user.id || isUpdating" @click="requestDelete(user)"><i
                     class="fa-regular fa-trash-can"></i></button>
-                <button v-if="statusText(user) === 'BLOCKED'" type="button" class="btn btn-soft"
+                <button v-if="statusText(user) === 'BLOCKED'" type="button" class="btn btn-soft" :disabled="isSelf(user) || togglingUserId === user.id || deletingUserId === user.id"
                   @click="toggleBlock(user)">
-                  Unblock/Verify
+                  {{ togglingUserId === user.id ? 'Processing...' : 'Unblock/Verify' }}
                 </button>
-                <button v-else type="button" class="btn btn-soft warn" @click="toggleBlock(user)">
-                  Block/Unverify
+                <button v-else type="button" class="btn btn-soft warn" :disabled="isSelf(user) || togglingUserId === user.id || deletingUserId === user.id" @click="toggleBlock(user)">
+                  {{ togglingUserId === user.id ? 'Processing...' : 'Block/Unverify' }}
                 </button>
               </td>
             </tr>
@@ -644,14 +677,16 @@ watch(
             </select>
           </label>
           <label class="field">
-            <span class="field-label">Password (API only)</span>
+            <span class="field-label">Password</span>
             <input v-model="createForm.password" type="password" placeholder="Strong password" />
           </label>
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" @click="closeCreate">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="submitCreate">Create</button>
+          <button type="button" class="btn btn-ghost" :disabled="isCreating" @click="closeCreate">Cancel</button>
+          <button type="button" class="btn btn-primary" :disabled="isCreating" @click="submitCreate">
+            {{ isCreating ? 'Creating...' : 'Create' }}
+          </button>
         </div>
       </div>
     </div>
@@ -707,8 +742,10 @@ watch(
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" @click="closeEdit">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="submitEdit">Save Changes</button>
+          <button type="button" class="btn btn-ghost" :disabled="isUpdating" @click="closeEdit">Cancel</button>
+          <button type="button" class="btn btn-primary" :disabled="isUpdating" @click="submitEdit">
+            {{ isUpdating ? 'Saving...' : 'Save Changes' }}
+          </button>
         </div>
       </div>
     </div>

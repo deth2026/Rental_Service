@@ -16,6 +16,24 @@ const formatDate = (dateStr) => {
   return d.toISOString().split('T')[0]
 }
 
+const getStatus = (coupon) => {
+  if (!coupon.is_active) return 'Inactive';
+  const today = new Date().toISOString().split('T')[0];
+  if (coupon.valid_from && today < coupon.valid_from) return 'Not Started';
+  if (coupon.valid_until && today > coupon.valid_until) return 'Expired';
+  return 'Active';
+};
+
+const getBadgeClass = (status) => {
+  switch (status) {
+    case 'Active': return 'badge badge-green';
+    case 'Not Started': return 'badge badge-blue';
+    case 'Expired': return 'badge badge-red';
+    case 'Inactive': return 'badge badge-gray';
+    default: return 'badge';
+  }
+};
+
 const loading = ref(false)
 const items = ref([])
 
@@ -211,10 +229,10 @@ onMounted(load)
                   <div class="shop-id">ID: {{ c.id }}</div>
                 </div>
               </td>
-              <td class="num">{{ c.discount_percent ?? '—' }}</td>
-              <td class="num">{{ c.discount_amount ?? '—' }}</td>
-              <td class="muted">{{ formatDate(c.valid_from) }} → {{ formatDate(c.valid_until) }}</td>
-              <td><span :class="c.is_active ? 'badge badge-green' : 'badge badge-red'">{{ c.is_active ? 'YES' : 'NO' }}</span></td>
+              <td class="num">{{ c.discount_percent !== null ? c.discount_percent + '%' : '—' }}</td>
+<td class="num">{{ c.discount_amount !== null ? '$' + c.discount_amount : '—' }}</td>
+<td class="muted">{{ formatDate(c.valid_from) }} → {{ formatDate(c.valid_until) }}</td>
+<td><span :class="getBadgeClass(getStatus(c))">{{ getStatus(c) }}</span></td>
               <td class="actions">
                 <button type="button" class="icon-action" title="View" @click="openView(c)"><i class="fa-regular fa-eye"></i></button>
                 <button type="button" class="icon-action" title="Edit" @click="openEdit(c)"><i class="fa-regular fa-pen-to-square"></i></button>

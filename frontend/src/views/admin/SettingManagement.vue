@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { adminDataSource } from '../../services/adminDataSource.js'
 import { useToast } from '../../composables/useToast.js'
 
 const STORAGE_KEY = 'chong_choul_admin_settings_v1'
@@ -21,9 +20,9 @@ const form = ref({
     weekly_performance_summary: false,
   },
   platform: {
-    default_currency: 'EUR (€)',
+    default_currency: 'USD ($)',
     default_language: 'English',
-    timezone: 'CET (UTC+1)',
+    timezone: 'Asia/Phnom_Penh (UTC+7)',
   },
   fees: {
     standard_commission_rate: 15,
@@ -50,7 +49,7 @@ const save = async () => {
   saving.value = true
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(form.value))
-    toast.success('Saved successfully.')
+    toast.success('Settings saved successfully.')
   } finally {
     saving.value = false
   }
@@ -58,16 +57,23 @@ const save = async () => {
 
 const resetDemoData = () => {
   showResetConfirm.value = false
-  adminDataSource.persistDemo(null)
-  localStorage.removeItem('chong_choul_payouts_v1')
-  localStorage.removeItem('chong_choul_last_payout_date')
+  // Clear various local storage keys that might hold mock data
+  const keysToClear = [
+    'chong_choul_payouts_v1',
+    'chong_choul_last_payout_date',
+    'rental_users',
+    'rental_bookings'
+  ]
+  keysToClear.forEach(key => localStorage.removeItem(key))
   toast.success('Platform demo data reset.')
 }
 
 const toggle = (path) => {
   const parts = path.split('.')
   let target = form.value
-  for (let i = 0; i < parts.length - 1; i += 1) target = target[parts[i]]
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    target = target[parts[i]]
+  }
   const key = parts[parts.length - 1]
   target[key] = !target[key]
 }
@@ -168,8 +174,8 @@ onMounted(load)
         <div class="settings-row">
           <div class="settings-label">Default Currency</div>
           <select v-model="form.platform.default_currency" class="pill-input">
-            <option>EUR (€)</option>
             <option>USD ($)</option>
+            <option>EUR (€)</option>
             <option>KHR (៛)</option>
           </select>
         </div>
@@ -185,8 +191,8 @@ onMounted(load)
         <div class="settings-row">
           <div class="settings-label">Timezone</div>
           <select v-model="form.platform.timezone" class="pill-input">
-            <option>CET (UTC+1)</option>
             <option>Asia/Phnom_Penh (UTC+7)</option>
+            <option>CET (UTC+1)</option>
             <option>UTC</option>
           </select>
         </div>
@@ -204,15 +210,15 @@ onMounted(load)
 
       <div class="settings-grid">
         <div class="settings-row">
-          <div class="settings-label">Standard Commission Rate</div>
+          <div class="settings-label">Standard Commission Rate (%)</div>
           <input v-model.number="form.fees.standard_commission_rate" class="pill-input" type="number" min="0" max="100" />
         </div>
         <div class="settings-row">
-          <div class="settings-label">Premium Vehicle Rate</div>
+          <div class="settings-label">Premium Vehicle Rate (%)</div>
           <input v-model.number="form.fees.premium_vehicle_rate" class="pill-input" type="number" min="0" max="100" />
         </div>
         <div class="settings-row">
-          <div class="settings-label">Promo Commission Rate</div>
+          <div class="settings-label">Promo Commission Rate (%)</div>
           <input v-model.number="form.fees.promo_commission_rate" class="pill-input" type="number" min="0" max="100" />
         </div>
       </div>
@@ -221,16 +227,16 @@ onMounted(load)
 
     <section class="card danger">
       <div class="danger-head">
-        <div class="danger-icon" aria-hidden="true"><i class="fa-regular fa-envelope-open"></i></div>
+        <div class="danger-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></div>
         <div>
           <h2 class="danger-title">Danger Zone</h2>
           <div class="muted small">Reset Platform Data</div>
-          <div class="muted small">This will permanently delete all test data. This action cannot be undone.</div>
+          <div class="muted small">This will permanently delete all test data and local preferences. This action cannot be undone.</div>
         </div>
       </div>
 
       <div class="danger-actions">
-        <button type="button" class="btn btn-danger" @click="showResetConfirm = true">Reset Data</button>
+        <button type="button" class="btn btn-danger" @click="showResetConfirm = true">Reset All Data</button>
       </div>
     </section>
 
@@ -238,8 +244,8 @@ onMounted(load)
       <div class="modal">
         <div class="modal-head">
           <div>
-            <div class="modal-title">Reset Platform Demo Data?</div>
-            <div class="modal-sub">This cannot be undone.</div>
+            <div class="modal-title">Reset Platform Data?</div>
+            <div class="modal-sub">This will permanently delete local test data.</div>
           </div>
           <button type="button" class="icon-action" title="Close" @click="showResetConfirm = false"><i class="fa-solid fa-xmark"></i></button>
         </div>

@@ -54,6 +54,42 @@ class DatabaseSeeder extends Seeder
                 'is_verified' => true,
             ]
         );
+
+        // Create sample categories
+        \App\Models\Category::create([
+            'name' => 'Cars',
+            'description' => 'Passenger vehicles for personal use',
+            'status' => 'active'
+        ]);
+
+        \App\Models\Category::create([
+            'name' => 'Motorcycles',
+            'description' => 'Two-wheeled vehicles',
+            'status' => 'active'
+        ]);
+
+        \App\Models\Category::create([
+            'name' => 'Trucks',
+            'description' => 'Commercial and cargo vehicles',
+            'status' => 'active'
+        ]);
+
+        // Create sample cities
+        \App\Models\City::create([
+            'name' => 'Phnom Penh'
+        ]);
+
+        \App\Models\City::create([
+            'name' => 'Siem Reap'
+        ]);
+
+        \App\Models\City::create([
+            'name' => 'Battambang'
+        ]);
+
+        \App\Models\City::create([
+            'name' => 'Sihanoukville'
+        ]);
     }
 }
 

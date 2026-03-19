@@ -3,18 +3,21 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '../../composables/useTheme'
-import { userService } from '../../services/database.js'
+import userService from '../../services/userService.js'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { CAMBODIA_TIMEZONE, cambodiaDateTimeLabel, cambodiaYear } from '../../utils/cambodiaTime.js'
 import '../../css/DashboardAdmin.css'
 import ConfirmModal from '../../components/ConfirmModal.vue'
-import logoUrl from '../../assets/logo.png'
+import ToastStack from '../../components/ToastStack.vue'
 
 const route = useRoute()
 const router = useRouter()
 const { isDark, toggleTheme } = useTheme()
 const adminStore = useAdminStore()
 const { t } = useI18n()
+
+// Professional Logo path from public folder
+const logoUrl = '/images/logo-removebg.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)
@@ -23,7 +26,7 @@ let clockTimer = null
 const nowTick = ref(Date.now())
 
 const navItems = [
-  { label: 'Dashboard', to: '/admin/dashboard', icon: 'fa-solid fa-table-cells-large' },
+  { label: 'Dashboard', to: '/admin', icon: 'fa-solid fa-table-cells-large' },
   { label: 'Shop Management', to: '/admin/shops', icon: 'fa-regular fa-building' },
   { label: 'User Management', to: '/admin/users', icon: 'fa-regular fa-user' },
   { label: 'Vehicle Management', to: '/admin/vehicles', icon: 'fa-solid fa-motorcycle' },
@@ -37,40 +40,36 @@ const navItems = [
 ]
 
 const currentUser = computed(() => userService.getCurrentUser())
-const adminName = computed(() => currentUser.value?.name || 'Alex Johnson')
-const adminRole = computed(() => (currentUser.value?.role || 'MASTER ADMIN').toString().toUpperCase())
+const adminName = computed(() => currentUser.value?.name || 'Admin')
+const adminRole = computed(() => (currentUser.value?.role || 'Admin').toString().toUpperCase())
+const isAdmin = computed(() => {
+  const u = currentUser.value || {}
+  if (u.is_admin === true) return true
+  const role = String(u.role || u.user_type || '').toLowerCase()
+  return role === 'admin'
+})
 const adminInitials = computed(() => {
-  const parts = adminName.value.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return 'AJ'
+  const name = adminName.value.trim()
+  if (!name) return 'A'
+  const parts = name.split(/\s+/).filter(Boolean)
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
 })
 
 const activePath = computed(() => route.path)
-const isActive = (path) => activePath.value === path || activePath.value.startsWith(`${path}/`)
+const isActive = (path) => {
+  if (path === '/admin') return activePath.value === '/admin' || activePath.value === '/admin/'
+  return activePath.value.startsWith(path)
+}
 
 const handleLogout = async () => {
   try {
-    await userService.logout?.()
-  } catch {
-    // ignore
-  }
-
-  try {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token')
-    if (token) {
-      await fetch('/api/users/logout', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-      })
-    }
-  } catch {
-    // ignore
-  } finally {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     router.push('/login')
+  } catch (error) {
+    console.error('Logout failed:', error)
   }
 }
 
@@ -84,9 +83,6 @@ const onSearchSubmit = () => {
     '/admin/users',
     '/admin/vehicles',
     '/admin/bookings',
-    '/admin/coupons',
-    '/admin/categories',
-    '/admin/cities',
   ]
 
   const target = searchable.find((p) => path.startsWith(p)) || '/admin/shops'
@@ -102,35 +98,26 @@ watch(
   { immediate: true }
 )
 
-watch(
-  () => route.path,
-  () => {
-    const next = String(route.query.q || '').trim()
-    if (searchQuery.value !== next) searchQuery.value = next
-  }
-)
-
-
 watch(searchQuery, (value) => {
-  const path = route.path
-  const searchable =
-    path.startsWith('/admin/shops') ||
-    path.startsWith('/admin/users') ||
-    path.startsWith('/admin/vehicles') ||
-    path.startsWith('/admin/bookings') ||
-    path.startsWith('/admin/coupons') ||
-    path.startsWith('/admin/categories') ||
-    path.startsWith('/admin/cities')
-
-  if (!searchable) return
   if (searchTimer) window.clearTimeout(searchTimer)
   searchTimer = window.setTimeout(() => {
     const q = String(value || '').trim()
+    const currentQ = String(route.query.q || '').trim()
+    if (q === currentQ) return
+
+    const searchable = [
+      '/admin/shops',
+      '/admin/users',
+      '/admin/vehicles',
+      '/admin/bookings',
+    ]
+    if (!searchable.some(p => route.path.startsWith(p))) return
+
     const nextQuery = { ...route.query }
     if (q) nextQuery.q = q
     else delete nextQuery.q
     router.replace({ query: nextQuery })
-  }, 250)
+  }, 400)
 })
 
 onMounted(() => {
@@ -142,9 +129,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (searchTimer) window.clearTimeout(searchTimer)
-  searchTimer = null
   if (clockTimer) window.clearInterval(clockTimer)
-  clockTimer = null
 })
 
 const cambodiaClockLabel = computed(() => cambodiaDateTimeLabel(new Date(nowTick.value)))
@@ -152,16 +137,16 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
 </script>
 
 <template>
-  <div class="admin-app">
+  <div class="admin-app" :class="{ 'is-admin': isAdmin }">
     <aside class="admin-sidebar">
-      <div class="admin-brand">
-        <div class="brand-badge" aria-hidden="true">
-          <img class="brand-logo" :src="logoUrl" alt="CHONG CHOUL" />
-        </div>
-        <div class="brand-text">
-          <span class="brand-name">CHONG <span class="brand-cyan">CHOUL</span></span>
-        </div>
-      </div>
+       <div class="admin-brand">
+         <div class="brand-badge" aria-hidden="true">
+           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 6px; border-radius: 150px; width: 96px; height: 80px; object-fit: contain;" />
+         </div>
+         <div class="brand-text">
+           <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
+         </div>
+       </div>
 
       <nav class="admin-nav">
         <RouterLink
@@ -200,7 +185,12 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
             <span class="dot">•</span>
             <span class="topbar-time-clock">{{ cambodiaClockLabel }}</span>
           </div>
-          <button type="button" class="icon-btn" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'" @click="toggleTheme">
+          <button 
+            type="button" 
+            class="icon-btn" 
+            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'" 
+            @click="toggleTheme"
+          >
             <i :class="isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon'" aria-hidden="true"></i>
           </button>
           <button type="button" class="icon-btn" title="Notifications">
@@ -208,15 +198,15 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
             <span class="notif-dot" aria-hidden="true"></span>
           </button>
 
-          <div class="topbar-user">
-            <div class="user-meta">
-              <div class="user-name">{{ adminName }}</div>
-              <div class="user-role">{{ adminRole }}</div>
+            <div class="topbar-user">
+              <div class="user-meta">
+                <div class="user-name">{{ adminName }}</div>
+                <div class="user-status">{{ adminRole }}</div>
+              </div>
+              <div class="user-avatar" :aria-label="adminName">
+                {{ adminInitials }}
+              </div>
             </div>
-            <div class="user-avatar" :aria-label="adminName">
-              {{ adminInitials }}
-            </div>
-          </div>
         </div>
       </header>
 
@@ -231,14 +221,15 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
     </div>
   </div>
 
+   <ToastStack />
 
-  <ConfirmModal
-    v-model="showLogoutConfirm"
-    title="Logout"
-    :message="t('confirmLogout') === 'confirmLogout' ? 'Are you sure you want to logout?' : t('confirmLogout')"
-    :cancel-text="t('cancel') === 'cancel' ? 'Cancel' : t('cancel')"
-    confirm-text="Yes"
-    variant="danger"
-    @confirm="handleLogout"
-  />
+   <ConfirmModal
+     v-model="showLogoutConfirm"
+     title="Logout"
+     message="Are you sure you want to logout?"
+     cancel-text="Cancel"
+     confirm-text="Yes, Logout"
+     variant="danger"
+     @confirm="handleLogout"
+   />
 </template>

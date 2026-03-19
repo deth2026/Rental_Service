@@ -28,6 +28,10 @@ const editImagePreview = ref('')
 
 const showDeleteConfirm = ref(false)
 const deleteTarget = ref(null)
+const isCreating = ref(false)
+const isUpdating = ref(false)
+const deletingShopId = ref(null)
+const statusChangingShopId = ref(null)
 
 const normalizedQuery = computed(() => String(route.query.q || '').trim().toLowerCase())
 
@@ -171,7 +175,7 @@ const resolveShopImageUrl = (value) => {
 }
 
 const shopImage = (shop) => {
-  const value = shop?.img_url || shop?.image_url || shop?.image || shop?.photo
+  const value = shop?.img_url_full || shop?.img_url || shop?.image_url || shop?.image || shop?.photo
   return resolveShopImageUrl(value)
 }
 
@@ -224,6 +228,7 @@ const closeCreate = () => {
 }
 
 const submitCreate = async () => {
+  if (isCreating.value) return
   const name = String(createForm.value.name || '').trim()
   const address = String(createForm.value.address || '').trim()
   if (!name || !address) {
@@ -232,6 +237,7 @@ const submitCreate = async () => {
   }
 
   try {
+    isCreating.value = true
     let payload = {
       name,
       address,
@@ -262,6 +268,8 @@ const submitCreate = async () => {
     page.value = 1
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to create shop.')
+  } finally {
+    isCreating.value = false
   }
 }
 
@@ -289,6 +297,7 @@ const closeEdit = () => {
 }
 
 const submitEdit = async () => {
+  if (isUpdating.value) return
   const id = editForm.value.id
   if (!id) return
   const name = String(editForm.value.name || '').trim()
@@ -299,6 +308,7 @@ const submitEdit = async () => {
   }
 
   try {
+    isUpdating.value = true
     let payload = {
       name,
       address,
@@ -324,6 +334,8 @@ const submitEdit = async () => {
     closeEdit()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to update shop.')
+  } finally {
+    isUpdating.value = false
   }
 }
 
@@ -335,32 +347,43 @@ const requestDelete = (shop) => {
 const confirmDelete = async () => {
   const shop = deleteTarget.value
   if (!shop?.id) return
+  if (deletingShopId.value) return
   try {
+    deletingShopId.value = shop.id
     await admin.deleteShop(shop.id)
     toast.success('Shop deleted.')
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to delete shop.')
   } finally {
+    deletingShopId.value = null
     showDeleteConfirm.value = false
     deleteTarget.value = null
   }
 }
 
 const approve = async (shop) => {
+  if (!shop?.id || statusChangingShopId.value) return
   try {
+    statusChangingShopId.value = shop.id
     await admin.setShopStatus(shop.id, 'active')
     toast.success('Shop approved.')
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to approve shop.')
+  } finally {
+    statusChangingShopId.value = null
   }
 }
 
 const disable = async (shop) => {
+  if (!shop?.id || statusChangingShopId.value) return
   try {
+    statusChangingShopId.value = shop.id
     await admin.setShopStatus(shop.id, 'inactive')
     toast.info('Shop disabled.')
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to disable shop.')
+  } finally {
+    statusChangingShopId.value = null
   }
 }
 
@@ -460,10 +483,10 @@ onMounted(() => {
               </td>
               <td><span :class="statusBadgeClass(shop.status)">{{ statusLabel(shop.status) }}</span></td>
               <td class="actions">
-                <button type="button" class="icon-action" title="Edit" @click="openEdit(shop)"><i class="fa-regular fa-pen-to-square"></i></button>
-                <button type="button" class="icon-action" title="Delete" @click="requestDelete(shop)"><i class="fa-regular fa-trash-can"></i></button>
-                <button type="button" class="icon-action" title="Disable" @click="disable(shop)"><i class="fa-regular fa-circle-xmark"></i></button>
-                <button v-if="statusLabel(shop.status) === 'PENDING'" type="button" class="btn btn-soft" @click="approve(shop)">
+                <button type="button" class="icon-action" title="Edit" :disabled="isUpdating || isCreating || deletingShopId === shop.id || statusChangingShopId === shop.id" @click="openEdit(shop)"><i class="fa-regular fa-pen-to-square"></i></button>
+                <button type="button" class="icon-action" title="Delete" :disabled="deletingShopId === shop.id || isUpdating || isCreating" @click="requestDelete(shop)"><i class="fa-regular fa-trash-can"></i></button>
+                <button type="button" class="icon-action" title="Disable" :disabled="statusChangingShopId === shop.id || isUpdating || isCreating" @click="disable(shop)"><i class="fa-regular fa-circle-xmark"></i></button>
+                <button v-if="statusLabel(shop.status) === 'PENDING'" type="button" class="btn btn-soft" :disabled="statusChangingShopId === shop.id || isUpdating || isCreating" @click="approve(shop)">
                   Approve
                 </button>
               </td>
@@ -527,8 +550,10 @@ onMounted(() => {
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" @click="closeCreate">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="submitCreate">Create Shop</button>
+          <button type="button" class="btn btn-ghost" :disabled="isCreating" @click="closeCreate">Cancel</button>
+          <button type="button" class="btn btn-primary" :disabled="isCreating" @click="submitCreate">
+            {{ isCreating ? 'Creating...' : 'Create Shop' }}
+          </button>
         </div>
       </div>
     </div>
@@ -574,8 +599,10 @@ onMounted(() => {
         </div>
 
         <div class="modal-actions">
-          <button type="button" class="btn btn-ghost" @click="closeEdit">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="submitEdit">Save Changes</button>
+          <button type="button" class="btn btn-ghost" :disabled="isUpdating" @click="closeEdit">Cancel</button>
+          <button type="button" class="btn btn-primary" :disabled="isUpdating" @click="submitEdit">
+            {{ isUpdating ? 'Saving...' : 'Save Changes' }}
+          </button>
         </div>
       </div>
     </div>

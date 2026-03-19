@@ -13,6 +13,7 @@ import AdminDashboard from '../views/admin/Dashboard.vue';
 import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
+import AdminLayout from '../views/admin/AdminLayout.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -97,15 +98,69 @@ const router = createRouter({
     },
     {
       path: '/admin',
-      name: 'admin',
-      component: AdminDashboard,
-      meta: { requiresAuth: true, allowedRoles: ['admin'] }
-    },
-    {
-      path: '/admin/users',
-      name: 'admin-users',
-      component: () => import('../views/admin/UserManagement.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['admin'] }
+      component: AdminLayout,
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+      children: [
+        {
+          path: '',
+          name: 'admin-dashboard',
+          component: AdminDashboard
+        },
+        {
+          path: 'dashboard',
+          redirect: { name: 'admin-dashboard' }
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('../views/admin/UserManagement.vue')
+        },
+        {
+          path: 'shops',
+          name: 'admin-shops',
+          component: () => import('../views/admin/ShopManagement.vue')
+        },
+        {
+          path: 'vehicles',
+          name: 'admin-vehicles',
+          component: () => import('../views/admin/VehicleManagement.vue')
+        },
+        {
+          path: 'bookings',
+          name: 'admin-bookings',
+          component: () => import('../views/admin/BookingManagement.vue')
+        },
+        {
+          path: 'coupons',
+          name: 'admin-coupons',
+          component: () => import('../views/admin/CouponManagement.vue')
+        },
+        {
+          path: 'categories',
+          name: 'admin-categories',
+          component: () => import('../views/admin/CategoryManagement.vue')
+        },
+        {
+          path: 'cities',
+          name: 'admin-cities',
+          component: () => import('../views/admin/CityManagement.vue')
+        },
+        {
+          path: 'financials',
+          name: 'admin-financials',
+          component: () => import('../views/admin/FinancialManagement.vue')
+        },
+        {
+          path: 'reports',
+          name: 'admin-reports',
+          component: () => import('../views/admin/ReportManagement.vue')
+        },
+        {
+          path: 'settings',
+          name: 'admin-settings',
+          component: () => import('../views/admin/SettingManagement.vue')
+        }
+      ]
     },
     {
       path: '/vehicles',
@@ -128,7 +183,7 @@ const router = createRouter({
   ]
 });
 
-// Navigation guard to check authentication and authorization
+// Navigation guard
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isGuestOnly = to.matched.some(record => record.meta.guest);
@@ -136,21 +191,17 @@ router.beforeEach((to, from, next) => {
   const isAuth = isAuthenticated();
   const userRole = getUserRole();
 
-  // Redirect to login if authentication is required but user is not authenticated
   if (requiresAuth && !isAuth) {
     next('/login');
     return;
   }
 
-  // Redirect to dashboard if user is already authenticated and trying to access guest pages (login/register)
   if (isGuestOnly && isAuth) {
-    // Allow authenticated users to access login page (to switch accounts)
     const allowAuthenticated = to.matched.some(record => record.meta.allowAuthenticated);
     if (allowAuthenticated) {
       next();
       return;
     }
-    // Redirect based on role
     if (userRole === 'admin') {
       next('/admin');
     } else if (userRole === 'shop_owner') {
@@ -161,10 +212,8 @@ router.beforeEach((to, from, next) => {
     return;
   }
 
-  // Check role-based access control
   if (requiresAuth && isAuth && allowedRoles.length > 0) {
     if (!allowedRoles.includes(userRole)) {
-      // User doesn't have the required role, redirect to their appropriate dashboard
       if (userRole === 'admin') {
         next('/admin');
       } else if (userRole === 'shop_owner') {

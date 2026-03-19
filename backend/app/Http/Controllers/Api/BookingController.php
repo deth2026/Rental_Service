@@ -11,7 +11,15 @@ class BookingController extends Controller
 {
     public function index()
     {
-        return response()->json(Booking::paginate(15));
+        $bookings = Booking::with([
+            'user:id,name,email,phone',
+            'vehicle:id,brand,model,plate_number,shop_id',
+            'shop:id,name',
+        ])
+            ->orderByDesc('id')
+            ->get();
+
+        return response()->json($bookings);
     }
 
     public function customerBookings()
