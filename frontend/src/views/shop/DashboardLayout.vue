@@ -1737,14 +1737,14 @@ const iconSvg = (name) => {
               <p class="upload-help">
                 Drag or drop a square image (PNG/JPG/WEBP) for your storefront.
               </p>
-              <input
-                ref="shopImageInputRef"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                class="hidden-file-input"
-                @change="onShopImageChange"
-              />
-            </section>
+            <input
+              ref="shopImageInputRef"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              class="hidden-file-input"
+              @change="onShopImageChange"
+            />
+          </div>
 
             <div class="panel-header">
               <div>

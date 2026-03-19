@@ -1,25 +1,18 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const router = useRouter()
-const route = useRoute()
 
 const loading = ref(true)
 const error = ref('')
 const promotions = ref([])
 const activeFilter = ref('all')
 const dealsSection = ref(null)
-
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', route: '#' },
-  { label: 'Promotions', route: '/promotions' }
-]
 
 const filterItems = [
   { id: 'all', label: 'All Deals', icon: 'fa-solid fa-circle-dot' },
@@ -88,38 +81,12 @@ const fallbackCoupons = [
   }
 ]
 
-const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-
-const activeNav = computed(() => {
-  const currentPath = route.path
-  const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-  return matchedItem?.label || 'Promotions'
-})
-
-const notify = (message) => {
-  window.alert(message)
-}
-
-const openProfile = () => {
-  router.push('/user/profile')
-}
-
 const handleLogout = async () => {
   await userService.logout()
   localStorage.removeItem('auth_token')
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   router.push('/login')
-}
-
-const setActiveNav = (item) => {
-  if (item.route) {
-    router.push(item.route)
-    return
-  }
-
-  notify('My Bookings page is not available yet.')
 }
 
 const inferCategory = (coupon, index) => {
@@ -271,29 +238,7 @@ onMounted(fetchPromotions)
 
 <template>
   <div class="promotion-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item.label"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item.label }"
-          @click="setActiveNav(item)"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar @logout-request="handleLogout" />
 
     <main>
       <section class="hero-section">
@@ -390,119 +335,6 @@ onMounted(fetchPromotions)
 </template>
 
 <style scoped>
-.promotion-page {
-  min-height: 100vh;
-  background: #f3f6fb;
-  color: #10213a;
-}
-
-.btn-reset {
-  border: 0;
-  background: transparent;
-  padding: 0;
-}
-
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  width: 110%;
-  height: 80px;
-  display: flex; 
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  /* padding: 0 30px 0 40px; */
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  backdrop-filter: blur(14px);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 1.2rem;
-  font-weight: 800;
-  margin-left: -30px;
-}
-
-.brand-icon {
-  display: flex;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  color: #fff;
-
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav-link {
-  padding: 10px 16px;
-  border-radius: 999px;
-  color: #4b5563;
-  font-size: 0.98rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-link:hover,
-.nav-link.active {
-  background: #e8f0ff;
-  color: #165df5;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.user-display-name {
-  font-weight: 600;
-  color: #334155;
-}
-
-.avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: none;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, #3b82f6, #1e293b);
-  color: #fff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: none;
-  background: #fee2e2;
-  color: #dc2626;
-  font-weight: 700;
-  cursor: pointer;
-}
-
 .hero-section {
   position: relative;
   min-height: 600px;
@@ -782,44 +614,6 @@ onMounted(fetchPromotions)
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-}
-
-@media (max-width: 1100px) {
-  .topbar {
-    padding: 16px 20px;
-  }
-
-  .promo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 820px) {
-  .topbar {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .nav-links,
-  .top-actions {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-
-  .hero-content {
-    margin-left: 0;
-    max-width: 100%;
-  }
-
-  .promo-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .section-footer {
-    flex-direction: column;
-    text-align: center;
-  }
 }
 
 @media (max-width: 640px) {

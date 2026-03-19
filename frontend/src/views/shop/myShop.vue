@@ -36,10 +36,6 @@ const createForm = reactive({
   longitude: "",
   status: "active",
   font: "Modern Sans-serif",
-  primary_color: "#2563eb",
-  accent_color: "#10b981",
-  instagram: "",
-  facebook: "",
   img_url: "",
 });
 const fieldErrors = reactive({
@@ -50,32 +46,12 @@ const fieldErrors = reactive({
   description: "",
 });
 
-const colorPalette = [
-  "#2563eb",
-  "#0ea5e9",
-  "#10b981",
-  "#f97316",
-  "#f43f5e",
-  "#a855f7",
-  "#fbbf24",
-  "#94a3b8",
-];
-const accentPalette = ["#111827", "#1f2937", "#4c1d95", "#0f172a", "#1d4ed8"];
 const fontOptions = [
   "Modern Sans-serif",
   "Classic Serif",
   "Minimalist",
   "Bold Display",
 ];
-const previewSizes = ["XS", "S", "M", "L", "XL", "XXL"];
-
-const setPrimaryColor = (color) => {
-  createForm.primary_color = color;
-};
-
-const setAccentColor = (color) => {
-  createForm.accent_color = color;
-};
 
 const asArray = (payload) => payload?.data || payload || [];
 
@@ -231,10 +207,6 @@ const resetForm = () => {
   createForm.longitude = "";
   createForm.status = "active";
   createForm.font = fontOptions[0];
-  createForm.primary_color = colorPalette[0];
-  createForm.accent_color = accentPalette[0];
-  createForm.instagram = "";
-  createForm.facebook = "";
   createForm.img_url = "";
   fieldErrors.name = "";
   fieldErrors.status = "";
@@ -748,19 +720,6 @@ onBeforeUnmount(() => {
                 <strong>Address:</strong>
                 {{ createForm.address || 'Add your location' }}
               </p>
-              <div class="myshop-preview-colors">
-                <span>Palette</span>
-                <div class="myshop-color-chip-preview">
-                  <span
-                    class="chip"
-                    :style="{ backgroundColor: createForm.primary_color }"
-                  ></span>
-                  <span
-                    class="chip"
-                    :style="{ backgroundColor: createForm.accent_color }"
-                  ></span>
-                </div>
-              </div>
               <div class="myshop-preview-price-row">
                 <div class="myshop-preview-price">
                   <span class="myshop-preview-price-value">$199.00</span>
@@ -769,25 +728,6 @@ onBeforeUnmount(() => {
                 <div class="myshop-preview-rating">
                   <span>4.8/5</span>
                   <small>(2.1k reviews)</small>
-                </div>
-              </div>
-              <div class="myshop-preview-sizes">
-                <p>Sizes</p>
-                <div class="myshop-size-chips">
-                  <span v-for="size in previewSizes" :key="size" class="myshop-size-chip">{{
-                    size
-                  }}</span>
-                </div>
-              </div>
-              <div class="myshop-preview-color-row">
-                <p>Colors</p>
-                <div class="myshop-preview-color-swatches">
-                  <span
-                    v-for="color in colorPalette"
-                    :key="`preview-${color}`"
-                    class="myshop-color-dot"
-                    :style="{ backgroundColor: color }"
-                  ></span>
                 </div>
               </div>
               <p class="myshop-preview-font">Font · {{ createForm.font }}</p>
@@ -905,41 +845,6 @@ onBeforeUnmount(() => {
                   </label>
                 </div>
 
-                <div class="myshop-palette-section">
-                  <div>
-                    <p class="section-kicker">Colors</p>
-                    <h4>Shop Palette</h4>
-                  </div>
-                  <div class="myshop-color-group">
-                    <div class="myshop-color-label">Primary Colour</div>
-                    <div class="myshop-color-palette-grid">
-                      <button
-                        v-for="color in colorPalette"
-                        :key="`primary-${color}`"
-                        type="button"
-                        class="myshop-color-chip"
-                        :style="{ backgroundColor: color }"
-                        :class="{ selected: createForm.primary_color === color }"
-                        @click="setPrimaryColor(color)"
-                      ></button>
-                    </div>
-                  </div>
-                  <div class="myshop-color-group">
-                    <div class="myshop-color-label">Accent Colour</div>
-                    <div class="myshop-color-palette-grid">
-                      <button
-                        v-for="color in accentPalette"
-                        :key="`accent-${color}`"
-                        type="button"
-                        class="myshop-color-chip accent"
-                        :style="{ backgroundColor: color }"
-                        :class="{ selected: createForm.accent_color === color }"
-                        @click="setAccentColor(color)"
-                      ></button>
-                    </div>
-                  </div>
-                </div>
-
                 <label class="myshop-font-select">
                   <span>Shop Font</span>
                   <select v-model="createForm.font">
@@ -962,31 +867,6 @@ onBeforeUnmount(() => {
                   </small>
                 </label>
 
-                <div class="myshop-social-section">
-                  <p>Social Links</p>
-                  <label>
-                    <span>Instagram</span>
-                    <div class="myshop-addon-input">
-                      <span>@</span>
-                      <input
-                        v-model="createForm.instagram"
-                        type="text"
-                        placeholder="yourhandle"
-                      />
-                    </div>
-                  </label>
-                  <label>
-                    <span>Facebook</span>
-                    <div class="myshop-addon-input">
-                      <span>facebook.com/</span>
-                      <input
-                        v-model="createForm.facebook"
-                        type="text"
-                        placeholder="yourhandle"
-                      />
-                    </div>
-                  </label>
-                </div>
               </div>
             </div>
           </div>

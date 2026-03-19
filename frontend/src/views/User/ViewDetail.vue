@@ -1,33 +1,17 @@
 <template>
   <div class="motoride-container">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          <i :class="getNavIcon(item)" class="nav-icon"></i>
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNav"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+      @nav-click="setActiveNav"
+    />
 
     <main class="content">
       <p v-if="isLoading" class="action-message">Loading vehicle details...</p>
       <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
+      <p v-else-if="actionMessage" class="action-message">{{ actionMessage }}</p>
 
       <template v-else>
         <!-- Top Row: Image Vehicle and Booking Details -->
@@ -354,61 +338,26 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
-import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import UserNavbar from '@/components/UserNavbar.vue';
 
 const router = useRouter();
 const route = useRoute();
 
-const navItems = ["Home", "View Details", "Bookings"];
+const navItems = [
+  { label: "Home", route: "/view_shop" },
+  { label: "View Details", fallbackMessage: "View Details is not available yet." },
+  { label: "Bookings", fallbackMessage: "Bookings is not available yet." }
+];
 const activeNav = ref("Home");
 const actionMessage = ref("");
-const avatarLoadFailed = ref(false);
-const currentUser = computed(() => userService.getCurrentUser());
-const userDisplayName = computed(() => currentUser.value?.name || "customer");
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return "";
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, "/").replace(/^\/+/, "");
-  if (normalized.startsWith("storage/")) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return "";
-  const src =
-    currentUser.value?.avatar_url ||
-    currentUser.value?.profile_picture ||
-    currentUser.value?.img_url ||
-    "";
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (words.length === 0) return "CU";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
-});
 
 const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === "Home") {
-    router.replace("/view_shop");
+  activeNav.value = item.label;
+  if (item.label === "Home") {
+    actionMessage.value = "";
     return;
   }
-  actionMessage.value = `${item} is not available yet.`;
-};
-
-const openProfile = () => {
-  router.push("/user/profile");
+  actionMessage.value = `${item.label} is not available yet.`;
 };
 
 const handleLogout = async () => {
