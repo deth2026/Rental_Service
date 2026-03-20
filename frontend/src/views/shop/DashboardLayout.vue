@@ -8,7 +8,7 @@ import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
 import MyShop from "./myShop.vue";
 import LoyaltyPoints from "./Loyalty_points.vue";
-import Setting from "./Setting.vue";
+import Setting from "./setting.vue";
 import ActivityHistory from "./ActivityHistory.vue";
 import api, { shopApi, vehicleApi } from "@/services/api";
 import { getSessionUser, logoutUser } from "@/services/auth";
