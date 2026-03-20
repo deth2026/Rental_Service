@@ -2,9 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Booking;
+use App\Models\Rating;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -39,6 +43,23 @@ class Vehicle extends Model
     public function shop(): BelongsTo
     {
         return $this->belongsTo(Shop::class);
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function ratings(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            Rating::class,
+            Booking::class,
+            'vehicle_id', // Foreign key on bookings table
+            'booking_id', // Foreign key on ratings table
+            'id', // Local key on vehicles table
+            'id' // Intermediate key on bookings table
+        );
     }
 
     /**

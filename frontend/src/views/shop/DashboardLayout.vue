@@ -423,36 +423,52 @@ fetchCities();
 // Fetch vehicles from database
 const fetchVehicles = async () => {
   try {
+    // First get the shop to filter vehicles by shop_id
+    await fetchShop();
+    const shopId = shop.value?.id;
+    
+    // If no shop exists, don't fetch vehicles
+    if (!shopId) {
+      vehicles.value = [];
+      return;
+    }
+    
     const response = await vehicleApi.getAll();
-    vehicles.value = (response.data.data || response.data || []).map((v) => {
-      const normalizedStatus =
-        typeof v.status === "string" ? v.status.trim() : v.status;
-      const createdAtValue = v.created_at || v.create_at || v.createdAt || "";
-      return {
-        ...v,
-        name: v.name,
-        type: v.type,
-        category: v.type || v.category,
-        brand: v.brand,
-        model: v.model,
-        plate: v.plate_number,
-        plate_number: v.plate_number,
-        price: v.price_per_day,
-        price_per_day: v.price_per_day,
-        status: normalizedStatus || "Available",
-        description: v.description,
-        fuel: v.fuel_type,
-        fuel_type: v.fuel_type,
-        transmission: v.transmission,
-        createdAt: createdAtValue,
-        updatedAt: v.updated_at,
-        image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
-        image_url:
-          v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
-      };
-    });
+    const allVehicles = response.data.data || response.data || [];
+    
+    // Filter vehicles by shop_id
+    vehicles.value = allVehicles
+      .filter((v) => Number(v.shop_id) === Number(shopId))
+      .map((v) => {
+        const normalizedStatus =
+          typeof v.status === "string" ? v.status.trim() : v.status;
+        const createdAtValue = v.created_at || v.create_at || v.createdAt || "";
+        return {
+          ...v,
+          name: v.name,
+          type: v.type,
+          category: v.type || v.category,
+          brand: v.brand,
+          model: v.model,
+          plate: v.plate_number,
+          plate_number: v.plate_number,
+          price: v.price_per_day,
+          price_per_day: v.price_per_day,
+          status: normalizedStatus || "Available",
+          description: v.description,
+          fuel: v.fuel_type,
+          fuel_type: v.fuel_type,
+          transmission: v.transmission,
+          createdAt: createdAtValue,
+          updatedAt: v.updated_at,
+          image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
+          image_url:
+            v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
+        };
+      });
   } catch (error) {
     console.error("Error fetching vehicles:", error);
+    vehicles.value = [];
   }
 };
 

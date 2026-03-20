@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\RatingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -95,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
     Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
     Route::apiResource('bookings', BookingController::class);
+    Route::post('/bookings/{booking}/rating', [RatingController::class, 'store']);
     Route::apiResource('booking-status-logs', BookingStatusLogController::class);
     Route::apiResource('damage-reports', DamageReportController::class);
     Route::apiResource('feedback', FeedbackController::class);

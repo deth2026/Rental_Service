@@ -76,6 +76,8 @@ class VehicleResource extends JsonResource
             'updated_at' => $this->updated_at,
             // Include shop relationship if loaded
             'shop' => $this->whenLoaded('shop'),
+            'rating' => $this->ratings_count > 0 ? round($this->ratings_avg_rating, 1) : null,
+            'rating_count' => (int) ($this->ratings_count ?? 0),
         ];
     }
 }

@@ -3,6 +3,57 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/services/api'
 import '../../css/Payment.css'
 
+// Get current user's shop
+const getStoredUser = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const getCachedShop = (userId) => {
+  if (!userId || typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(`settings_shop_${userId}`)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const currentShop = ref(null)
+
+const loadShop = async () => {
+  const storedUser = getStoredUser()
+  if (!storedUser?.id) return null
+  
+  const cachedShop = getCachedShop(storedUser.id)
+  if (cachedShop) {
+    currentShop.value = cachedShop
+    return cachedShop
+  }
+  
+  try {
+    const response = await api.get('/shops')
+    const shops = response.data.data || response.data || []
+    const userShops = shops.filter((s) => Number(s.owner_id) === Number(storedUser.id))
+    if (userShops.length > 0) {
+      currentShop.value = userShops[0]
+      return userShops[0]
+    }
+  } catch (e) {
+    console.error('Error fetching shops:', e)
+  }
+  return null
+}
+
 const filter = ref('all')
 const dateFrom = ref('')
 const dateTo = ref('')
@@ -96,6 +147,18 @@ const fetchPayments = async () => {
   try {
     loading.value = true
     error.value = null
+    
+    // First load the shop to get shop_id
+    const shop = await loadShop()
+    const shopId = shop?.id
+    
+    // If no shop exists, show empty payments
+    if (!shopId) {
+      payments.value = []
+      loading.value = false
+      return
+    }
+    
     console.log('Fetching payments from /shop-payments...')
     
     const response = await api.get('/shop-payments')
@@ -104,7 +167,7 @@ const fetchPayments = async () => {
     const payload = response?.data
     console.log('Payload:', payload)
     
-    const data = Array.isArray(payload)
+    const allPayments = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.data)
         ? payload.data
@@ -112,8 +175,14 @@ const fetchPayments = async () => {
           ? payload.data.data
           : []
 
-    console.log('Final data array:', data)
-    payments.value = data.map(mapPaymentToRow)
+    // Filter payments by shop_id
+    const filteredPayments = allPayments.filter((p) => {
+      const paymentShopId = p.shop_id || p.booking?.shop_id || p.booking?.vehicle?.shop_id
+      return Number(paymentShopId) === Number(shopId)
+    })
+
+    console.log('Filtered payments by shop:', filteredPayments)
+    payments.value = filteredPayments.map(mapPaymentToRow)
     console.log('Mapped payments:', payments.value)
     
   } catch (err) {

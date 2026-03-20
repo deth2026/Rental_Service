@@ -124,7 +124,9 @@ const normalizeVehicle = (vehicle) => {
     description: vehicle.description || '',
     imageUrl: resolveVehicleImageUrl(imageUrl),
     photos: parsedPhotos,
-    photoUrls: vehicle.photo_urls || []
+    photoUrls: vehicle.photo_urls || [],
+    rating: typeof vehicle.rating === 'number' || !Number.isNaN(Number(vehicle.rating)) ? Number(vehicle.rating) : null,
+    ratingCount: Number(vehicle.rating_count ?? 0)
   }
 }
 
@@ -395,6 +397,12 @@ const openMap = () => {
                 <i class="fa-solid fa-gear"></i>
                 <span>{{ vehicle.transmission }}</span>
               </div>
+            </div>
+            
+            <div class="vehicle-rating" v-if="vehicle.rating">
+              <i class="fa-solid fa-star"></i>
+              <span>{{ vehicle.rating.toFixed(1) }}</span>
+              <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
             </div>
 
             <div class="vehicle-price">
@@ -849,6 +857,24 @@ const openMap = () => {
   background: #f3f4f6;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
+}
+
+.vehicle-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0.75rem;
+  color: #047857;
+  font-weight: 600;
+}
+
+.vehicle-rating i {
+  color: #fbbf24;
+}
+
+.vehicle-rating small {
+  font-size: 0.75rem;
+  color: #475569;
 }
 
 .detail-item i {

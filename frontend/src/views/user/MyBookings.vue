@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { vehicleService, userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
@@ -9,8 +9,15 @@ const router = useRouter()
 
 const activeTab = ref('all')
 const searchQuery = ref('')
+const visibleCount = ref(4)
 const showDetailModal = ref(false)
 const detailLoading = ref(false)
+const cancelModal = ref({
+  visible: false,
+  booking: null
+})
+const cancelLoading = ref(false)
+const cancelError = ref('')
 const detailError = ref('')
 const selectedBooking = ref(null)
 const selectedVehicle = ref(null)
@@ -18,6 +25,49 @@ const selectedVehicle = ref(null)
 const bookings = ref([])
 const loading = ref(true)
 const error = ref('')
+// Load skipped ratings from localStorage
+const loadSkippedRatings = () => {
+  try {
+    const stored = localStorage.getItem('ratingSkipped')
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+}
+
+// Save skipped ratings to localStorage
+const saveSkippedRatings = (data) => {
+  try {
+    localStorage.setItem('ratingSkipped', JSON.stringify(data))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+const ratingSkipped = reactive(loadSkippedRatings())
+const ratingStars = [1, 2, 3, 4, 5]
+const ratingOverlay = ref({
+  visible: false,
+  booking: null
+})
+const overlayRatingValue = ref(0)
+const overlayComment = ref('')
+const overlayLoading = ref(false)
+const overlayError = ref('')
+const pollingTimer = ref(null)
+const normalizeStatus = (status) => {
+  if (status === null || status === undefined) return ''
+  return String(status).toLowerCase().trim()
+}
+
+const isCompletedStatus = (status) => {
+  const normalized = normalizeStatus(status)
+  return normalized === 'completed' || normalized === 'complete'
+}
+
+const isBookingCompleted = (booking) => isCompletedStatus(booking?.status)
+const bookingStatusMap = ref({})
+const initialLoadDone = ref(false)
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
 
@@ -46,6 +96,7 @@ const fetchBookings = async () => {
     }
     const data = await response.json()
     bookings.value = Array.isArray(data) ? data : (data.data || [])
+    handleBookingStatusUpdates(bookings.value)
   } catch (e) {
     error.value = e.message || 'Unable to load bookings'
     console.error('Error fetching bookings:', e)
@@ -54,8 +105,26 @@ const fetchBookings = async () => {
   }
 }
 
-// Fetch bookings on mount
-fetchBookings()
+const POLL_INTERVAL_MS = 15000
+
+const startBookingPolling = () => {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+  }
+  fetchBookings()
+  pollingTimer.value = setInterval(fetchBookings, POLL_INTERVAL_MS)
+}
+
+onMounted(() => {
+  startBookingPolling()
+})
+
+onBeforeUnmount(() => {
+  if (pollingTimer.value) {
+    clearInterval(pollingTimer.value)
+    pollingTimer.value = null
+  }
+})
 
 const filteredBookings = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -78,6 +147,32 @@ const filteredBookings = computed(() => {
 
     return haystack.includes(q)
   })
+})
+
+const displayedBookings = computed(() => {
+  return filteredBookings.value.slice(0, visibleCount.value)
+})
+
+const hasMoreBookings = computed(() => {
+  return filteredBookings.value.length > visibleCount.value
+})
+
+const showMore = () => {
+  visibleCount.value += 4
+}
+
+const showLess = () => {
+  visibleCount.value = 4
+}
+
+const resetVisibleCount = () => {
+  visibleCount.value = 4
+}
+
+// Reset visible count when filters change
+import { watch } from 'vue'
+watch([activeTab, searchQuery], () => {
+  resetVisibleCount()
 })
 
 const getStatusClass = (status) => {
@@ -172,6 +267,61 @@ const closeDetails = () => {
   detailError.value = ''
 }
 
+const openCancelModal = (booking) => {
+  cancelModal.value = {
+    visible: true,
+    booking
+  }
+  cancelError.value = ''
+}
+
+const closeCancelModal = () => {
+  cancelModal.value = {
+    visible: false,
+    booking: null
+  }
+  cancelError.value = ''
+}
+
+const confirmCancelBooking = async () => {
+  const booking = cancelModal.value.booking
+  if (!booking?.id) return
+
+  cancelLoading.value = true
+  cancelError.value = ''
+
+  try {
+    const token = getStoredToken()
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const response = await fetch(`/api/bookings/${booking.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ status: 'cancelled' })
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.message || data.error || 'Failed to cancel booking')
+    }
+
+    // Update the booking in the local list
+    bookings.value = bookings.value.map((b) =>
+      b.id === booking.id ? { ...b, status: 'cancelled' } : b
+    )
+
+    closeCancelModal()
+  } catch (err) {
+    cancelError.value = err.message || 'Unable to cancel booking'
+  } finally {
+    cancelLoading.value = false
+  }
+}
+
 const goHome = () => {
   const role = getStoredUserRole()
 
@@ -234,6 +384,152 @@ const detailPricePerDay = computed(() => {
 })
 
 const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_price || 0))
+
+const getAuthHeaders = () => {
+  const token = getStoredToken()
+  const headers = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
+  }
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+  return headers
+}
+
+const openRatingOverlay = (booking) => {
+  overlayRatingValue.value = 0
+  overlayComment.value = ''
+  overlayError.value = ''
+  overlayLoading.value = false
+  ratingOverlay.value = {
+    visible: true,
+    booking
+  }
+}
+
+const closeRatingOverlay = (markSkip = false) => {
+  const bookingId = ratingOverlay.value.booking?.id
+  ratingOverlay.value = {
+    visible: false,
+    booking: null
+  }
+  overlayRatingValue.value = 0
+  overlayComment.value = ''
+  overlayError.value = ''
+  overlayLoading.value = false
+  if (markSkip && bookingId) {
+    ratingSkipped[bookingId] = true
+  }
+}
+
+const maybeShowRatingOverlay = () => {
+  if (ratingOverlay.value.visible) return
+  const nextBooking = bookings.value.find(
+    (b) => isBookingCompleted(b) && !b.rating && !ratingSkipped[b.id]
+  )
+  if (nextBooking) {
+    openRatingOverlay(nextBooking)
+  }
+}
+
+const handleBookingStatusUpdates = (allBookings) => {
+  const previousStatuses = { ...bookingStatusMap.value }
+  
+  // Find bookings that just changed to completed status
+  const newlyCompleted = initialLoadDone.value
+    ? allBookings.find((booking) => {
+        const prevStatus = previousStatuses[booking.id]
+        return (
+          !isCompletedStatus(prevStatus) &&
+          isCompletedStatus(booking.status) &&
+          !booking.rating &&
+          !ratingSkipped[booking.id]
+        )
+      })
+    : null
+
+  bookingStatusMap.value = allBookings.reduce((map, booking) => {
+    map[booking.id] = booking.status
+    return map
+  }, {})
+
+  if (!initialLoadDone.value) {
+    initialLoadDone.value = true
+    // Show rating immediately for already completed bookings that haven't been rated/skipped
+    maybeShowRatingOverlay()
+    return
+  }
+
+  // Show rating when booking status changes TO completed
+  if (newlyCompleted) {
+    openRatingOverlay(newlyCompleted)
+  }
+  // Don't keep prompting for other completed bookings
+}
+
+const selectOverlayRating = (value) => {
+  overlayRatingValue.value = value
+  overlayError.value = ''
+}
+
+const submitRating = async () => {
+  const booking = ratingOverlay.value.booking
+  if (!booking?.id) return
+
+  if (!overlayRatingValue.value) {
+    overlayError.value = 'Please choose 1-5 stars'
+    return
+  }
+
+  overlayLoading.value = true
+  overlayError.value = ''
+
+  try {
+    const response = await fetch(`/api/bookings/${booking.id}/rating`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        rating: overlayRatingValue.value,
+        comment: overlayComment.value || ''
+      })
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      overlayError.value = data.message || data.error || 'Unable to submit rating'
+      return
+    }
+
+    const data = await response.json()
+    markBookingRated(booking, data)
+    closeRatingOverlay()
+    // Don't call maybeShowRatingOverlay() - rating is optional, don't prompt for more
+  } catch (err) {
+    overlayError.value = err.message || 'Unable to submit rating'
+  } finally {
+    overlayLoading.value = false
+  }
+}
+
+const markBookingRated = (booking, ratingData) => {
+  if (!booking?.id) return
+  ratingSkipped[booking.id] = true
+  saveSkippedRatings(ratingSkipped) // Persist to localStorage
+  bookings.value = bookings.value.map((b) =>
+    b.id === booking.id ? { ...b, rating: ratingData } : b
+  )
+}
+
+const skipRating = () => {
+  const booking = ratingOverlay.value.booking
+  if (!booking?.id) return
+  ratingSkipped[booking.id] = true
+  saveSkippedRatings(ratingSkipped) // Persist to localStorage
+  closeRatingOverlay()
+  // Don't call maybeShowRatingOverlay() - stop prompting after skip
+}
+
 </script>
 
 <template>
@@ -288,7 +584,7 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
       <div v-else-if="filteredBookings.length === 0" class="empty-state">
         No bookings found for your search.
       </div>
-      <article v-for="booking in filteredBookings" :key="booking.id" class="booking-card">
+      <article v-for="booking in displayedBookings" :key="booking.id" class="booking-card">
         <div class="booking-image">
           <img :src="getBookingImage(booking)" :alt="booking.vehicle_name" class="vehicle-img" />
         </div>
@@ -307,13 +603,41 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
 
-          <button class="details-btn" @click="openDetails(booking)">View Details</button>
+          <div class="card-actions">
+            <button class="details-btn" @click="openDetails(booking)">View Details</button>
+            <button 
+              v-if="booking.status === 'pending' || booking.status === 'confirmed'" 
+              class="cancel-btn" 
+              @click="openCancelModal(booking)"
+            >
+              Cancel Booking
+            </button>
+          </div>
         </div>
 
         <div class="booking-price">
           <span class="price-value">{{ formatCurrency(booking.total_price) }}</span>
+          <div v-if="booking.rating" class="rating-stars-right" aria-label="Rated stars">
+            <span
+              v-for="star in ratingStars"
+              :key="`history-star-${booking.id}-${star}`"
+              class="rating-star"
+              :class="{ filled: booking.rating.rating >= star }"
+            >
+              ★
+            </span>
+          </div>
         </div>
       </article>
+      
+      <div class="see-more-container">
+        <button v-if="hasMoreBookings" class="see-more-btn" type="button" @click="showMore">
+          See More ({{ filteredBookings.length - visibleCount }} more)
+        </button>
+        <button v-else-if="visibleCount > 4" class="see-more-btn" type="button" @click="showLess">
+          Show Less
+        </button>
+      </div>
     </section>
 
     <div v-if="showDetailModal" class="detail-overlay" @click.self="closeDetails">
@@ -407,6 +731,94 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
     </div>
   </div>
 
-  <!-- Common Footer -->
+
+    <div
+      v-if="ratingOverlay.visible && isBookingCompleted(ratingOverlay.booking)"
+      class="rating-overlay-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Rate your completed booking"
+      @click.self="skipRating"
+    >
+    <div class="rating-alert-card">
+      <div class="rating-alert-hero">
+        <div class="rating-alert-icon">
+          <i class="fa-solid fa-star"></i>
+        </div>
+      </div>
+      <p class="rating-alert-title">Rate your experience</p>
+      <p class="rating-alert-subtitle">
+        {{ ratingOverlay.booking?.vehicle_name || 'Your rental' }} finished successfully.
+      </p>
+      <div class="rating-alert-stars">
+        <button
+          v-for="star in ratingStars"
+          :key="`overlay-${star}`"
+          type="button"
+          :class="{ active: overlayRatingValue >= star }"
+          @click="selectOverlayRating(star)"
+        >
+          ★
+        </button>
+      </div>
+      <textarea
+        v-model="overlayComment"
+        class="rating-alert-comment"
+        rows="3"
+        placeholder="Tell us what you enjoyed or how we can improve"
+      ></textarea>
+      <div class="rating-alert-actions">
+        <button
+          type="button"
+          class="rating-alert-submit"
+          :disabled="overlayLoading"
+          @click="submitRating"
+        >
+          {{ overlayLoading ? 'Submitting...' : 'Submit' }}
+        </button>
+        <button type="button" class="rating-alert-skip" @click="skipRating">
+          No, thanks
+        </button>
+      </div>
+      <p v-if="overlayError" class="rating-alert-error">{{ overlayError }}</p>
+    </div>
+  </div>
+
+  <!-- Cancel Booking Modal -->
+  <div v-if="cancelModal.visible" class="cancel-modal-backdrop" @click.self="closeCancelModal">
+    <div class="cancel-modal-card">
+      <div class="cancel-modal-header">
+        <h2>Cancel Booking</h2>
+        <button type="button" class="cancel-modal-close" @click="closeCancelModal">
+          &times;
+        </button>
+      </div>
+      <div class="cancel-modal-body">
+        <p>Are you sure you want to cancel this booking?</p>
+        <div class="cancel-modal-details">
+          <p><strong>Vehicle:</strong> {{ cancelModal.booking?.vehicle_name }}</p>
+          <p><strong>Booking ID:</strong> {{ cancelModal.booking?.booking_code }}</p>
+          <p><strong>Date:</strong> {{ formatDate(cancelModal.booking?.start_date) }} to {{ formatDate(cancelModal.booking?.end_date) }}</p>
+          <p><strong>Total:</strong> {{ formatCurrency(cancelModal.booking?.total_price) }}</p>
+        </div>
+        <p class="cancel-warning">Note: Cancellation may be subject to the shop's refund policy.</p>
+        <p v-if="cancelError" class="cancel-error">{{ cancelError }}</p>
+      </div>
+      <div class="cancel-modal-actions">
+        <button type="button" class="cancel-modal-cancel" @click="closeCancelModal">
+          Keep Booking
+        </button>
+        <button 
+          type="button" 
+          class="cancel-modal-confirm" 
+          :disabled="cancelLoading"
+          @click="confirmCancelBooking"
+        >
+          {{ cancelLoading ? 'Cancelling...' : 'Yes, Cancel Booking' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  
   <CommonFooter />
 </template>

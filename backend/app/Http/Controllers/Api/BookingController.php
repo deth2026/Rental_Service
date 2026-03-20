@@ -41,7 +41,7 @@ class BookingController extends Controller
             }
             
             $bookings = Booking::where('user_id', $user->id)
-                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs'])
+                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs', 'rating'])
                 ->orderBy('created_at', 'desc')
                 ->get();
             
@@ -77,8 +77,14 @@ class BookingController extends Controller
                     'image' => $vehicleImage,
                     'total_days' => $booking->total_days,
                     'daily_rate' => $booking->daily_rate,
-                    'status_logs' => $statusLogs,
-                ];
+                'status_logs' => $statusLogs,
+                'rating' => $booking->rating ? [
+                    'id' => $booking->rating->id,
+                    'rating' => $booking->rating->rating,
+                    'comment' => $booking->rating->comment,
+                    'created_at' => $booking->rating->created_at,
+                ] : null,
+            ];
             });
             
             return response()->json($formattedBookings);
