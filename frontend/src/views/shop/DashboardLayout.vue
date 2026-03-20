@@ -1757,7 +1757,10 @@ const iconSvg = (name) => {
     >
       <div class="shop-modal">
         <div class="shop-modal-header">
-          <h2>{{ shop ? "Edit Shop" : "Create Shop" }}</h2>
+          <div>
+            <h2>{{ shop ? "Edit Shop" : "Create New Shop" }}</h2>
+            <p class="shop-modal-sub">Add a new rental shop (pending approval by default).</p>
+          </div>
           <button class="close-btn" @click="shopModal = false">
             <svg
               viewBox="0 0 24 24"
@@ -1773,94 +1776,157 @@ const iconSvg = (name) => {
           </button>
         </div>
         <div class="shop-modal-content">
-          <!-- Shop Image Upload -->
-          <div class="form-group">
-            <label>Shop Image</label>
-            <input
-              ref="shopImageInputRef"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              style="display: none"
-              @change="onShopImageChange"
-            />
-            <div
-              class="shop-image-upload"
-              :class="{ 'has-image': shopImagePreview || shopForm.img_url }"
-              @click="triggerShopImagePicker"
-              @dragover.prevent="isShopImageDragOver = true"
-              @dragleave.prevent="isShopImageDragOver = false"
-              @drop.prevent="onShopImageDrop"
-            >
-              <div
-                v-if="shopImagePreview || shopForm.img_url"
-                class="image-preview-container"
-              >
+          <div class="shop-modal-grid">
+            <article class="shop-preview-panel">
+              <div class="shop-preview-image">
                 <img
+                  v-if="shopImagePreview || shopForm.img_url"
                   :src="shopImagePreview || shopForm.img_url"
                   alt="Shop preview"
                 />
-                <div class="image-overlay">
-                  <span>Click to change</span>
+                <div v-else class="shop-preview-placeholder">
+                  <svg
+                    viewBox="0 0 80 80"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <rect x="6" y="6" width="68" height="68" rx="16" />
+                    <path d="M22 34h36l-5 7-7-9-5 5-6-9-3 6z" />
+                  </svg>
                 </div>
               </div>
-              <div v-else class="upload-placeholder">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="40"
-                  height="40"
-                  fill="none"
-                  stroke="#94a3b8"
-                  stroke-width="1.5"
-                >
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 5 17 10"></polyline>
-                  <line x1="12" y1="5" x2="12" y2="16"></line>
-                </svg>
-                <p>Click to upload or drag image here</p>
-                <span>PNG / JPG / WEBP</span>
+              <div class="shop-preview-info">
+                <h3>{{ shopForm.name || shop?.name || "Untitled Shop" }}</h3>
+                <p>
+                  {{
+                    shopForm.description ||
+                      shop?.description ||
+                      "Describe your shop, fleet highlights or location to attract customers."
+                  }}
+                </p>
+                <p class="shop-preview-meta">
+                  {{ shopForm.address || shop?.address || "Address" }}
+                  <span>•</span>
+                  {{ shopForm.location || shop?.location || "City, Country" }}
+                </p>
+              </div>
+              <div class="shop-preview-status">
+                <span>Status</span>
+                <strong>{{ shop?.status || "Draft" }}</strong>
+              </div>
+            </article>
+
+            <section class="shop-details-panel">
+            <div class="upload-card">
+              <div class="upload-card__header">
+                <div>
+                  <h3>Upload shop cover</h3>
+                  <p>Drop an image or click to browse files.</p>
+                </div>
+              </div>
+              <input
+                ref="shopImageInputRef"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="visually-hidden"
+                @change="onShopImageChange"
+              />
+              <div
+                class="upload-dropzone"
+                :class="{ 'is-active': isShopImageDragOver }"
+                @click="triggerShopImagePicker"
+                @dragover.prevent="isShopImageDragOver = true"
+                @dragleave.prevent="isShopImageDragOver = false"
+                @drop.prevent="onShopImageDrop"
+              >
+                <div v-if="shopImagePreview || shopForm.img_url" class="upload-preview">
+                  <img
+                    :src="shopImagePreview || shopForm.img_url"
+                    alt="Shop preview"
+                  />
+                  <span>Click to change</span>
+                </div>
+                <div v-else class="upload-placeholder">
+                  <svg
+                    viewBox="0 0 32 32"
+                    width="46"
+                    height="46"
+                    fill="none"
+                    stroke="#2563eb"
+                    stroke-width="2"
+                  >
+                    <path d="M16 7v16"></path>
+                    <path d="M9 15l7-8 7 8"></path>
+                    <path d="M26 22v3a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-3"></path>
+                  </svg>
+                  <p>Drop an image or click to browse files</p>
+                  <span>PNG, JPG or WebP up to 5MB</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Shop Name -->
-          <div class="form-group">
-            <label>Shop Name *</label>
-            <input
-              v-model="shopForm.name"
-              type="text"
-              placeholder="Enter shop name"
-            />
-          </div>
-
-          <!-- City -->
-          <div class="form-group">
-            <label>City</label>
-            <select v-model="shopForm.city_id">
-              <option :value="null">Select City</option>
-              <option v-for="city in cities" :key="city.id" :value="city.id">
-                {{ city.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Address -->
-          <div class="form-group">
-            <label>Address *</label>
-            <input
-              v-model="shopForm.address"
-              type="text"
-              placeholder="Enter address"
-            />
-          </div>
-          <!-- Description -->
-          <div class="form-group">
-            <label>Description</label>
-            <textarea
-              v-model="shopForm.description"
-              rows="3"
-              placeholder="Describe your shop"
-            ></textarea>
-          </div>
+            <div class="form-card">
+              <div class="form-card__header">
+                <div>
+                  <h3>Shop Information</h3>
+                  <p>Fill in the key details to publish your shop listing quickly.</p>
+                </div>
+              </div>
+              <div class="form-card__body">
+                <div class="field-grid two-column">
+                  <label class="field">
+                    <span>Shop Name</span>
+                    <input
+                      class="rounded-input"
+                      v-model="shopForm.name"
+                      type="text"
+                      placeholder="e.g. Berlin Elite Rentals"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Address</span>
+                    <input
+                      class="rounded-input"
+                      v-model="shopForm.address"
+                      type="text"
+                      placeholder="Street, City, Country"
+                    />
+                  </label>
+                </div>
+                <div class="field-grid two-column">
+                  <label class="field">
+                    <span>Location</span>
+                    <input
+                      class="rounded-input"
+                      v-model="shopForm.location"
+                      type="text"
+                      placeholder="City, Country"
+                    />
+                  </label>
+                  <label class="field">
+                    <span>Phone</span>
+                    <input
+                      class="rounded-input"
+                      v-model="shopForm.phone"
+                      type="text"
+                      placeholder="+855..."
+                    />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Description</span>
+                  <textarea
+                    class="rounded-input"
+                    v-model="shopForm.description"
+                    rows="4"
+                    placeholder="Describe the shop, services or fleet."
+                  ></textarea>
+                </label>
+              </div>
+            </div>
+          </section>
+        </div>
         </div>
         <div class="shop-modal-footer">
           <button class="cancel-btn-modal" @click="shopModal = false">
@@ -4320,166 +4386,324 @@ textarea {
 }
 
 .shop-modal {
-  background: white;
-  border-radius: 12px;
+  background: #f7f8fb;
+  border-radius: 30px;
   width: 100%;
-  max-width: 500px;
+  max-width: 940px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
 }
 
 .shop-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 24px 32px;
+  border-bottom: 1px solid #edeff5;
 }
 
 .shop-modal-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1a1a1a;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
   margin: 0;
 }
 
+.shop-modal-sub {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
 .shop-modal-content {
-  padding: 24px;
-  overflow-y: auto;
+  padding: 32px 40px;
   flex: 1;
+  overflow-y: auto;
+  background: #f7f8fb;
 }
 
-.shop-image-upload {
-  border: 2px dashed #cbd5e1;
-  border-radius: 10px;
-  padding: 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 16px;
+.shop-modal-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 24px;
 }
 
-.shop-image-upload:hover {
-  border-color: #3b82f6;
-  background: #f8fafc;
+.shop-preview-panel {
+  background: #fff;
+  border-radius: 28px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
 }
 
-.shop-image-upload.has-image {
-  padding: 12px;
-}
-
-.image-preview-container {
-  position: relative;
+.shop-preview-image {
   width: 100%;
-  max-height: 200px;
-  border-radius: 8px;
+  height: 150px;
+  border-radius: 20px;
+  background: #edf0f5;
   overflow: hidden;
-}
-
-.image-preview-container img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-}
-
-.image-preview-container .image-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
 }
 
-.image-preview-container:hover .image-overlay {
-  opacity: 1;
+.shop-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.image-overlay span {
-  color: white;
-  font-size: 14px;
-  font-weight: 500;
+.shop-preview-placeholder {
+  width: 70px;
+  height: 70px;
+  color: #94a3b8;
+}
+
+.shop-preview-info h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.shop-preview-info p {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.shop-preview-meta {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.shop-preview-meta span {
+  color: #cbd5f5;
+}
+
+.shop-preview-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: #f5f6fb;
+  border: 1px solid #e5e7eb;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.shop-preview-status strong {
+  color: #0f172a;
+}
+
+.shop-details-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.upload-card,
+.form-card {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+}
+
+.upload-card__header,
+.form-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.upload-card__header h3,
+.form-card__header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.upload-card__header p,
+.form-card__header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.upload-dropzone {
+  border: 2px dashed rgba(249, 115, 22, 0.6);
+  border-radius: 18px;
+  padding: 28px;
+  text-align: center;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-dropzone.is-active {
+  border-color: #f97316;
+  background: #fff3e0;
+}
+
+.upload-preview {
+  width: 100%;
+  height: 160px;
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-preview span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.upload-placeholder svg {
+  margin-bottom: 6px;
+}
+
+.upload-placeholder p {
+  margin: 0;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.upload-placeholder span {
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.form-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.field-grid.two-column {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field span {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  font-size: 0.95rem;
+  font-family: "Inter", system-ui, sans-serif;
+  color: #0f172a;
+  background: #fcfcff;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rounded-input {
+  border-radius: 16px;
+  background: #f5f6fb;
+  border: 1px solid #dfe7f5;
+  font-size: 0.95rem;
+}
+
+.field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 
 .shop-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 20px 24px;
-  border-top: 1px solid #e2e8f0;
-  background: #f8fafc;
+  padding: 22px 32px;
+  border-top: 1px solid #edeff5;
+  background: #f7f8fb;
 }
 
 .save-shop-btn {
-  padding: 10px 24px;
+  padding: 12px 28px;
   border: none;
-  background: #3b82f6;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 999px;
+  background: #f97316;
+  color: #fff;
   font-weight: 600;
-  color: white;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 10px 25px rgba(249, 115, 22, 0.25);
 }
 
-.save-shop-btn:hover {
-  background: #2563eb;
+.save-shop-btn:hover:not(:disabled) {
+  background: #ea580c;
+  transform: translateY(-1px);
 }
 
 .save-shop-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-}
-
-.shop-modal .form-group {
-  margin-bottom: 16px;
-}
-
-.shop-modal .form-group:last-child {
-  margin-bottom: 0;
-}
-
-.shop-modal .form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: #475569;
-  margin-bottom: 6px;
-}
-
-.shop-modal .form-group input,
-.shop-modal .form-group select,
-.shop-modal .form-group textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #1a1a1a;
-  background: white;
-  transition: all 0.2s;
-  box-sizing: border-box;
-}
-
-.shop-modal .form-group input:focus,
-.shop-modal .form-group select:focus,
-.shop-modal .form-group textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.shop-modal .form-group textarea {
-  min-height: 80px;
-  resize: vertical;
+  box-shadow: none;
 }
 
 @media (max-width: 640px) {
@@ -4499,6 +4723,14 @@ textarea {
   .save-shop-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .shop-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shop-preview-panel {
+    order: 1;
   }
 }
 
