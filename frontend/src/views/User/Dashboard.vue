@@ -3,30 +3,22 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
-import UserFooter from '../../components/UserFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import CommonFooter from '../../components/CommonFooter.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const router = useRouter()
 const route = useRoute()
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', route: '#' },
+  { label: 'My Bookings', route: '/my-bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
-const activeNav = computed(() => {
+const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
   return matchedItem?.label || 'Home'
 })
-
-const notify = (message) => console.log(message)
-
-const setActiveNav = (item) => {
-  if (item.route && item.route !== route.path) {
-    router.push(item.route)
-  }
-}
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
@@ -303,31 +295,14 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="dashboard-wrapper">
-  <div class="rides-page">
-    <div class="rides-shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-          <span>Chong Choul</span>
-        </div>
-
-        <nav class="nav-links">
-          <button
-            v-for="item in navItems"
-            :key="item.label"
-            class="btn-reset nav-link"
-            :class="{ active: activeNav === item.label }"
-            @click="setActiveNav(item)"
-          >
-            {{ item.label }}
-          </button>
-        </nav>
-
-        <div class="top-actions">
-          <span class="user-display-name">{{ userDisplayName }}</span>
-          <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-        </div>
-      </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
+    <div class="rides-page">
+      <div class="rides-shell">
 
       <section class="slideshow-section">
       <div class="containers">
@@ -450,11 +425,11 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </section>
+      </div>
     </div>
-  </div>
 
-  <!-- Logout Confirmation Modal -->
-  <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
+    <!-- Logout Confirmation Modal -->
+    <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
     <div class="confirm-modal" @click.stop>
       <div class="confirm-icon">
         <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
@@ -468,7 +443,7 @@ onBeforeUnmount(() => {
     </div>
   </div>
 
-  <!-- Common Footer -->
-  <UserFooter />
+    <!-- Common Footer -->
+    <CommonFooter />
   </div>
 </template>

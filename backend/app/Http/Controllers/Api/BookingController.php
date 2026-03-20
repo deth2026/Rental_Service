@@ -4,33 +4,170 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class BookingController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $bookings = Booking::with([
-            'user:id,name,email,phone',
-            'vehicle:id,brand,model,plate_number,shop_id',
-            'shop:id,name',
-        ])
-            ->orderByDesc('id')
-            ->get();
+        $user = $request->user();
+        $query = Booking::with(['vehicle', 'user', 'shop'])
+            ->orderBy('created_at', 'desc');
 
-        return response()->json($bookings);
+        if ($user && $user->role === 'shop_owner') {
+            $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
+
+            if ($shopIds->isEmpty()) {
+                return response()->json([
+                    'data' => [],
+                    'message' => 'No shops found for this user. Please create a shop first.',
+                ]);
+            }
+
+            $query->whereIn('shop_id', $shopIds);
+        }
+
+        return response()->json($query->paginate(15));
     }
 
     public function customerBookings()
     {
-        $user = Auth::user();
-        $bookings = Booking::where('user_id', $user->id)
-            ->with(['user', 'vehicle', 'shop'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-        
-        return response()->json($bookings);
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            
+            $bookings = Booking::where('user_id', $user->id)
+                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            $formattedBookings = $bookings->map(function ($booking) {
+                $vehicle = $booking->vehicle;
+                $shop = $vehicle ? $vehicle->shop : null;
+                $vehicleImage = '';
+                if ($vehicle) {
+                    $vehicleImage = $vehicle->image_url_full ?? $vehicle->image_url ?? '';
+                }
+                
+                // Get status logs
+                $statusLogs = $booking->bookingStatusLogs->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'booking_id' => $log->booking_id,
+                        'status' => $log->status,
+                        'changed_at' => $log->changed_at,
+                    ];
+                });
+                
+                return [
+                    'id' => $booking->id,
+                    'vehicle_id' => $booking->vehicle_id,
+                    'vehicle_name' => $vehicle ? ($vehicle->brand . ' ' . $vehicle->model) : 'N/A',
+                    'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
+                    'shop_name' => $shop ? $shop->name : 'N/A',
+                    'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
+                    'start_date' => $booking->start_date,
+                    'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
+                    'total_price' => $booking->total_price,
+                    'status' => $booking->status,
+                    'image' => $vehicleImage,
+                    'total_days' => $booking->total_days,
+                    'daily_rate' => $booking->daily_rate,
+                    'status_logs' => $statusLogs,
+                ];
+            });
+            
+            return response()->json($formattedBookings);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get bookings for shop owner (bookings made at their shop)
+     */
+    public function shopOwnerBookings()
+    {
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['error' => 'Unauthorized'], 401);
+            }
+            
+            // Check if user has shop_owner role
+            if (!in_array($user->role, ['shop_owner', 'admin'])) {
+                return response()->json(['error' => 'Only shop owners can view shop bookings'], 403);
+            }
+            
+            // Get all shops owned by this user
+            $shops = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
+            
+            if ($shops->isEmpty()) {
+                return response()->json([]);
+            }
+            
+            // Get bookings for these shops with related data
+            $bookings = Booking::whereIn('shop_id', $shops)
+                ->with(['vehicle', 'user', 'bookingStatusLogs'])
+                ->orderBy('created_at', 'desc')
+                ->get();
+            
+            $formattedBookings = $bookings->map(function ($booking) {
+                $vehicle = $booking->vehicle;
+                $shop = optional($booking)->shop;
+                $vehicleImage = '';
+                if ($vehicle) {
+                    $vehicleImage = $vehicle->image_url_full ?? $vehicle->image_url ?? '';
+                }
+                
+                // Get customer info
+                $customer = $booking->user;
+                
+                // Get status logs - safely handle if null
+                $statusLogs = [];
+                if ($booking->bookingStatusLogs) {
+                    $statusLogs = $booking->bookingStatusLogs->map(function ($log) {
+                        return [
+                            'id' => $log->id,
+                            'booking_id' => $log->booking_id,
+                            'status' => $log->status,
+                            'changed_at' => $log->changed_at,
+                        ];
+                    });
+                }
+                
+                return [
+                    'id' => $booking->id,
+                    'vehicle_id' => $booking->vehicle_id,
+                    'vehicle_name' => $vehicle ? ($vehicle->brand . ' ' . $vehicle->model) : 'N/A',
+                    'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
+                    'shop_name' => $shop ? $shop->name : 'N/A',
+                    'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
+                    'start_date' => $booking->start_date,
+                    'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
+                    'total_price' => $booking->total_price,
+                    'status' => $booking->status,
+                    'image' => $vehicleImage,
+                    'total_days' => $booking->total_days,
+                    'daily_rate' => $booking->daily_rate,
+                    'status_logs' => $statusLogs,
+                    // Customer info for shop owner
+                    'customer_name' => $customer ? $customer->name : 'N/A',
+                    'customer_email' => $customer ? $customer->email : 'N/A',
+                    'customer_phone' => $customer ? $customer->phone : 'N/A',
+                ];
+            });
+            
+            return response()->json($formattedBookings);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -97,7 +234,27 @@ class BookingController extends Controller
 
     public function store(Request $_request)
     {
-        $record = Booking::create($_request->all());
+        // Get the vehicle to automatically assign shop_id
+        $vehicle = \App\Models\Vehicle::find($_request->vehicle_id);
+        
+        if (!$vehicle) {
+            return response()->json(['error' => 'Vehicle not found'], 404);
+        }
+        
+        // Add shop_id from the vehicle
+        $bookingData = $_request->all();
+        $bookingData['shop_id'] = $vehicle->shop_id;
+
+        $record = Booking::create($bookingData);
+
+        // Create status log entry
+        \App\Models\BookingStatusLog::create([
+            'booking_id' => $record->id,
+            'status' => $record->status ?? 'pending',
+            'changed_at' => now(),
+        ]);
+
+        NotificationService::bookingCreated($record);
 
         return response()->json($record, 201);
     }
@@ -109,7 +266,19 @@ class BookingController extends Controller
 
     public function update(Request $_request, Booking $booking)
     {
+        $oldStatus = $booking->status;
         $booking->update($_request->all());
+        
+        // Create status log entry if status changed
+        if (isset($_request->status) && $_request->status !== $oldStatus) {
+            \App\Models\BookingStatusLog::create([
+                'booking_id' => $booking->id,
+                'status' => $_request->status,
+                'changed_at' => now(),
+            ]);
+
+            NotificationService::bookingStatusChanged($booking->fresh(), $_request->status);
+        }
 
         return response()->json($booking->fresh());
     }

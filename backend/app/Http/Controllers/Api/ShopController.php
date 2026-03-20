@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Shop;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
@@ -35,6 +38,10 @@ class ShopController extends Controller
             'status' => 'nullable|string|in:active,inactive',
             // do NOT validate img_url here; see below
         ]);
+
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
         
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
@@ -89,6 +96,14 @@ class ShopController extends Controller
         }
 
         $record = Shop::create($payload);
+        try {
+            NotificationService::shopCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin notification for new shop', [
+                'error' => $exception->getMessage(),
+                'shop_id' => $record->id,
+            ]);
+        }
 
         return response()->json($record, 201);
     }
@@ -122,6 +137,10 @@ class ShopController extends Controller
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
 
         // validate img_url value type depending on upload or text
         if ($request->hasFile('img_url')) {
@@ -226,6 +245,18 @@ class ShopController extends Controller
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
+    }
+
+    /**
+     * Check whether the shops table contains the given column.
+     */
+    private function shopColumnExists(string $column): bool
+    {
+        static $cache = [];
+        if (!array_key_exists($column, $cache)) {
+            $cache[$column] = Schema::hasColumn('shops', $column);
+        }
+        return $cache[$column];
     }
 
     /**

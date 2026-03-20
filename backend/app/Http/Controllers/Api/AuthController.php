@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -38,6 +40,15 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
+
+        try {
+            NotificationService::userRegistered($user);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin registration notification', [
+                'error' => $exception->getMessage(),
+                'user_id' => $user->id,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Registration successful! Please check your email to verify your account.',

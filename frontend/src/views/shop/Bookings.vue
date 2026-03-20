@@ -1,11 +1,146 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import '../../css/Booking.css'
 
 const activeTab = ref('all')
 const searchQuery = ref('')
-
 const bookings = ref([])
+const loading = ref(true)
+const error = ref(null)
+const processing = ref(false)
+
+const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
+
+// Get user's shop info from localStorage or fetch
+const userShopId = ref(null)
+
+const fetchUserShop = async () => {
+  try {
+    const token = getStoredToken()
+    const headers = { Accept: 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    // Fetch current user to get their shop
+    const response = await fetch('/api/auth/me', { headers })
+    if (response.ok) {
+      const userData = await response.json()
+      // Check if user has a shop_id property or get from shops
+      if (userData.shop_id) {
+        userShopId.value = userData.shop_id
+      }
+    }
+  } catch (e) {
+    console.error('Error fetching user shop:', e)
+  }
+}
+
+const fetchShopBookings = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    const token = getStoredToken()
+    console.log('Token available:', !!token)
+    
+    const headers = { Accept: 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    // Use the main bookings endpoint and filter on frontend
+    console.log('Fetching from /api/bookings...')
+    const response = await fetch('/api/bookings', { headers })
+    console.log('Response status:', response.status)
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      const errorMsg = errorData.message || errorData.error || `HTTP error! status: ${response.status}`
+      throw new Error(errorMsg)
+    }
+    
+    const data = await response.json()
+    console.log('Bookings raw data:', data)
+    
+    // Get bookings from data.data (pagination) or directly
+    const allBookings = Array.isArray(data) ? data : (data.data || [])
+    
+    // Format the bookings data for display
+    bookings.value = allBookings.map(booking => {
+      // Get vehicle image - try different fields
+      const vehicleImage = booking.vehicle?.image_url_full || booking.vehicle?.image_url || booking.vehicle?.img_url || ''
+      console.log('Vehicle image for booking', booking.id, ':', vehicleImage)
+      
+      return {
+        id: booking.id,
+        vehicle_id: booking.vehicle_id,
+        vehicle_name: booking.vehicle?.name || booking.vehicle?.brand + ' ' + booking.vehicle?.model || 'N/A',
+        booking_code: 'BK-' + (booking.created_at ? new Date(booking.created_at).toISOString().slice(0,10).replace(/-/g,'') : '') + '-' + String(booking.id).padStart(4, '0'),
+        shop_name: booking.shop?.name || 'N/A',
+        shop_image: booking.shop?.img_url_full || booking.shop?.img_url || '',
+        start_date: booking.start_date,
+        end_date: booking.start_date ? new Date(new Date(booking.start_date).getTime() + (booking.total_days - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10) : null,
+        total_price: booking.total_price,
+        status: booking.status,
+        image: vehicleImage,
+        total_days: booking.total_days,
+        daily_rate: booking.daily_rate,
+        customer_name: booking.user?.name || 'N/A',
+        customer_email: booking.user?.email || 'N/A',
+        customer_phone: booking.user?.phone || 'N/A',
+      }
+    })
+    
+    console.log('Formatted bookings:', bookings.value)
+  } catch (e) {
+    error.value = e.message || 'Unable to load bookings'
+    console.error('Error fetching shop bookings:', e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const updateBookingStatus = async (bookingId, newStatus) => {
+  processing.value = true
+  try {
+    const token = getStoredToken()
+    const headers = { 
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const response = await fetch(`/api/bookings/${bookingId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ status: newStatus })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Failed to update booking')
+    }
+    
+    // Refresh bookings after update
+    await fetchShopBookings()
+  } catch (e) {
+    error.value = e.message || 'Failed to update booking'
+    console.error('Error updating booking:', e)
+  } finally {
+    processing.value = false
+  }
+}
+
+const acceptBooking = (bookingId) => {
+  if (confirm('Are you sure you want to accept this booking?')) {
+    updateBookingStatus(bookingId, 'confirmed')
+  }
+}
+
+const rejectBooking = (bookingId) => {
+  if (confirm('Are you sure you want to reject this booking?')) {
+    updateBookingStatus(bookingId, 'cancelled')
+  }
+}
+
+onMounted(() => {
+  fetchShopBookings()
+})
 
 const filteredBookings = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -21,6 +156,7 @@ const filteredBookings = computed(() => {
       b.booking_code,
       b.shop_name,
       b.status,
+      b.customer_name,
       formatDate(b.start_date),
       formatDate(b.end_date),
     ]
@@ -78,8 +214,8 @@ const getTotalDays = (start, end) => {
   <div class="bookings-page">
     <section class="bookings-panel">
       <div class="panel-head">
-        <h1>My Bookings</h1>
-        <p>View and manage your vehicle rentals.</p>
+        <h1>Shop Bookings</h1>
+        <p>View and manage customer bookings for your shop.</p>
       </div>
 
       <div class="controls-row">
@@ -96,7 +232,7 @@ const getTotalDays = (start, end) => {
             v-model="searchQuery"
             type="text"
             class="search-input"
-            placeholder="Search booking, shop, status, or date..."
+            placeholder="Search booking, customer, vehicle, or status..."
           />
           <button type="button" class="search-btn" aria-label="Search">
             <svg class="search-icon-svg" viewBox="0 0 24 24" aria-hidden="true">
@@ -109,7 +245,9 @@ const getTotalDays = (start, end) => {
     </section>
 
     <section class="booking-list-wrap">
-      <div v-if="filteredBookings.length === 0" class="empty-state">No bookings found for your search.</div>
+      <div v-if="loading" class="empty-state">Loading bookings...</div>
+      <div v-else-if="error" class="empty-state">{{ error }}</div>
+      <div v-else-if="filteredBookings.length === 0" class="empty-state">No bookings found for your search.</div>
 
       <article v-for="booking in filteredBookings" :key="booking.id" class="booking-card">
         <div class="booking-image">
@@ -122,15 +260,20 @@ const getTotalDays = (start, end) => {
             <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
           </div>
 
-          <p><span class="meta-label">Booking ID:</span> {{ booking.booking_code }}</p>
-          <p><span class="meta-label">Shop:</span> {{ booking.shop_name }}</p>
+          <p><span class="meta-label">Booking ID:</span> {{ booking.booking_code || 'N/A' }}</p>
+          <p><span class="meta-label">Customer:</span> {{ booking.customer_name || 'N/A' }}</p>
+          <p><span class="meta-label">Contact:</span> {{ booking.customer_phone || booking.customer_email || 'N/A' }}</p>
           <p>
             <span class="meta-label">Date:</span>
             {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
 
-          <button class="details-btn">View Details</button>
+          <div class="action-buttons" v-if="booking.status === 'pending'">
+            <button class="accept-btn" @click="acceptBooking(booking.id)" :disabled="processing">Accept</button>
+            <button class="reject-btn" @click="rejectBooking(booking.id)" :disabled="processing">Reject</button>
+          </div>
+          <button v-else class="details-btn">View Details</button>
         </div>
 
         <div class="booking-price">

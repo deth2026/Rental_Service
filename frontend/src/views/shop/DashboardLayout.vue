@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
 import Payments from "./Payments.vue";
 import DamageReports from "./Demage_reports.vue";
@@ -10,15 +10,50 @@ import MyShop from "./myShop.vue";
 import LoyaltyPoints from "./Loyalty_points.vue";
 import Setting from "./setting.vue";
 import ActivityHistory from "./ActivityHistory.vue";
-import api, { shopApi, vehicleApi } from "@/services/api";
+import NotificationOwner from "./Notification_owner.vue";
+import api, { bookingApi, shopApi, vehicleApi } from "@/services/api";
 import { getSessionUser, logoutUser } from "@/services/auth";
+import NotificationMenu from "@/components/NotificationMenu.vue";
+import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
+const route = useRoute();
 const toast = ref({ show: false, message: "", type: "success" });
 const showToast = (message, type = "success") => {
   toast.value = { show: true, message, type };
   setTimeout(() => (toast.value.show = false), 100);
+};
+
+const { unreadCount } = useNotifications();
+const showNotifications = ref(false);
+const notificationRoot = ref(null);
+
+const badgeLabel = computed(() => {
+  if (!unreadCount.value) return "";
+  return unreadCount.value > 9 ? "9+" : String(unreadCount.value);
+});
+
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value;
+};
+
+const closeNotifications = () => {
+  showNotifications.value = false;
+};
+
+const goToOwnerNotifications = () => {
+  router.push({ name: "shop-notifications" })
+}
+
+const handleDocumentClick = (event) => {
+  if (
+    showNotifications.value &&
+    notificationRoot.value &&
+    !notificationRoot.value.contains(event.target)
+  ) {
+    closeNotifications();
+  }
 };
 
 const sections = [
@@ -32,6 +67,7 @@ const sections = [
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
   { id: "activity", label: "Activity History", icon: "history" },
+  { id: "notifications", label: "Notifications", icon: "bell" },
   { id: "settings", label: "Settings", icon: "settings" },
 ];
 
@@ -132,9 +168,31 @@ watch(showUserMenu, (isOpen) => {
   }
 });
 
+watch(
+  () => router.currentRoute.value.fullPath,
+  () => {
+    closeNotifications();
+  }
+);
+
+watch(
+  () => route.meta.defaultSection,
+  (section) => {
+    if (!section) return;
+    const matching = sections.find((s) => s.id === section);
+    if (matching) {
+      active.value = section;
+    }
+  },
+  { immediate: true }
+);
+
+let initializeShopData = async () => {}
+
 const refreshSessionUser = () => {
   sessionUser.value = getSessionUser() || {};
   avatarLoadFailed.value = false;
+  initializeShopData().catch(() => {});
 };
 
 const onAvatarError = () => {
@@ -144,12 +202,14 @@ const onAvatarError = () => {
 onMounted(() => {
   window.addEventListener("storage", refreshSessionUser);
   window.addEventListener("user-updated", refreshSessionUser);
+  document.addEventListener("mousedown", handleDocumentClick);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("storage", refreshSessionUser);
   window.removeEventListener("user-updated", refreshSessionUser);
   clearUserMenuTimer();
+  document.removeEventListener("mousedown", handleDocumentClick);
 });
 const categories = ["Car", "Moto", "Bike"];
 const statuses = ["Available", "Rented", "Maintenance"];
@@ -188,6 +248,10 @@ const onMenuClick = (item) => {
   if (item.id === "vehicles") {
     loadOwnerShopName();
   }
+  if (item.id === "notifications") {
+    goToOwnerNotifications();
+    return;
+  }
 };
 
 const cancelLogout = () => {
@@ -218,6 +282,10 @@ const payments = ref([]);
 const feedback = ref([]);
 const coupons = ref([]);
 const loyalty = ref([]);
+
+// Dashboard loading states
+const isLoadingDashboard = ref(false);
+const dashboardError = ref(null);
 
 // Shop data
 const shop = ref(null);
@@ -284,6 +352,35 @@ const triggerShopImagePicker = () => {
 };
 
 // Fetch shop data
+const SHOP_CACHE_PREFIX = "settings_shop_";
+
+const shopCacheKey = (ownerId) => `${SHOP_CACHE_PREFIX}${ownerId}`;
+
+const getCachedShop = (ownerId) => {
+  if (!ownerId) return null;
+  try {
+    const raw = localStorage.getItem(shopCacheKey(ownerId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const setCachedShop = (ownerId, shopData) => {
+  if (!ownerId) return;
+  try {
+    if (!shopData) {
+      localStorage.removeItem(shopCacheKey(ownerId));
+      return;
+    }
+    localStorage.setItem(shopCacheKey(ownerId), JSON.stringify(shopData));
+  } catch {
+    // best effort
+  }
+};
+
 const fetchShop = async () => {
   try {
     const ownerId = Number(sessionUser.value?.id || 0);
@@ -300,7 +397,15 @@ const fetchShop = async () => {
       return Number(b.id || 0) - Number(a.id || 0);
     });
 
-    shop.value = myShops[0] || null;
+    const cached = getCachedShop(ownerId);
+    const cachedShop =
+      cached && myShops.find((entry) => Number(entry.id) === Number(cached.id));
+    const selectedShop = cachedShop || myShops[0] || null;
+
+    shop.value = selectedShop;
+    if (ownerId) {
+      setCachedShop(ownerId, selectedShop);
+    }
   } catch (error) {
     console.error("Error fetching shop:", error);
     shop.value = null;
@@ -416,9 +521,27 @@ const saveShop = async () => {
   }
 };
 
-// Load shop and cities on mount
-fetchShop();
+// Load cities on mount
 fetchCities();
+
+// Fetch shop owner bookings for dashboard stats
+const fetchShopBookings = async () => {
+  isLoadingDashboard.value = true;
+  dashboardError.value = null;
+  try {
+    const response = await api.get("/shop-bookings");
+    bookings.value = response.data || [];
+    console.log("Dashboard bookings loaded:", bookings.value.length);
+  } catch (error) {
+    console.error("Error fetching shop bookings:", error);
+    dashboardError.value = "Failed to load bookings. Please refresh.";
+    bookings.value = [];
+  } finally {
+    isLoadingDashboard.value = false;
+  }
+};
+
+fetchShopBookings();
 
 // Fetch vehicles from database
 const fetchVehicles = async () => {
@@ -565,7 +688,12 @@ const resolveOwnerShop = async () => {
   return shop.value;
 };
 
-loadOwnerShopName();
+initializeShopData = async () => {
+  await fetchShop();
+  await loadOwnerShopName();
+};
+
+initializeShopData().catch(() => {});
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -963,6 +1091,7 @@ const iconSvg = (name) => {
         </button>
       </div>
 
+
       <button class="menu-item logout-item" @click="showLogoutModal = true">
         <span class="menu-icon logout-icon" v-html="iconSvg('logout')"></span>
         <span class="menu-label">Logout</span>
@@ -981,10 +1110,22 @@ const iconSvg = (name) => {
           <h1>{{ sections.find((s) => s.id === active)?.label }}</h1>
         </div>
         <div class="topbar-right">
-          <button class="bell-btn">
-            <span class="bell-icon" v-html="iconSvg('bell')"></span>
-            <span class="bell-dot"></span>
-          </button>
+          <div class="notification-wrapper" ref="notificationRoot">
+            <button
+              type="button"
+              class="bell-btn notification-btn"
+              aria-label="Open notifications"
+              @click.stop="toggleNotifications"
+            >
+              <span class="bell-icon" v-html="iconSvg('bell')"></span>
+              <span v-if="badgeLabel" class="notification-count">{{ badgeLabel }}</span>
+            </button>
+            <transition name="notification-fade">
+              <div v-if="showNotifications" class="notification-popup">
+                <NotificationMenu :shop-id="shop?.id" />
+              </div>
+            </transition>
+          </div>
           <div class="user-box">
             <div class="user-dropdown" @click="toggleUserMenu">
               <div class="avatar">
@@ -1147,6 +1288,10 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'coupons'" class="coupons-view">
         <Coupons />
+      </section>
+
+      <section v-else-if="active === 'notifications'" class="notifications-view">
+        <NotificationOwner :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'loyalty'" class="loyalty-view">
@@ -2108,6 +2253,7 @@ const iconSvg = (name) => {
   background: rgba(34, 211, 238, 0.18);
   color: #22d3ee;
 }
+
 
 .main {
   flex: 1;
@@ -4354,5 +4500,59 @@ textarea {
     width: 100%;
     justify-content: center;
   }
+}
+
+.notification-wrapper {
+  position: relative;
+  margin-right: 16px;
+}
+
+.notification-btn {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.notification-btn:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.notification-count {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.notification-popup {
+  position: absolute;
+  top: 48px;
+  right: 0;
+  z-index: 1200;
+}
+
+
+.notification-fade-enter-active,
+.notification-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.notification-fade-enter-from,
+.notification-fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\FeedbackController;
 use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Api\LoyaltyPointController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
@@ -47,6 +49,11 @@ Route::get('/test', function () {
 // Protected routes - require authentication
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications', [NotificationController::class, 'store']);
+    Route::patch('/notifications/{notification}', [NotificationController::class, 'update']);
+    Route::patch('/notifications/mark-all', [NotificationController::class, 'markAllAsRead']);
+    Route::apiResource('messages', MessageController::class)->only(['index', 'store']);
 });
 
 // Admin only routes
@@ -118,4 +125,6 @@ Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->get('/shop-payment
 Route::middleware('auth:sanctum')->group(function () {
     // Customer can view their own bookings
     Route::get('/my-bookings', [BookingController::class, 'customerBookings']);
+    // Shop owner can view bookings for their shop
+    Route::get('/shop-bookings', [BookingController::class, 'shopOwnerBookings']);
 });

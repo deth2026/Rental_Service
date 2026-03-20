@@ -1,19 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
+import HomeView from '../views/HomeView.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
 import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Booking.vue';
+import UserBookings from '../views/User/MyBookings.vue';
 import PromotionView from '../views/User/Promotion.vue';
 import SettingUser from '../views/User/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
 import ShopVehicles from '../views/User/ShopVehicles.vue';
 import VehiclesByShop from '../views/User/VehiclesByShop.vue';
+import Booking from '../views/User/Booking.vue';
 import ViewDetail from '../views/User/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
+import UserNotifications from '../views/User/Notification.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -41,7 +43,9 @@ const router = createRouter({
     },
     {
       path: '/home',
-      redirect: '/'
+      name: 'landing',
+      component: HomeView,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/chooserole',
@@ -68,14 +72,36 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
     {
+      path: '/shop/notifications',
+      name: 'shop-notifications',
+      component: ShopDashboard,
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['shop_owner', 'admin'],
+        defaultSection: 'notifications'
+      }
+    },
+    {
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
+      path: '/booking/:id?',
+      name: 'booking',
+      component: Booking,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
       path: '/bookings/:id?',
       name: 'user-booking',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/my-bookings',
+      name: 'my-bookings',
       component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
@@ -95,6 +121,12 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingUser
+    },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: UserNotifications,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/admin',
@@ -156,6 +188,11 @@ const router = createRouter({
           component: () => import('../views/admin/ReportManagement.vue')
         },
         {
+          path: 'notifications',
+          name: 'admin-notifications',
+          component: () => import('../views/admin/Notification_admin.vue')
+        },
+        {
           path: 'settings',
           name: 'admin-settings',
           component: () => import('../views/admin/Admins_setting.vue')
@@ -184,6 +221,10 @@ const router = createRouter({
       name: 'shop-vehicles',
       component: ShopVehicles,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/login'
     }
   ]
 });

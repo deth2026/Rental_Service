@@ -129,4 +129,14 @@ export const loyaltyPointApi = {
   delete: (id) => api.delete(`/loyalty-points/${id}`)
 };
 
+// Bookings API calls
+export const bookingApi = {
+  getAll: () => api.get('/bookings'),
+  getById: (id) => api.get(`/bookings/${id}`),
+  create: (data) => api.post('/bookings', data),
+  update: (id, data) => api.put(`/bookings/${id}`, data),
+  delete: (id) => api.delete(`/bookings/${id}`),
+  getMyBookings: () => api.get('/my-bookings')
+};
+
 export default api;

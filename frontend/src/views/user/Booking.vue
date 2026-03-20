@@ -1,34 +1,25 @@
 <template>
   <div class="booking-checkout-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="true"
+      @logout-request="handleLogout"
+    />
 
     <div class="page-container">
 
       <div class="page-heading-row">
-        <h1>Checkout</h1>
-        <span class="step-pill">Step 2 of 3</span>
+        <div class="title-block">
+          <h1>Checkout</h1>
+          <span class="step-pill">Step 2 of 3</span>
+        </div>
+        <div class="top-actions">
+          <button class="btn-back-top" type="button" @click="goHome">
+            <span class="back-arrow" aria-hidden="true">←</span>
+            Back to Home
+          </button>
+        </div>
       </div>
 
       <div class="checkout-progress" aria-hidden="true">
@@ -517,6 +508,7 @@
         </div>
       </div>
     </div>
+    <CommonFooter />
   </div>
 </template>
 
@@ -525,17 +517,22 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
-import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import CommonFooter from '../../components/CommonFooter.vue';
+import UserNavbar from '@/components/UserNavbar.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
 const router = useRouter();
 const route = useRoute();
-
-// Header data from VehiclesByShop.vue
-const navItems = ['Home', 'View Details', 'Bookings'];
-const activeNav = ref('Home');
-const actionMessage = ref('');
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'View Details', fallbackMessage: 'View Details is not available yet.' },
+  { label: 'Bookings', route: '/bookings' }
+];
+const activeNavLabel = computed(() => {
+  const matched = navItems.find((item) => item.route && route.path.startsWith(item.route));
+  return matched?.label || 'Home';
+});
 const avatarLoadFailed = ref(false);
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -562,15 +559,6 @@ const userInitials = computed(() => {
 });
 
 // Header functions
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.replace('/view_shop');
-    return;
-  }
-  actionMessage.value = `${item} is not available yet.`;
-};
-
 const openProfile = () => {
   router.push('/user/profile');
 };
@@ -578,6 +566,10 @@ const openProfile = () => {
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
+};
+
+const goHome = () => {
+  router.push('/');
 };
 
 const onAvatarError = () => {
@@ -947,7 +939,7 @@ const saveBookingToDatabase = async (bookingData) => {
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
-    status: bookingData?.status || "pending",
+    status: "pending",
     deposit_amount: 0,
     deposit_status: "unpaid",
     rider_details: rental.value.riders,
