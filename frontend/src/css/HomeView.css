@@ -727,7 +727,11 @@
 }
 
 .home-page .footer {
-  background: #000;
+  background:
+    radial-gradient(1200px 600px at 10% 0%, rgba(57, 169, 225, 0.22), transparent 55%),
+    radial-gradient(1100px 620px at 90% 10%, rgba(37, 99, 235, 0.22), transparent 55%),
+    linear-gradient(180deg, #0b1020, #0f172a);
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
 }
 
 .home-page .footer::after {
@@ -784,6 +788,10 @@
 .footer-brand-logo .app-logo__mark {
   width: 180px;
   height: 180px;
+}
+
+.app-logo__mark{
+  background: #00d4ff;
 }
 
 .footer-brand-logo .app-logo__img {
