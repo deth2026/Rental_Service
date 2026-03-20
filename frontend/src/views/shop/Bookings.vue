@@ -13,6 +13,8 @@ const confirmationModal = ref({
   booking: null,
   action: ''
 })
+const showDetailModal = ref(false)
+const selectedBookingDetail = ref(null)
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
 
@@ -89,6 +91,9 @@ const fetchShopBookings = async () => {
         customer_name: booking.user?.name || 'N/A',
         customer_email: booking.user?.email || 'N/A',
         customer_phone: booking.user?.phone || 'N/A',
+        vehicle_details: booking.vehicle || null,
+        shop_details: booking.shop || null,
+        user_details: booking.user || null,
       }
     })
     
@@ -161,6 +166,39 @@ const confirmBookingAction = async () => {
   }
 }
 
+const markBookingComplete = async (bookingId) => {
+  if (!confirm('Notify the customer and mark this booking as completed?')) return
+  await updateBookingStatus(bookingId, 'completed')
+}
+
+const openBookingDetails = (booking) => {
+  selectedBookingDetail.value = booking
+  showDetailModal.value = true
+}
+
+const closeBookingDetails = () => {
+  showDetailModal.value = false
+  selectedBookingDetail.value = null
+}
+
+const detailVehicleData = computed(() => selectedBookingDetail.value?.vehicle_details || {})
+const detailCustomerData = computed(() => selectedBookingDetail.value?.user_details || {})
+const detailShopData = computed(() => selectedBookingDetail.value?.shop_details || {})
+const detailDaysCount = computed(() => {
+  if (!selectedBookingDetail.value) return 0
+  return getTotalDays(selectedBookingDetail.value.start_date, selectedBookingDetail.value.end_date) || 0
+})
+const detailPricePerDay = computed(() => {
+  const booking = selectedBookingDetail.value
+  if (!booking) return 0
+  if (booking.daily_rate) return Number(booking.daily_rate)
+  const total = Number(booking.total_price || 0)
+  const days = detailDaysCount.value || 1
+  return days > 0 ? total / days : total
+})
+const detailTotalAmount = computed(() => Number(selectedBookingDetail.value?.total_price || 0))
+const detailStatusText = computed(() => getStatusLabel(selectedBookingDetail.value?.status))
+const detailBookingCode = computed(() => selectedBookingDetail.value?.booking_code || `BK-${selectedBookingDetail.value?.id || ''}`)
 onMounted(() => {
   fetchShopBookings()
 })
@@ -293,25 +331,55 @@ const getTotalDays = (start, end) => {
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
 
-          <div class="action-buttons" v-if="booking.status === 'pending'">
-            <button
-              type="button"
-              class="accept-btn"
-              @click="openBookingConfirmation(booking, 'accept')"
-              :disabled="processing"
-            >
-              Accept
-            </button>
-            <button
-              type="button"
-              class="reject-btn"
-              @click="openBookingConfirmation(booking, 'reject')"
-              :disabled="processing"
-            >
-              Reject
-            </button>
+          <div class="action-buttons">
+            <template v-if="booking.status === 'pending'">
+              <button
+                type="button"
+                class="action-btn btn-green"
+                @click="openBookingDetails(booking)"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+                View
+              </button>
+              <button
+                type="button"
+                class="action-btn btn-green"
+                @click="openBookingConfirmation(booking, 'accept')"
+                :disabled="processing"
+              >
+                <i class="fa-solid fa-check"></i>
+                Accept
+              </button>
+              <button
+                type="button"
+                class="action-btn btn-red"
+                @click="openBookingConfirmation(booking, 'reject')"
+                :disabled="processing"
+              >
+                <i class="fa-solid fa-xmark"></i>
+                Reject
+              </button>
+            </template>
+            <template v-else-if="booking.status === 'confirmed'">
+              <button
+                type="button"
+                class="action-btn btn-gold"
+                @click="openBookingDetails(booking)"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+                View
+              </button>
+              <button
+                type="button"
+                class="action-btn btn-gold"
+                @click="markBookingComplete(booking.id)"
+                :disabled="processing"
+              >
+                <i class="fa-solid fa-star"></i>
+                Complete
+              </button>
+            </template>
           </div>
-          <button v-else class="details-btn">View Details</button>
         </div>
 
         <div class="booking-price">
@@ -368,6 +436,93 @@ const getTotalDays = (start, end) => {
                 ? 'Yes, accept the booking'
                 : 'Yes, reject the booking' }}
           </button>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="showDetailModal"
+      class="booking-detail-backdrop"
+      @click.self="closeBookingDetails"
+    >
+      <div class="booking-detail-card">
+        <button
+          type="button"
+          class="booking-detail-close"
+          aria-label="Close booking details"
+          @click="closeBookingDetails"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <div class="booking-detail-header">
+          <div>
+            <h3>{{ selectedBookingDetail?.vehicle_name || 'Booking Detail' }}</h3>
+            <p class="booking-detail-code">{{ detailBookingCode }}</p>
+          </div>
+          <span :class="['status-pill', getStatusClass(selectedBookingDetail?.status)]">
+            {{ detailStatusText }}
+          </span>
+        </div>
+
+        <div class="booking-detail-highlight">
+          <div class="highlight-chip">
+            <div class="chip-icon" aria-hidden="true">📅</div>
+            <div>
+              <span>Booked on</span>
+              <strong>{{ formatDate(selectedBookingDetail?.start_date) || 'TBD' }}</strong>
+            </div>
+          </div>
+          <div class="highlight-chip neon">
+            <div class="chip-icon" aria-hidden="true">⚡</div>
+            <div>
+              <span>Current status</span>
+              <strong>{{ detailStatusText }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-detail-cards">
+          <div class="detail-card">
+          <div class="detail-card-row">
+            <span>Duration</span>
+            <strong>{{ detailDaysCount }} day(s)</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Daily rate</span>
+              <strong>{{ formatCurrency(detailPricePerDay) }}</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Total</span>
+              <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
+            </div>
+          </div>
+          <div class="detail-card detail-card--info">
+            <div class="detail-card-row">
+              <span>Shop</span>
+              <strong>{{ selectedBookingDetail?.shop_name || detailShopData?.name || 'N/A' }}</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Customer</span>
+              <strong>{{ detailCustomerData?.name || selectedBookingDetail?.customer_name || 'N/A' }}</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Contact</span>
+              <strong>
+                {{ selectedBookingDetail?.customer_phone || selectedBookingDetail?.customer_email || detailCustomerData?.phone || 'N/A' }}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-detail-vehicle">
+          <h4>Vehicle specs</h4>
+          <div class="booking-detail-specs">
+            <span>Type: <strong>{{ detailVehicleData?.category || 'N/A' }}</strong></span>
+            <span>Brand: <strong>{{ detailVehicleData?.brand || 'N/A' }}</strong></span>
+            <span>Fuel: <strong>{{ detailVehicleData?.fuel_type || 'N/A' }}</strong></span>
+            <span>Transmission: <strong>{{ detailVehicleData?.transmission || 'N/A' }}</strong></span>
+            <span>Plate: <strong>{{ detailVehicleData?.plate || detailVehicleData?.plate_number || 'N/A' }}</strong></span>
+            <span>Status: <strong>{{ detailVehicleData?.status || 'N/A' }}</strong></span>
+          </div>
         </div>
       </div>
     </div>
