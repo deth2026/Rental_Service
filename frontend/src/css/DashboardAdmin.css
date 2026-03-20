@@ -473,6 +473,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+  
 }
 
 .page-title {
@@ -481,6 +482,7 @@
   line-height: 1.12;
   font-weight: 800;
   letter-spacing: -0.4px;
+  
 }
 
 .page-subtitle {

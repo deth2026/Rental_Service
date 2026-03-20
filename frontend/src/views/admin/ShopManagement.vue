@@ -416,7 +416,7 @@ onMounted(() => {
         <h1 class="page-title">Shop Management</h1>
         <p class="page-subtitle">Manage, verify, and monitor all registered rental shops.</p>
       </div>
-      <button type="button" class="btn btn-primary" @click="openCreate">
+      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="openCreate">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
         <span>Add New Shop</span>
       </button>

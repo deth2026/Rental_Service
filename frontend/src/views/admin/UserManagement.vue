@@ -215,6 +215,19 @@ const initials = (name) => {
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
 }
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return dateStr
+  return date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
 const isSelf = (user) => Number(user?.id) === currentUserId.value
 
 const registrationSeries = computed(() => {
@@ -702,7 +715,44 @@ watch(
               class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
-          <pre class="code-block">{{ JSON.stringify(selectedUser, null, 2) }}</pre>
+          <div v-if="selectedUser" class="user-detail-view">
+            <div class="detail-header">
+              <div class="user-avatar-large">
+                {{ initials(selectedUser.name) }}
+              </div>
+              <div class="user-main-info">
+                <h3>{{ selectedUser.name }}</h3>
+                <p class="user-email">{{ selectedUser.email }}</p>
+                <span :class="['role-badge', roleBadgeClass(selectedUser.role)]">{{ String(selectedUser.role || '').toUpperCase() }}</span>
+              </div>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>User ID</label>
+                <span>{{ selectedUser.id }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Phone</label>
+                <span>{{ selectedUser.phone || 'Not provided' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Status</label>
+                <span :class="statusClass(selectedUser)">{{ statusText(selectedUser) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Verified</label>
+                <span>{{ selectedUser.is_verified ? 'Yes' : 'No' }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Joined Date</label>
+                <span>{{ formatDate(selectedUser.created_at) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Last Login</label>
+                <span>{{ formatDate(selectedUser.last_login) || 'Never' }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -765,5 +815,84 @@ watch(
   overflow: auto;
   max-height: 52vh;
   font-size: 12px;
+}
+
+/* User Detail View Styles */
+.user-detail-view {
+  padding: 0;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--mp-border);
+  margin-bottom: 20px;
+}
+
+.user-avatar-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-main-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--mp-text);
+}
+
+.user-email {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: var(--mp-muted);
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mp-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-item span {
+  font-size: 14px;
+  color: var(--mp-text);
+  font-weight: 500;
+}
+
+.detail-item span.badge-active {
+  color: #10b981;
+}
+
+.detail-item span.badge-blocked {
+  color: #ef4444;
+}
+
+.detail-item span.badge-pending {
+  color: #f59e0b;
 }
 </style>

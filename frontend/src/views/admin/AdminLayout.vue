@@ -25,19 +25,19 @@ let searchTimer = null
 let clockTimer = null
 const nowTick = ref(Date.now())
 
-const navItems = [
-  { label: 'Dashboard', to: '/admin', icon: 'fa-solid fa-table-cells-large' },
-  { label: 'Shop Management', to: '/admin/shops', icon: 'fa-regular fa-building' },
-  { label: 'User Management', to: '/admin/users', icon: 'fa-regular fa-user' },
-  { label: 'Vehicle Management', to: '/admin/vehicles', icon: 'fa-solid fa-motorcycle' },
-  { label: 'Booking Management', to: '/admin/bookings', icon: 'fa-regular fa-calendar-check' },
-  { label: 'Coupons', to: '/admin/coupons', icon: 'fa-solid fa-ticket' },
-  { label: 'Categories', to: '/admin/categories', icon: 'fa-solid fa-tags' },
-  { label: 'Cities', to: '/admin/cities', icon: 'fa-solid fa-location-dot' },
-  { label: 'Financials', to: '/admin/financials', icon: 'fa-solid fa-dollar-sign' },
-  { label: 'Reports', to: '/admin/reports', icon: 'fa-solid fa-chart-column' },
-  { label: 'Settings', to: '/admin/settings', icon: 'fa-solid fa-gear' },
-]
+const navItems = computed(() => [
+  { label: t('dashboard'), to: '/admin', icon: 'fa-solid fa-table-cells-large' },
+  { label: t('shopManagement'), to: '/admin/shops', icon: 'fa-regular fa-building' },
+  { label: t('userManagement'), to: '/admin/users', icon: 'fa-regular fa-user' },
+  { label: t('vehicleManagement'), to: '/admin/vehicles', icon: 'fa-solid fa-motorcycle' },
+  { label: t('bookingManagement'), to: '/admin/bookings', icon: 'fa-regular fa-calendar-check' },
+  { label: t('coupons'), to: '/admin/coupons', icon: 'fa-solid fa-ticket' },
+  { label: t('categories'), to: '/admin/categories', icon: 'fa-solid fa-tags' },
+  { label: t('cities'), to: '/admin/cities', icon: 'fa-solid fa-location-dot' },
+  { label: t('financials'), to: '/admin/financials', icon: 'fa-solid fa-dollar-sign' },
+  { label: t('reports'), to: '/admin/reports', icon: 'fa-solid fa-chart-column' },
+  { label: t('settings'), to: '/admin/settings', icon: 'fa-solid fa-gear' },
+])
 
 const currentUser = computed(() => userService.getCurrentUser())
 const adminName = computed(() => currentUser.value?.name || 'Admin')
@@ -57,6 +57,14 @@ const adminInitials = computed(() => {
 })
 
 const activePath = computed(() => route.path)
+
+// Check if current page should hide search bar
+const shouldShowSearch = computed(() => {
+  const path = route.path
+  // Hide search on all admin pages
+  return !path.startsWith('/admin')
+})
+
 const isActive = (path) => {
   if (path === '/admin') return activePath.value === '/admin' || activePath.value === '/admin/'
   return activePath.value.startsWith(path)
@@ -122,10 +130,64 @@ watch(searchQuery, (value) => {
 
 onMounted(() => {
   adminStore.load().catch(() => {})
+  fetchUserProfile()
   clockTimer = window.setInterval(() => {
     nowTick.value = Date.now()
   }, 1000)
 })
+
+// Fetch user profile and store in localStorage
+const fetchUserProfile = async () => {
+  const token = localStorage.getItem('auth_token')
+  if (!token) return
+  try {
+    const response = await fetch('/api/auth/me', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    })
+    
+    // Handle 401 unauthorized - redirect to login
+    if (response.status === 401) {
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('user_name')
+      localStorage.removeItem('user_email')
+      localStorage.removeItem('user_phone')
+      localStorage.removeItem('user_job_title')
+      localStorage.removeItem('user_bio')
+      localStorage.removeItem('user_profile_picture')
+      router.push('/login')
+      return
+    }
+    
+    if (!response.ok) return
+    const data = await response.json()
+    const user = data.user || {}
+    
+    // Only update if we have valid user data (name or email)
+    if (user && (user.name || user.email)) {
+      // Preserve existing values if new values are empty
+      const existingName = localStorage.getItem('user_name')
+      const existingEmail = localStorage.getItem('user_email')
+      const existingPhone = localStorage.getItem('user_phone')
+      const existingJobTitle = localStorage.getItem('user_job_title')
+      const existingBio = localStorage.getItem('user_bio')
+      const existingProfilePicture = localStorage.getItem('user_profile_picture')
+      
+      localStorage.setItem('user', JSON.stringify(user))
+      localStorage.setItem('user_name', user.name || existingName || '')
+      localStorage.setItem('user_email', user.email || existingEmail || '')
+      localStorage.setItem('user_phone', user.phone || existingPhone || '')
+      localStorage.setItem('user_job_title', user.job_title || user.role || existingJobTitle || 'Super Admin')
+      localStorage.setItem('user_bio', user.bio || existingBio || '')
+      localStorage.setItem('user_profile_picture', user.profile_picture || user.avatar_url || existingProfilePicture || '')
+    }
+  } catch (error) {
+    console.error('Failed to fetch user profile:', error)
+  }
+}
 
 onBeforeUnmount(() => {
   if (searchTimer) window.clearTimeout(searchTimer)
@@ -163,21 +225,22 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
 
       <button type="button" class="admin-logout" @click="showLogoutConfirm = true">
         <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-        <span>Logout</span>
+        <span>{{ t('logout') }}</span>
       </button>
     </aside>
 
     <div class="admin-main">
       <header class="admin-topbar">
-        <form class="topbar-search" @submit.prevent="onSearchSubmit">
+        <form v-if="shouldShowSearch" class="topbar-search" @submit.prevent="onSearchSubmit">
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
           <input
             v-model="searchQuery"
             type="search"
-            placeholder="Search for shops, bookings, or users..."
+            :placeholder="t('searchPlaceholder')"
             aria-label="Search"
           />
         </form>
+        <div v-else class="topbar-search"></div>
 
         <div class="topbar-actions">
           <div class="topbar-time" :title="`Cambodia time (${CAMBODIA_TIMEZONE})`">
@@ -214,7 +277,7 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
         <div class="admin-content-inner">
           <RouterView />
           <footer class="admin-footer">
-            <span>© 2026 Chong Choul Rental Management System. All rights reserved.</span>
+            <span>{{ t('footerCopyright') }}</span>
           </footer>
         </div>
       </main>

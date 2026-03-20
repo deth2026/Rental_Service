@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\BookingController;
 use App\Http\Controllers\Api\BookingStatusLogController;
 use App\Http\Controllers\Api\CategoryController;
@@ -26,8 +27,12 @@ Route::post('/users/login', [UserController::class, 'login']);
 // Auth routes with /auth prefix
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/logout', [AuthController::class, 'logout']);
-Route::get('/auth/me', [AuthController::class, 'me']);
+
+// Protected auth routes - require authentication
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me']);
+});
 
 Route::middleware('auth:sanctum')->get('/auth-user', function (Request $request) {
     return $request->user();
@@ -49,6 +54,7 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::apiResource('users', UserController::class)->except(['create', 'edit']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('cities', CityController::class)->except(['index']);
+    Route::get('admin/stats', [AdminController::class, 'stats']);
 });
 
 // Public cities endpoint - needed for dropdowns in shop creation forms
@@ -73,9 +79,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Profile settings routes (from feature/setting.user)
+// These routes require authentication - MUST be after auth:sanctum is defined
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('users/{id}/update-profile', [UserController::class, 'updateProfile']);
-    Route::post('users/{id}/change-password', [UserController::class, 'changePassword']);
+    Route::post('/users/{id}/update-profile', [UserController::class, 'updateProfile']);
+    Route::post('/users/{id}/change-password', [UserController::class, 'changePassword']);
+    Route::post('/users/{id}/avatar', [UserController::class, 'uploadAvatar']);
+    Route::delete('/users/{id}/avatar', [UserController::class, 'removeAvatar']);
 });
 
 // Public shop routes (for customer/user shop listing)

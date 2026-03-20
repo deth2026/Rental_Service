@@ -37,6 +37,18 @@ class DatabaseSeeder extends Seeder
                 'is_verified' => true,
             ]
         );
+        
+        // Create admin@chongchoul.com user
+        \App\Models\User::updateOrCreate(
+            ['email' => 'admin@chongchoul.com'],
+            [
+                'name' => 'Admin User',
+                'phone' => '+855 12 345 678',
+                'password' => Hash::make('admin123'),
+                'role' => 'admin',
+                'is_verified' => true,
+            ]
+        );
 
         $shopOwner = \App\Models\User::updateOrCreate(
             ['email' => 'shop@example.com'],
@@ -61,7 +73,6 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-<<<<<<< HEAD
         // Create sample categories
         \App\Models\Category::create([
             'name' => 'Cars',
@@ -97,7 +108,7 @@ class DatabaseSeeder extends Seeder
         \App\Models\City::create([
             'name' => 'Sihanoukville'
         ]);
-=======
+
         // Create shops
         $shop1 = \App\Models\Shop::create([
             'owner_id' => $shopOwner->id,
@@ -202,7 +213,6 @@ class DatabaseSeeder extends Seeder
         \App\Models\City::create(['name' => 'Siem Reap', 'status' => 'active']);
         \App\Models\City::create(['name' => 'Battambang', 'status' => 'active']);
         \App\Models\City::create(['name' => 'Sihanoukville', 'status' => 'active']);
->>>>>>> 97fe194e17cb1f63475f30fa861bf80781395f7c
     }
 }
 

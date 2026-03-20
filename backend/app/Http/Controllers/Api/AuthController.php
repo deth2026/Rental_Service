@@ -100,10 +100,15 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;
+        
+        // Update last login time
+        $user->last_login = now();
+        $user->save();
 
         return response()->json([
             'user' => $user,
             'token' => $token,
+            'last_login' => $user->last_login,
         ]);
     }
 
@@ -112,8 +117,31 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated',
+                'user' => null,
+            ], 401);
+        }
+        
         return response()->json([
-            'user' => $request->user(),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'job_title' => $user->job_title,
+                'bio' => $user->bio,
+                'is_verified' => $user->is_verified,
+                'profile_picture' => $user->profile_picture,
+                'avatar_url' => $user->avatar_url,
+                'last_login' => $user->last_login,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+            ],
         ]);
     }
 

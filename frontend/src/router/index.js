@@ -158,7 +158,12 @@ const router = createRouter({
         {
           path: 'settings',
           name: 'admin-settings',
-          component: () => import('../views/admin/SettingManagement.vue')
+          component: () => import('../views/admin/Admins_setting.vue')
+        },
+        {
+          path: 'profile',
+          name: 'admin-profile',
+          component: () => import('../views/admin/Update_profile_admin.vue')
         }
       ]
     },

@@ -193,7 +193,7 @@ onMounted(load)
         <h1 class="page-title">Coupon Management</h1>
         <p class="page-subtitle">Create and manage discount coupons.</p>
       </div>
-      <button type="button" class="btn btn-primary" @click="openCreate">
+      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="openCreate">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
         <span>Add Coupon</span>
       </button>
