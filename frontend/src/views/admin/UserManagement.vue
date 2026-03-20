@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { useToast } from '../../composables/useToast.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
@@ -9,6 +9,7 @@ import userService from '../../services/userService.js'
 
 const admin = useAdminStore()
 const route = useRoute()
+const router = useRouter()
 const toast = useToast()
 
 const page = ref(1)
@@ -102,6 +103,20 @@ watch(totalPages, (next) => {
 watch([selectedRole, selectedStatus, showOnlyMe, query], () => {
   page.value = 1
 })
+
+const focusUserId = computed(() => Number(route.query.focusUser || 0))
+watch(
+  [() => focusUserId.value, () => (admin.state.users || []).length],
+  ([focus]) => {
+    if (!focus) return
+    const user = (admin.state.users || []).find((item) => Number(item.id) === focus)
+    if (!user) return
+    openEdit(user)
+    const nextQuery = { ...route.query }
+    delete nextQuery.focusUser
+    router.replace({ query: nextQuery })
+  }
+)
 
 const pagedUsers = computed(() => {
   const start = (page.value - 1) * perPage
@@ -215,7 +230,55 @@ const initials = (name) => {
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
 }
 
+const brokenAvatars = ref(new Set())
+const getUserAvatar = (user) => {
+  if (!user) return ''
+  return user.avatar_url || user.profile_picture || user.img_url || ''
+}
+const shouldShowAvatar = (user) => {
+  const id = Number(user?.id || 0)
+  if (!id) return false
+  const url = getUserAvatar(user)
+  return Boolean(url) && !brokenAvatars.value.has(id)
+}
+const handleAvatarError = (user) => {
+  const id = Number(user?.id || 0)
+  if (!id) return
+  const nextSet = new Set(brokenAvatars.value)
+  nextSet.add(id)
+  brokenAvatars.value = nextSet
+}
+
 const isSelf = (user) => Number(user?.id) === currentUserId.value
+
+const formatUserDate = (value) => {
+  if (!value) return '—'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return '—'
+  return parsed.toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
+}
+
+const selectedUserName = computed(() => selectedUser.value?.name || 'Unnamed user')
+const selectedUserEmailLabel = computed(() => selectedUser.value?.email || 'Not provided')
+const selectedUserPhoneLabel = computed(() => selectedUser.value?.phone || 'Not provided')
+const selectedUserRoleLabel = computed(() => {
+  if (!selectedUser.value?.role) return 'Role not set'
+  return roleLabel(selectedUser.value.role)
+})
+const selectedUserRoleClass = computed(() => roleBadgeClass(selectedUser.value?.role))
+const selectedUserStatusLabel = computed(() => {
+  if (!selectedUser.value) return 'Status unavailable'
+  return statusText(selectedUser.value)
+})
+const selectedUserJoinedLabel = computed(() => {
+  if (!selectedUser.value) return '—'
+  return formatUserDate(selectedUser.value.created_at || selectedUser.value.joined_at)
+})
+const selectedUserUpdatedLabel = computed(() => formatUserDate(selectedUser.value?.updated_at))
+const selectedUserAvatar = computed(() => getUserAvatar(selectedUser.value))
 
 const registrationSeries = computed(() => {
   const now = new Date()
@@ -553,7 +616,16 @@ watch(
           <tbody>
             <tr v-for="user in pagedUsers" :key="user.id">
               <td class="shop-cell">
-                <span class="user-bubble" aria-hidden="true">{{ initials(user.name) }}</span>
+                <span class="user-bubble" aria-hidden="true">
+                  <img
+                    v-if="shouldShowAvatar(user)"
+                    :src="getUserAvatar(user)"
+                    :alt="`${user.name || 'User'} avatar`"
+                    class="user-bubble__img"
+                    @error="handleAvatarError(user)"
+                  />
+                  <span v-else>{{ initials(user.name) }}</span>
+                </span>
                 <div class="shop-meta">
                   <div class="shop-name">
                     {{ user.name }}
@@ -691,18 +763,71 @@ watch(
       </div>
     </div>
 
-    <div v-if="showView" class="modal-backdrop" role="dialog" aria-modal="true" @click.self="showView = false">
-      <div class="modal">
+    <div
+      v-if="showView"
+      class="modal-backdrop modal-backdrop--center"
+      role="dialog"
+      aria-modal="true"
+      @click.self="showView = false"
+    >
+      <div class="modal modal--profile">
         <div class="modal-head">
           <div>
             <div class="modal-title">User Details</div>
-            <div class="modal-sub">Read-only view</div>
+            <div class="modal-sub">Read-only profile snapshot</div>
           </div>
           <button type="button" class="icon-action" title="Close" @click="showView = false"><i
               class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
-          <pre class="code-block">{{ JSON.stringify(selectedUser, null, 2) }}</pre>
+          <div class="user-details">
+            <div class="user-details__hero">
+              <div class="user-details__avatar">
+                <img
+                  v-if="selectedUserAvatar"
+                  :src="selectedUserAvatar"
+                  :alt="`Avatar for ${selectedUserName}`"
+                  @error="handleAvatarError(selectedUser)"
+                />
+                <span v-else>{{ initials(selectedUser?.name) }}</span>
+              </div>
+              <div class="user-details__hero-text">
+                <p class="user-details__name">{{ selectedUserName }}</p>
+                <div class="user-details__meta">
+                  <span>ID {{ selectedUser?.id || '—' }}</span>
+                  <span>{{ selectedUserJoinedLabel }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-row">
+                <span class="detail-label">Email</span>
+                <span class="detail-value">{{ selectedUserEmailLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Phone</span>
+                <span class="detail-value">{{ selectedUserPhoneLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Role</span>
+                <span class="detail-value detail-value--badge" :class="selectedUserRoleClass">
+                  {{ selectedUserRoleLabel }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Status</span>
+                <span class="detail-value">{{ selectedUserStatusLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Joined</span>
+                <span class="detail-value">{{ selectedUserJoinedLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Last updated</span>
+                <span class="detail-value">{{ selectedUserUpdatedLabel }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -756,14 +881,94 @@ watch(
 </template>
 
 <style scoped>
-.code-block {
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.user-details__hero {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.user-details__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.12);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #1d4ed8;
+  overflow: hidden;
+}
+
+.user-details__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.user-details__hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-details__name {
+  font-size: 1.2rem;
+  font-weight: 700;
   margin: 0;
-  padding: 12px;
-  border-radius: 12px;
+}
+
+.user-details__meta {
+  display: flex;
+  gap: 0.75rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0.75rem;
+  background: var(--mp-card);
   border: 1px solid var(--mp-border);
-  background: rgba(148, 163, 184, 0.08);
-  overflow: auto;
-  max-height: 52vh;
-  font-size: 12px;
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+}
+
+.detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.detail-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.detail-value--badge {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
 }
 </style>

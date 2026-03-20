@@ -6,6 +6,14 @@ const normalizeAvatar = (name = 'Notification') => {
   return `https://ui-avatars.com/api/?name=${sanitized}&background=7c3aed&color=fff&rounded=true`
 }
 
+const parseId = (value) => {
+  if (value === null || value === undefined) {
+    return null
+  }
+  const id = Number(value)
+  return Number.isFinite(id) ? id : null
+}
+
 const normalizeNotification = (record) => {
   const user = record.user || {}
   const userName = user.name || 'System'
@@ -14,6 +22,39 @@ const normalizeNotification = (record) => {
     user.profile_picture ||
     user.img_url ||
     normalizeAvatar(userName)
+  const normalizedUser = {
+    id: parseId(user.id ?? record.user_id),
+    name: userName,
+    avatar,
+    email: user.email || ''
+  }
+
+  const relatedSender = record.related?.sender
+  const senderName = relatedSender?.name || 'Sender'
+  const normalizedRelatedSender = relatedSender
+    ? {
+        id: parseId(relatedSender.id),
+        name: senderName,
+        avatar:
+          relatedSender.avatar_url ||
+          relatedSender.profile_picture ||
+          relatedSender.img_url ||
+          normalizeAvatar(senderName),
+        email: relatedSender.email || ''
+      }
+    : null
+
+  const relatedModel =
+    record.related
+      ? {
+          ...record.related,
+          id: parseId(record.related.id ?? record.related_id),
+          type: record.related_type || record.related?.type || null
+        }
+      : null
+
+  const detailSubject = record.related?.subject || record.title || 'Notification'
+  const detailBody = record.related?.body || record.message || ''
 
   return {
     id: String(record.id),
@@ -23,14 +64,17 @@ const normalizeNotification = (record) => {
     timestamp: record.created_at,
     status: record.is_read ? 'read' : 'unread',
     isRead: Boolean(record.is_read),
+    shopId: record.shop_id || null,
+    role: record.role || null,
     related: {
       id: record.related_id,
       type: record.related_type
     },
-    user: {
-      name: userName,
-      avatar
-    }
+    user: normalizedUser,
+    relatedSender: normalizedRelatedSender,
+    relatedModel,
+    detailSubject,
+    detailBody
   }
 }
 
@@ -50,12 +94,22 @@ const unreadCount = computed(() =>
   notificationsSorted.value.filter((item) => item.status === 'unread').length
 )
 
-const loadNotifications = async () => {
+const buildQueryParams = (shopId, extraParams = {}) => {
+  const params = { ...extraParams }
+  if (shopId) {
+    params.shop_id = shopId
+  }
+  return params
+}
+
+const loadNotifications = async (shopId = null, extraParams = {}) => {
   if (isLoading.value) return
   isLoading.value = true
   error.value = ''
   try {
-    const response = await api.get('/notifications')
+    const response = await api.get('/notifications', {
+      params: buildQueryParams(shopId, extraParams)
+    })
     const payload = Array.isArray(response?.data) ? response.data : []
     notifications.value = payload.map(normalizeNotification)
   } catch (err) {
@@ -85,9 +139,9 @@ const toggleReadStatus = async (id) => {
   )
 }
 
-const markAllAsRead = async () => {
+const markAllAsRead = async (shopId = null) => {
   try {
-    await api.patch('/notifications/mark-all', { is_read: true })
+    await api.patch('/notifications/mark-all', buildQueryParams(shopId))
     notifications.value = notifications.value.map((item) => ({
       ...item,
       isRead: true,

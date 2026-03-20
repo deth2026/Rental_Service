@@ -2,10 +2,8 @@
   <div class="notification-screen">
     <UserNavbar
       :nav-items="navItems"
-      :active-label="activeNav"
       :show-fallback-message="false"
       @logout-request="handleLogout"
-      @nav-click="setActiveNav"
     />
 
     <main class="notification-screen__body">
@@ -39,9 +37,10 @@
           </div>
           <template v-else>
             <article
-              v-for="item in filteredNotifications"
+              v-for="item in displayedNotifications"
               :key="item.id"
               :class="['notification-row', { unread: item.status === 'unread' }]"
+              @click="openNotificationDetail(item)"
             >
               <img :src="item.user.avatar" :alt="item.user.name" class="notification-row__avatar" />
               <div class="notification-row__content">
@@ -54,7 +53,7 @@
                 <p class="notification-row__message">{{ item.message }}</p>
                 <div class="notification-row__footer">
                   <span>{{ formatRelativeTime(item.timestamp) }}</span>
-                  <button class="link-btn" type="button" @click="toggleReadStatus(item.id)">
+                <button class="link-btn" type="button" @click.stop="toggleReadStatus(item.id)">
                     {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
                   </button>
                 </div>
@@ -64,22 +63,49 @@
             <p v-if="!filteredNotifications.length" class="notification-list__empty">
               Nothing new here yet. Start a booking or send a message to see updates.
             </p>
+            <div v-if="canToggleView" class="notification-list__actions">
+              <button type="button" class="link-btn" @click="toggleNotificationView">
+                {{ showAllNotifications ? 'See less' : 'See more' }}
+              </button>
+            </div>
           </template>
         </div>
 
-        <footer class="notification-shell__footer">
-          <button class="mark-read" :disabled="!hasUnread || isLoading" @click="markAllAsRead">Mark all as read</button>
-          <router-link to="/notifications" class="view-all">View all notifications</router-link>
-        </footer>
-      </section>
-    </main>
+  </section>
+</main>
 
-    <CommonFooter />
+  <div
+    v-if="detailModalVisible"
+    class="notification-detail-dialog"
+    role="dialog"
+    aria-modal="true"
+    @click.self="closeDetailModal"
+  >
+    <div class="notification-detail-dialog__panel">
+      <header class="notification-detail-dialog__header">
+        <div>
+          <p class="notification-detail-dialog__title">{{ detailNotificationInfo.subject }}</p>
+          <p class="notification-detail-dialog__subtitle">{{ detailNotificationInfo.subtitle }}</p>
+        </div>
+        <button class="icon-btn notification-detail-dialog__close" type="button" @click="closeDetailModal">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          <span class="sr-only">Close</span>
+        </button>
+      </header>
+      <div class="notification-detail-dialog__meta">
+        <span>{{ formatFullDate(detailNotificationInfo.timestamp) }}</span>
+        <span>{{ detailNotificationInfo.categoryLabel }}</span>
+      </div>
+      <p class="notification-detail-dialog__body">{{ detailNotificationInfo.body || 'No additional details provided.' }}</p>
+    </div>
   </div>
+
+  <CommonFooter />
+</div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { userService } from '@/services/database.js'
 import UserNavbar from '@/components/UserNavbar.vue'
@@ -91,14 +117,8 @@ const router = useRouter()
 const navItems = [
   { label: 'Home', route: '/view_shop' },
   { label: 'My Bookings', route: '/bookings' },
-  { label: 'Notifications', route: '/notifications' },
   { label: 'Promotions', route: '/promotions' }
 ]
-
-const activeNav = ref('Notifications')
-const setActiveNav = (item) => {
-  activeNav.value = item.label
-}
 
 const handleLogout = async () => {
   await userService.logout()
@@ -127,12 +147,66 @@ onMounted(() => {
   loadNotifications()
 })
 
+const detailModalVisible = ref(false)
+const detailNotification = ref(null)
+
+const detailNotificationInfo = computed(() => {
+  const item = detailNotification.value
+  if (!item) {
+    return {
+      subject: '',
+      subtitle: '',
+      body: '',
+      timestamp: null,
+      categoryLabel: ''
+    }
+  }
+
+  return {
+    subject: item.detailSubject || item.action || 'Notification',
+    subtitle: `From ${item.user?.name || 'a user'}`,
+    body: item.detailBody || item.message || '',
+    timestamp: item.timestamp,
+    categoryLabel: item.type || 'general'
+  }
+})
+
+const openNotificationDetail = (item) => {
+  detailNotification.value = item
+  detailModalVisible.value = true
+}
+
+const closeDetailModal = () => {
+  detailModalVisible.value = false
+  detailNotification.value = null
+}
+
 const filteredNotifications = computed(() => {
   const list = notifications.value || []
   if (activeFilter.value === 'unread') {
     return list.filter((item) => item.status === 'unread')
   }
   return list
+})
+
+const MAX_VISIBLE_NOTIFICATIONS = 4
+const showAllNotifications = ref(false)
+
+const displayedNotifications = computed(() => {
+  if (showAllNotifications.value) return filteredNotifications.value
+  return filteredNotifications.value.slice(0, MAX_VISIBLE_NOTIFICATIONS)
+})
+
+const canToggleView = computed(() => filteredNotifications.value.length > MAX_VISIBLE_NOTIFICATIONS)
+
+const toggleNotificationView = () => {
+  showAllNotifications.value = !showAllNotifications.value
+}
+
+watch(filteredNotifications, () => {
+  if (showAllNotifications.value && filteredNotifications.value.length <= MAX_VISIBLE_NOTIFICATIONS) {
+    showAllNotifications.value = false
+  }
 })
 
 const formatRelativeTime = (timestamp) => {
@@ -148,6 +222,15 @@ const formatRelativeTime = (timestamp) => {
   const days = Math.floor(hours / 24)
   if (days < 7) return `${days}d ago`
   return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+const formatFullDate = (timestamp) => {
+  if (!timestamp) return ''
+  const value = new Date(timestamp)
+  return value.toLocaleString('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  })
 }
 
 </script>
@@ -226,6 +309,11 @@ const formatRelativeTime = (timestamp) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.notification-list__actions {
+  display: flex;
+  justify-content: center;
 }
 
 .notification-list__state {
@@ -308,6 +396,71 @@ const formatRelativeTime = (timestamp) => {
   border: none;
   color: #2563eb;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.notification-detail-dialog {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 70;
+}
+
+.notification-detail-dialog__panel {
+  background: #fff;
+  border-radius: 20px;
+  width: min(520px, 100%);
+  padding: 1.5rem;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notification-detail-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.notification-detail-dialog__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.notification-detail-dialog__subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.notification-detail-dialog__meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.notification-detail-dialog__body {
+  margin: 0;
+  line-height: 1.5;
+  color: #111827;
+  white-space: pre-wrap;
+}
+
+.notification-detail-dialog__close {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 1rem;
+  padding: 0;
   cursor: pointer;
 }
 

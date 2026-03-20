@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class NotificationRecord extends Model
 {
@@ -15,6 +16,7 @@ class NotificationRecord extends Model
     protected $fillable = [
         'user_id',
         'role',
+        'shop_id',
         'title',
         'message',
         'type',
@@ -32,5 +34,10 @@ class NotificationRecord extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function related(): MorphTo
+    {
+        return $this->morphTo();
     }
 }

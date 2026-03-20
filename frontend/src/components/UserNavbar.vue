@@ -51,17 +51,23 @@ const notify = (message) => {
   window.alert(message)
 }
 
-const { unreadCount } = useNotifications()
+const { unreadCount, loadNotifications } = useNotifications()
 const showNotifications = ref(false)
 const notificationRoot = ref(null)
+const badgeDismissed = ref(false)
+const previousUnread = ref(unreadCount.value)
 
 const badgeLabel = computed(() => {
+  if (badgeDismissed.value) return ''
   if (!unreadCount.value) return ''
   return unreadCount.value > 9 ? '9+' : String(unreadCount.value)
 })
 
 const toggleNotifications = () => {
   showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    badgeDismissed.value = true
+  }
 }
 
 const closeNotifications = () => {
@@ -75,7 +81,15 @@ const handleDocumentClick = (event) => {
 }
 
 onMounted(() => {
+  loadNotifications()
   document.addEventListener('mousedown', handleDocumentClick)
+})
+
+watch(unreadCount, (value) => {
+  if (value > previousUnread.value) {
+    badgeDismissed.value = false
+  }
+  previousUnread.value = value
 })
 
 onBeforeUnmount(() => {

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Api\LoyaltyPointController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
@@ -44,8 +45,10 @@ Route::get('/test', function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/users/logout', [UserController::class, 'logout']);
     Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::post('/notifications', [NotificationController::class, 'store']);
     Route::patch('/notifications/{notification}', [NotificationController::class, 'update']);
     Route::patch('/notifications/mark-all', [NotificationController::class, 'markAllAsRead']);
+    Route::apiResource('messages', MessageController::class)->only(['index', 'store']);
 });
 
 // Admin only routes

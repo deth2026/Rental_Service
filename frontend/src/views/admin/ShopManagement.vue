@@ -34,6 +34,7 @@ const deletingShopId = ref(null)
 const statusChangingShopId = ref(null)
 
 const normalizedQuery = computed(() => String(route.query.q || '').trim().toLowerCase())
+const focusShopId = computed(() => Number(route.query.focusShop || 0))
 
 const deleteShopMessage = computed(() => {
   const name = String(deleteTarget.value?.name || '').trim()
@@ -393,6 +394,19 @@ watch(
     showCreate.value = Boolean(value)
   },
   { immediate: true }
+)
+
+watch(
+  [() => focusShopId.value, () => (admin.state.shops || []).length],
+  ([focus]) => {
+    if (!focus) return
+    const shop = (admin.state.shops || []).find((item) => Number(item.id) === focus)
+    if (!shop) return
+    openEdit(shop)
+    const nextQuery = { ...route.query }
+    delete nextQuery.focusShop
+    router.replace({ query: nextQuery })
+  }
 )
 
 onMounted(() => {

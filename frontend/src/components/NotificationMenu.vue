@@ -1,11 +1,19 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useNotifications } from '@/composables/useNotifications'
 
-const filters = [
-  { label: 'All', value: 'all' },
-  { label: 'Unread', value: 'unread' }
+const tabOptions = [
+  { label: 'View All', value: 'all' },
+  { label: 'New Order', value: 'booking' },
+  { label: 'Weekly Update', value: 'general' }
 ]
+
+const props = defineProps({
+  shopId: {
+    type: [String, Number],
+    default: null
+  }
+})
 
 const {
   notifications,
@@ -13,29 +21,44 @@ const {
   isLoading,
   error,
   loadNotifications,
-  markAllAsRead,
-  toggleReadStatus
+  markAllAsRead
 } = useNotifications()
 
-const activeFilter = ref('all')
+const activeTab = ref('all')
 
-onMounted(() => {
-  loadNotifications()
+const refreshNotifications = () => {
+  loadNotifications(props.shopId).catch(() => {})
+}
+
+watch(
+  () => props.shopId,
+  () => {
+    refreshNotifications()
+  },
+  { immediate: true }
+)
+
+const baseNotifications = computed(() => {
+  if (!props.shopId) {
+    return notifications.value || []
+  }
+  return (notifications.value || []).filter(
+    (item) => String(item.shopId) === String(props.shopId),
+  )
 })
 
-const filteredNotifications = computed(() => {
-  const base = notifications.value || []
-  if (activeFilter.value === 'unread') {
-    return base.filter((item) => item.status === 'unread')
+const filteredForTab = computed(() => {
+  const base = baseNotifications.value
+  if (activeTab.value === 'booking') {
+    return base.filter((item) => item.type === 'booking')
+  }
+  if (activeTab.value === 'general') {
+    return base.filter((item) => item.type === 'general')
   }
   return base
 })
 
 const hasUnread = computed(() => unreadCount.value > 0)
-const displayBadge = computed(() => {
-  if (!unreadCount.value) return ''
-  return unreadCount.value > 9 ? '9+' : String(unreadCount.value)
-})
 
 const formatRelativeTime = (timestamp) => {
   if (!timestamp) return 'Just now'
@@ -51,27 +74,41 @@ const formatRelativeTime = (timestamp) => {
   if (days < 7) return `${days}d ago`
   return new Date(timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
+
+const formatNotificationTitle = (item) => {
+  const verbMap = {
+    booking: 'New order for',
+    message: 'Message from',
+    general: 'Update from'
+  }
+  const verb = verbMap[item.type] || 'Notification from'
+  return `${verb} ${item.user?.name || 'Customer'}`
+}
 </script>
 
 <template>
-  <div class="notification-panel">
+  <div class="notification-panel panel-slim">
     <header class="notification-panel__header">
       <div>
-        <p class="notification-panel__eyebrow">Notifications</p>
-        <h3>Activity</h3>
+        <h3>Notifications</h3>
+        <p class="notification-panel__subtitle">Stay on top of incoming orders and updates.</p>
       </div>
-      <span v-if="hasUnread" class="notification-panel__badge">{{ displayBadge }}</span>
+      <button class="header-menu" type="button" aria-label="Open menu">
+        <span class="dot" />
+        <span class="dot" />
+        <span class="dot" />
+      </button>
     </header>
 
-    <div class="notification-panel__filters">
+    <div class="notification-tabs">
       <button
-        v-for="filter in filters"
-        :key="filter.value"
-        :class="['filter-pill', { active: activeFilter === filter.value }]"
+        v-for="tab in tabOptions"
+        :key="tab.value"
+        :class="['notification-tab', { active: activeTab === tab.value }]"
         type="button"
-        @click="activeFilter = filter.value"
+        @click="activeTab = tab.value"
       >
-        {{ filter.label }}
+        {{ tab.label }}
       </button>
     </div>
 
@@ -82,36 +119,32 @@ const formatRelativeTime = (timestamp) => {
       </div>
       <template v-else>
         <article
-          v-for="item in filteredNotifications"
+          v-for="item in filteredForTab"
           :key="item.id"
-          class="notification-card"
-          :class="{ unread: item.status === 'unread' }"
+          class="notification-item"
         >
-          <img :src="item.user.avatar" :alt="item.user.name" class="notification-avatar" />
-          <div class="notification-text">
-            <p class="notification-text__title">
-              <span class="notification-name">{{ item.user.name }}</span>
-              {{ item.action }}
-            </p>
-            <p class="notification-text__body">{{ item.message }}</p>
-            <div class="notification-meta">
-              <span>{{ formatRelativeTime(item.timestamp) }}</span>
-              <button class="notification-meta__action" type="button" @click="toggleReadStatus(item.id)">
-                {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
-              </button>
-            </div>
+          <div class="notification-item__avatar">
+            <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="item.user?.name || 'avatar'" />
+            <span v-else>{{ item.user?.name?.charAt(0) || 'N' }}</span>
+            <span v-if="item.status === 'unread'" class="badge-dot" />
           </div>
-          <span class="notification-badge" :class="{ unread: item.status === 'unread' }" />
+          <div class="notification-item__body">
+            <p class="notification-item__title">{{ formatNotificationTitle(item) }}</p>
+            <p class="notification-item__description">{{ item.message || item.action }}</p>
+            <span class="notification-item__time">{{ formatRelativeTime(item.timestamp) }}</span>
+          </div>
         </article>
-        <p v-if="!filteredNotifications.length" class="notification-panel__empty">
-          No notifications for now. Check back after creating a booking or receiving a message.
+        <p v-if="!filteredForTab.length" class="notification-panel__empty">
+          No notifications yet. Check back after you receive activity.
         </p>
       </template>
     </div>
 
     <footer class="notification-panel__footer">
-      <button class="mark-read" :disabled="!hasUnread || isLoading" @click="markAllAsRead">Mark all as read</button>
-      <router-link to="/notifications" class="view-all">View all notifications</router-link>
+      <button class="mark-read" :disabled="!hasUnread || isLoading" @click="markAllAsRead(props.shopId)">
+        Mark all as read
+      </button>
+      <router-link :to="{ name: 'notifications' }" class="view-all">View all notifications</router-link>
     </footer>
   </div>
 </template>
@@ -120,12 +153,16 @@ const formatRelativeTime = (timestamp) => {
 .notification-panel {
   width: 420px;
   padding: 22px;
-  border-radius: 32px;
-  background: linear-gradient(180deg, #ffffff 0%, #eff3ff 80%);
-  box-shadow: 0 30px 65px rgba(15, 23, 42, 0.25);
+  border-radius: 28px;
+  background: #ffffff;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.1);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+}
+
+.panel-slim {
+  min-width: 360px;
 }
 
 .notification-panel__header {
@@ -134,54 +171,55 @@ const formatRelativeTime = (timestamp) => {
   align-items: center;
 }
 
-.notification-panel__eyebrow {
-  margin: 0;
-  font-size: 0.75rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-  color: #94a3b8;
-}
-
 .notification-panel__header h3 {
-  margin: 4px 0 0;
+  margin: 0;
   font-size: 1.35rem;
-  font-weight: 700;
-  color: #0f172a;
+  color: #111827;
 }
 
-.notification-panel__badge {
-  background: #7c3aed;
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 999px;
+.notification-panel__subtitle {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
 }
 
-.notification-panel__filters {
+.header-menu {
+  border: none;
+  background: transparent;
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  cursor: pointer;
 }
 
-.filter-pill {
+.header-menu .dot {
+  width: 4px;
+  height: 4px;
+  background: #6b7280;
+  border-radius: 50%;
+}
+
+.notification-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.notification-tab {
   flex: 1;
   border-radius: 999px;
-  border: 1px solid #e0e7ff;
-  background: #fff;
-  color: #475569;
-  font-size: 0.85rem;
-  font-weight: 600;
   padding: 10px 0;
+  border: none;
+  font-weight: 600;
+  background: #f3f4ff;
+  color: #6b7280;
+  cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.filter-pill.active {
+.notification-tab.active {
   background: #eef2ff;
-  color: #111827;
-  border-color: #c4b5fd;
+  color: #4338ca;
 }
 
 .notification-panel__list {
@@ -190,155 +228,141 @@ const formatRelativeTime = (timestamp) => {
   gap: 12px;
   max-height: 360px;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 .notification-panel__state {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: #475569;
-  padding: 14px;
+  padding: 18px;
   border-radius: 16px;
   background: #f8fafc;
   text-align: center;
 }
 
 .notification-panel__state--error {
-  color: #be123c;
-  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #9f1239;
 }
 
-.notification-card {
-  display: grid;
-  grid-template-columns: 58px 1fr 12px;
-  gap: 16px;
+.notification-item {
+  display: flex;
   align-items: center;
-  padding: 12px 12px 12px 0;
-  border-radius: 24px;
-  background: #f7f9ff;
+  gap: 16px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.notification-item__avatar {
   position: relative;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #eef2ff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #1d4ed8;
+  font-size: 1rem;
 }
 
-.notification-card.unread {
-  background: #e0e7ff;
-  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.15);
-}
-
-.notification-avatar {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
+.notification-item__avatar img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  margin-left: 12px;
-  border: 2px solid #fff;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.25);
+  border-radius: 16px;
 }
 
-.notification-text {
-  padding: 10px 16px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.9);
+.badge-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+}
+
+.notification-item__body {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.notification-text__title {
+.notification-item__title {
   margin: 0;
-  font-size: 0.95rem;
-  color: #0f172a;
-  font-weight: 600;
+  font-weight: 700;
+  color: #111827;
 }
 
-.notification-name {
-  color: #4338ca;
-}
-
-.notification-text__body {
+.notification-item__description {
   margin: 0;
-  font-size: 0.82rem;
   color: #475569;
+  font-size: 0.9rem;
 }
 
-.notification-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.78rem;
+.notification-item__time {
+  font-size: 0.8rem;
   color: #94a3b8;
-  margin-top: 4px;
-}
-
-.notification-meta__action {
-  border: none;
-  background: none;
-  color: #2563eb;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.notification-badge {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  background: #cbd5f5;
-}
-
-.notification-badge.unread {
-  background: #a855f7;
 }
 
 .notification-panel__empty {
-  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
   text-align: center;
-  color: #94a3b8;
-  font-size: 0.85rem;
+  padding: 20px;
 }
 
 .notification-panel__footer {
   display: flex;
-  gap: 12px;
-}
-
-.mark-read,
-.view-all {
-  flex: 1;
-  border-radius: 14px;
-  padding: 10px 0;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
 }
 
 .mark-read {
+  border-radius: 999px;
+  border: 1px solid #e0e7ff;
   background: #fff;
-  border: 1px solid #cbd5f5;
-  color: #2563eb;
+  padding: 10px 18px;
+  font-weight: 600;
+  color: #4338ca;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
 }
 
 .mark-read:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .view-all {
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-  color: #fff;
-  text-align: center;
-  text-decoration: none;
+  font-weight: 600;
+  color: #4338ca;
 }
 
 @media (max-width: 640px) {
   .notification-panel {
-    width: 100%;
+    width: calc(100vw - 40px);
   }
 
-  .notification-card {
-    grid-template-columns: 48px 1fr 10px;
+  .notification-tabs {
+    flex-wrap: wrap;
   }
 
-  .notification-avatar {
-    width: 48px;
-    height: 48px;
+  .notification-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .notification-panel__footer {
+    flex-direction: column;
+    gap: 8px;
   }
 }
 </style>

@@ -72,6 +72,16 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
     {
+      path: '/shop/notifications',
+      name: 'shop-notifications',
+      component: ShopDashboard,
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['shop_owner', 'admin'],
+        defaultSection: 'notifications'
+      }
+    },
+    {
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
@@ -176,6 +186,11 @@ const router = createRouter({
           path: 'reports',
           name: 'admin-reports',
           component: () => import('../views/admin/ReportManagement.vue')
+        },
+        {
+          path: 'notifications',
+          name: 'admin-notifications',
+          component: () => import('../views/admin/Notification_admin.vue')
         },
         {
           path: 'settings',
