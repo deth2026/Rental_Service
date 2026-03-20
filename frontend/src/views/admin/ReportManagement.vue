@@ -107,6 +107,12 @@ const categoryTargetMax = {
   Bicycle: 800
 }
 const fallbackAllCategoryAmount = Object.values(fallbackCategoryAmounts).reduce((sum, amount) => sum + amount, 0)
+const spinnerColors = {
+  [ALL_CATEGORIES]: '#165DFF',
+  'Motorbike Rental': '#1F7BFF',
+  'Car Rental': '#28A5F5',
+  Bicycle: '#2BC96B'
+}
 
 const distributionData = computed(() => {
   const rows = bookings.value
@@ -146,6 +152,45 @@ watch(distributionData, () => {
 })
 
 const filteredBookings = computed(() => selectedCategory.value === ALL_CATEGORIES ? bookings.value : bookings.value.filter((row) => row._category === selectedCategory.value))
+const monthContext = computed(() => {
+  const now = new Date()
+  return {
+    month: now.getMonth(),
+    year: now.getFullYear(),
+    label: `${monthNames[now.getMonth()]} ${now.getFullYear()}`
+  }
+})
+const monthlyBookings = computed(() => {
+  return bookings.value.filter((row) => row._date && row._date.getMonth() === monthContext.value.month && row._date.getFullYear() === monthContext.value.year)
+})
+const monthlyCategoryData = computed(() => {
+  const rows = monthlyBookings.value
+  if (!rows.length) {
+    return [
+      { name: ALL_CATEGORIES, amount: fallbackAllCategoryAmount, rows: [], color: spinnerColors[ALL_CATEGORIES] },
+      ...visibleCategoryOrder.map((name) => ({
+        name,
+        amount: fallbackCategoryAmounts[name] || 0,
+        rows: [],
+        color: spinnerColors[name] || categoryColors[name] || '#1F7BFF'
+      }))
+    ]
+  }
+  const grouped = new Map()
+  visibleCategoryOrder.forEach((name) => grouped.set(name, { name, amount: 0, rows: [], color: spinnerColors[name] || categoryColors[name] || '#1F7BFF' }))
+  rows.forEach((row) => {
+    if (!grouped.has(row._category)) return
+    const item = grouped.get(row._category)
+    item.amount += row._net
+    item.rows.push(row)
+  })
+  const categories = visibleCategoryOrder.map((name) => grouped.get(name))
+  const totalAmount = categories.reduce((sum, item) => sum + item.amount, 0)
+  return [
+    { name: ALL_CATEGORIES, amount: totalAmount, rows, color: spinnerColors[ALL_CATEGORIES] },
+    ...categories
+  ].map((item) => ({ ...item, amount: Math.round(item.amount || 0) }))
+})
 const buildFallbackSeries = (category) => {
   const commissionRate = Number(admin.state.commission_rate || 0.15)
 
@@ -267,14 +312,9 @@ const donutSegments = (items, radius, field = 'amount') => {
   })
 }
 
-const distributionSegments = computed(() => donutSegments(distributionData.value, 72, 'amount'))
+const distributionSegments = computed(() => donutSegments(monthlyCategoryData.value, 72, 'amount'))
 const statusSegments = computed(() => donutSegments(statusData.value, 56, 'percentage'))
-const selectedShare = computed(() => {
-  if (selectedCategory.value === ALL_CATEGORIES) return 100
-  const total = distributionData.value.reduce((sum, item) => sum + item.amount, 0)
-  const item = distributionData.value.find((entry) => entry.name === selectedCategory.value)
-  return item && total > 0 ? Math.round((item.amount / total) * 100) : 0
-})
+const selectedShare = computed(() => monthlyCategoryData.value.length ? 100 : 0)
 
 const selectedCategoryTitle = computed(() => selectedCategory.value === ALL_CATEGORIES ? 'All categories' : selectedCategory.value)
 const totalNetAmount = computed(() => {
@@ -309,7 +349,7 @@ const categoryMetrics = computed(() => {
 })
 
 const categoryCircleFilters = computed(() => {
-  const metricsMap = new Map(categoryMetrics.value.map((item) => [item.name, item]))
+  const metricsMap = new Map(monthlyCategoryData.value.map((item) => [item.name, item]))
   const shortName = (name) => {
     if (name === ALL_CATEGORIES) return 'ALL'
     if (name === 'Motorbike Rental') return 'MOTO'
@@ -323,7 +363,7 @@ const categoryCircleFilters = computed(() => {
       name,
       short: shortName(name),
       amount: Math.round(item?.amount || 0),
-      color: item?.color || categoryColors[name] || '#1F7BFF'
+      color: item?.color || spinnerColors[name] || categoryColors[name] || '#1F7BFF'
     }
   })
 })
@@ -356,14 +396,7 @@ const kpiMomentum = computed(() => {
 
 const donutTooltipData = computed(() => {
   if (!hoveredDonutName.value) return null
-  if (hoveredDonutName.value === ALL_CATEGORIES) {
-    return {
-      name: ALL_CATEGORIES,
-      amount: totalNetAmount.value,
-      color: '#1F7BFF'
-    }
-  }
-  const item = distributionData.value.find((entry) => entry.name === hoveredDonutName.value)
+  const item = monthlyCategoryData.value.find((entry) => entry.name === hoveredDonutName.value)
   if (!item) return null
   return {
     name: item.name,
@@ -409,7 +442,10 @@ const closeDetail = () => { detailModalVisible.value = false; detailRows.value =
 const selectCategory = (category) => { selectedCategory.value = category; hoveredDonutName.value = '' }
 const selectCategoryAndDetail = (category) => {
   selectCategory(category)
-  showCategoryDetail(category)
+  const rows = category === ALL_CATEGORIES
+    ? monthlyBookings.value
+    : monthlyBookings.value.filter((r) => r._category === category)
+  openDetail(`${category} - ${monthContext.value.label}`, `${rows.length} booking record(s) this month`, rows)
 }
 const showCategoryDetail = (category) => {
   const rows = category === ALL_CATEGORIES ? bookings.value : bookings.value.filter((r) => r._category === category)
@@ -544,7 +580,7 @@ onMounted(async () => {
       <article class="report-card">
         <div class="card-head">
           <h2>Payout Distribution by Shop Category</h2>
-          <p>Click a category to filter pending payouts.</p>
+          <p>{{ monthContext.label }} earnings. Hover to preview, click ring to open details.</p>
         </div>
         <div class="donut-wrap" @mouseleave="hideDonutTooltip">
           <svg class="chart-svg" viewBox="0 0 220 220">
@@ -564,6 +600,7 @@ onMounted(async () => {
           <div class="donut-center">
             <div class="donut-value">{{ selectedShare }}%</div>
             <div class="donut-label">{{ selectedCategory === ALL_CATEGORIES ? 'All categories' : 'Selected' }}</div>
+            <div class="donut-month">{{ monthContext.label }}</div>
           </div>
           <div class="circle-filter-row">
             <button
@@ -1102,6 +1139,14 @@ onMounted(async () => {
 .donut-label {
   color: var(--muted);
   font-size: .78rem
+}
+
+.donut-month {
+  margin-top: .2rem;
+  color: #94a3b8;
+  font-size: .68rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .donut-tooltip {
