@@ -1,18 +1,19 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import HomeView from '../views/HomeView.vue';
 import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
+import HomeView from '../views/HomeView.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Booking.vue';
-import PromotionView from '../views/User/Promotion.vue';
-import SettingUser from '../views/User/Setting_user.vue';
+import UserDashboard from '../views/user/Dashboard.vue';
+import UserBookings from '../views/user/MyBookings.vue';
+import PromotionView from '../views/user/Promotion.vue';
+import SettingUser from '../views/user/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/User/ShopVehicles.vue';
-import VehiclesByShop from '../views/User/VehiclesByShop.vue';
-import ViewDetail from '../views/User/ViewDetail.vue';
+import ShopVehicles from '../views/user/ShopVehicles.vue';
+import VehiclesByShop from '../views/user/VehiclesByShop.vue';
+import Booking from '../views/user/Booking.vue';
+import ViewDetail from '../views/user/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
 
 // Check if user is authenticated
@@ -41,7 +42,9 @@ const router = createRouter({
     },
     {
       path: '/home',
-      redirect: '/'
+      name: 'landing',
+      component: HomeView,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/chooserole',
@@ -74,8 +77,20 @@ const router = createRouter({
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
+      path: '/booking/:id?',
+      name: 'booking',
+      component: Booking,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
       path: '/bookings/:id?',
       name: 'user-booking',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/my-bookings',
+      name: 'my-bookings',
       component: UserBookings,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },

@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            $table->foreignId('shop_id')->constrained('shops')->onDelete('cascade');
+        Schema::table('cities', function (Blueprint $table) {
+            $table->string('status')->default('active');
         });
     }
 
@@ -21,8 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('bookings', function (Blueprint $table) {
-            //
+        Schema::table('cities', function (Blueprint $table) {
+            $table->dropColumn('status');
         });
     }
 };

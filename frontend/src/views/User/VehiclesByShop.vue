@@ -109,7 +109,7 @@
   </div>
 
   <!-- Common Footer -->
-  <UserFooter />
+  <CommonFooter />
   </div>
 </template>
 
@@ -119,7 +119,7 @@ import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
-import UserFooter from '../../components/UserFooter.vue'
+import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
@@ -341,7 +341,7 @@ const setActiveNav = (item) => {
     return;
   }
   if (item === 'My Bookings') {
-    router.push('/bookings');
+    router.push('/my-bookings');
     return;
   }
   if (item === 'Promotion') {

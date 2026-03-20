@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userService, shopService } from '../../services/database.js'
 import '../../css/userDashboard.css'
-import UserFooter from '../../components/UserFooter.vue'
+import CommonFooter from '../../components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const router = useRouter()
@@ -11,7 +11,7 @@ const route = useRoute()
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', route: '#' },
+  { label: 'Mybooking', route: '/my-bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -469,6 +469,6 @@ onBeforeUnmount(() => {
   </div>
 
   <!-- Common Footer -->
-  <UserFooter />
+  <CommonFooter />
   </div>
 </template>

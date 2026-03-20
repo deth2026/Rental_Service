@@ -587,9 +587,9 @@ const goToBooking = () => {
   }
 
   if (vehicleId) {
-    router.push({ name: "user-booking", params: { id: vehicleId }, query });
+    router.push({ name: "booking", params: { id: vehicleId }, query });
   } else {
-    router.push({ name: "user-booking", params: { id: 1 }, query }); // Fallback ID
+    router.push({ name: "booking", params: { id: 1 }, query }); // Fallback ID
   }
 };
 

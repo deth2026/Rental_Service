@@ -12,6 +12,8 @@ class Vehicle extends Model
 {
     use HasFactory;
 
+    protected $appends = ['image_url_full', 'photo_urls'];
+
     public function getCreatedAtColumn()
     {
         static $createdColumn = null;

@@ -19,6 +19,10 @@
       </nav>
 
       <div class="top-actions">
+        <button class="btn-back-top" type="button" @click="goHome">
+          <span class="back-arrow" aria-hidden="true">←</span>
+          Back to Home
+        </button>
         <span class="user-display-name">{{ userDisplayName }}</span>
         <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
@@ -27,8 +31,10 @@
     <div class="page-container">
 
       <div class="page-heading-row">
-        <h1>Checkout</h1>
-        <span class="step-pill">Step 2 of 3</span>
+        <div class="title-block">
+          <h1>Checkout</h1>
+          <span class="step-pill">Step 2 of 3</span>
+        </div>
       </div>
 
       <div class="checkout-progress" aria-hidden="true">
@@ -517,6 +523,7 @@
         </div>
       </div>
     </div>
+    <CommonFooter />
   </div>
 </template>
 
@@ -525,6 +532,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
+import CommonFooter from '../../components/CommonFooter.vue';
 import UserProfileMenu from '@/components/UserProfileMenu.vue';
 import "../../assets/user/booking.css";
 
@@ -578,6 +586,10 @@ const openProfile = () => {
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
+};
+
+const goHome = () => {
+  router.push('/');
 };
 
 const onAvatarError = () => {
@@ -947,7 +959,7 @@ const saveBookingToDatabase = async (bookingData) => {
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
-    status: bookingData?.status || "pending",
+    status: "pending",
     deposit_amount: 0,
     deposit_status: "unpaid",
     rider_details: rental.value.riders,

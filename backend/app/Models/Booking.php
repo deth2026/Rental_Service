@@ -62,5 +62,10 @@ class Booking extends Model
     {
         return $this->hasOne(BookingStatusLog::class)->latestOfMany('changed_at');
     }
+
+    public function bookingStatusLogs()
+    {
+        return $this->hasMany(BookingStatusLog::class)->orderBy('changed_at', 'desc');
+    }
 }
 
