@@ -294,6 +294,170 @@
   font-weight: 800;
 }
 
+.confirm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 999;
+  backdrop-filter: blur(3px);
+}
+
+.confirm-modal-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f4f7ff 100%);
+  border-radius: 24px;
+  width: min(470px, 100%);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.25);
+  padding: 30px 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  animation: floatCard 0.8s ease-out;
+}
+
+.confirm-modal-icon {
+  position: absolute;
+  top: -24px;
+  right: 30px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.15);
+}
+.confirm-modal-icon span {
+  font-size: 0.85rem;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: uppercase;
+}
+
+.confirm-modal-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.25), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.3), transparent 45%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.8;
+}
+
+.confirm-modal-header h2 {
+  margin: 0;
+  font-size: 1.55rem;
+  color: #0f2f5c;
+}
+
+.confirm-modal-header p {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  color: #4a6389;
+}
+
+.confirm-modal-body {
+  font-size: 0.95rem;
+  color: #1f3b62;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.confirm-modal-body strong {
+  color: #102f56;
+}
+
+.confirm-modal-period {
+  font-weight: 600;
+  color: #0e8bcc;
+}
+
+.confirm-modal-detail {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.confirm-modal-detail span {
+  color: #4a6389;
+}
+
+.confirm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.confirm-cancel-btn,
+.confirm-submit-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 0.75rem 1.35rem;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
+}
+
+.confirm-cancel-btn {
+  background: #f1f5f9;
+  color: #1f3b62;
+}
+
+.confirm-cancel-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1);
+}
+
+.confirm-submit-btn {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  color: #fff;
+}
+
+.confirm-submit-btn.reject {
+  background: linear-gradient(135deg, #f9a8d4 0%, #f43f5e 100%);
+}
+
+.confirm-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirm-submit-btn:focus-visible,
+.confirm-cancel-btn:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.4);
+  outline-offset: 2px;
+}
+
+@keyframes floatCard {
+  0% {
+    transform: translateY(30px) scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-6px) scale(1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 900px) {
   .bookings-page {
     padding: 8px;

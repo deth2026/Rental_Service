@@ -8,6 +8,11 @@ const bookings = ref([])
 const loading = ref(true)
 const error = ref(null)
 const processing = ref(false)
+const confirmationModal = ref({
+  visible: false,
+  booking: null,
+  action: ''
+})
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
 
@@ -118,23 +123,41 @@ const updateBookingStatus = async (bookingId, newStatus) => {
     
     // Refresh bookings after update
     await fetchShopBookings()
+    return true
   } catch (e) {
     error.value = e.message || 'Failed to update booking'
     console.error('Error updating booking:', e)
+    return false
   } finally {
     processing.value = false
   }
 }
 
-const acceptBooking = (bookingId) => {
-  if (confirm('Are you sure you want to accept this booking?')) {
-    updateBookingStatus(bookingId, 'confirmed')
+const openBookingConfirmation = (booking, action) => {
+  confirmationModal.value = {
+    visible: true,
+    booking,
+    action
   }
 }
 
-const rejectBooking = (bookingId) => {
-  if (confirm('Are you sure you want to reject this booking?')) {
-    updateBookingStatus(bookingId, 'cancelled')
+const closeBookingConfirmation = () => {
+  confirmationModal.value = {
+    visible: false,
+    booking: null,
+    action: ''
+  }
+}
+
+const confirmBookingAction = async () => {
+  const booking = confirmationModal.value.booking
+  if (!booking) return
+
+  const targetStatus = confirmationModal.value.action === 'accept' ? 'confirmed' : 'cancelled'
+  const success = await updateBookingStatus(booking.id, targetStatus)
+
+  if (success) {
+    closeBookingConfirmation()
   }
 }
 
@@ -206,6 +229,7 @@ const formatCurrency = (value) => {
 const getTotalDays = (start, end) => {
   if (!start || !end) return 0
   const diff = Math.abs(new Date(end) - new Date(start))
+  if (Number.isNaN(diff)) return 0
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) || 1
 }
 </script>
@@ -270,8 +294,22 @@ const getTotalDays = (start, end) => {
           </p>
 
           <div class="action-buttons" v-if="booking.status === 'pending'">
-            <button class="accept-btn" @click="acceptBooking(booking.id)" :disabled="processing">Accept</button>
-            <button class="reject-btn" @click="rejectBooking(booking.id)" :disabled="processing">Reject</button>
+            <button
+              type="button"
+              class="accept-btn"
+              @click="openBookingConfirmation(booking, 'accept')"
+              :disabled="processing"
+            >
+              Accept
+            </button>
+            <button
+              type="button"
+              class="reject-btn"
+              @click="openBookingConfirmation(booking, 'reject')"
+              :disabled="processing"
+            >
+              Reject
+            </button>
           </div>
           <button v-else class="details-btn">View Details</button>
         </div>
@@ -281,6 +319,58 @@ const getTotalDays = (start, end) => {
         </div>
       </article>
     </section>
+    <div
+      v-if="confirmationModal.visible"
+      class="confirm-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeBookingConfirmation"
+    >
+      <div class="confirm-modal-card">
+        <div class="confirm-modal-header">
+          <h2>
+            {{ confirmationModal.action === 'accept' ? 'Confirm acceptance' : 'Confirm rejection' }}
+          </h2>
+        </div>
+        <div class="confirm-modal-body">
+          <p>
+            You are about to
+            <strong>{{ confirmationModal.action === 'accept' ? 'accept' : 'reject' }}</strong>
+            the reservation for
+            <strong>{{ confirmationModal.booking?.vehicle_name || 'the vehicle' }}</strong>
+            booked by
+            <strong>{{ confirmationModal.booking?.customer_name || 'the customer' }}</strong>.
+          </p>
+          <p class="confirm-modal-period">
+            {{ formatDate(confirmationModal.booking?.start_date) }} to
+            {{ formatDate(confirmationModal.booking?.end_date) }}
+            ({{ getTotalDays(confirmationModal.booking?.start_date, confirmationModal.booking?.end_date) }} days)
+          </p>
+          <p class="confirm-modal-detail">
+            <span>Total:</span>
+            {{ formatCurrency(confirmationModal.booking?.total_price || 0) }}
+          </p>
+        </div>
+        <div class="confirm-modal-actions">
+          <button type="button" class="confirm-cancel-btn" @click="closeBookingConfirmation">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="confirm-submit-btn"
+            :class="{ reject: confirmationModal.action === 'reject' }"
+            :disabled="processing"
+            @click="confirmBookingAction"
+          >
+            {{ processing
+              ? 'Processing...'
+              : confirmationModal.action === 'accept'
+                ? 'Yes, accept the booking'
+                : 'Yes, reject the booking' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
