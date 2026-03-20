@@ -2,7 +2,7 @@ import './css/HomeView.css'
 import './css/chooserole.css'
 import './css/register.css'
 import './css/setting.css'
-import './assets/user/Booking.css'
+import './css/Booking.css'
 
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
