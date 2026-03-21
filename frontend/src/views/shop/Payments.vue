@@ -100,6 +100,7 @@ const fetchPayments = async () => {
     
     const response = await api.get('/shop-payments')
     console.log('API Response:', response)
+    console.log('Full response data:', JSON.stringify(response?.data, null, 2))
     
     const payload = response?.data
     console.log('Payload:', payload)

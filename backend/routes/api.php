@@ -119,7 +119,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Shop dashboard payments derived from bookings
-Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->get('/shop-payments', [BookingController::class, 'shopPayments']);
+Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->get('/shop-payments', [PaymentController::class, 'shopPayments']);
 
 // Customer routes (accessible by all authenticated users)
 Route::middleware('auth:sanctum')->group(function () {

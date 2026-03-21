@@ -7,6 +7,8 @@ use App\Models\Booking;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class BookingController extends Controller
 {
@@ -26,7 +28,23 @@ class BookingController extends Controller
                 ]);
             }
 
-            $query->whereIn('shop_id', $shopIds);
+            // Check if shop_id column exists in bookings table
+            try {
+                $hasShopId = \Illuminate\Support\Facades\Schema::hasColumn('bookings', 'shop_id');
+                if ($hasShopId) {
+                    $query->whereIn('shop_id', $shopIds);
+                } else {
+                    // Fallback: filter by vehicle's shop_id if bookings doesn't have shop_id column
+                    $query->whereHas('vehicle', function ($q) use ($shopIds) {
+                        $q->whereIn('shop_id', $shopIds);
+                    });
+                }
+            } catch (\Exception $e) {
+                // If schema check fails, use fallback
+                $query->whereHas('vehicle', function ($q) use ($shopIds) {
+                    $q->whereIn('shop_id', $shopIds);
+                });
+            }
         }
 
         return response()->json($query->paginate(15));
@@ -178,31 +196,73 @@ class BookingController extends Controller
         try {
             $user = Auth::user();
             
+            // DEBUG: Log user info
+            \Log::info('shopPayments: User', [
+                'user_id' => $user->id,
+                'user_role' => $user->role,
+                'user_name' => $user->name
+            ]);
+            
             // Get all bookings with relationships
-            $bookings = Booking::with(['user', 'vehicle', 'payment'])
+            $bookings = Booking::with(['user', 'vehicle', 'shop', 'payment'])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // If user is not admin, filter by their shop through vehicles
+            // DEBUG: Log total bookings count
+            \Log::info('shopPayments: Total bookings', ['count' => $bookings->count()]);
+            
+            // DEBUG: Log ALL booking shop_ids (not just first 3)
+            \Log::info('shopPayments: All bookings shop_ids', [
+                'bookings' => $bookings->map(function($b) {
+                    return [
+                        'booking_id' => $b->id,
+                        'booking_shop_id' => $b->shop_id,
+                        'vehicle_shop_id' => $b->vehicle?->shop_id,
+                        'booking_status' => $b->status,
+                        'total_price' => $b->total_price,
+                        'created_at' => $b->created_at
+                    ];
+                })->toArray()
+            ]);
+
+            // If user is not admin, filter by their shop (using vehicle's shop_id)
+            // For now, we'll skip filtering if shop_id doesn't exist in bookings table
             if ($user->role !== 'admin') {
-                // Get the user's shop
-                $shop = \App\Models\Shop::where('owner_id', $user->id)->first();
+                $shops = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
                 
-                if ($shop) {
-                    // Filter bookings by vehicles that belong to this shop
-                    $bookings = $bookings->filter(function ($booking) use ($shop) {
-                        return $booking->vehicle && $booking->vehicle->shop_id === $shop->id;
+                // If user has shops, filter by vehicle's shop_id
+                if (!$shops->isEmpty()) {
+                    $bookings = $bookings->filter(function ($booking) use ($shops) {
+                        $vehicleShopId = $booking->vehicle?->shop_id ?? null;
+                        return $vehicleShopId && $shops->contains($vehicleShopId);
                     });
                 }
             }
 
             // Map bookings to payment format
             $payments = $bookings->map(function ($booking) {
+                // Debug: log total_price
+                \Log::info('shopPayments mapping booking', [
+                    'booking_id' => $booking->id,
+                    'total_price' => $booking->total_price,
+                    'price_per_day' => $booking->vehicle?->price_per_day ?? 'no vehicle',
+                    'status' => $booking->status,
+                    'vehicle_shop_id' => $booking->vehicle?->shop_id
+                ]);
+                
+                // Use booking's total_price, fallback to vehicle's price_per_day
+                $amount = (float) ($booking->total_price ?? 0);
+                if ($amount === 0 && $booking->vehicle) {
+                    $amount = (float) ($booking->vehicle->price_per_day ?? 0);
+                }
+                
                 return [
                     'id' => $booking->id,
                     'booking_id' => $booking->id,
+                    'shop_id' => $booking->shop_id, // Include shop_id for debugging
                     'transaction_id' => $booking->payment?->transaction_id ?? 'BK-' . $booking->id,
-                    'amount' => (float) ($booking->total_price ?? 0),
+                    'amount' => $amount,
+                    'total_price' => $amount, // Also include as total_price for frontend
                     'status' => $booking->status ?? 'pending',
                     'raw_status' => $booking->status ?? 'pending',
                     'payment_status' => $booking->payment?->payment_status ?? $booking->status ?? 'pending',
@@ -211,12 +271,13 @@ class BookingController extends Controller
                     'booking' => [
                         'id' => $booking->id,
                         'status' => $booking->status ?? 'pending',
+                        'total_price' => (float) ($booking->total_price ?? 0),
                         'user' => [
                             'name' => $booking->user?->name ?? 'Unknown User',
                             'email' => $booking->user?->email ?? ''
                         ],
                         'vehicle' => [
-                            'title' => $booking->vehicle?->title ?? 'Unknown Vehicle'
+                            'title' => $booking->vehicle ? ($booking->vehicle->brand . ' ' . $booking->vehicle->model) : 'Unknown Vehicle'
                         ]
                     ]
                 ];
@@ -241,9 +302,16 @@ class BookingController extends Controller
             return response()->json(['error' => 'Vehicle not found'], 404);
         }
         
-        // Add shop_id from the vehicle
+        // Add shop_id from the vehicle (only if column exists)
         $bookingData = $_request->all();
-        $bookingData['shop_id'] = $vehicle->shop_id;
+        try {
+            $hasShopIdColumn = \Illuminate\Support\Facades\Schema::hasColumn('bookings', 'shop_id');
+            if ($hasShopIdColumn) {
+                $bookingData['shop_id'] = $vehicle->shop_id;
+            }
+        } catch (\Exception $e) {
+            // Schema check failed, skip shop_id
+        }
 
         $record = Booking::create($bookingData);
 
@@ -254,7 +322,12 @@ class BookingController extends Controller
             'changed_at' => now(),
         ]);
 
-        NotificationService::bookingCreated($record);
+        // Send notification (silently fail if table doesn't exist)
+        try {
+            NotificationService::bookingCreated($record);
+        } catch (\Exception $e) {
+            // Notification table might not exist, silently fail
+        }
 
         return response()->json($record, 201);
     }
@@ -277,7 +350,25 @@ class BookingController extends Controller
                 'changed_at' => now(),
             ]);
 
-            NotificationService::bookingStatusChanged($booking->fresh(), $_request->status);
+            // When booking is confirmed, update the associated payment status to 'paid'
+            if ($_request->status === 'confirmed') {
+                // Reload the payment relationship
+                $booking->load('payment');
+                
+                if ($booking->payment) {
+                    $booking->payment->update([
+                        'payment_status' => 'paid',
+                        'paid_at' => now()
+                    ]);
+                }
+            }
+
+            // Send notification (silently fail if table doesn't exist)
+            try {
+                NotificationService::bookingStatusChanged($booking->fresh(), $_request->status);
+            } catch (\Exception $e) {
+                // Notification table might not exist, silently fail
+            }
         }
 
         return response()->json($booking->fresh());
