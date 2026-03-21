@@ -91,4 +91,12 @@ class User extends Authenticatable
 
         return asset($normalized);
     }
+
+    /**
+     * Get the shop that owns this user (if user is a shop owner)
+     */
+    public function shop()
+    {
+        return $this->hasOne(Shop::class, 'owner_id');
+    }
 }

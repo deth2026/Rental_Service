@@ -8,9 +8,14 @@ use Illuminate\Http\Request;
 
 class FeedbackController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $shopId = $request->user()?->shop?->id;
+        
         $feedback = Feedback::with(['user', 'booking', 'booking.vehicle'])
+            ->when($shopId, function($query) use ($shopId) {
+                return $query->where('shop_id', $shopId);
+            })
             ->orderBy('created_at', 'desc')
             ->paginate(15);
         
