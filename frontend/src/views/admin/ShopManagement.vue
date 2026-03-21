@@ -545,34 +545,77 @@ onMounted(() => {
         </div>
 
 
-        <div class="modal-body form-grid">
-          <label class="field">
-            <span class="field-label">Shop Name</span>
-            <input v-model="createForm.name" type="text" placeholder="e.g. Berlin Elite Rentals" />
-          </label>
-          <label class="field">
-            <span class="field-label">Address</span>
-            <input v-model="createForm.address" type="text" placeholder="Street, City, Country" />
-          </label>
-          <label class="field">
-            <span class="field-label">Location</span>
-            <input v-model="createForm.location" type="text" placeholder="City, Country" />
-          </label>
-          <label class="field">
-            <span class="field-label">Phone</span>
-            <input v-model="createForm.phone" type="text" placeholder="+855..." />
-          </label>
-          <label class="field span-2">
-            <span class="field-label">Description</span>
-            <textarea v-model="createForm.description" rows="3" placeholder="Short shop description (optional)"></textarea>
-          </label>
-          <label class="field span-2">
-            <span class="field-label">Shop Image</span>
-            <input type="file" accept="image/*" @change="onCreateImageChange" />
-            <div v-if="createImagePreview" class="image-preview">
-              <img :src="createImagePreview" alt="Shop preview" />
+        <div class="modal-body create-shop-layout">
+          <div class="create-shop-preview">
+            <div class="create-shop-preview__image">
+              <img
+                v-if="createImagePreview"
+                :src="createImagePreview"
+                alt="Shop preview"
+              />
+              <div v-else class="create-shop-preview__placeholder">
+                <i class="fa-solid fa-shop"></i>
+              </div>
             </div>
-          </label>
+            <div class="create-shop-preview__info">
+              <p class="create-shop-preview__title">
+                {{ createForm.name || 'Untitled shop' }}
+              </p>
+              <p class="create-shop-preview__subtitle">
+                {{ createForm.address || 'Add a location and contact details' }}
+              </p>
+              <p class="create-shop-preview__location">
+                {{ createForm.location || 'City, Country' }}
+              </p>
+            </div>
+            <div class="create-shop-preview__meta">
+              <span class="muted">Status</span>
+              <strong>Pending</strong>
+            </div>
+          </div>
+
+          <div class="create-shop-form">
+            <label class="upload-drop">
+              <input type="file" accept="image/*" @change="onCreateImageChange" />
+              <div class="upload-drop__content">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <strong>Upload shop cover</strong>
+                <span>Drop an image or click to browse files</span>
+              </div>
+            </label>
+            <div class="field-grid two-column">
+              <label class="field">
+                <span class="field-label">Shop Name</span>
+                <input
+                  v-model="createForm.name"
+                  type="text"
+                  placeholder="e.g. Berlin Elite Rentals"
+                />
+              </label>
+              <label class="field">
+                <span class="field-label">Address</span>
+                <input v-model="createForm.address" type="text" placeholder="Street, City, Country" />
+              </label>
+            </div>
+            <div class="field-grid two-column">
+              <label class="field">
+                <span class="field-label">Location</span>
+                <input v-model="createForm.location" type="text" placeholder="City, Country" />
+              </label>
+              <label class="field">
+                <span class="field-label">Phone</span>
+                <input v-model="createForm.phone" type="text" placeholder="+855..." />
+              </label>
+            </div>
+            <label class="field">
+              <span class="field-label">Description</span>
+              <textarea
+                v-model="createForm.description"
+                rows="4"
+                placeholder="Describe the shop, services or fleet."
+              ></textarea>
+            </label>
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -646,10 +689,152 @@ onMounted(() => {
 </template>
 
 <style>
-.sort-menu {
-  padding: 10px;
-}
-.sort-menu  button {
-margin: 4px;
-}
+  .sort-menu {
+    padding: 10px;
+  }
+  .sort-menu button {
+    margin: 4px;
+  }
+
+  .create-shop-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .create-shop-preview {
+    background: #f8fafc;
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+    text-align: center;
+  }
+
+  .create-shop-preview__image {
+    width: 100%;
+    padding-top: 56%;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: inset 0 0 0 1px #e5e7eb;
+  }
+
+  .create-shop-preview__image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .create-shop-preview__placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    font-size: 32px;
+  }
+
+  .create-shop-preview__info {
+    text-align: left;
+  }
+
+  .create-shop-preview__title {
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #0f172a;
+  }
+
+  .create-shop-preview__subtitle,
+  .create-shop-preview__location {
+    margin: 4px 0 0;
+    color: #475569;
+    font-size: 0.9rem;
+  }
+
+  .create-shop-preview__meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    color: #475569;
+    font-size: 0.85rem;
+  }
+
+  .create-shop-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .upload-drop {
+    border: 2px dashed #cbd5f5;
+    border-radius: 18px;
+    padding: 32px;
+    text-align: center;
+    background: #fdfdfd;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+  }
+
+  .upload-drop:hover {
+    border-color: #2563eb;
+  }
+
+  .upload-drop input {
+    display: none;
+  }
+
+  .upload-drop__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+  }
+
+  .upload-drop__content i {
+    font-size: 32px;
+    color: #2563eb;
+  }
+
+  .field-grid {
+    display: grid;
+    gap: 16px;
+  }
+
+  .field-grid.two-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field input,
+  .field textarea {
+    border-radius: 12px;
+    border: 1px solid #d6dbec;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .field textarea {
+    min-height: 120px;
+    resize: vertical;
+  }
 </style>

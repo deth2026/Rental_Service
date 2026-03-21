@@ -241,6 +241,7 @@ const formatFullDate = (timestamp) => {
   display: flex;
   flex-direction: column;
   background: #f4f7fb;
+  overflow: hidden;
 }
 
 .notification-screen__body {

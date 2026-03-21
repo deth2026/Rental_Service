@@ -15,7 +15,7 @@ import VehiclesByShop from '../views/user/VehiclesByShop.vue';
 import Booking from '../views/user/Booking.vue';
 import ViewDetail from '../views/user/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
-import UserNotifications from '../views/User/Notification.vue';
+import UserNotifications from '../views/user/Notification.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -120,7 +120,8 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
-      component: SettingUser
+      component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/notifications',

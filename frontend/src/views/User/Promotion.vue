@@ -394,6 +394,7 @@ onMounted(fetchPromotions)
   min-height: 100vh;
   background: #f3f6fb;
   color: #10213a;
+  overflow: hidden;
 }
 
 .btn-reset {
