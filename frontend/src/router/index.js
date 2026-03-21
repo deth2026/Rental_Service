@@ -5,17 +5,17 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import HomeView from '../views/HomeView.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/user/Dashboard.vue';
-import UserBookings from '../views/user/MyBookings.vue';
-import PromotionView from '../views/user/Promotion.vue';
-import SettingUser from '../views/user/Setting_user.vue';
+import UserDashboard from '../views/users/Dashboard.vue';
+import UserBookings from '../views/users/MyBookings.vue';
+import PromotionView from '../views/users/Promotion.vue';
+import SettingUser from '../views/users/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/user/ShopVehicles.vue';
-import VehiclesByShop from '../views/user/VehiclesByShop.vue';
-import Booking from '../views/user/Booking.vue';
-import ViewDetail from '../views/user/ViewDetail.vue';
+import ShopVehicles from '../views/users/ShopVehicles.vue';
+import VehiclesByShop from '../views/users/VehiclesByShop.vue';
+import Booking from '../views/users/Booking.vue';
+import ViewDetail from '../views/users/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
-import UserNotifications from '../views/user/Notification.vue';
+import UserNotifications from '../views/users/Notification.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
