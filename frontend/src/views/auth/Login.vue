@@ -60,6 +60,12 @@
         </svg>
         Back to Home
       </router-link>
+      <router-link to="/" class="homeview-link">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+          <path d="M10 2L2 9H5V18H9V12H11V18H15V9H18L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Home view
+      </router-link>
 
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
