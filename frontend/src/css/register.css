@@ -749,6 +749,7 @@ h2 {
 .back-home-btn:hover {
   background: rgba(52, 152, 219, 0.1);
   border-color: rgba(52, 152, 219, 0.3);
+  
   transform: translateX(-4px);
 }
 
