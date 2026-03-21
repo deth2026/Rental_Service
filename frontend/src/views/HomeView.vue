@@ -1,7 +1,58 @@
 
-
 <template>
-  <div class="home-page">
+  <!-- Modern Splash Screen -->
+  <transition name="fade">
+    <div v-if="showSplash" class="location-splash">
+      <div class="splash-content">
+        <div class="splash-logo-container">
+          <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="splash-img" />
+          <h1 class="splash-brand">CHONG CHOUL</h1>
+        </div>
+        <div class="splash-loader-container">
+          <div class="splash-loader-bar"></div>
+        </div>
+        <p class="splash-tagline">Premium Vehicle Rental in Cambodia</p>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Location Permission Popup -->
+  <transition name="modal-fade">
+    <div v-if="showLocationPopup" class="location-popup-overlay">
+      <div class="location-popup-card">
+        <div class="popup-brand-header">
+           <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="popup-logo-big" />
+           <h3 class="popup-brand-name">CHONG CHOUL</h3>
+        </div>
+        
+        <div class="location-popup-header">
+          <div class="red-circle-x">
+            <i class="fa-solid fa-xmark"></i>
+          </div>
+        </div>
+        <div class="location-popup-body">
+          <h2 class="khmer-text">ស្នើសុំការអនុញ្ញាតប្រើទីតាំង</h2>
+          <p class="english-text">Allow location so we can show rental shops near you</p>
+          
+          <div class="location-status">
+            <div class="pulse-ring"></div>
+            <i class="fa-solid fa-location-crosshairs location-pin-icon"></i>
+            <span class="detecting-text">Detecting your location...</span>
+          </div>
+        </div>
+        <div class="location-popup-footer">
+          <button class="cancel-btn" @click="closeLocationPopup">
+            <i class="fa-solid fa-xmark"></i> Cancel
+          </button>
+          <button class="allow-btn-green" @click="handleAllowLocation">
+            <i class="fa-solid fa-check"></i> Allow
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
+
+  <div v-if="!showSplash" class="home-page">
     <header class="top-nav">
       <div class="brand-container">
         <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -30,8 +81,14 @@
       </div>
 
       <div class="nav-auth">
-        <RouterLink class="link-login" to="/login">Login</RouterLink>
-        <RouterLink class="btn-signup" to="/chooserole">Sign Up</RouterLink>
+        <template v-if="isLocationAllowed">
+          <RouterLink class="link-login" to="/login">Login</RouterLink>
+          <RouterLink class="btn-signup" to="/chooserole">Sign Up</RouterLink>
+        </template>
+        <template v-else>
+          <button class="link-login disabled-link" @click="showLocationPopup = true">Login</button>
+          <button class="btn-signup disabled-btn" @click="showLocationPopup = true">Sign Up</button>
+        </template>
       </div>
     </header>
 
@@ -101,6 +158,7 @@
       </div>
     </section>
 
+
     <section class="section">
       <div class="trending-head">
         <h2>Trending Rides</h2>
@@ -140,7 +198,60 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, onMounted, ref } from 'vue'
+
+const showSplash = ref(true)
+const showLocationPopup = ref(false)
+const isLocationAllowed = ref(localStorage.getItem('chong_choul_location_granted') === 'true')
+const LOCATION_CACHE_KEY = 'chong_choul_user_location'
+
+const closeLocationPopup = () => {
+  showLocationPopup.value = false
+}
+
+const handleAllowLocation = () => {
+  requestLocation()
+  // Securely grant access only on Allow click
+  localStorage.setItem('chong_choul_location_granted', 'true')
+  isLocationAllowed.value = true
+  showLocationPopup.value = false
+  console.log("Location access granted by user");
+}
+
+const requestLocation = () => {
+  if (localStorage.getItem(LOCATION_CACHE_KEY)) return
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLoc = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        }
+        localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(userLoc))
+      },
+      (error) => {
+        console.warn('Location access denied or unavailable:', error.message)
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    )
+  }
+}
+
+onMounted(() => {
+  // Splash screen duration (flash)
+  setTimeout(() => {
+    showSplash.value = false
+    
+    // Show the location permission popup 2 seconds AFTER the splash screen is gone
+    // ONLY if it hasn't been allowed yet (Security Measure)
+    setTimeout(() => {
+      if (!isLocationAllowed.value) {
+        showLocationPopup.value = true
+      }
+    }, 2000)
+  }, 2500)
+})
 
 const search = reactive({
   type: 'All Vehicles',
@@ -219,9 +330,7 @@ const rides = [
 ]
 </script>
 
+
 <style>
 @import "../css/HomeView.css";
 </style>
-
-
-

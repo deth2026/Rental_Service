@@ -12,15 +12,12 @@ import Setting from "./Setting.vue";
 import ActivityHistory from "./ActivityHistory.vue";
 import api, { shopApi, vehicleApi } from "@/services/api";
 import { getSessionUser, logoutUser } from "@/services/auth";
+import { useToast } from "@/composables/useToast";
 
 // Toast notifications
 const router = useRouter();
 const logoUrl = "/images/logo-removebg.png";
-const toast = ref({ show: false, message: "", type: "success" });
-const showToast = (message, type = "success") => {
-  toast.value = { show: true, message, type };
-  setTimeout(() => (toast.value.show = false), 100);
-};
+const { showToast } = useToast();
 
 const sections = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard" },
@@ -226,6 +223,7 @@ const shopModal = ref(false);
 const shopForm = reactive({
   name: "",
   city_id: null,
+  province: "",
   description: "",
   address: "",
   location: "",
@@ -311,8 +309,8 @@ const fetchShop = async () => {
 // Fetch cities
 const fetchCities = async () => {
   try {
-    const response = await api.get("/cities");
-    cities.value = response.data.data || response.data || [];
+    const response = await api.get("/cities", { params: { per_page: 100, active_only: true } });
+    cities.value = response.data?.data?.data || response.data?.data || response.data || [];
   } catch (error) {
     console.error("Error fetching cities:", error);
     cities.value = [];
@@ -323,6 +321,7 @@ const fetchCities = async () => {
 const openShopModal = () => {
   shopForm.name = shop.value?.name || "";
   shopForm.city_id = shop.value?.city_id || null;
+  shopForm.province = shop.value?.province || shop.value?.city?.name || "";
   shopForm.description = shop.value?.description || "";
   shopForm.address = shop.value?.address || "";
   shopForm.location = shop.value?.location || "";
@@ -341,6 +340,10 @@ const saveShop = async () => {
     showToast("Please enter shop name", "error");
     return;
   }
+  if (!String(shopForm.province || "").trim()) {
+    showToast("Please enter province", "error");
+    return;
+  }
 
   isLoadingShop.value = true;
   try {
@@ -354,6 +357,7 @@ const saveShop = async () => {
       if (shopForm.city_id) {
         formData.append("city_id", shopForm.city_id);
       }
+      formData.append("province", String(shopForm.province || "").trim());
       formData.append("description", shopForm.description);
       formData.append("address", shopForm.address);
       if (shopForm.location) formData.append("location", shopForm.location);
@@ -383,6 +387,7 @@ const saveShop = async () => {
         owner_id: ownerId,
         name: shopForm.name,
         city_id: shopForm.city_id || null,
+        province: String(shopForm.province || "").trim(),
         description: shopForm.description,
         address: shopForm.address,
         location: shopForm.location || null,
@@ -1713,15 +1718,18 @@ const iconSvg = (name) => {
             />
           </div>
 
-          <!-- City -->
+          <!-- Province -->
           <div class="form-group">
-            <label>City</label>
-            <select v-model="shopForm.city_id">
-              <option :value="null">Select City</option>
-              <option v-for="city in cities" :key="city.id" :value="city.id">
-                {{ city.name }}
-              </option>
-            </select>
+            <label>Province *</label>
+            <input
+              v-model="shopForm.province"
+              type="text"
+              list="dashboard-province-options"
+              placeholder="Type province name (e.g. Phnom Penh)"
+            />
+            <datalist id="dashboard-province-options">
+              <option v-for="city in cities" :key="city.id" :value="city.name" />
+            </datalist>
           </div>
 
           <!-- Address -->

@@ -221,8 +221,6 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
     </div>
   </div>
 
-   <ToastStack />
-
    <ConfirmModal
      v-model="showLogoutConfirm"
      title="Logout"
@@ -232,4 +230,4 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
      variant="danger"
      @confirm="handleLogout"
    />
-</template>
+   </template>

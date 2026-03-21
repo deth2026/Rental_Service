@@ -17,12 +17,12 @@ const page = ref(1)
 const perPage = 6
 
 const showCreate = ref(false)
-const createForm = ref({ name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const createForm = ref({ name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' })
 const createImageFile = ref(null)
 const createImagePreview = ref('')
 
 const showEdit = ref(false)
-const editForm = ref({ id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const editForm = ref({ id: null, name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' })
 const editImageFile = ref(null)
 const editImagePreview = ref('')
 
@@ -63,7 +63,7 @@ const matchesTab = (shop) => {
 }
 
 const ownerName = (shop) => shop?.owner?.name || shop?.owner_name || shop?.owner || '—'
-const shopLocation = (shop) => shop?.location || shop?.address || shop?.city || '—'
+const shopLocation = (shop) => shop?.province || shop?.city?.name || shop?.location || shop?.address || shop?.city || '—'
 
 const matchesQuery = (shop) => {
   const q = normalizedQuery.value
@@ -217,7 +217,7 @@ const openCreate = () => {
 
 const closeCreate = () => {
   showCreate.value = false
-  createForm.value = { name: '', address: '', location: '', phone: '', description: '', img_url: '' }
+  createForm.value = { name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' }
   createImageFile.value = null
   createImagePreview.value = ''
   if (route.query.create) {
@@ -241,10 +241,13 @@ const submitCreate = async () => {
     let payload = {
       name,
       address,
+      province: createForm.value.province || null,
       location: createForm.value.location || null,
       phone: createForm.value.phone || null,
       description: createForm.value.description || null,
       img_url: createForm.value.img_url || null,
+      latitude: createForm.value.latitude || null,
+      longitude: createForm.value.longitude || null,
       status: 'inactive',
     }
 
@@ -253,9 +256,12 @@ const submitCreate = async () => {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (createForm.value.province) formData.append('province', createForm.value.province)
       if (createForm.value.location) formData.append('location', createForm.value.location)
       if (createForm.value.phone) formData.append('phone', createForm.value.phone)
       if (createForm.value.description) formData.append('description', createForm.value.description)
+      if (createForm.value.latitude) formData.append('latitude', createForm.value.latitude)
+      if (createForm.value.longitude) formData.append('longitude', createForm.value.longitude)
       formData.append('status', 'inactive')
       formData.append('img_url', createImageFile.value)
       payload = formData
@@ -279,10 +285,13 @@ const openEdit = (shop) => {
     id,
     name: shop?.name || '',
     address: shop?.address || '',
+    province: shop?.province || shop?.city?.name || '',
     location: shop?.location || '',
     phone: shop?.phone || '',
     description: shop?.description || '',
     img_url: shop?.img_url || '',
+    latitude: shop?.latitude || '',
+    longitude: shop?.longitude || '',
   }
   editImageFile.value = null
   editImagePreview.value = ''
@@ -291,7 +300,7 @@ const openEdit = (shop) => {
 
 const closeEdit = () => {
   showEdit.value = false
-  editForm.value = { id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' }
+  editForm.value = { id: null, name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' }
   editImageFile.value = null
   editImagePreview.value = ''
 }
@@ -312,19 +321,25 @@ const submitEdit = async () => {
     let payload = {
       name,
       address,
+      province: editForm.value.province || null,
       location: editForm.value.location || null,
       phone: editForm.value.phone || null,
       description: editForm.value.description || null,
       img_url: editForm.value.img_url || null,
+      latitude: editForm.value.latitude || null,
+      longitude: editForm.value.longitude || null,
     }
 
     if (editImageFile.value) {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (editForm.value.province) formData.append('province', editForm.value.province)
       if (editForm.value.location) formData.append('location', editForm.value.location)
       if (editForm.value.phone) formData.append('phone', editForm.value.phone)
       if (editForm.value.description) formData.append('description', editForm.value.description)
+      if (editForm.value.latitude) formData.append('latitude', editForm.value.latitude)
+      if (editForm.value.longitude) formData.append('longitude', editForm.value.longitude)
       formData.append('img_url', editImageFile.value)
       payload = formData
     }
@@ -545,8 +560,20 @@ onMounted(() => {
             <input v-model="createForm.location" type="text" placeholder="City, Country" />
           </label>
           <label class="field">
+            <span class="field-label">Province</span>
+            <input v-model="createForm.province" type="text" placeholder="Phnom Penh" />
+          </label>
+          <label class="field">
             <span class="field-label">Phone</span>
             <input v-model="createForm.phone" type="text" placeholder="+855..." />
+          </label>
+          <label class="field">
+            <span class="field-label">Latitude</span>
+            <input v-model="createForm.latitude" type="text" placeholder="11.5564" />
+          </label>
+          <label class="field">
+            <span class="field-label">Longitude</span>
+            <input v-model="createForm.longitude" type="text" placeholder="104.9282" />
           </label>
           <label class="field span-2">
             <span class="field-label">Description</span>
@@ -594,8 +621,20 @@ onMounted(() => {
             <input v-model="editForm.location" type="text" />
           </label>
           <label class="field">
+            <span class="field-label">Province</span>
+            <input v-model="editForm.province" type="text" />
+          </label>
+          <label class="field">
             <span class="field-label">Phone</span>
             <input v-model="editForm.phone" type="text" />
+          </label>
+          <label class="field">
+            <span class="field-label">Latitude</span>
+            <input v-model="editForm.latitude" type="text" />
+          </label>
+          <label class="field">
+            <span class="field-label">Longitude</span>
+            <input v-model="editForm.longitude" type="text" />
           </label>
           <label class="field span-2">
             <span class="field-label">Description</span>

@@ -31,6 +31,7 @@ const createForm = reactive({
   phone: "",
   description: "",
   address: "",
+  province: "",
   location: "",
   latitude: "",
   longitude: "",
@@ -46,6 +47,7 @@ const fieldErrors = reactive({
   name: "",
   status: "",
   address: "",
+  province: "",
   phone: "",
   description: "",
 });
@@ -225,6 +227,7 @@ const resetForm = () => {
   createForm.phone = "";
   createForm.description = "";
   createForm.address = "";
+  createForm.province = "";
   createForm.location = "";
   createForm.latitude = "";
   createForm.longitude = "";
@@ -238,6 +241,7 @@ const resetForm = () => {
   fieldErrors.name = "";
   fieldErrors.status = "";
   fieldErrors.address = "";
+  fieldErrors.province = "";
   fieldErrors.phone = "";
   fieldErrors.description = "";
   shopImageFile.value = null;
@@ -256,18 +260,21 @@ const validateCreateForm = () => {
   fieldErrors.name = "";
   fieldErrors.status = "";
   fieldErrors.address = "";
+  fieldErrors.province = "";
   fieldErrors.phone = "";
   fieldErrors.description = "";
 
   const name = createForm.name.trim();
   const status = createForm.status.trim();
   const address = createForm.address.trim();
+  const province = createForm.province.trim();
   const phone = createForm.phone.trim();
   const description = createForm.description.trim();
 
   if (!name) fieldErrors.name = "Shop name is required.";
   if (!status) fieldErrors.status = "Status is required.";
   if (!address) fieldErrors.address = "Address is required.";
+  if (!province) fieldErrors.province = "Province is required.";
   if (!phone) {
     fieldErrors.phone = "Phone number is required.";
   } else if (!/^[0-9+\-\s()]{8,20}$/.test(phone)) {
@@ -279,6 +286,7 @@ const validateCreateForm = () => {
     !fieldErrors.name &&
     !fieldErrors.status &&
     !fieldErrors.address &&
+    !fieldErrors.province &&
     !fieldErrors.phone &&
     !fieldErrors.description
   );
@@ -468,6 +476,7 @@ const createShop = async () => {
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
+      payload.append("province", createForm.province.trim());
       if (createForm.location)
         payload.append("location", createForm.location.trim());
       if (createForm.latitude) payload.append("latitude", createForm.latitude);
@@ -483,6 +492,7 @@ const createShop = async () => {
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
+        province: createForm.province.trim(),
         location: createForm.location.trim() || null,
         latitude: createForm.latitude || null,
         longitude: createForm.longitude || null,
@@ -654,6 +664,10 @@ onBeforeUnmount(() => {
         <label class="settings-field">
           <span>Phone number</span>
           <input type="text" :value="shop.phone || 'N/A'" readonly />
+        </label>
+        <label class="settings-field">
+          <span>Province</span>
+          <input type="text" :value="shop.province || shop.city?.name || 'N/A'" readonly />
         </label>
         <label class="settings-field">
           <span>Password</span>
@@ -861,6 +875,20 @@ onBeforeUnmount(() => {
                   />
                   <small v-if="fieldErrors.address" class="field-error">{{
                     fieldErrors.address
+                  }}</small>
+                </label>
+
+                <label>
+                  <span>Province *</span>
+                  <input
+                    v-model="createForm.province"
+                    required
+                    type="text"
+                    placeholder="Type province name (e.g. Phnom Penh)"
+                    @input="clearFieldError('province')"
+                  />
+                  <small v-if="fieldErrors.province" class="field-error">{{
+                    fieldErrors.province
                   }}</small>
                 </label>
 

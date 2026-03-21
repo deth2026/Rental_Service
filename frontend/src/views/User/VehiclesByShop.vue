@@ -74,7 +74,16 @@
                 <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
               </div>
 
-              <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
+               <div class="shop-info">
+                 <img 
+                   v-if="getVehicleShopImage(vehicle)" 
+                   :src="getVehicleShopImage(vehicle)" 
+                   :alt="getVehicleShop(vehicle) + ' logo'" 
+                   class="shop-logo"
+                 >
+                 <span v-else><i class="fa-regular fa-building" aria-hidden="true"></i></span>
+                 <span class="shop-name">{{ getVehicleShop(vehicle) }}</span>
+               </div>
 
               <div class="promo-meta">
                 <div class="promo-value">
@@ -90,19 +99,28 @@
 
       <section class="map-section">
         <div class="map">
-          <iframe
-            class="map-frame"
-            :src="mapEmbedUrl"
-            title="Google map location"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-          <button class="btn-reset open-map-btn" @click="openMainLocation">
-            Open in Google Maps
-          </button>
-          <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
-            Open Saved Location
-          </button>
+            <div class="map-controls">
+              <button class="btn-reset open-map-btn" :class="{ active: mapMode === 'satellite' }" @click="mapMode = 'satellite'">Satellite</button>
+              <button class="btn-reset open-map-btn" :class="{ active: mapMode === 'road' }" @click="mapMode = 'road'">Roadmap</button>
+              <button class="btn-reset open-map-btn" :class="{ active: mapMode === 'route' }" @click="mapMode = 'route'">Show Route</button>
+              <button class="btn-reset open-map-btn secondary" @click="useMyLocation">Use My Location</button>
+              <div class="distance-info" v-if="distanceKm !== null">
+                <strong>Distance:</strong> {{ distanceKm.toFixed(2) }} km
+              </div>
+            </div>
+
+            <iframe
+              class="map-frame"
+              :src="mapEmbedUrl"
+              title="Google map location"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+
+            <div class="map-actions">
+              <button class="btn-reset open-map-btn" @click="openMainLocation">Open in Google Maps</button>
+              <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">Open Saved Location</button>
+            </div>
         </div>
       </section>
     </main>
@@ -215,25 +233,68 @@ const selectedShopCoords = computed(() => {
   if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null;
   return { lat: parsedLat, lng: parsedLng };
 });
+// Map UI mode: 'satellite' | 'road' | 'route'
+const mapMode = ref('satellite');
+// Optional origin coordinates for route mode (set via geolocation or other input)
+const originCoords = ref(null);
+
+// Haversine distance (km) between originCoords and selectedShopCoords
+const distanceKm = computed(() => {
+  const dest = selectedShopCoords.value;
+  const origin = originCoords.value;
+  if (!dest || !origin) return null;
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(dest.lat - origin.lat);
+  const dLon = toRad(dest.lng - origin.lng);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(origin.lat)) * Math.cos(toRad(dest.lat)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+});
+
+const useMyLocation = () => {
+  if (!navigator?.geolocation) {
+    actionMessage.value = 'Geolocation not available in this browser.';
+    return;
+  }
+  actionMessage.value = 'Fetching your location...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      originCoords.value = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      actionMessage.value = 'Using your location as origin.';
+    },
+    (err) => {
+      console.error(err);
+      actionMessage.value = 'Could not read your location.';
+    },
+    { enableHighAccuracy: false, timeout: 10000 }
+  );
+};
 const mapEmbedUrl = computed(() => {
   const coords = selectedShopCoords.value;
   const shopAddress = selectedShopAddress.value;
   const shopName = selectedShopName.value || 'Shop';
   const fallback = 'Siem Reap, Cambodia';
 
-  // Build a clean query without "undefined"
   const queryParts = [];
   if (shopName) queryParts.push(shopName);
   if (shopAddress) queryParts.push(shopAddress);
   if (coords) queryParts.push(`${coords.lat},${coords.lng}`);
   const query = queryParts.join(' - ') || fallback;
 
-  // When we have coordinates, also set ll (map center) to avoid the world view
-  if (coords) {
-    return `https://maps.google.com/maps?hl=en&ll=${coords.lat},${coords.lng}&q=${encodeURIComponent(query)}&t=k&z=18&output=embed`;
+  // Route mode: when origin is available and mapMode is 'route', show directions
+  if (mapMode.value === 'route' && coords && originCoords.value) {
+    const o = originCoords.value;
+    return `https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lng}&destination=${coords.lat},${coords.lng}&travelmode=driving`;
   }
 
-  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=k&z=16&output=embed`;
+  // Map tiles: satellite or road
+  const tile = mapMode.value === 'satellite' ? 'k' : 'm';
+  if (coords) {
+    return `https://maps.google.com/maps?hl=en&ll=${coords.lat},${coords.lng}&q=${encodeURIComponent(query)}&t=${tile}&z=18&output=embed`;
+  }
+
+  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=${tile}&z=16&output=embed`;
 });
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -267,24 +328,48 @@ const displayedVehicles = computed(() => {
 });
 
 const getVehicleImage = (vehicle) => {
-  // First check for full URL (provided by backend accessor)
-  if (vehicle.image_url_full) {
-    return vehicle.image_url_full;
-  }
-  // Check photo_urls array for multiple images
-  if (vehicle.photo_urls && Array.isArray(vehicle.photo_urls) && vehicle.photo_urls.length > 0) {
-    return vehicle.photo_urls[0];
-  }
-  // Fallback to image_url processing
-  const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
-  if (image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) return image;
-    if (image.startsWith('/')) return `${API_ROOT}${image}`;
-    return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
-  }
-  const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
-  return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
-};
+   // First check for full URL (provided by backend accessor)
+   if (vehicle.image_url_full) {
+     return vehicle.image_url_full;
+   }
+   // Check photo_urls array for multiple images
+   if (vehicle.photo_urls && Array.isArray(vehicle.photo_urls) && vehicle.photo_urls.length > 0) {
+     return vehicle.photo_urls[0];
+   }
+   // Fallback to image_url processing
+   const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
+   if (image) {
+     if (image.startsWith('http://') || image.startsWith('https://')) return image;
+     if (image.startsWith('/')) return `${API_ROOT}${image}`;
+     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+   }
+   const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
+   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
+ };
+
+const getVehicleShopImage = (vehicle) => {
+   if (!vehicle.shop_id) return null;
+   const shop = shopNamesById.value[vehicle.shop_id];
+   if (!shop) return null;
+   
+   // Check if shop has image/logo
+   if (shop.shop_image_url) {
+     const image = shop.shop_image_url;
+     if (image.startsWith('http://') || image.startsWith('https://')) return image;
+     if (image.startsWith('/')) return `${API_ROOT}${image}`;
+     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+   }
+   
+   // Fallback to shop logo or default
+   if (shop.logo_url) {
+     const image = shop.logo_url;
+     if (image.startsWith('http://') || image.startsWith('https://')) return image;
+     if (image.startsWith('/')) return `${API_ROOT}${image}`;
+     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+   }
+   
+   return null;
+ };
 
 const loadAllPages = async (resource) => {
   let page = 1;
@@ -497,6 +582,36 @@ onUnmounted(() => {
   font-weight: 700;
   color: #2563eb;
   white-space: nowrap;
+}
+
+.map-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.map-frame {
+  width: 100%;
+  height: 380px;
+  border: 0;
+  border-radius: 12px;
+}
+.map-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.open-map-btn.active {
+  background: linear-gradient(90deg,#1158d6,#0b4fc0);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.distance-info {
+  margin-left: 12px;
+  font-size: 14px;
+  color: #0b243a;
 }
 
 .brand-icon {

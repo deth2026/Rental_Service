@@ -1,8 +1,17 @@
 <script setup>
+import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import "../css/chooserole.css";
 
 const router = useRouter();
+
+onMounted(() => {
+  const isGranted = localStorage.getItem('chong_choul_location_granted') === 'true';
+  if (!isGranted) {
+    console.warn("Security: Location not allowed. Redirecting to home.");
+    router.push('/');
+  }
+});
 
 const selectRole = (role) => {
   localStorage.setItem("selectedRole", role);
@@ -60,7 +69,10 @@ const selectRole = (role) => {
       <p class="hint">
         Choose your role to access the appropriate registration page
       </p>
-      <RouterLink class="back-home" to="/">Back to Home</RouterLink>
+      <RouterLink class="back-home-btn prominent" to="/">
+        <i class="fa-solid fa-house"></i>
+        <span>Back to Home</span>
+      </RouterLink>
     </section>
   </main>
 </template>

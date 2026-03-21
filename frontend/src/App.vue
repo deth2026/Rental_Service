@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue'
+import ToastStack from './components/ToastStack.vue'
+import './assets/main.css'
 
 const getUserRole = () => {
   try {
@@ -16,6 +18,7 @@ const getUserRole = () => {
 <template>
   <div id="app">
     <router-view />
+    <ToastStack />
   </div>
 </template>
 
