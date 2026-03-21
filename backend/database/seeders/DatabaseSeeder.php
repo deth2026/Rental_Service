@@ -3,6 +3,11 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Booking;
+use App\Models\BookingStatusLog;
+use App\Models\Message;
+use App\Models\NotificationRecord;
+use App\Services\NotificationService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -37,6 +42,18 @@ class DatabaseSeeder extends Seeder
                 'is_verified' => true,
             ]
         );
+        
+        // Create admin@chongchoul.com user
+        \App\Models\User::updateOrCreate(
+            ['email' => 'admin@chongchoul.com'],
+            [
+                'name' => 'Admin User',
+                'phone' => '+855 12 345 678',
+                'password' => Hash::make('admin123'),
+                'role' => 'admin',
+                'is_verified' => true,
+            ]
+        );
 
         $shopOwner = \App\Models\User::updateOrCreate(
             ['email' => 'shop@example.com'],
@@ -61,6 +78,14 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+<<<<<<< HEAD
+        // Create sample categories
+        \App\Models\Category::create([
+            'name' => 'Cars',
+            'description' => 'Passenger vehicles for personal use',
+            'status' => 'active'
+        ]);
+=======
         $categories = [
             [
                 'name' => 'Cars',
@@ -78,6 +103,7 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ],
         ];
+>>>>>>> 35f1dcfbac65e45eb17ec38bee0ad08097768b82
 
         foreach ($categories as $category) {
             \App\Models\Category::updateOrCreate(['name' => $category['name']], $category);
@@ -127,6 +153,21 @@ class DatabaseSeeder extends Seeder
             $shopMap[$definition['name']] = $shop;
         }
 
+<<<<<<< HEAD
+        \App\Models\City::create([
+            'name' => 'Sihanoukville'
+        ]);
+
+        // Create shops
+        $shop1 = \App\Models\Shop::create([
+            'owner_id' => $shopOwner->id,
+            'name' => 'Phnom Penh City Rides',
+            'address' => 'Street 178, Daun Penh, Phnom Penh',
+            'phone' => '+855 12 345 678',
+            'status' => 'active',
+            'img_url' => 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=600&q=80',
+        ]);
+=======
         $vehicleDefinitions = [
             [
                 'shop' => 'Phnom Penh City Rides',
@@ -194,6 +235,7 @@ class DatabaseSeeder extends Seeder
                 'image_url' => 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=1000&q=80',
             ],
         ];
+>>>>>>> 35f1dcfbac65e45eb17ec38bee0ad08097768b82
 
         foreach ($vehicleDefinitions as $vehicleDefinition) {
             $shopName = $vehicleDefinition['shop'];
@@ -211,5 +253,63 @@ class DatabaseSeeder extends Seeder
                 $data + ['shop_id' => $shop->id]
             );
         }
+
+        $testUser = \App\Models\User::where('email', 'test@example.com')->first();
+        $vehicle = \App\Models\Vehicle::where('status', 'available')->first();
+
+        if ($testUser && $vehicle) {
+            $startDate = '2026-04-01';
+            $booking = Booking::updateOrCreate(
+                ['user_id' => $testUser->id, 'vehicle_id' => $vehicle->id, 'start_date' => $startDate],
+                [
+                    'shop_id' => $vehicle->shop_id,
+                    'total_days' => 3,
+                    'total_price' => 120,
+                    'status' => 'pending',
+                    'daily_rate' => 40,
+                    'rider_details' => 'John Doe · +855 12 345 678',
+                    'insurance_fee' => 5,
+                    'taxes_fee' => 3,
+                    'deposit_amount' => 0,
+                    'deposit_status' => 'unpaid',
+                ]
+            );
+
+            BookingStatusLog::firstOrCreate(
+                ['booking_id' => $booking->id, 'status' => $booking->status],
+                ['changed_at' => now()]
+            );
+
+<<<<<<< HEAD
+        // Create cities
+        \App\Models\City::create(['name' => 'Phnom Penh', 'status' => 'active']);
+        \App\Models\City::create(['name' => 'Siem Reap', 'status' => 'active']);
+        \App\Models\City::create(['name' => 'Battambang', 'status' => 'active']);
+        \App\Models\City::create(['name' => 'Sihanoukville', 'status' => 'active']);
+=======
+            if (!NotificationRecord::where('related_type', Booking::class)
+                ->where('related_id', $booking->id)
+                ->where('title', 'Booking received')
+                ->exists()) {
+                NotificationService::bookingCreated($booking);
+            }
+
+            $message = Message::firstOrCreate(
+                [
+                    'sender_id' => $shopOwner->id,
+                    'receiver_id' => $testUser->id,
+                    'booking_id' => $booking->id,
+                    'subject' => 'Pickup reminder',
+                ],
+                ['body' => 'Thanks for choosing us! We will confirm the key exchange once the vehicle is ready.']
+            );
+
+            if (!NotificationRecord::where('related_type', Message::class)
+                ->where('related_id', $message->id)
+                ->exists()) {
+                NotificationService::messageReceived($message);
+            }
+        }
+>>>>>>> 35f1dcfbac65e45eb17ec38bee0ad08097768b82
     }
 }

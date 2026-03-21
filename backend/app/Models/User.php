@@ -45,6 +45,9 @@ class User extends Authenticatable
         'is_verified',
         'img_url',
         'profile_picture',
+        'job_title',
+        'bio',
+        'last_login',
     ];
 
     protected $hidden = [

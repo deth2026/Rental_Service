@@ -34,6 +34,7 @@ const deletingShopId = ref(null)
 const statusChangingShopId = ref(null)
 
 const normalizedQuery = computed(() => String(route.query.q || '').trim().toLowerCase())
+const focusShopId = computed(() => Number(route.query.focusShop || 0))
 
 const deleteShopMessage = computed(() => {
   const name = String(deleteTarget.value?.name || '').trim()
@@ -395,6 +396,19 @@ watch(
   { immediate: true }
 )
 
+watch(
+  [() => focusShopId.value, () => (admin.state.shops || []).length],
+  ([focus]) => {
+    if (!focus) return
+    const shop = (admin.state.shops || []).find((item) => Number(item.id) === focus)
+    if (!shop) return
+    openEdit(shop)
+    const nextQuery = { ...route.query }
+    delete nextQuery.focusShop
+    router.replace({ query: nextQuery })
+  }
+)
+
 onMounted(() => {
   // Use cached data first, then force-refresh if empty so Admin page always tries to recover.
   admin.load()
@@ -416,7 +430,7 @@ onMounted(() => {
         <h1 class="page-title">Shop Management</h1>
         <p class="page-subtitle">Manage, verify, and monitor all registered rental shops.</p>
       </div>
-      <button type="button" class="btn btn-primary" @click="openCreate">
+      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="openCreate">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
         <span>Add New Shop</span>
       </button>

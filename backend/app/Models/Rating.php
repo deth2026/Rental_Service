@@ -11,6 +11,7 @@ class Rating extends Model
 
     protected $fillable = [
         'booking_id',
+        'vehicle_id',
         'shop_id',
         'user_id',
         'rating',
@@ -30,5 +31,10 @@ class Rating extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function vehicle()
+    {
+        return $this->belongsTo(Vehicle::class);
     }
 }

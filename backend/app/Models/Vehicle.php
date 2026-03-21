@@ -63,6 +63,14 @@ class Vehicle extends Model
     }
 
     /**
+     * Direct ratings relationship (since ratings table now has vehicle_id)
+     */
+    public function directRatings(): HasMany
+    {
+        return $this->hasMany(Rating::class, 'vehicle_id');
+    }
+
+    /**
      * Get the full image URL for display
      * This accessor is automatically included in API responses
      */

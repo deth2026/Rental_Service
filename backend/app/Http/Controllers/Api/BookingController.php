@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -249,15 +250,17 @@ class BookingController extends Controller
         // Add shop_id from the vehicle
         $bookingData = $_request->all();
         $bookingData['shop_id'] = $vehicle->shop_id;
-        
+
         $record = Booking::create($bookingData);
-        
+
         // Create status log entry
         \App\Models\BookingStatusLog::create([
             'booking_id' => $record->id,
             'status' => $record->status ?? 'pending',
             'changed_at' => now(),
         ]);
+
+        NotificationService::bookingCreated($record);
 
         return response()->json($record, 201);
     }
@@ -279,6 +282,8 @@ class BookingController extends Controller
                 'status' => $_request->status,
                 'changed_at' => now(),
             ]);
+
+            NotificationService::bookingStatusChanged($booking->fresh(), $_request->status);
         }
 
         return response()->json($booking->fresh());

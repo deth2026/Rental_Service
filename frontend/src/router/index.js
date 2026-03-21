@@ -15,6 +15,7 @@ import VehiclesByShop from '../views/user/VehiclesByShop.vue';
 import Booking from '../views/user/Booking.vue';
 import ViewDetail from '../views/user/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
+import UserNotifications from '../views/User/Notification.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -71,6 +72,16 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
     },
     {
+      path: '/shop/notifications',
+      name: 'shop-notifications',
+      component: ShopDashboard,
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['shop_owner', 'admin'],
+        defaultSection: 'notifications'
+      }
+    },
+    {
       path: '/view_shop',
       name: 'view_shop',
       component: UserDashboard,
@@ -110,6 +121,12 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: SettingUser
+    },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: UserNotifications,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/admin',
@@ -171,9 +188,19 @@ const router = createRouter({
           component: () => import('../views/admin/ReportManagement.vue')
         },
         {
+          path: 'notifications',
+          name: 'admin-notifications',
+          component: () => import('../views/admin/Notification_admin.vue')
+        },
+        {
           path: 'settings',
           name: 'admin-settings',
-          component: () => import('../views/admin/SettingManagement.vue')
+          component: () => import('../views/admin/Admins_setting.vue')
+        },
+        {
+          path: 'profile',
+          name: 'admin-profile',
+          component: () => import('../views/admin/Update_profile_admin.vue')
         }
       ]
     },
@@ -194,6 +221,10 @@ const router = createRouter({
       name: 'shop-vehicles',
       component: ShopVehicles,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/login'
     }
   ]
 });

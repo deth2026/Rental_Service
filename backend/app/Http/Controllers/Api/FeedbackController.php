@@ -10,7 +10,24 @@ class FeedbackController extends Controller
 {
     public function index()
     {
-        return response()->json(Feedback::paginate(15));
+        $feedback = Feedback::with(['user', 'booking', 'booking.vehicle'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+        
+        // Transform the collection to include vehicle_name and user profile picture
+        $feedback->getCollection()->transform(function ($item) {
+            $item->vehicle_name = $item->booking && $item->booking->vehicle 
+                ? $item->booking->vehicle->name 
+                : null;
+            // Include user profile picture
+            if ($item->user) {
+                $item->user_name = $item->user->name;
+                $item->user_profile_picture = $item->user->avatar_url;
+            }
+            return $item;
+        });
+        
+        return response()->json($feedback);
     }
 
     public function store(Request $_request)
