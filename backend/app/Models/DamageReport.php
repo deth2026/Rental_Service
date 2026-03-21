@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Booking;
 
 class DamageReport extends Model
 {
@@ -22,4 +23,9 @@ class DamageReport extends Model
         'created_at' => 'datetime',
         'repair_cost' => 'decimal:2'
     ];
+
+    public function booking()
+    {
+        return $this->belongsTo(Booking::class);
+    }
 }

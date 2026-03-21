@@ -45,6 +45,9 @@ class User extends Authenticatable
         'is_verified',
         'img_url',
         'profile_picture',
+        'job_title',
+        'bio',
+        'last_login',
     ];
 
     protected $hidden = [
@@ -87,5 +90,13 @@ class User extends Authenticatable
         }
 
         return asset($normalized);
+    }
+
+    /**
+     * Get the shop that owns this user (if user is a shop owner)
+     */
+    public function shop()
+    {
+        return $this->hasOne(Shop::class, 'owner_id');
     }
 }

@@ -1,1 +1,1 @@
-- [x] 1. Resolve conflicts in 4 Vue files (Dashboard.vue, Setting_user.vue, ViewDetail.vue, Promotion.vue)\n- [ ] 2. git add conflicted files\n
+# Database Schema Fixes - Ongoing\n\n**Original last_login FIXED ✅**\n\n**New: job_title/bio missing columns FIXED**\n- [x] Confirmed pending migration, columns missing (No)\n- [ ] Run targeted migrate\n\n**Status:** Handling chained schema issues from pending migrations.\n**Full migrate blocked by 2026_03_06_023832 duplicate shop_id.**

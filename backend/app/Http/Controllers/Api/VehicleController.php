@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Schema;
 
 class VehicleController extends Controller
 {
+    private function ratingAwareVehicleQuery()
+    {
+        return Vehicle::with('shop')->withAvg('ratings', 'rating')->withCount('ratings');
+    }
+
     private function filterVehicleDataBySchema(array $data): array
     {
         $allowed = Schema::getColumnListing('vehicles');
@@ -139,21 +144,17 @@ class VehicleController extends Controller
     {
         // Check if shop_id is provided in the query parameters
         $shopId = $request->query('shop_id');
-        
-        // If shop_id is provided, filter vehicles by that shop
+
         if ($shopId) {
-            $vehicles = Vehicle::where('shop_id', $shopId)->paginate(15);
-            return VehicleResource::collection($vehicles);
+            $query = $this->ratingAwareVehicleQuery()->where('shop_id', $shopId);
+            return VehicleResource::collection($query->paginate(15));
         }
-        
-        // If user is authenticated, filter vehicles by their shop
+
         $user = $request->user();
-        
+
         if ($user && $user->role === 'shop_owner') {
-            // Get all shops owned by this user
             $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
-            
-            // If user has no shops, return empty result
+
             if (empty($shopIds)) {
                 return response()->json([
                     'data' => [],
@@ -163,15 +164,13 @@ class VehicleController extends Controller
                     'total' => 0
                 ]);
             }
-            
-            // Return only vehicles from user's shops
-            $vehicles = Vehicle::whereIn('shop_id', $shopIds)->paginate(15);
-            return VehicleResource::collection($vehicles);
+
+            $query = $this->ratingAwareVehicleQuery()->whereIn('shop_id', $shopIds);
+            return VehicleResource::collection($query->paginate(15));
         }
-        
-        // For admin or unauthenticated users, return all vehicles
-        $vehicles = Vehicle::paginate(15);
-        return VehicleResource::collection($vehicles);
+
+        $query = $this->ratingAwareVehicleQuery();
+        return VehicleResource::collection($query->paginate(15));
     }
 
     public function store(Request $request)
@@ -262,6 +261,7 @@ class VehicleController extends Controller
 
     public function show(Vehicle $vehicle)
     {
+        $vehicle->load('shop')->loadAvg('ratings', 'rating')->loadCount('ratings');
         return response()->json(new VehicleResource($vehicle));
     }
 

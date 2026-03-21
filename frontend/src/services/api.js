@@ -12,18 +12,19 @@ const getStoredToken = () => {
   return localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
 };
 
-const token = getStoredToken();
-if (token) {
-  api.defaults.headers.common.Authorization = `Bearer ${token}`;
-}
-
 api.interceptors.request.use((config) => {
   const nextConfig = { ...config };
   const authToken = getStoredToken();
 
+  // Log for debugging
+  console.log('API Interceptor: Token from localStorage:', authToken ? 'present' : 'missing');
+
   if (authToken) {
     nextConfig.headers = nextConfig.headers || {};
     nextConfig.headers.Authorization = `Bearer ${authToken}`;
+    console.log('API Interceptor: Authorization header set');
+  } else {
+    console.log('API Interceptor: No token found, skipping Authorization header');
   }
 
   // Let browser set correct multipart boundary automatically.
@@ -67,6 +68,15 @@ export const cityApi = {
   getAll: () => api.get('/cities')
 };
 
+// Category API calls
+export const categoryApi = {
+  getAll: () => api.get('/categories'),
+  getById: (id) => api.get(`/categories/${id}`),
+  create: (data) => api.post('/categories', data),
+  update: (id, data) => api.put(`/categories/${id}`, data),
+  delete: (id) => api.delete(`/categories/${id}`)
+};
+
 // Payment API calls
 export const paymentApi = {
   getAll: () => api.get('/payments'),
@@ -74,6 +84,13 @@ export const paymentApi = {
   create: (data) => api.post('/payments', data),
   update: (id, data) => api.put(`/payments/${id}`, data),
   delete: (id) => api.delete(`/payments/${id}`)
+};
+
+export const userApi = {
+  getAll: (params = {}) => api.get('/users', { params }),
+  create: (payload) => api.post('/users', payload),
+  update: (id, payload) => api.put(`/users/${id}`, payload),
+  delete: (id) => api.delete(`/users/${id}`)
 };
 
 // Coupon API calls
@@ -110,6 +127,23 @@ export const loyaltyPointApi = {
   create: (data) => api.post('/loyalty-points', data),
   update: (id, data) => api.put(`/loyalty-points/${id}`, data),
   delete: (id) => api.delete(`/loyalty-points/${id}`)
+};
+
+// Bookings API calls
+export const bookingApi = {
+  getAll: () => api.get('/bookings'),
+  getById: (id) => api.get(`/bookings/${id}`),
+  create: (data) => api.post('/bookings', data),
+  update: (id, data) => api.put(`/bookings/${id}`, data),
+  delete: (id) => api.delete(`/bookings/${id}`),
+  getMyBookings: () => api.get('/my-bookings')
+};
+
+// Rating API calls
+export const ratingApi = {
+  getVehicleRatings: () => api.get('/vehicle-ratings'),
+  getVehicleRatingsSummary: () => api.get('/vehicle-ratings-summary'),
+  create: (bookingId, data) => api.post(`/bookings/${bookingId}/rating`, data)
 };
 
 export default api;

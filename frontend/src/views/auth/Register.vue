@@ -50,7 +50,7 @@
       </div>
     </div>
 
-    <!-- RIGHT SIDE -->
+    <!-- RIGHT SIDE --> 
     <div class="right">
       <!-- Back to Home -->
       <router-link to="/" class="back-home-btn">

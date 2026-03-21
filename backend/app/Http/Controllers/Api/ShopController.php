@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Shop;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
     public function index()
     {
-        $shops = Shop::with('owner')
+        $shops = Shop::with(['owner:id,name,email,phone'])
             ->orderByDesc('id')
             ->get();
 
@@ -35,10 +38,11 @@ class ShopController extends Controller
             'status' => 'nullable|string|in:active,inactive',
             // do NOT validate img_url here; see below
         ]);
-        
-        // A shop owner can only create shops for themselves.
-        $payload['owner_id'] = $request->user()?->id;
 
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
+        
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
             // file rule ensures it is an image and not too large
@@ -49,7 +53,7 @@ class ShopController extends Controller
             $request->validate(['img_url' => 'string']);
         }
 
-        // A shop owner can only create shops for themselves.
+        // The creator becomes the owner by default.
         $payload['owner_id'] = $request->user()?->id;
 
         // Handle image upload or URL
@@ -92,6 +96,14 @@ class ShopController extends Controller
         }
 
         $record = Shop::create($payload);
+        try {
+            NotificationService::shopCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin notification for new shop', [
+                'error' => $exception->getMessage(),
+                'shop_id' => $record->id,
+            ]);
+        }
 
         return response()->json($record, 201);
     }
@@ -104,7 +116,9 @@ class ShopController extends Controller
     public function update(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if ($user && !$isAdmin && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
                 'message' => 'Unauthorized. You can only update your own shops.',
             ], 403);
@@ -123,6 +137,10 @@ class ShopController extends Controller
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
 
         // validate img_url value type depending on upload or text
         if ($request->hasFile('img_url')) {
@@ -209,15 +227,36 @@ class ShopController extends Controller
     public function destroy(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if ($user && !$isAdmin && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
                 'message' => 'Unauthorized. You can only delete your own shops.',
             ], 403);
         }
 
+        if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
+            $oldPath = storage_path('app/public/' . ltrim($shop->img_url, '/'));
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
+    }
+
+    /**
+     * Check whether the shops table contains the given column.
+     */
+    private function shopColumnExists(string $column): bool
+    {
+        static $cache = [];
+        if (!array_key_exists($column, $cache)) {
+            $cache[$column] = Schema::hasColumn('shops', $column);
+        }
+        return $cache[$column];
     }
 
     /**

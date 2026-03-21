@@ -10,6 +10,8 @@ class Shop extends Model
 {
     use HasFactory;
 
+    protected $appends = ['img_url_full'];
+
     protected $fillable = [
         'owner_id',
         'city_id',
@@ -34,5 +36,24 @@ class Shop extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function getImgUrlFullAttribute(): ?string
+    {
+        $value = trim((string) ($this->img_url ?? ''));
+        if ($value === '') {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        $normalized = ltrim(str_replace('\\', '/', $value), '/');
+        if (str_starts_with($normalized, 'storage/')) {
+            return asset($normalized);
+        }
+
+        return asset('storage/' . $normalized);
     }
 }
