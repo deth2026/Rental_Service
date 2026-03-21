@@ -10,9 +10,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 90px;
+  height: 90px;
+  
   overflow: visible;
-  padding: 0 40px;
+  padding: 0px 24px;
   background: #fff;
   border-bottom: 1px solid #edf2f7;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);

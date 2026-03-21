@@ -1,10 +1,13 @@
 <template>
   <span :class="logoClass" v-bind="attrs">
-    <span class="app-logo__mark" aria-hidden="true">CC</span>
-    <span class="app-logo__img">
-      <span class="app-logo__name">Chong Choul</span>
-      <small v-if="showTagline" class="app-logo__tagline">Vehicle Rentals</small>
-    </span>
+    <img v-if="src" :src="src" alt="Logo" class="app-logo__image" />
+    <template v-else>
+      <span class="app-logo__mark" aria-hidden="true">CC</span>
+      <span class="app-logo__img">
+        <span class="app-logo__name">Chong Choul</span>
+        <small v-if="showTagline" class="app-logo__tagline">Vehicle Rentals</small>
+      </span>
+    </template>
   </span>
 </template>
 
@@ -15,7 +18,8 @@ import { useAttrs } from 'vue'
 const props = defineProps({
   theme: { type: String, default: 'light' },
   size: { type: String, default: 'md' },
-  showTagline: { type: Boolean, default: false }
+  showTagline: { type: Boolean, default: false },
+  src: { type: String, default: '' }
 })
 
 const attrs = useAttrs()
@@ -68,6 +72,24 @@ const logoClass = computed(() => [
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: #6b7280;
+}
+
+.app-logo__image {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+}
+
+.app-logo--lg .app-logo__image {
+  height: 180px;
+}
+
+.app-logo--md .app-logo__image {
+  height: 100px;
+}
+
+.app-logo--sm .app-logo__image {
+  height: 70px;
 }
 
 .app-logo--dark .app-logo__mark {
