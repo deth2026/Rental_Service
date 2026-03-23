@@ -14,6 +14,17 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public static function hasLastLoginColumn(): bool
+    {
+        static $hasLastLoginColumn = null;
+
+        if ($hasLastLoginColumn === null) {
+            $hasLastLoginColumn = Schema::hasColumn((new static())->getTable(), 'last_login');
+        }
+
+        return $hasLastLoginColumn;
+    }
+
     public function getCreatedAtColumn()
     {
         static $createdColumn = null;

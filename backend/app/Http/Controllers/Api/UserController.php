@@ -300,7 +300,7 @@ class UserController extends Controller
                 'is_verified' => $updatedUser->is_verified,
                 'profile_picture' => $updatedUser->profile_picture,
                 'avatar_url' => $updatedUser->avatar_url,
-                'last_login' => $updatedUser->last_login,
+                'last_login' => User::hasLastLoginColumn() ? $updatedUser->last_login : null,
                 'created_at' => $updatedUser->created_at,
                 'updated_at' => $updatedUser->updated_at,
             ],

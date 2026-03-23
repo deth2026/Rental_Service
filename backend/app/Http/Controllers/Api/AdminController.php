@@ -32,7 +32,7 @@ class AdminController extends Controller
         
         // Get current user's last login time
         $user = $request->user();
-        $lastLogin = $user ? $user->last_login : null;
+        $lastLogin = ($user && User::hasLastLoginColumn()) ? $user->last_login : null;
         
         return response()->json([
             'total_shops' => $totalShops,

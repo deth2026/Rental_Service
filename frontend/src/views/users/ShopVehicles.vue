@@ -5,10 +5,15 @@ import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Booking', route: '/my-bookings' },
+  { label: 'Promotions', route: '/promotions' }
+]
 
 const shopId = computed(() => route.params.id)
 const vehicles = ref([])
@@ -20,7 +25,10 @@ const shopError = ref('')
 const isLoadingShop = ref(false)
 
 const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const activeNavLabel = computed(() => {
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
+  return matchedItem?.label || 'Home'
+})
 
 const isOwnerRole = computed(() => {
   const role = String(currentUser.value?.role || '').toLowerCase()
@@ -165,10 +173,6 @@ const goBack = () => {
   router.push('/view_shop')
 }
 
-const openProfile = () => {
-  router.push('/user/profile')
-}
-
 const handleLogout = async () => {
   await userService.logout()
   localStorage.removeItem('auth_token')
@@ -274,20 +278,12 @@ const openMap = () => {
 <template>
   <div class="shop-vehicles-wrapper">
   <div class="shop-vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <button class="back-btn" @click="goBack">
-          <i class="fa-solid fa-arrow-left"></i>
-        </button>
-        <div class="brand-icon"><i class="fa-solid fa-car" aria-hidden="true"></i></div>
-        <span>Shop Vehicles</span>
-      </div>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="vehicles-content">
       <div class="page-header">

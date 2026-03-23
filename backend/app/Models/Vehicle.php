@@ -133,7 +133,11 @@ class Vehicle extends Model
         'price_per_day',
         'fuel_type',
         'transmission',
+        'total_vehicles',
         'seats',
+        'rider_details',
+        'insurance_fee',
+        'taxes_fee',
         'status',
         'description',
         'image_url',
@@ -141,6 +145,9 @@ class Vehicle extends Model
     ];
 
     protected $casts = [
-        'price_per_day' => 'decimal:2'
+        'price_per_day' => 'decimal:2',
+        'total_vehicles' => 'integer',
+        'insurance_fee' => 'decimal:2',
+        'taxes_fee' => 'decimal:2'
     ];
 }
