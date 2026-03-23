@@ -4,26 +4,9 @@
     <!-- LEFT SIDE -->
     <div class="left">
         <div class="overlay">
-        <div class="logo">
-            <div class="logo-icon-wrap">
-              <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Location Pin -->
-                <path d="M30 2C23.37 2 17 7.37 17 14C17 21.5 30 30 30 30C30 30 43 21.5 43 14C43 7.37 36.63 2 30 2Z" fill="white"/>
-                <circle cx="30" cy="14" r="5" fill="rgba(25,100,210,0.6)"/>
-                <!-- Car Cabin -->
-                <path d="M18 42L21 33Q23 30 27 30H33Q37 30 39 33L42 42Z" fill="white"/>
-                <!-- Car Body -->
-                <rect x="6" y="42" width="48" height="15" rx="4" fill="white"/>
-                <!-- Windshield -->
-                <path d="M23 41L25 32H35L37 41Z" fill="rgba(25,100,210,0.45)"/>
-                <!-- Left Wheel -->
-                <circle cx="16" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-                <!-- Right Wheel -->
-                <circle cx="44" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-              </svg>
+            <div class="logo">
+              <Logo src="/images/logo-removebg.png" size="lg" :showTagline="false" />
             </div>
-            <span>GoRent</span>
-          </div>
 
           <div class="left-content">
             <div class="hero-badge">
@@ -61,8 +44,8 @@
         Back to Home
       </router-link>
       <router-link to="/" class="homeview-link">
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-          <path d="M10 2L2 9H5V18H9V12H11V18H15V9H18L10 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
         </svg>
         Home view
       </router-link>
@@ -180,6 +163,7 @@ import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../../services/auth";
 import "../../css/login.css";
+import Logo from '@/components/Logo.vue'
 
 const router = useRouter();
 const isLoading = ref(false);

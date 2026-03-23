@@ -18,12 +18,9 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
-<<<<<<< HEAD
 const logoUrl = "/images/logo-removebg.png";
-=======
 const route = useRoute();
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
->>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
 const toast = ref({ show: false, message: "", type: "success" });
 const showToast = (message, type = "success") => {
   toast.value = { show: true, message, type };
@@ -93,16 +90,10 @@ const sections = [
   { id: "damage", label: "Damage Reports", icon: "shield-alert" },
   { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
-<<<<<<< HEAD
-  { id: "loyalty", label: "Loyalty Points", icon: "badge" },
-  { id: "activity", label: "Activity History", icon: "chart" },
-  { id: "settings", label: "Settings", icon: "gear" },
-=======
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
   { id: "activity", label: "Activity History", icon: "history" },
   { id: "notifications", label: "Notifications", icon: "bell" },
   { id: "settings", label: "Settings", icon: "settings" },
->>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
 ];
 
 const active = ref("dashboard");
@@ -1234,10 +1225,6 @@ const iconSvg = (name) => {
         </span>
       </button>
       <div class="menu-area">
-<<<<<<< HEAD
-=======
-        <div class="menu-title">MENU</div>
->>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
         <button
           v-for="item in sections"
           :key="item.id"
@@ -2474,19 +2461,11 @@ const iconSvg = (name) => {
   color: #22d3ee;
 }
 
-<<<<<<< HEAD
 .brand p {
   margin: 4px 0 0;
   font-size: 11px;
   font-weight: 600;
   color: #8ca4df;
-=======
-.menu-title {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: #6f84b5;
-  padding: 8px 10px;
->>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
 }
 
 .menu-item {
@@ -3373,14 +3352,8 @@ textarea {
     font-size: 19px;
   }
 
-<<<<<<< HEAD
   .brand p {
     font-size: 11px;
-=======
-  .brand p,
-  .menu-title {
-    font-size: 14px;
->>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
   }
 
   .dashboard-view h2 {
