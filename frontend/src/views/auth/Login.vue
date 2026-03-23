@@ -4,22 +4,19 @@
     <!-- LEFT SIDE -->
     <div class="left">
         <div class="overlay">
-        <div class="logo">
-            <div class="logo-icon-wrap">
-              <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="login-logo-img" />
+            <div class="logo">
+              <Logo src="/images/logo-removebg.png" size="lg" :showTagline="false" />
             </div>
-            <span>CHONG CHOUL</span>
-          </div>
 
           <div class="left-content">
             <div class="hero-badge">
               <span class="hero-badge-dot"></span>
-              Premium Vehicle Rental
+              Premium Car Rental
             </div>
-            <h1>Your Journey Begins<br /><span class="journey-highlight">With Us.</span></h1>
+            <h1>Start your journey<br /><span class="journey-highlight">in minutes.</span></h1>
             <p>
-              Experience the best vehicle rental service in Cambodia.
-              Professional, reliable, and modern.
+              Access a fleet of premium vehicles at your fingertips.
+              Rent for an hour, drive for a lifetime.
             </p>
           </div>
 
@@ -40,9 +37,17 @@
     <!-- RIGHT SIDE -->
     <div class="right">
       <!-- Back to Home -->
-      <router-link to="/" class="back-home-btn prominent">
-        <i class="fa-solid fa-house"></i>
-        <span>Back to Home</span>
+      <router-link to="/" class="back-home-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Back to Home
+      </router-link>
+      <router-link to="/" class="homeview-link">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+        Home view
       </router-link>
 
       <!-- Floating decorative elements for right side -->
@@ -144,7 +149,7 @@
         </div>
 
         <p class="terms">
-          By signing in, you agree to CHONG CHOUL's
+          By signing in, you agree to GoRent's
           <a href="#">Terms of Service</a> and
           <a href="#">Privacy Policy</a>.
         </p>
@@ -154,20 +159,13 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from "vue";
+import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../../services/auth";
 import "../../css/login.css";
+import Logo from '@/components/Logo.vue'
 
 const router = useRouter();
-
-onMounted(() => {
-  const isGranted = localStorage.getItem('chong_choul_location_granted') === 'true';
-  if (!isGranted) {
-    console.warn("Security: Location not allowed. Redirecting to home.");
-    router.push('/');
-  }
-});
 const isLoading = ref(false);
 const errors = ref({});
 const showPassword = ref(false);

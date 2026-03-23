@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,7 +17,7 @@ const dealsSection = ref(null)
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', route: '#' },
+  { label: 'My Booking', route: '/my-bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -88,22 +88,11 @@ const fallbackCoupons = [
   }
 ]
 
-const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-
-const activeNav = computed(() => {
+const activeNavLabel = computed(() => {
   const currentPath = route.path
   const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
   return matchedItem?.label || 'Promotions'
 })
-
-const notify = (message) => {
-  window.alert(message)
-}
-
-const openProfile = () => {
-  router.push('/user/profile')
-}
 
 const handleLogout = async () => {
   await userService.logout()
@@ -111,15 +100,6 @@ const handleLogout = async () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   router.push('/login')
-}
-
-const setActiveNav = (item) => {
-  if (item.route) {
-    router.push(item.route)
-    return
-  }
-
-  notify('My Bookings page is not available yet.')
 }
 
 const inferCategory = (coupon, index) => {
@@ -271,29 +251,12 @@ onMounted(fetchPromotions)
 
 <template>
   <div class="promotion-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item.label"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item.label }"
-          @click="setActiveNav(item)"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main>
       <section class="hero-section">
@@ -394,6 +357,7 @@ onMounted(fetchPromotions)
   min-height: 100vh;
   background: #f3f6fb;
   color: #10213a;
+  overflow: hidden;
 }
 
 .btn-reset {

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\Shop;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
@@ -64,7 +66,31 @@ class ShopController extends Controller
             $shop->setAttribute('province', $shop->city?->name);
         });
 
-        return response()->json($shops);
+        // Manually add img_url_full to ensure it's included
+        $shopsWithImages = $shops->map(function ($shop) {
+            return [
+                'id' => $shop->id,
+                'owner_id' => $shop->owner_id,
+                'city_id' => $shop->city_id,
+                'name' => $shop->name,
+                'description' => $shop->description,
+                'address' => $shop->address,
+                'location' => $shop->location,
+                'phone' => $shop->phone,
+                'img_url' => $shop->img_url,
+                'img_url_full' => $shop->img_url_full,
+                'image' => $shop->img_url_full, // Add image field for frontend compatibility
+                'latitude' => $shop->latitude,
+                'longitude' => $shop->longitude,
+                'total_reviews' => $shop->total_reviews,
+                'status' => $shop->status,
+                'created_at' => $shop->created_at,
+                'updated_at' => $shop->updated_at,
+                'owner' => $shop->owner
+            ];
+        });
+
+        return response()->json($shopsWithImages);
     }
 
     private function getProvinceStats()
@@ -173,8 +199,39 @@ class ShopController extends Controller
             }
         }
 
-        $record = Shop::create($payload)->load(['owner', 'city'])->loadCount('vehicles');
+<<<<<<< HEAD
+        $record = Shop::create($payload);
+        try {
+            NotificationService::shopCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin notification for new shop', [
+                'error' => $exception->getMessage(),
+                'shop_id' => $record->id,
+            ]);
+        }
+=======
+        $record = Shop::create($payload);
+        try {
+            NotificationService::shopCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin notification for new shop', [
+                'error' => $exception->getMessage(),
+                'shop_id' => $record->id,
+            ]);
+        }
+        $record->load(['owner', 'city'])->loadCount('vehicles');
         $record->setAttribute('province', $record->city?->name);
+=======
+        $record = Shop::create($payload);
+        try {
+            NotificationService::shopCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin notification for new shop', [
+                'error' => $exception->getMessage(),
+                'shop_id' => $record->id,
+            ]);
+        }
+>>>>>>> feature/copy
 
         return response()->json($record, 201);
     }

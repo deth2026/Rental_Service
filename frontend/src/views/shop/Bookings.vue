@@ -1,9 +1,10 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import '../../css/Booking.css'
 
 const activeTab = ref('all')
 const searchQuery = ref('')
+const visibleCount = ref(4)
 const bookings = ref([])
 const loading = ref(true)
 const error = ref(null)
@@ -13,6 +14,18 @@ const confirmationModal = ref({
   booking: null,
   action: ''
 })
+const completionModal = ref({
+  visible: false,
+  booking: null
+})
+const showDetailModal = ref(false)
+const selectedBookingDetail = ref(null)
+const cancelModal = ref({
+  visible: false,
+  booking: null
+})
+const cancelLoading = ref(false)
+const cancelError = ref('')
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
 
@@ -39,12 +52,50 @@ const fetchUserShop = async () => {
   }
 }
 
+// Get user's shop to filter bookings
+const getUserShop = async () => {
+  try {
+    const token = getStoredToken()
+    const headers = { Accept: 'application/json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    
+    const response = await fetch('/api/shops', { headers })
+    if (!response.ok) return null
+    
+    const data = await response.json()
+    const allShops = Array.isArray(data) ? data : (data.data || [])
+    
+    // Get current user
+    const userStr = localStorage.getItem('user')
+    const user = userStr ? JSON.parse(userStr) : null
+    if (!user?.id) return null
+    
+    // Find shops owned by current user
+    const userShops = allShops.filter((s) => Number(s.owner_id) === Number(user.id))
+    return userShops.length > 0 ? userShops[0] : null
+  } catch (e) {
+    console.error('Error fetching user shop:', e)
+    return null
+  }
+}
+
 const fetchShopBookings = async () => {
   loading.value = true
   error.value = null
   try {
     const token = getStoredToken()
     console.log('Token available:', !!token)
+    
+    // First get the user's shop to filter bookings
+    const userShop = await getUserShop()
+    const shopId = userShop?.id
+    
+    // If no shop exists, don't fetch bookings
+    if (!shopId) {
+      bookings.value = []
+      loading.value = false
+      return
+    }
     
     const headers = { Accept: 'application/json' }
     if (token) headers.Authorization = `Bearer ${token}`
@@ -66,11 +117,20 @@ const fetchShopBookings = async () => {
     // Get bookings from data.data (pagination) or directly
     const allBookings = Array.isArray(data) ? data : (data.data || [])
     
+    // Filter bookings by shop_id
+    const filteredBookings = allBookings.filter((booking) => {
+      const bookingShopId = booking.shop_id || booking.shop?.id || booking.vehicle?.shop_id
+      return Number(bookingShopId) === Number(shopId)
+    })
+    
     // Format the bookings data for display
-    bookings.value = allBookings.map(booking => {
+    bookings.value = filteredBookings.map(booking => {
       // Get vehicle image - try different fields
       const vehicleImage = booking.vehicle?.image_url_full || booking.vehicle?.image_url || booking.vehicle?.img_url || ''
       console.log('Vehicle image for booking', booking.id, ':', vehicleImage)
+      
+      // Get payment information
+      const payment = booking.payment || {}
       
       return {
         id: booking.id,
@@ -89,6 +149,14 @@ const fetchShopBookings = async () => {
         customer_name: booking.user?.name || 'N/A',
         customer_email: booking.user?.email || 'N/A',
         customer_phone: booking.user?.phone || 'N/A',
+        vehicle_details: booking.vehicle || null,
+        shop_details: booking.shop || null,
+        user_details: booking.user || null,
+        // Payment information
+        payment_status: payment.status || payment.payment_status || booking.payment_status || 'pending',
+        payment_method: payment.method || payment.payment_method || payment.payment_type || 'N/A',
+        paid_at: payment.paid_at || payment.payment_date || null,
+        transaction_id: payment.transaction_id || payment.payment_id || null,
       }
     })
     
@@ -101,7 +169,7 @@ const fetchShopBookings = async () => {
   }
 }
 
-const updateBookingStatus = async (bookingId, newStatus) => {
+const updateBookingStatus = async (bookingId, newStatus, extra = {}) => {
   processing.value = true
   try {
     const token = getStoredToken()
@@ -111,10 +179,12 @@ const updateBookingStatus = async (bookingId, newStatus) => {
     }
     if (token) headers.Authorization = `Bearer ${token}`
     
+    const body = { status: newStatus, ...extra }
+
     const response = await fetch(`/api/bookings/${bookingId}`, {
       method: 'PUT',
       headers,
-      body: JSON.stringify({ status: newStatus })
+      body: JSON.stringify(body)
     })
     
     if (!response.ok) {
@@ -161,6 +231,114 @@ const confirmBookingAction = async () => {
   }
 }
 
+const openCompletionModal = (booking) => {
+  completionModal.value = {
+    visible: true,
+    booking
+  }
+}
+
+const closeCompletionModal = () => {
+  completionModal.value = {
+    visible: false,
+    booking: null,
+    notes: ''
+  }
+}
+
+const submitCompletion = async () => {
+  const booking = completionModal.value.booking
+  if (!booking) return
+
+  const success = await updateBookingStatus(booking.id, 'completed')
+  if (success) {
+    closeCompletionModal()
+  }
+}
+
+const openBookingDetails = (booking) => {
+  selectedBookingDetail.value = booking
+  showDetailModal.value = true
+}
+
+const closeBookingDetails = () => {
+  showDetailModal.value = false
+  selectedBookingDetail.value = null
+}
+
+const openCancelModal = (booking) => {
+  cancelModal.value = {
+    visible: true,
+    booking
+  }
+  cancelError.value = ''
+}
+
+const closeCancelModal = () => {
+  cancelModal.value = {
+    visible: false,
+    booking: null
+  }
+  cancelError.value = ''
+}
+
+const confirmCancelBooking = async () => {
+  const booking = cancelModal.value.booking
+  if (!booking?.id) return
+
+  cancelLoading.value = true
+  cancelError.value = ''
+
+  try {
+    const token = getStoredToken()
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    const response = await fetch(`/api/bookings/${booking.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ status: 'cancelled' })
+    })
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      throw new Error(data.message || data.error || 'Failed to cancel booking')
+    }
+
+    // Update the booking in the local list
+    bookings.value = bookings.value.map((b) =>
+      b.id === booking.id ? { ...b, status: 'cancelled' } : b
+    )
+
+    closeCancelModal()
+  } catch (err) {
+    cancelError.value = err.message || 'Unable to cancel booking'
+  } finally {
+    cancelLoading.value = false
+  }
+}
+
+const detailVehicleData = computed(() => selectedBookingDetail.value?.vehicle_details || {})
+const detailCustomerData = computed(() => selectedBookingDetail.value?.user_details || {})
+const detailShopData = computed(() => selectedBookingDetail.value?.shop_details || {})
+const detailDaysCount = computed(() => {
+  if (!selectedBookingDetail.value) return 0
+  return getTotalDays(selectedBookingDetail.value.start_date, selectedBookingDetail.value.end_date) || 0
+})
+const detailPricePerDay = computed(() => {
+  const booking = selectedBookingDetail.value
+  if (!booking) return 0
+  if (booking.daily_rate) return Number(booking.daily_rate)
+  const total = Number(booking.total_price || 0)
+  const days = detailDaysCount.value || 1
+  return days > 0 ? total / days : total
+})
+const detailTotalAmount = computed(() => Number(selectedBookingDetail.value?.total_price || 0))
+const detailStatusText = computed(() => getStatusLabel(selectedBookingDetail.value?.status))
+const detailBookingCode = computed(() => selectedBookingDetail.value?.booking_code || `BK-${selectedBookingDetail.value?.id || ''}`)
 onMounted(() => {
   fetchShopBookings()
 })
@@ -190,6 +368,31 @@ const filteredBookings = computed(() => {
   })
 })
 
+const displayedBookings = computed(() => {
+  return filteredBookings.value.slice(0, visibleCount.value)
+})
+
+const hasMoreBookings = computed(() => {
+  return filteredBookings.value.length > visibleCount.value
+})
+
+const showMore = () => {
+  visibleCount.value += 4
+}
+
+const showLess = () => {
+  visibleCount.value = 4
+}
+
+const resetVisibleCount = () => {
+  visibleCount.value = 4
+}
+
+// Reset visible count when filters change
+watch([activeTab, searchQuery], () => {
+  resetVisibleCount()
+})
+
 const getStatusClass = (status) => {
   const map = {
     pending: 'status-pending',
@@ -208,6 +411,26 @@ const getStatusLabel = (status) => {
     cancelled: 'Cancelled',
   }
   return labels[status?.toLowerCase()] || 'Pending'
+}
+
+const getPaymentStatusClass = (status) => {
+  const map = {
+    pending: 'payment-pending',
+    paid: 'payment-paid',
+    failed: 'payment-failed',
+    refunded: 'payment-refunded',
+  }
+  return map[status?.toLowerCase()] || 'payment-pending'
+}
+
+const getPaymentStatusLabel = (status) => {
+  const labels = {
+    pending: 'Unpaid',
+    paid: 'Paid',
+    failed: 'Failed',
+    refunded: 'Refunded',
+  }
+  return labels[status?.toLowerCase()] || 'Unpaid'
 }
 
 const formatDate = (dateStr) => {
@@ -273,7 +496,7 @@ const getTotalDays = (start, end) => {
       <div v-else-if="error" class="empty-state">{{ error }}</div>
       <div v-else-if="filteredBookings.length === 0" class="empty-state">No bookings found for your search.</div>
 
-      <article v-for="booking in filteredBookings" :key="booking.id" class="booking-card">
+      <article v-for="booking in displayedBookings" :key="booking.id" class="booking-card">
         <div class="booking-image">
           <img :src="booking.image" :alt="booking.vehicle_name" class="vehicle-img" />
         </div>
@@ -293,32 +516,138 @@ const getTotalDays = (start, end) => {
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
 
-          <div class="action-buttons" v-if="booking.status === 'pending'">
-            <button
-              type="button"
-              class="accept-btn"
-              @click="openBookingConfirmation(booking, 'accept')"
-              :disabled="processing"
-            >
-              Accept
-            </button>
-            <button
-              type="button"
-              class="reject-btn"
-              @click="openBookingConfirmation(booking, 'reject')"
-              :disabled="processing"
-            >
-              Reject
-            </button>
+          <p>
+            <span class="meta-label">Payment:</span>
+            <span :class="['payment-status', getPaymentStatusClass(booking.payment_status)]">
+              {{ getPaymentStatusLabel(booking.payment_status) }}
+            </span>
+            <span v-if="booking.payment_method && booking.payment_method !== 'N/A'" class="payment-method">
+              ({{ booking.payment_method }})
+            </span>
+          </p>
+
+          <div class="action-buttons">
+            <template v-if="booking.status === 'pending'">
+              <button
+                type="button"
+                class="action-btn btn-green"
+                @click="openBookingDetails(booking)"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+                View
+              </button>
+              <button
+                type="button"
+                class="action-btn btn-green"
+                @click="openBookingConfirmation(booking, 'accept')"
+                :disabled="processing"
+              >
+                <i class="fa-solid fa-check"></i>
+                Accept
+              </button>
+              <button
+                type="button"
+                class="action-btn btn-red"
+                @click="openBookingConfirmation(booking, 'reject')"
+                :disabled="processing"
+              >
+                <i class="fa-solid fa-xmark"></i>
+                Reject
+              </button>
+            </template>
+            <template v-else-if="booking.status === 'confirmed'">
+              <button
+                type="button"
+                class="action-btn btn-gold"
+                @click="openBookingDetails(booking)"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+                View
+              </button>
+              <button
+                type="button"
+                class="action-btn btn-gold"
+                @click="openCompletionModal(booking)"
+                :disabled="processing"
+              >
+                <i class="fa-solid fa-star"></i>
+                Complete
+              </button>
+            </template>
+            <template v-else-if="booking.status === 'completed'">
+              <button
+                type="button"
+                class="action-btn btn-gold"
+                @click="openBookingDetails(booking)"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+                View
+              </button>
+            </template>
+            <template v-else-if="booking.status === 'cancelled'">
+              <button
+                type="button"
+                class="action-btn btn-gold"
+                @click="openBookingDetails(booking)"
+              >
+                <i class="fa-solid fa-file-lines"></i>
+                View
+              </button>
+            </template>
           </div>
-          <button v-else class="details-btn">View Details</button>
         </div>
 
         <div class="booking-price">
           <span class="price-value">{{ formatCurrency(booking.total_price) }}</span>
         </div>
       </article>
+      
+      <div class="see-more-container">
+        <button v-if="hasMoreBookings" class="see-more-btn" type="button" @click="showMore">
+          See More ({{ filteredBookings.length - visibleCount }} more)
+        </button>
+        <button v-else-if="visibleCount > 4" class="see-more-btn" type="button" @click="showLess">
+          Show Less
+        </button>
+      </div>
     </section>
+
+    <!-- Cancel Booking Modal -->
+    <div v-if="cancelModal.visible" class="cancel-modal-backdrop" @click.self="closeCancelModal">
+      <div class="cancel-modal-card">
+        <div class="cancel-modal-header">
+          <h2>Cancel Booking</h2>
+          <button type="button" class="cancel-modal-close" @click="closeCancelModal">
+            &times;
+          </button>
+        </div>
+        <div class="cancel-modal-body">
+          <p>Are you sure you want to cancel this booking?</p>
+          <div class="cancel-modal-details">
+            <p><strong>Vehicle:</strong> {{ cancelModal.booking?.vehicle_name }}</p>
+            <p><strong>Customer:</strong> {{ cancelModal.booking?.customer_name }}</p>
+            <p><strong>Date:</strong> {{ formatDate(cancelModal.booking?.start_date) }} to {{ formatDate(cancelModal.booking?.end_date) }}</p>
+            <p><strong>Total:</strong> {{ formatCurrency(cancelModal.booking?.total_price) }}</p>
+          </div>
+          <p class="cancel-warning">Note: Cancellation may be subject to the shop's refund policy.</p>
+          <p v-if="cancelError" class="cancel-error">{{ cancelError }}</p>
+        </div>
+        <div class="cancel-modal-actions">
+          <button type="button" class="cancel-modal-cancel" @click="closeCancelModal">
+            Keep Booking
+          </button>
+          <button 
+            type="button" 
+            class="cancel-modal-confirm" 
+            :disabled="cancelLoading"
+            @click="confirmCancelBooking"
+          >
+            {{ cancelLoading ? 'Cancelling...' : 'Yes, Cancel Booking' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div
       v-if="confirmationModal.visible"
       class="confirm-modal-backdrop"
@@ -367,6 +696,122 @@ const getTotalDays = (start, end) => {
               : confirmationModal.action === 'accept'
                 ? 'Yes, accept the booking'
                 : 'Yes, reject the booking' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="showDetailModal"
+      class="booking-detail-backdrop"
+      @click.self="closeBookingDetails"
+    >
+      <div class="booking-detail-card">
+        <button
+          type="button"
+          class="booking-detail-close"
+          aria-label="Close booking details"
+          @click="closeBookingDetails"
+        >
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <div class="booking-detail-header">
+          <div>
+            <h3>{{ selectedBookingDetail?.vehicle_name || 'Booking Detail' }}</h3>
+            <p class="booking-detail-code">{{ detailBookingCode }}</p>
+          </div>
+          <span :class="['status-pill', getStatusClass(selectedBookingDetail?.status)]">
+            {{ detailStatusText }}
+          </span>
+        </div>
+
+        <div class="booking-detail-highlight">
+          <div class="highlight-chip">
+            <div class="chip-icon" aria-hidden="true">📅</div>
+            <div>
+              <span>Booked on</span>
+              <strong>{{ formatDate(selectedBookingDetail?.start_date) || 'TBD' }}</strong>
+            </div>
+          </div>
+          <div class="highlight-chip neon">
+            <div class="chip-icon" aria-hidden="true">⚡</div>
+            <div>
+              <span>Current status</span>
+              <strong>{{ detailStatusText }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-detail-cards">
+          <div class="detail-card">
+          <div class="detail-card-row">
+            <span>Duration</span>
+            <strong>{{ detailDaysCount }} day(s)</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Daily rate</span>
+              <strong>{{ formatCurrency(detailPricePerDay) }}</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Total</span>
+              <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
+            </div>
+          </div>
+          <div class="detail-card detail-card--info">
+            <div class="detail-card-row">
+              <span>Shop</span>
+              <strong>{{ selectedBookingDetail?.shop_name || detailShopData?.name || 'N/A' }}</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Customer</span>
+              <strong>{{ detailCustomerData?.name || selectedBookingDetail?.customer_name || 'N/A' }}</strong>
+            </div>
+            <div class="detail-card-row">
+              <span>Contact</span>
+              <strong>
+                {{ selectedBookingDetail?.customer_phone || selectedBookingDetail?.customer_email || detailCustomerData?.phone || 'N/A' }}
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-detail-vehicle">
+          <h4>Vehicle specs</h4>
+          <div class="booking-detail-specs">
+            <span>Type: <strong>{{ detailVehicleData?.category || 'N/A' }}</strong></span>
+            <span>Brand: <strong>{{ detailVehicleData?.brand || 'N/A' }}</strong></span>
+            <span>Fuel: <strong>{{ detailVehicleData?.fuel_type || 'N/A' }}</strong></span>
+            <span>Transmission: <strong>{{ detailVehicleData?.transmission || 'N/A' }}</strong></span>
+            <span>Plate: <strong>{{ detailVehicleData?.plate || detailVehicleData?.plate_number || 'N/A' }}</strong></span>
+            <span>Status: <strong>{{ detailVehicleData?.status || 'N/A' }}</strong></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="completionModal.visible"
+      class="completion-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeCompletionModal"
+    >
+      <div class="completion-modal-card">
+        <div class="completion-modal-header">
+          <div>
+            <h2>Complete this booking</h2>
+          </div>
+          <button type="button" class="completion-close" @click="closeCompletionModal">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="completion-modal-body">
+          <p>Are you sure you want to mark this booking as completed?</p>
+        </div>
+        <div class="completion-modal-actions">
+          <button type="button" class="completion-cancel" @click="closeCompletionModal">
+            Cancel
+          </button>
+          <button type="button" class="completion-primary" @click="submitCompletion" :disabled="processing">
+            {{ processing ? 'Completing...' : 'Complete booking' }}
           </button>
         </div>
       </div>

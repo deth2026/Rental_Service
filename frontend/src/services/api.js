@@ -139,4 +139,11 @@ export const bookingApi = {
   getMyBookings: () => api.get('/my-bookings')
 };
 
+// Rating API calls
+export const ratingApi = {
+  getVehicleRatings: () => api.get('/vehicle-ratings'),
+  getVehicleRatingsSummary: () => api.get('/vehicle-ratings-summary'),
+  create: (bookingId, data) => api.post(`/bookings/${bookingId}/rating`, data)
+};
+
 export default api;

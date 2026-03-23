@@ -1,3 +1,14 @@
+# Database Schema Fixes - Ongoing
+
+**Original last_login FIXED ✅**
+
+**New: job_title/bio missing columns FIXED**
+- [x] Confirmed pending migration, columns missing (No)
+- [ ] Run targeted migrate
+
+**Status:** Handling chained schema issues from pending migrations.
+**Full migrate blocked by 2026_03_06_023832 duplicate shop_id.**
+=======
 # Rental Service TODO
 
 ## Current Dashboard Fix
@@ -19,9 +30,9 @@
 
 ## Merge feature/copy → feature/search_provinces [In Progress]
 **Step 1: [✅] Clean state confirmed**
-**Step 2: [ ] git merge feature/copy**
-**Step 3: [ ] Resolve conflicts (prefer feature/copy UI/backend):**
-   - TODO.md [keep dashboard + merge note]
+**Step 2: [✅] git merge feature/copy (conflicts)**
+**Step 3: [In Progress] Resolve conflicts (prefer feature/copy UI/backend):**
+   - TODO.md [✅ kept dashboard + merge note]
    - backend/app/Http/Controllers/Api/ShopController.php
    - backend/database/seeders/DatabaseSeeder.php
    - frontend/src/App.vue
@@ -34,7 +45,9 @@
    - frontend/src/views/auth/Register.vue
    - frontend/src/views/shop/DashboardLayout.vue
    - frontend/src/views/shop/myShop.vue
-   - frontend/src/views/users/* (ShopVehicles.vue, VehiclesByShop.vue, ViewDetail.vue)
+   - frontend/src/views/users/ShopVehicles.vue
+   - frontend/src/views/users/VehiclesByShop.vue
+   - frontend/src/views/users/ViewDetail.vue
    - frontend/src/css/userDashboard.css
 **Step 4: [ ] git add . && git commit**
 **Step 5: [ ] Migrate: cd backend && php artisan migrate**
@@ -43,3 +56,7 @@
 
 New features from feature/copy: ratings, notifications, payment updates, UI fixes.
 
+
+=======
+# Database Schema Fixes - Ongoing\n\n**Original last_login FIXED ✅**\n\n**New: job_title/bio missing columns FIXED**\n- [x] Confirmed pending migration, columns missing (No)\n- [ ] Run targeted migrate\n\n**Status:** Handling chained schema issues from pending migrations.\n**Full migrate blocked by 2026_03_06_023832 duplicate shop_id.**
+>>>>>>> feature/copy
