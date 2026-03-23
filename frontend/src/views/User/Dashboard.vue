@@ -3,11 +3,13 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSessionUser, logoutUser } from '@/services/auth'
 import { shopApi } from '@/services/api'
+import { useToast } from '@/composables/useToast'
 import CommonFooter from '@/components/CommonFooter.vue'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 import '@/css/userDashboard.css'
 
 const router = useRouter()
+const { showToast, info } = useToast()
 
 const LOCATION_CACHE_KEY = 'chong_choul_user_location'
 
@@ -46,12 +48,13 @@ const isLoading = ref(false)
 const dataError = ref('')
 const shops = ref([])
 const provinceQuery = ref('')
-const selectedProvince = ref('Phnom Penh')
+const selectedProvince = ref('All Cambodia')
 const searchMessage = ref('')
 
 const userLocation = ref(getStoredLocation())
 const locationStatus = ref(userLocation.value ? 'Current location detected.' : 'Enable location for nearest distance.')
 const locating = ref(false)
+const showLocationModal = ref(false)
 
 const mapContainer = ref(null)
 let leafletLib = null
@@ -72,7 +75,24 @@ function getStoredLocation() {
   }
 }
 
+const openLogin = () => {
+  if (!userLocation.value) {
+    showLocationModal.value = true
+    return
+  }
+  router.push('/login')
+}
+
+const openRegister = () => {
+  if (!userLocation.value) {
+    showLocationModal.value = true
+    return
+  }
+  router.push('/register')
+}
+
 const normalizeProvinceName = (value) => {
+  if (value === 'All Cambodia') return 'All Cambodia'
   const raw = String(value || '')
     .trim()
     .replace(/\s+/g, ' ')
@@ -150,9 +170,12 @@ const normalizeShop = (shop) => {
     id: Number(shop.id),
     name: shop.name || `Shop #${shop.id}`,
     address: shop.address || 'Address not available',
+    location: shop.location || '',
     province,
-    latitude: Number(shop.latitude ?? shop.lat),
-    longitude: Number(shop.longitude ?? shop.lng),
+    latitude: Number(shop.latitude ?? 0),
+    longitude: Number(shop.longitude ?? 0),
+    distanceKm: shop.distance ? Number(shop.distance) : null,
+    isNearest: !!(shop.is_nearest || shop.suggested),
     vehiclesCount: Number(shop.vehicles_count || 0),
     status: String(shop.status || 'active').toLowerCase(),
     img_url: shop.img_url_full || shop.img_url || '/images/default-shop.png'
@@ -167,11 +190,17 @@ const provinceOptions = computed(() => {
 const provinceChips = computed(() => provinceOptions.value.slice(0, 12))
 
 const selectedProvinceShops = computed(() => {
+  const isAll = selectedProvince.value === 'All Cambodia'
   const normalized = normalizeProvinceName(selectedProvince.value)
-  const inProvince = shops.value.filter((shop) => normalizeProvinceName(shop.province) === normalized)
+  
+  const inProvince = shops.value.filter((shop) => {
+    if (isAll) return true
+    return normalizeProvinceName(shop.province) === normalized
+  })
+
   const withDistance = inProvince.map((shop) => {
-    let distanceKm = null
-    if (userLocation.value && Number.isFinite(shop.latitude) && Number.isFinite(shop.longitude)) {
+    let distanceKm = shop.distanceKm || null
+    if (!distanceKm && userLocation.value && Number.isFinite(shop.latitude) && Number.isFinite(shop.longitude)) {
       distanceKm = calculateDistanceKm(userLocation.value.lat, userLocation.value.lng, shop.latitude, shop.longitude)
     }
     return { ...shop, distanceKm }
@@ -179,12 +208,16 @@ const selectedProvinceShops = computed(() => {
 
   withDistance.sort((a, b) => {
     if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm
-    return a.name.localeCompare(b.name)
+    if (a.distanceKm !== null) return -1
+    if (b.distanceKm !== null) return 1
+    return b.vehiclesCount - a.vehiclesCount || a.name.localeCompare(b.name)
   })
+
+  const hasMultipleShops = withDistance.length >= 2
 
   return withDistance.map((shop, idx) => ({
     ...shop,
-    isNearest: shop.distanceKm !== null && idx === 0,
+    isNearest: hasMultipleShops && idx === 0,
   }))
 })
 
@@ -226,14 +259,21 @@ const loadShops = async () => {
   dataError.value = ''
 
   try {
-    const response = await shopApi.getAll({ active_only: true })
+    const params = { active_only: true }
+    if (userLocation.value) {
+      params.user_lat = userLocation.value.lat
+      params.user_lng = userLocation.value.lng
+    }
+    const response = await shopApi.getAll(params)
     shops.value = parseArrayPayload(response.data)
       .map((shop) => normalizeShop(shop))
       .filter((shop) => shop.status === 'active' && shop.province)
 
-    if (!shops.value.some((shop) => normalizeProvinceName(shop.province) === normalizeProvinceName(selectedProvince.value))) {
-      selectedProvince.value = shops.value[0]?.province || 'Phnom Penh'
-      provinceQuery.value = selectedProvince.value
+    if (selectedProvince.value === 'All Cambodia') {
+      provinceQuery.value = ''
+    } else if (!shops.value.some((shop) => normalizeProvinceName(shop.province) === normalizeProvinceName(selectedProvince.value))) {
+      selectedProvince.value = 'All Cambodia'
+      provinceQuery.value = ''
     }
   } catch (error) {
     console.error(error)
@@ -247,6 +287,27 @@ const viewShop = (shop) => {
   router.push({ name: 'shop-vehicles', params: { id: String(shop.id) } })
 }
 
+const getDirections = (shop) => {
+  if (!shop.latitude || !shop.longitude) {
+    if (shop.location && shop.location.startsWith('http')) {
+      window.open(shop.location, '_blank')
+    } else {
+      info('Shop location coordinates not available.')
+    }
+    return
+  }
+
+  let url = ''
+  if (userLocation.value) {
+    // Route from User to Shop
+    url = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.value.lat},${userLocation.value.lng}&destination=${shop.latitude},${shop.longitude}&travelmode=driving`
+  } else {
+    // Just show shop on map
+    url = `https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}`
+  }
+  window.open(url, '_blank')
+}
+
 const enableLocation = () => {
   if (locating.value) return
   if (!navigator?.geolocation) {
@@ -258,7 +319,7 @@ const enableLocation = () => {
   locationStatus.value = 'Detecting your location...'
 
   navigator.geolocation.getCurrentPosition(
-    (position) => {
+    async (position) => {
       userLocation.value = {
         lat: Number(position.coords.latitude),
         lng: Number(position.coords.longitude),
@@ -266,7 +327,11 @@ const enableLocation = () => {
       localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(userLocation.value))
       locationStatus.value = 'Location detected successfully.'
       locating.value = false
+      
+      // Reload shops to get distances from backend
+      await loadShops()
       renderMapMarkers()
+      showLocationModal.value = false
     },
     () => {
       locating.value = false
@@ -274,6 +339,15 @@ const enableLocation = () => {
     },
     { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
   )
+}
+
+const clearLocation = () => {
+  localStorage.removeItem(LOCATION_CACHE_KEY)
+  userLocation.value = null
+  locationStatus.value = 'Location cleared. Enable location for nearest distance.'
+  renderMapMarkers()
+  loadShops()
+  showLocationModal.value = true
 }
 
 const openProfile = () => router.push('/user/profile')
@@ -321,6 +395,11 @@ const provinceBanners = {
   'Siem Reap': 'https://images.unsplash.com/photo-1500048993953-d23a436266cf?q=80&w=1200', // Angkor Wat
   'Preah Sihanouk': 'https://images.unsplash.com/photo-1554483731-866416049079?q=80&w=1200', // Beach
   'Kampot': 'https://images.unsplash.com/photo-1571216694665-68a867822941?q=80&w=1200',
+  'Pursat': 'https://images.unsplash.com/photo-1619405399517-d7fce0f13302?q=80&w=1200', // Rice fields/nature
+  'Battambang': 'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?q=80&w=1200', // Bamboo train style
+  'Mondulkiri': 'https://images.unsplash.com/photo-1581458023773-5856f64be87d?q=80&w=1200', // Waterfall
+  'Kep': 'https://images.unsplash.com/photo-1548625361-58a9b86aa83b?q=80&w=1200', // Crab statue
+  'All Cambodia': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
   'default': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200'
 }
 
@@ -345,6 +424,7 @@ const renderMapMarkers = () => {
   if (!leafletLib || !mapInstance || !markerLayer) return
 
   markerLayer.clearLayers()
+  const isAll = selectedProvince.value === 'All Cambodia'
   const selected = normalizeProvinceName(selectedProvince.value)
   const allBounds = []
   const selectedBounds = []
@@ -352,7 +432,7 @@ const renderMapMarkers = () => {
   for (const shop of shops.value) {
     if (!Number.isFinite(shop.latitude) || !Number.isFinite(shop.longitude)) continue
 
-    const isActive = normalizeProvinceName(shop.province) === selected
+    const isActive = isAll || normalizeProvinceName(shop.province) === selected
     const marker = leafletLib.marker([shop.latitude, shop.longitude], { 
       icon: createPinIcon(shop, isActive),
       zIndexOffset: isActive ? 1000 : 0
@@ -379,12 +459,12 @@ const renderMapMarkers = () => {
         weight: 3,
       }).bindPopup('You are here')
     )
-    allBounds.push([userLocation.value.lat, userLocation.value.lng])
   }
 
-  // On initial load or when no province is selected, show whole Cambodia
-  if (!selectedProvince.value || selectedBounds.length === 0) {
-    mapInstance.setView([12.5657, 104.991], 7)
+  // Focus on Cambodia area
+  if (isAll || selectedBounds.length === 0) {
+     // Center of Cambodia
+     mapInstance.setView([12.5657, 104.991], 7)
   } else {
     // Zoom to selected province shops
     if (selectedBounds.length > 0) {
@@ -399,14 +479,21 @@ const initMap = async () => {
     leafletLib = await ensureLeaflet()
     if (!mapContainer.value) return
 
+    // Limit map to Cambodia area
+    const cambodiaBounds = [[10.0, 102.0], [15.0, 108.0]]
+
     mapInstance = leafletLib.map(mapContainer.value, {
       zoomControl: false,
       scrollWheelZoom: false,
+      maxBounds: cambodiaBounds,
+      maxBoundsViscosity: 1.0,
+      minZoom: 6
     }).setView([12.5657, 104.991], 7)
 
     leafletLib
       .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
+        bounds: cambodiaBounds
       })
       .addTo(mapInstance)
 
@@ -420,8 +507,19 @@ const initMap = async () => {
 watch([selectedProvince, shops, userLocation], () => renderMapMarkers(), { deep: true })
 
 onMounted(async () => {
+  console.log('[Dashboard] onMounted triggered')
+  
+  // Start location prompt timer immediately
+  setTimeout(() => {
+    console.log('[Dashboard] Location modal timer fired')
+    // We force show it for every Guest so you can see it and test the flow
+    if (!currentUser.value) {
+      showLocationModal.value = true
+    }
+  }, 3000)
+
   await loadShops()
-  provinceQuery.value = selectedProvince.value
+  provinceQuery.value = selectedProvince.value === 'All Cambodia' ? '' : selectedProvince.value
   await nextTick()
   await initMap()
 })
@@ -444,13 +542,24 @@ onBeforeUnmount(() => {
       </div>
 
       <nav class="top-links">
-        <button class="link-btn" @click="openBookings">My Bookings</button>
-        <button class="link-btn" @click="openProfile">Profile</button>
+        <template v-if="currentUser">
+          <button class="link-btn" @click="openBookings">My Bookings</button>
+          <button class="link-btn" @click="openProfile">Profile</button>
+        </template>
+        <template v-else>
+          <button class="link-btn" @click="openLogin">Login</button>
+          <button class="link-btn" @click="openRegister">Register</button>
+        </template>
       </nav>
 
       <div class="top-actions">
-        <span class="user-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="onLogout" />
+        <template v-if="currentUser">
+          <span class="user-name">{{ userDisplayName }}</span>
+          <UserProfileMenu @settings="openProfile" @logout="onLogout" />
+        </template>
+        <template v-else>
+          <button class="login-accent-btn" @click="openLogin">Sign In</button>
+        </template>
       </div>
     </header>
 
@@ -483,6 +592,7 @@ onBeforeUnmount(() => {
           <div class="location-status-box">
              <i class="fa-solid fa-location-dot"></i>
              <span>{{ locationStatus }}</span>
+             <button v-if="userLocation" class="clear-loc-link" @click="clearLocation">Clear</button>
           </div>
           <button class="location-btn" :disabled="locating" @click="enableLocation">
             <i class="fa-solid fa-crosshairs"></i>
@@ -524,14 +634,19 @@ onBeforeUnmount(() => {
                 <p class="shop-address"><i class="fa-solid fa-map-pin"></i> {{ shop.address }}</p>
               </div>
               
-              <div class="shop-distance-meter" v-if="userLocation">
+              <div class="shop-distance-meter" v-if="shop.distanceKm">
                 <div class="distance-bar">
                    <i class="fa-solid fa-person-walking"></i>
                    <div class="bar-line"></div>
                    <i class="fa-solid fa-store"></i>
                 </div>
                 <span class="distance-text">
-                  <strong>{{ shop.distanceKm ? shop.distanceKm.toFixed(2) : '...' }} km</strong> from your location
+                  <strong>{{ shop.distanceKm.toFixed(1) }} km</strong> away
+                </span>
+              </div>
+              <div class="shop-distance-meter" v-else-if="!userLocation">
+                <span class="distance-text" style="font-size: 0.8rem; opacity: 0.7;">
+                   Enable location to see distance
                 </span>
               </div>
 
@@ -540,7 +655,12 @@ onBeforeUnmount(() => {
                   <span><i class="fa-solid fa-motorcycle"></i> {{ shop.vehiclesCount }}</span>
                   <span><i class="fa-solid fa-star"></i> 4.8</span>
                 </div>
-                <button class="visit-btn" @click="viewShop(shop)">View Details</button>
+                <div class="shop-actions-group">
+                  <button class="visit-btn" @click="viewShop(shop)">View Details</button>
+                  <button class="directions-btn" title="Open Google Maps Route" @click.stop="getDirections(shop)">
+                    <i class="fa-solid fa-route"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </article>
@@ -549,5 +669,23 @@ onBeforeUnmount(() => {
     </main>
 
     <CommonFooter />
+
+    <!-- MANDATORY LOCATION MODAL -->
+    <div v-if="showLocationModal" class="location-modal-overlay">
+      <div class="location-modal-card">
+        <div class="loc-icon-animate">
+          <i class="fa-solid fa-location-dot"></i>
+          <div class="loc-pulse"></div>
+        </div>
+        <h2>Access Required</h2>
+        <p>To provide you with the nearest branches in Cambodia, we need to access your location before you can proceed to Login or Register.</p>
+        <div class="loc-modal-actions">
+          <button class="loc-btn cancel" @click="showLocationModal = false">Cancel</button>
+          <button class="loc-btn open" @click="enableLocation">
+            {{ locating ? 'Opening GPS...' : 'Allow Access' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

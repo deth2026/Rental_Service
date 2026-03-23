@@ -15,15 +15,31 @@ class ShopController extends Controller
     {
         $province = trim((string) $request->query('province', ''));
         $activeOnly = filter_var($request->query('active_only', false), FILTER_VALIDATE_BOOLEAN);
-        $normalizedProvince = strtolower($this->canonicalizeProvinceName($province));
+        $stats = filter_var($request->query('stats', false), FILTER_VALIDATE_BOOLEAN);
+        $userLat = $request->query('user_lat');
+        $userLng = $request->query('user_lng');
+
+        // Use a more relaxed search: canonicalize but also allow partial matching
+        $normalizedProvince = strtolower($province);
+
+        if ($stats) {
+            return $this->getProvinceStats();
+        }
 
         $query = Shop::query()
             ->with([
                 'owner:id,name,email,phone',
-                'city:id,name,status',
+                'city:id,name,status,latitude,longitude',
             ])
-            ->withCount('vehicles')
-            ->orderByDesc('id');
+            ->withCount('vehicles');
+
+        if ($userLat && $userLng) {
+            // Haversine formula for distance in kilometers
+            $query->selectRaw("shops.*, (6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) AS distance", [$userLat, $userLng, $userLat]);
+            $query->orderBy('distance');
+        } else {
+            $query->orderByDesc('id');
+        }
 
         if ($activeOnly) {
             $query->where('status', 'active');
@@ -31,16 +47,46 @@ class ShopController extends Controller
 
         if ($normalizedProvince !== '') {
             $query->whereHas('city', function ($cityQuery) use ($normalizedProvince) {
-                $cityQuery->whereRaw('LOWER(name) = ?', [$normalizedProvince]);
+                // Allow partial case-insensitive search
+                $cityQuery->whereRaw('LOWER(name) LIKE ?', ['%' . $normalizedProvince . '%']);
             });
         }
 
         $shops = $query->get();
+        
+        // Suggest the nearest shop if there are 2 or more shops
+        if ($shops->count() >= 2 && $userLat && $userLng) {
+            $shops[0]->setAttribute('is_nearest', true);
+            $shops[0]->setAttribute('suggested', true);
+        }
+
         $shops->each(function ($shop) {
             $shop->setAttribute('province', $shop->city?->name);
         });
 
         return response()->json($shops);
+    }
+
+    private function getProvinceStats()
+    {
+        $stats = City::query()
+            ->has('shops')
+            ->withCount(['shops as shop_count' => function ($query) {
+                $query->where('status', 'active');
+            }])
+            ->withAvg('shops', 'total_reviews')
+            ->get()
+            ->map(function ($city) {
+                return [
+                    'province' => $city->name,
+                    'shop_count' => $city->shop_count,
+                    'avg_reviews' => round($city->shops_avg_total_reviews ?? 0),
+                    'latitude' => $city->latitude,
+                    'longitude' => $city->longitude,
+                ];
+            });
+
+        return response()->json($stats);
     }
 
     public function store(Request $request)

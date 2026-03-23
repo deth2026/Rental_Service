@@ -138,6 +138,18 @@
 
 .location-status-box i { color: #2563eb; }
 
+.clear-loc-link {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0 5px;
+  margin-left: 5px;
+}
+
 .location-btn {
   background: #fff;
   border: 1px solid #e2e8f0;
@@ -244,6 +256,27 @@
   overflow: hidden;
   border: 1px solid #e2e8f0;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.shop-card.nearest {
+  border: 2px solid #10b981;
+  box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+}
+
+.shop-card.nearest::before {
+  content: "RECOMMENDED BRANCH";
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #10b981;
+  color: #fff;
+  padding: 4px 12px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  border-bottom-left-radius: 12px;
+  z-index: 20;
+  letter-spacing: 0.5px;
 }
 
 .shop-card:hover {
@@ -352,14 +385,165 @@
   background: #2563eb;
   color: #fff;
   border: none;
-  padding: 12px 25px;
+  padding: 10px 20px;
   border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
+  flex: 1;
+}
+
+.shop-actions-group {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.directions-btn {
+  background: #f1f5f9;
+  color: #2563eb;
+  border: 1px solid #e2e8f0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.directions-btn:hover {
+  background: #e2e8f0;
+  color: #1d4ed8;
+}
+
+.directions-btn i {
+  font-size: 1.1rem;
 }
 
 .visit-btn:hover { background: #1d4ed8; }
+
+.login-accent-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.login-accent-btn:hover {
+  background: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+/* Mandatory Location Modal CSS */
+.location-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.location-modal-card {
+  background: #fff;
+  width: 100%;
+  max-width: 440px;
+  padding: 40px;
+  border-radius: 35px;
+  text-align: center;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+  animation: modalIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.loc-icon-animate {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 25px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loc-icon-animate i {
+  font-size: 2.5rem;
+  color: #2563eb;
+  z-index: 2;
+}
+
+.loc-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.2);
+  animation: pulseLoc 2s infinite;
+}
+
+@keyframes pulseLoc {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.location-modal-card h2 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 15px;
+  color: #1e293b;
+}
+
+.location-modal-card p {
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  font-size: 1rem;
+}
+
+.loc-modal-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.loc-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 18px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.loc-btn.cancel {
+  background: #f1f5f9;
+  color: #475569;
+  border: none;
+}
+
+.loc-btn.open {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+}
+
+.loc-btn.open:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+}
 
 @media (max-width: 768px) {
   .hero-banner-content h1 { font-size: 2.5rem; }

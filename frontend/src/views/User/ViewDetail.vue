@@ -18,8 +18,9 @@
           {{ item }}
         </button>
       </nav>
-
-      <div class="top-actions">
+             <button class="view-shop-btn" @click="goToViewShop">View Shop</button>
+      
+             <div class="top-actions">
         <span class="user-display-name">{{ userDisplayName }}</span>
         <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
       </div>
@@ -349,6 +350,21 @@
   </div>
 </template>
 
+<style scoped>
+.view-shop-btn {
+  margin-right: 16px;
+  /* You can adjust the margin as needed */
+  /* Additional styling for the button if required */
+  /* Example: */
+  /* padding: 8px 16px; */
+  /* background-color: #007bff; */
+  /* color: white; */
+  /* border: none; */
+  /* border-radius: 4px; */
+  /* cursor: pointer; */
+}
+</style>
+
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
@@ -399,13 +415,17 @@ const userInitials = computed(() => {
 });
 
 const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === "Home") {
-    router.replace("/view_shop");
-    return;
-  }
-  actionMessage.value = `${item} is not available yet.`;
-};
+   activeNav.value = item;
+   if (item === "Home") {
+     router.replace("/view_shop");
+     return;
+   }
+   actionMessage.value = `${item} is not available yet.`;
+ };
+
+ const goToViewShop = () => {
+   router.replace("/view_shop");
+ };
 
 const openProfile = () => {
   router.push("/user/profile");

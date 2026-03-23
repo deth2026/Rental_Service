@@ -60,6 +60,11 @@
             </label>
 
             <label class="field">
+              <span>Google Map Link</span>
+              <input v-model="form.location" type="text" placeholder="Paste Google Maps link here" />
+            </label>
+
+            <label class="field">
               <span>Latitude</span>
               <input v-model="form.latitude" type="text" placeholder="11.5564" />
             </label>
@@ -290,6 +295,7 @@ const form = reactive({
   shop_status: 'active',
   phone: '',
   shop_address: '',
+  location: '',
   latitude: '',
   longitude: '',
   notifications_enabled: true,
@@ -402,6 +408,7 @@ const loadData = async () => {
       form.shop_name = cachedShop.name || '';
       form.shop_status = cachedShop.status || 'active';
       form.shop_address = cachedShop.address || '';
+      form.location = cachedShop.location || '';
       form.phone = cachedShop.phone || storedUser.phone || '';
       form.latitude = cachedShop.latitude || '';
       form.longitude = cachedShop.longitude || '';
@@ -439,6 +446,9 @@ const loadData = async () => {
     form.shop_name = selectedShop?.name || '';
     form.shop_status = selectedShop?.status || 'active';
     form.shop_address = selectedShop?.address || '';
+    form.location = selectedShop?.location || '';
+    form.latitude = selectedShop?.latitude || '';
+    form.longitude = selectedShop?.longitude || '';
     form.password = '';
 
     const notifyRaw = localStorage.getItem(`${NOTIFY_KEY_PREFIX}${user.id}`);
@@ -632,6 +642,7 @@ const saveSettings = async () => {
       owner_id: user.id,
       name: form.shop_name,
       address: form.shop_address || '',
+      location: form.location || '',
       phone: form.phone || '',
       status: form.shop_status || 'active',
       latitude: form.latitude || null,
@@ -649,6 +660,7 @@ const saveSettings = async () => {
       name: form.shop_name,
       status: form.shop_status || 'active',
       address: form.shop_address,
+      location: form.location,
       phone: form.phone,
       latitude: form.latitude,
       longitude: form.longitude

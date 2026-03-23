@@ -691,6 +691,10 @@ onBeforeUnmount(() => {
           </div>
         </label>
         <label class="settings-field full">
+          <span>Google Map Link</span>
+          <input type="text" :value="shop.location || 'N/A'" readonly />
+        </label>
+        <label class="settings-field full">
           <span>Shop Address</span>
           <textarea
             rows="3"
@@ -904,6 +908,15 @@ onBeforeUnmount(() => {
                   <small v-if="fieldErrors.phone" class="field-error">{{
                     fieldErrors.phone
                   }}</small>
+                </label>
+
+                <label class="wide">
+                  <span>Google Map Link</span>
+                  <input
+                    v-model="createForm.location"
+                    type="text"
+                    placeholder="Paste Google Maps link here"
+                  />
                 </label>
               </div>
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\City;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
@@ -13,6 +14,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(CitySeeder::class);
         \App\Models\User::updateOrCreate(
             ['email' => 'test@example.com'],
             [
@@ -90,43 +92,9 @@ class DatabaseSeeder extends Seeder
             \App\Models\Category::updateOrCreate(['name' => $category['name']], $category);
         }
 
-        $cities = [
-            ['name' => 'Banteay Meanchey', 'status' => 'active'],
-            ['name' => 'Battambang', 'status' => 'active'],
-            ['name' => 'Kampong Cham', 'status' => 'active'],
-            ['name' => 'Kampong Chhnang', 'status' => 'active'],
-            ['name' => 'Kampong Speu', 'status' => 'active'],
-            ['name' => 'Kampong Thom', 'status' => 'active'],
-            ['name' => 'Kampot', 'status' => 'active'],
-            ['name' => 'Kandal', 'status' => 'active'],
-            ['name' => 'Kep', 'status' => 'active'],
-            ['name' => 'Koh Kong', 'status' => 'active'],
-            ['name' => 'Kratie', 'status' => 'active'],
-            ['name' => 'Mondulkiri', 'status' => 'active'],
-            ['name' => 'Oddar Meanchey', 'status' => 'active'],
-            ['name' => 'Pailin', 'status' => 'active'],
-            ['name' => 'Phnom Penh', 'status' => 'active'],
-            ['name' => 'Preah Sihanouk', 'status' => 'active'],
-            ['name' => 'Preah Vihear', 'status' => 'active'],
-            ['name' => 'Prey Veng', 'status' => 'active'],
-            ['name' => 'Pursat', 'status' => 'active'],
-            ['name' => 'Ratanakiri', 'status' => 'active'],
-            ['name' => 'Siem Reap', 'status' => 'active'],
-            ['name' => 'Stung Treng', 'status' => 'active'],
-            ['name' => 'Svay Rieng', 'status' => 'active'],
-            ['name' => 'Takeo', 'status' => 'active'],
-            ['name' => 'Tboung Khmum', 'status' => 'active'],
-        ];
+        $this->call(CitySeeder::class);
 
-        $cityMap = [];
-        foreach ($cities as $city) {
-            $payload = $city;
-            if (Schema::hasColumn('cities', 'shop_id')) {
-                $payload['shop_id'] = 0;
-            }
-            $record = \App\Models\City::updateOrCreate(['name' => $city['name']], $payload);
-            $cityMap[$city['name']] = $record;
-        }
+        $cityMap = City::all()->pluck('id', 'name')->toArray();
 
         $shopDefinitions = [
             [
@@ -213,15 +181,43 @@ class DatabaseSeeder extends Seeder
                 'total_reviews' => 76,
                 'status' => 'active',
             ],
+            [
+                'name' => 'CHONG CHOUL Pursat Center',
+                'city' => 'Pursat',
+                'owner_id' => $phnomPenhOwner->id,
+                'description' => 'Main branch in Pursat city center.',
+                'address' => 'Street 01, Pursat City, Cambodia',
+                'location' => 'https://maps.google.com/?q=12.5386,103.9197',
+                'phone' => '+85512914001',
+                'img_url' => 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=800',
+                'latitude' => 12.5386,
+                'longitude' => 103.9197,
+                'total_reviews' => 45,
+                'status' => 'active',
+            ],
+            [
+                'name' => 'CHONG CHOUL Pursat West',
+                'city' => 'Pursat',
+                'owner_id' => $phnomPenhOwner->id,
+                'description' => 'West side branch for easy highway access.',
+                'address' => 'National Road 5, Pursat, Cambodia',
+                'location' => 'https://maps.google.com/?q=12.5200,103.8500',
+                'phone' => '+85512914002',
+                'img_url' => 'https://images.unsplash.com/photo-1449490126677-d1159957e6d3?q=80&w=800',
+                'latitude' => 12.5200,
+                'longitude' => 103.8500,
+                'total_reviews' => 32,
+                'status' => 'active',
+            ],
         ];
 
         $shopMap = [];
         foreach ($shopDefinitions as $shopDefinition) {
             $cityName = $shopDefinition['city'];
-            $city = $cityMap[$cityName] ?? null;
+            $cityId = $cityMap[$cityName] ?? null;
             $payload = $shopDefinition;
             unset($payload['city']);
-            $payload['city_id'] = $city?->id;
+            $payload['city_id'] = $cityId;
 
             $shop = \App\Models\Shop::updateOrCreate(
                 ['name' => $shopDefinition['name']],
