@@ -111,18 +111,33 @@ h1 {
   font-weight: 600;
 }
 
-.back-home {
-  display: inline-block;
-  margin-top: 14px;
-  color: #3c7aa0;
-  font-size: 0.95rem;
-  font-weight: 700;
+/* Back to Home button - Prominent Version */
+.back-home-btn.prominent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
   text-decoration: none;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 24px;
+  border-radius: 14px;
+  background: #2563eb;
+  border: 2px solid #fff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 20px;
+  box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
 }
 
-.back-home:hover {
-  color: #4dd9fc;
-  text-decoration: underline;
+.back-home-btn.prominent:hover {
+  background: #1d4ed8;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(37, 99, 235, 0.4);
+}
+
+.back-home-btn.prominent i {
+  font-size: 1.1rem;
 }
 
 @media (max-width: 900px) {

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
 import Payments from "./Payments.vue";
 import DamageReports from "./Demage_reports.vue";
@@ -8,72 +8,34 @@ import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
 import MyShop from "./myShop.vue";
 import LoyaltyPoints from "./Loyalty_points.vue";
-import Setting from "./setting.vue";
+import Setting from "./Setting.vue";
 import ActivityHistory from "./ActivityHistory.vue";
-import NotificationOwner from "./Notification_owner.vue";
-import api, { bookingApi, shopApi, vehicleApi } from "@/services/api";
+import api, { shopApi, vehicleApi } from "@/services/api";
 import { getSessionUser, logoutUser } from "@/services/auth";
-import NotificationMenu from "@/components/NotificationMenu.vue";
-import { useNotifications } from "@/composables/useNotifications";
+import { useToast } from "@/composables/useToast";
 
 // Toast notifications
 const router = useRouter();
-const route = useRoute();
-const toast = ref({ show: false, message: "", type: "success" });
-const showToast = (message, type = "success") => {
-  toast.value = { show: true, message, type };
-  setTimeout(() => (toast.value.show = false), 100);
-};
-
-const { unreadCount } = useNotifications();
-const showNotifications = ref(false);
-const notificationRoot = ref(null);
-
-const badgeLabel = computed(() => {
-  if (!unreadCount.value) return "";
-  return unreadCount.value > 9 ? "9+" : String(unreadCount.value);
-});
-
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value;
-};
-
-const closeNotifications = () => {
-  showNotifications.value = false;
-};
-
-const goToOwnerNotifications = () => {
-  router.push({ name: "shop-notifications" })
-}
-
-const handleDocumentClick = (event) => {
-  if (
-    showNotifications.value &&
-    notificationRoot.value &&
-    !notificationRoot.value.contains(event.target)
-  ) {
-    closeNotifications();
-  }
-};
+const logoUrl = "/Images/logo-removebg.png";
+const { showToast } = useToast();
 
 const sections = [
-  { id: "dashboard", label: "Dashboard", icon: "grid" },
-  { id: "my-shop", label: "My Shop", icon: "shop" },
-  { id: "vehicles", label: "Vehicles", icon: "car" },
-  { id: "bookings", label: "Bookings", icon: "calendar" },
-  { id: "payments", label: "Payments", icon: "dollar" },
-  { id: "damage", label: "Damage Reports", icon: "warning" },
-  { id: "reviews", label: "Reviews & Feedback", icon: "star" },
+  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { id: "my-shop", label: "My Shop", icon: "building" },
+  { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
+  { id: "bookings", label: "Bookings", icon: "calendar-check" },
+  { id: "payments", label: "Payments", icon: "wallet" },
+  { id: "damage", label: "Damage Reports", icon: "shield-alert" },
+  { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
-  { id: "loyalty", label: "Loyalty Points", icon: "gift" },
-  { id: "activity", label: "Activity History", icon: "history" },
-  { id: "notifications", label: "Notifications", icon: "bell" },
-  { id: "settings", label: "Settings", icon: "settings" },
+  { id: "loyalty", label: "Loyalty Points", icon: "badge" },
+  { id: "activity", label: "Activity History", icon: "chart" },
+  { id: "settings", label: "Settings", icon: "gear" },
 ];
 
 const active = ref("dashboard");
 const isSidebarCollapsed = ref(false);
-const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 240));
+const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 272));
 const sessionUser = ref(getSessionUser() || {});
 const avatarLoadFailed = ref(false);
 const showUserMenu = ref(false);
@@ -168,31 +130,9 @@ watch(showUserMenu, (isOpen) => {
   }
 });
 
-watch(
-  () => router.currentRoute.value.fullPath,
-  () => {
-    closeNotifications();
-  }
-);
-
-watch(
-  () => route.meta.defaultSection,
-  (section) => {
-    if (!section) return;
-    const matching = sections.find((s) => s.id === section);
-    if (matching) {
-      active.value = section;
-    }
-  },
-  { immediate: true }
-);
-
-let initializeShopData = async () => {}
-
 const refreshSessionUser = () => {
   sessionUser.value = getSessionUser() || {};
   avatarLoadFailed.value = false;
-  initializeShopData().catch(() => {});
 };
 
 const onAvatarError = () => {
@@ -202,14 +142,12 @@ const onAvatarError = () => {
 onMounted(() => {
   window.addEventListener("storage", refreshSessionUser);
   window.addEventListener("user-updated", refreshSessionUser);
-  document.addEventListener("mousedown", handleDocumentClick);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("storage", refreshSessionUser);
   window.removeEventListener("user-updated", refreshSessionUser);
   clearUserMenuTimer();
-  document.removeEventListener("mousedown", handleDocumentClick);
 });
 const categories = ["Car", "Moto", "Bike"];
 const statuses = ["Available", "Rented", "Maintenance"];
@@ -248,10 +186,6 @@ const onMenuClick = (item) => {
   if (item.id === "vehicles") {
     loadOwnerShopName();
   }
-  if (item.id === "notifications") {
-    goToOwnerNotifications();
-    return;
-  }
 };
 
 const cancelLogout = () => {
@@ -283,16 +217,13 @@ const feedback = ref([]);
 const coupons = ref([]);
 const loyalty = ref([]);
 
-// Dashboard loading states
-const isLoadingDashboard = ref(false);
-const dashboardError = ref(null);
-
 // Shop data
 const shop = ref(null);
 const shopModal = ref(false);
 const shopForm = reactive({
   name: "",
   city_id: null,
+  province: "",
   description: "",
   address: "",
   location: "",
@@ -352,35 +283,6 @@ const triggerShopImagePicker = () => {
 };
 
 // Fetch shop data
-const SHOP_CACHE_PREFIX = "settings_shop_";
-
-const shopCacheKey = (ownerId) => `${SHOP_CACHE_PREFIX}${ownerId}`;
-
-const getCachedShop = (ownerId) => {
-  if (!ownerId) return null;
-  try {
-    const raw = localStorage.getItem(shopCacheKey(ownerId));
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const setCachedShop = (ownerId, shopData) => {
-  if (!ownerId) return;
-  try {
-    if (!shopData) {
-      localStorage.removeItem(shopCacheKey(ownerId));
-      return;
-    }
-    localStorage.setItem(shopCacheKey(ownerId), JSON.stringify(shopData));
-  } catch {
-    // best effort
-  }
-};
-
 const fetchShop = async () => {
   try {
     const ownerId = Number(sessionUser.value?.id || 0);
@@ -397,15 +299,7 @@ const fetchShop = async () => {
       return Number(b.id || 0) - Number(a.id || 0);
     });
 
-    const cached = getCachedShop(ownerId);
-    const cachedShop =
-      cached && myShops.find((entry) => Number(entry.id) === Number(cached.id));
-    const selectedShop = cachedShop || myShops[0] || null;
-
-    shop.value = selectedShop;
-    if (ownerId) {
-      setCachedShop(ownerId, selectedShop);
-    }
+    shop.value = myShops[0] || null;
   } catch (error) {
     console.error("Error fetching shop:", error);
     shop.value = null;
@@ -415,8 +309,8 @@ const fetchShop = async () => {
 // Fetch cities
 const fetchCities = async () => {
   try {
-    const response = await api.get("/cities");
-    cities.value = response.data.data || response.data || [];
+    const response = await api.get("/cities", { params: { per_page: 100, active_only: true } });
+    cities.value = response.data?.data?.data || response.data?.data || response.data || [];
   } catch (error) {
     console.error("Error fetching cities:", error);
     cities.value = [];
@@ -427,6 +321,7 @@ const fetchCities = async () => {
 const openShopModal = () => {
   shopForm.name = shop.value?.name || "";
   shopForm.city_id = shop.value?.city_id || null;
+  shopForm.province = shop.value?.province || shop.value?.city?.name || "";
   shopForm.description = shop.value?.description || "";
   shopForm.address = shop.value?.address || "";
   shopForm.location = shop.value?.location || "";
@@ -445,6 +340,10 @@ const saveShop = async () => {
     showToast("Please enter shop name", "error");
     return;
   }
+  if (!String(shopForm.province || "").trim()) {
+    showToast("Please enter province", "error");
+    return;
+  }
 
   isLoadingShop.value = true;
   try {
@@ -458,6 +357,7 @@ const saveShop = async () => {
       if (shopForm.city_id) {
         formData.append("city_id", shopForm.city_id);
       }
+      formData.append("province", String(shopForm.province || "").trim());
       formData.append("description", shopForm.description);
       formData.append("address", shopForm.address);
       if (shopForm.location) formData.append("location", shopForm.location);
@@ -487,6 +387,7 @@ const saveShop = async () => {
         owner_id: ownerId,
         name: shopForm.name,
         city_id: shopForm.city_id || null,
+        province: String(shopForm.province || "").trim(),
         description: shopForm.description,
         address: shopForm.address,
         location: shopForm.location || null,
@@ -521,27 +422,9 @@ const saveShop = async () => {
   }
 };
 
-// Load cities on mount
+// Load shop and cities on mount
+fetchShop();
 fetchCities();
-
-// Fetch shop owner bookings for dashboard stats
-const fetchShopBookings = async () => {
-  isLoadingDashboard.value = true;
-  dashboardError.value = null;
-  try {
-    const response = await api.get("/shop-bookings");
-    bookings.value = response.data || [];
-    console.log("Dashboard bookings loaded:", bookings.value.length);
-  } catch (error) {
-    console.error("Error fetching shop bookings:", error);
-    dashboardError.value = "Failed to load bookings. Please refresh.";
-    bookings.value = [];
-  } finally {
-    isLoadingDashboard.value = false;
-  }
-};
-
-fetchShopBookings();
 
 // Fetch vehicles from database
 const fetchVehicles = async () => {
@@ -688,12 +571,7 @@ const resolveOwnerShop = async () => {
   return shop.value;
 };
 
-initializeShopData = async () => {
-  await fetchShop();
-  await loadOwnerShopName();
-};
-
-initializeShopData().catch(() => {});
+loadOwnerShopName();
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -1018,6 +896,25 @@ const onPhotoDrop = (e) => {
 
 const iconSvg = (name) => {
   const icons = {
+    dashboard:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    building:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/><path d="M11 21v-3h2v3"/></svg>',
+    motorcycle:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17.5" r="3.5"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M7 17.5h4.5l2.5-4.5h3.5"/><path d="M14 13h2.8l1.8 3.2"/><path d="M11.5 17.5l1.6-2.8"/><path d="M9.2 10.5H13l1.2 2.5"/><path d="M9.2 10.5 8 7.8H5.8"/></svg>',
+    "calendar-check":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="m9.5 15 2 2 4-4"/></svg>',
+    wallet:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M16 14h3"/><circle cx="15" cy="14" r=".8" fill="currentColor" stroke="none"/></svg>',
+    "shield-alert":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3 5 6v6c0 4.8 3 7.8 7 9 4-1.2 7-4.2 7-9V6z"/><path d="M12 9v4"/><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none"/></svg>',
+    "message-star":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 14a3 3 0 0 1-3 3H9l-4 4v-4H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z"/><path d="m12 7 1 2 2.2.3-1.6 1.6.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.6L11 9z"/></svg>',
+    badge:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="m9.5 12.5-1.3 8 3.8-2 3.8 2-1.3-8"/></svg>',
+    chart:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h16"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
     shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9l1.5-5h13L20 9"/><path d="M5 10h14v9H5z"/><path d="M9 14h6"/></svg>',
     car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
@@ -1057,6 +954,17 @@ const iconSvg = (name) => {
       class="sidebar"
       :style="{ width: `${sidebarWidth}px`, flexBasis: `${sidebarWidth}px` }"
     >
+      <div class="brand">
+        <div class="brand-badge">
+          <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
+        </div>
+        <div class="brand-text">
+          <h2>
+            Chong <span class="brand-cyan">Choul</span>
+          </h2>
+          <p>Shop Owner</p>
+        </div>
+      </div>
       <button
         class="sidebar-toggle"
         @click="isSidebarCollapsed = !isSidebarCollapsed"
@@ -1074,11 +982,6 @@ const iconSvg = (name) => {
         </span>
       </button>
       <div class="menu-area">
-        <div class="menu-title">
-          <span class="menu-title-icon" v-html="iconSvg('grid')"></span>
-          <span class="menu-title-text">Menu</span>
-          <span class="menu-title-line"></span>
-        </div>
         <button
           v-for="item in sections"
           :key="item.id"
@@ -1090,7 +993,6 @@ const iconSvg = (name) => {
           <span class="menu-label">{{ item.label }}</span>
         </button>
       </div>
-
 
       <button class="menu-item logout-item" @click="showLogoutModal = true">
         <span class="menu-icon logout-icon" v-html="iconSvg('logout')"></span>
@@ -1110,22 +1012,10 @@ const iconSvg = (name) => {
           <h1>{{ sections.find((s) => s.id === active)?.label }}</h1>
         </div>
         <div class="topbar-right">
-          <div class="notification-wrapper" ref="notificationRoot">
-            <button
-              type="button"
-              class="bell-btn notification-btn"
-              aria-label="Open notifications"
-              @click.stop="toggleNotifications"
-            >
-              <span class="bell-icon" v-html="iconSvg('bell')"></span>
-              <span v-if="badgeLabel" class="notification-count">{{ badgeLabel }}</span>
-            </button>
-            <transition name="notification-fade">
-              <div v-if="showNotifications" class="notification-popup">
-                <NotificationMenu :shop-id="shop?.id" />
-              </div>
-            </transition>
-          </div>
+          <button class="bell-btn">
+            <span class="bell-icon" v-html="iconSvg('bell')"></span>
+            <span class="bell-dot"></span>
+          </button>
           <div class="user-box">
             <div class="user-dropdown" @click="toggleUserMenu">
               <div class="avatar">
@@ -1288,10 +1178,6 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'coupons'" class="coupons-view">
         <Coupons />
-      </section>
-
-      <section v-else-if="active === 'notifications'" class="notifications-view">
-        <NotificationOwner :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'loyalty'" class="loyalty-view">
@@ -1757,10 +1643,7 @@ const iconSvg = (name) => {
     >
       <div class="shop-modal">
         <div class="shop-modal-header">
-          <div>
-            <h2>{{ shop ? "Edit Shop" : "Create New Shop" }}</h2>
-            <p class="shop-modal-sub">Add a new rental shop (pending approval by default).</p>
-          </div>
+          <h2>{{ shop ? "Edit Shop" : "Create Shop" }}</h2>
           <button class="close-btn" @click="shopModal = false">
             <svg
               viewBox="0 0 24 24"
@@ -1776,157 +1659,97 @@ const iconSvg = (name) => {
           </button>
         </div>
         <div class="shop-modal-content">
-          <div class="shop-modal-grid">
-            <article class="shop-preview-panel">
-              <div class="shop-preview-image">
+          <!-- Shop Image Upload -->
+          <div class="form-group">
+            <label>Shop Image</label>
+            <input
+              ref="shopImageInputRef"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              style="display: none"
+              @change="onShopImageChange"
+            />
+            <div
+              class="shop-image-upload"
+              :class="{ 'has-image': shopImagePreview || shopForm.img_url }"
+              @click="triggerShopImagePicker"
+              @dragover.prevent="isShopImageDragOver = true"
+              @dragleave.prevent="isShopImageDragOver = false"
+              @drop.prevent="onShopImageDrop"
+            >
+              <div
+                v-if="shopImagePreview || shopForm.img_url"
+                class="image-preview-container"
+              >
                 <img
-                  v-if="shopImagePreview || shopForm.img_url"
                   :src="shopImagePreview || shopForm.img_url"
                   alt="Shop preview"
                 />
-                <div v-else class="shop-preview-placeholder">
-                  <svg
-                    viewBox="0 0 80 80"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                  >
-                    <rect x="6" y="6" width="68" height="68" rx="16" />
-                    <path d="M22 34h36l-5 7-7-9-5 5-6-9-3 6z" />
-                  </svg>
-                </div>
-              </div>
-              <div class="shop-preview-info">
-                <h3>{{ shopForm.name || shop?.name || "Untitled Shop" }}</h3>
-                <p>
-                  {{
-                    shopForm.description ||
-                      shop?.description ||
-                      "Describe your shop, fleet highlights or location to attract customers."
-                  }}
-                </p>
-                <p class="shop-preview-meta">
-                  {{ shopForm.address || shop?.address || "Address" }}
-                  <span>•</span>
-                  {{ shopForm.location || shop?.location || "City, Country" }}
-                </p>
-              </div>
-              <div class="shop-preview-status">
-                <span>Status</span>
-                <strong>{{ shop?.status || "Draft" }}</strong>
-              </div>
-            </article>
-
-            <section class="shop-details-panel">
-            <div class="upload-card">
-              <div class="upload-card__header">
-                <div>
-                  <h3>Upload shop cover</h3>
-                  <p>Drop an image or click to browse files.</p>
-                </div>
-              </div>
-              <input
-                ref="shopImageInputRef"
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                class="visually-hidden"
-                @change="onShopImageChange"
-              />
-              <div
-                class="upload-dropzone"
-                :class="{ 'is-active': isShopImageDragOver }"
-                @click="triggerShopImagePicker"
-                @dragover.prevent="isShopImageDragOver = true"
-                @dragleave.prevent="isShopImageDragOver = false"
-                @drop.prevent="onShopImageDrop"
-              >
-                <div v-if="shopImagePreview || shopForm.img_url" class="upload-preview">
-                  <img
-                    :src="shopImagePreview || shopForm.img_url"
-                    alt="Shop preview"
-                  />
+                <div class="image-overlay">
                   <span>Click to change</span>
                 </div>
-                <div v-else class="upload-placeholder">
-                  <svg
-                    viewBox="0 0 32 32"
-                    width="46"
-                    height="46"
-                    fill="none"
-                    stroke="#2563eb"
-                    stroke-width="2"
-                  >
-                    <path d="M16 7v16"></path>
-                    <path d="M9 15l7-8 7 8"></path>
-                    <path d="M26 22v3a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-3"></path>
-                  </svg>
-                  <p>Drop an image or click to browse files</p>
-                  <span>PNG, JPG or WebP up to 5MB</span>
-                </div>
+              </div>
+              <div v-else class="upload-placeholder">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="40"
+                  height="40"
+                  fill="none"
+                  stroke="#94a3b8"
+                  stroke-width="1.5"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 5 17 10"></polyline>
+                  <line x1="12" y1="5" x2="12" y2="16"></line>
+                </svg>
+                <p>Click to upload or drag image here</p>
+                <span>PNG / JPG / WEBP</span>
               </div>
             </div>
+          </div>
 
-            <div class="form-card">
-              <div class="form-card__header">
-                <div>
-                  <h3>Shop Information</h3>
-                  <p>Fill in the key details to publish your shop listing quickly.</p>
-                </div>
-              </div>
-              <div class="form-card__body">
-                <div class="field-grid two-column">
-                  <label class="field">
-                    <span>Shop Name</span>
-                    <input
-                      class="rounded-input"
-                      v-model="shopForm.name"
-                      type="text"
-                      placeholder="e.g. Berlin Elite Rentals"
-                    />
-                  </label>
-                  <label class="field">
-                    <span>Address</span>
-                    <input
-                      class="rounded-input"
-                      v-model="shopForm.address"
-                      type="text"
-                      placeholder="Street, City, Country"
-                    />
-                  </label>
-                </div>
-                <div class="field-grid two-column">
-                  <label class="field">
-                    <span>Location</span>
-                    <input
-                      class="rounded-input"
-                      v-model="shopForm.location"
-                      type="text"
-                      placeholder="City, Country"
-                    />
-                  </label>
-                  <label class="field">
-                    <span>Phone</span>
-                    <input
-                      class="rounded-input"
-                      v-model="shopForm.phone"
-                      type="text"
-                      placeholder="+855..."
-                    />
-                  </label>
-                </div>
-                <label class="field">
-                  <span>Description</span>
-                  <textarea
-                    class="rounded-input"
-                    v-model="shopForm.description"
-                    rows="4"
-                    placeholder="Describe the shop, services or fleet."
-                  ></textarea>
-                </label>
-              </div>
-            </div>
-          </section>
-        </div>
+          <!-- Shop Name -->
+          <div class="form-group">
+            <label>Shop Name *</label>
+            <input
+              v-model="shopForm.name"
+              type="text"
+              placeholder="Enter shop name"
+            />
+          </div>
+
+          <!-- Province -->
+          <div class="form-group">
+            <label>Province *</label>
+            <input
+              v-model="shopForm.province"
+              type="text"
+              list="dashboard-province-options"
+              placeholder="Type province name (e.g. Phnom Penh)"
+            />
+            <datalist id="dashboard-province-options">
+              <option v-for="city in cities" :key="city.id" :value="city.name" />
+            </datalist>
+          </div>
+
+          <!-- Address -->
+          <div class="form-group">
+            <label>Address *</label>
+            <input
+              v-model="shopForm.address"
+              type="text"
+              placeholder="Enter address"
+            />
+          </div>
+          <!-- Description -->
+          <div class="form-group">
+            <label>Description</label>
+            <textarea
+              v-model="shopForm.description"
+              rows="3"
+              placeholder="Describe your shop"
+            ></textarea>
+          </div>
         </div>
         <div class="shop-modal-footer">
           <button class="cancel-btn-modal" @click="shopModal = false">
@@ -2123,21 +1946,44 @@ const iconSvg = (name) => {
 }
 
 .sidebar {
-  width: 240px;
-  flex: 0 0 240px;
+  width: 272px;
+  flex: 0 0 272px;
   min-width: 0;
-  background: #091633;
-  color: #c3d0f0;
-  border-right: 1px solid #1b2a52;
-  padding: 14px 10px;
-  position: relative;
-  overflow: visible;
+  background:
+    radial-gradient(1200px 600px at -200px -200px, rgba(34, 211, 238, 0.12), transparent 55%),
+    linear-gradient(180deg, #0b1220, #070a12);
+  color: #d2ddf2;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 18px 12px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition:
     width 0.2s ease,
     flex-basis 0.2s ease;
   z-index: 20;
   display: flex;
   flex-direction: column;
+}
+
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
 }
 
 .page.sidebar-collapsed .sidebar {
@@ -2147,9 +1993,9 @@ const iconSvg = (name) => {
 
 .sidebar-toggle {
   position: absolute;
-  right: 0;
-  transform: translateX(50%);
-  top: 72px;
+  right: 10px;
+  transform: none;
+  top: 86px;
   width: 32px !important;
   height: 32px !important;
   min-width: 32px;
@@ -2190,84 +2036,59 @@ const iconSvg = (name) => {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
-  padding: 2px 8px 16px;
-  border-bottom: 1px solid #1a2a52;
-  margin-bottom: 14px;
+  /* margin-right: 30px; */
+  padding: 4px 0 1px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  margin-bottom: 10px;
 }
 
-.brand-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.brand-badge {
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
   background: #ffffff;
-  color: #0891b2;
-  font-weight: 700;
   display: grid;
   place-items: center;
-  flex: 0 0 48px;
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.24);
+  overflow: hidden;
+  flex: 0 0 62px;
 }
 
-.brand-icon :deep(svg) {
-  width: 48px;
-  height: 48px;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+.brand-logo {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .brand h2 {
   margin: 0;
   color: #fff;
-  font-size: 18px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
   line-height: 1.1;
 }
 
-.brand p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: #8ca4df;
+.brand-cyan {
+  color: #22d3ee;
 }
 
-.menu-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  margin: 6px 6px 10px;
-  border-radius: 12px;
+.brand p {
+  margin: 4px 0 0;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #a8bce8;
-  background: linear-gradient(90deg, rgba(15, 33, 72, 0.8), rgba(15, 33, 72, 0.2));
-  border: 1px solid rgba(53, 78, 128, 0.6);
-}
-
-.menu-title-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #67e8f9;
-  background: rgba(34, 211, 238, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.28);
-  flex: 0 0 22px;
-}
-
-.menu-title-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
-}
-
-.menu-title-text {
-  line-height: 1;
-}
-
-.menu-title-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.55), rgba(148, 163, 184, 0));
+  color: #8ca4df;
 }
 
 .menu-item {
@@ -2277,49 +2098,51 @@ const iconSvg = (name) => {
   width: 100%;
   border: 0;
   background: transparent;
-  color: #c5d3f2;
-  border-radius: 10px;
+  color: rgba(226, 232, 240, 0.82);
+  border-radius: 12px;
   text-align: left;
-  padding: 10px 12px;
+  padding: 12px 12px;
   margin-bottom: 6px;
-  font-size: 15px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .menu-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: #102551;
-  color: #9ab1e6;
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.76);
   display: inline-grid;
   place-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex: 0 0 22px;
+  flex: 0 0 18px;
 }
 
 .menu-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 
 .menu-item:hover {
-  background: #0f2148;
+  background: rgba(148, 163, 184, 0.08);
+  color: #ffffff;
 }
 
 .menu-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.32);
   color: #fff;
-  border-left: 3px solid #22d3ee;
-  padding-left: 9px;
 }
 
 .menu-item.active .menu-icon {
-  background: rgba(34, 211, 238, 0.18);
   color: #22d3ee;
 }
-
 
 .main {
   flex: 1;
@@ -3092,8 +2915,8 @@ textarea {
 
 @media (max-width: 1200px) {
   .sidebar {
-    width: 200px;
-    flex-basis: 200px;
+    width: 236px;
+    flex-basis: 236px;
   }
 
   .stats {
@@ -3101,11 +2924,11 @@ textarea {
   }
 
   .brand h2 {
-    font-size: 24px;
+    font-size: 19px;
   }
 
   .brand p {
-    font-size: 14px;
+    font-size: 11px;
   }
 
   .dashboard-view h2 {
@@ -3142,8 +2965,8 @@ textarea {
   }
 
   .sidebar-toggle {
-    right: 0;
-    transform: translateX(50%);
+    right: 8px;
+    transform: none;
     top: 10px;
   }
 
@@ -3223,7 +3046,7 @@ textarea {
   }
 
   .brand h2 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .brand p {
@@ -4237,7 +4060,8 @@ textarea {
 /* Sidebar layout helpers */
 .menu-area {
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
+  padding-right: 2px;
 }
 
 /* Sidebar Profile Section */
@@ -4329,24 +4153,23 @@ textarea {
 }
 
 .sidebar-footer {
-  border-top: 1px solid #1a2a52;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
   padding: 8px 0 0;
   flex-shrink: 0;
 }
 
 .logout-item {
-  color: #fca5a5 !important;
+  color: #fb7185 !important;
   margin-top: auto;
   flex-shrink: 0;
 }
 
 .logout-icon {
-  background: rgba(239, 68, 68, 0.18) !important;
-  color: #f87171 !important;
+  color: #fb7185 !important;
 }
 
 .logout-item:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
+  background: rgba(251, 113, 133, 0.08) !important;
 }
 
 /* Vehicle name cell with car icon */
@@ -4386,324 +4209,166 @@ textarea {
 }
 
 .shop-modal {
-  background: #f7f8fb;
-  border-radius: 30px;
+  background: white;
+  border-radius: 12px;
   width: 100%;
-  max-width: 940px;
+  max-width: 500px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
 }
 
 .shop-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 32px;
-  border-bottom: 1px solid #edeff5;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .shop-modal-header h2 {
-  font-size: 22px;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
   margin: 0;
-}
-
-.shop-modal-sub {
-  margin: 4px 0 0;
-  font-size: 0.9rem;
-  color: #64748b;
 }
 
 .shop-modal-content {
-  padding: 32px 40px;
-  flex: 1;
-  overflow-y: auto;
-  background: #f7f8fb;
-}
-
-.shop-modal-grid {
-  display: grid;
-  grid-template-columns: minmax(220px, 280px) 1fr;
-  gap: 24px;
-}
-
-.shop-preview-panel {
-  background: #fff;
-  border-radius: 28px;
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
-}
-
-.shop-preview-image {
-  width: 100%;
-  height: 150px;
-  border-radius: 20px;
-  background: #edf0f5;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.shop-preview-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.shop-preview-placeholder {
-  width: 70px;
-  height: 70px;
-  color: #94a3b8;
-}
-
-.shop-preview-info h3 {
-  margin: 0;
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.shop-preview-info p {
-  margin: 6px 0 0;
-  color: #475569;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
-
-.shop-preview-meta {
-  margin-top: 12px;
-  font-size: 0.85rem;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.shop-preview-meta span {
-  color: #cbd5f5;
-}
-
-.shop-preview-status {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 16px;
-  border-radius: 16px;
-  background: #f5f6fb;
-  border: 1px solid #e5e7eb;
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-.shop-preview-status strong {
-  color: #0f172a;
-}
-
-.shop-details-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.upload-card,
-.form-card {
-  background: #fff;
-  border-radius: 24px;
   padding: 24px;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+  overflow-y: auto;
+  flex: 1;
 }
 
-.upload-card__header,
-.form-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.upload-card__header h3,
-.form-card__header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.upload-card__header p,
-.form-card__header p {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 0.9rem;
-}
-
-.upload-dropzone {
-  border: 2px dashed rgba(249, 115, 22, 0.6);
-  border-radius: 18px;
-  padding: 28px;
+.shop-image-upload {
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 24px;
   text-align: center;
-  background: #fff;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
-  min-height: 150px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
+  transition: all 0.2s;
+  margin-bottom: 16px;
 }
 
-.upload-dropzone.is-active {
-  border-color: #f97316;
-  background: #fff3e0;
+.shop-image-upload:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
 }
 
-.upload-preview {
-  width: 100%;
-  height: 160px;
-  border-radius: 16px;
-  overflow: hidden;
+.shop-image-upload.has-image {
+  padding: 12px;
+}
+
+.image-preview-container {
   position: relative;
+  width: 100%;
+  max-height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.upload-preview img {
+.image-preview-container img {
   width: 100%;
-  height: 100%;
+  height: 200px;
   object-fit: cover;
 }
 
-.upload-preview span {
+.image-preview-container .image-overlay {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  color: #fff;
-  background: rgba(15, 23, 42, 0.4);
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.upload-placeholder svg {
-  margin-bottom: 6px;
+.image-preview-container:hover .image-overlay {
+  opacity: 1;
 }
 
-.upload-placeholder p {
-  margin: 0;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.upload-placeholder span {
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-.form-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.field-grid {
-  display: grid;
-  gap: 16px;
-}
-
-.field-grid.two-column {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.field span {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 6px;
-}
-
-.field input,
-.field select,
-.field textarea {
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  font-size: 0.95rem;
-  font-family: "Inter", system-ui, sans-serif;
-  color: #0f172a;
-  background: #fcfcff;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
-}
-
-.rounded-input {
-  border-radius: 16px;
-  background: #f5f6fb;
-  border: 1px solid #dfe7f5;
-  font-size: 0.95rem;
-}
-
-.field textarea {
-  min-height: 120px;
-  resize: vertical;
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-  outline: none;
-  border-color: #f97316;
-  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  border: 0;
+.image-overlay span {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .shop-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 22px 32px;
-  border-top: 1px solid #edeff5;
-  background: #f7f8fb;
+  padding: 20px 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
 }
 
 .save-shop-btn {
-  padding: 12px 28px;
+  padding: 10px 24px;
   border: none;
-  border-radius: 999px;
-  background: #f97316;
-  color: #fff;
+  background: #3b82f6;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
+  color: white;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-  box-shadow: 0 10px 25px rgba(249, 115, 22, 0.25);
+  transition: all 0.2s;
 }
 
-.save-shop-btn:hover:not(:disabled) {
-  background: #ea580c;
-  transform: translateY(-1px);
+.save-shop-btn:hover {
+  background: #2563eb;
 }
 
 .save-shop-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
-  box-shadow: none;
+}
+
+.shop-modal .form-group {
+  margin-bottom: 16px;
+}
+
+.shop-modal .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.shop-modal .form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.shop-modal .form-group input,
+.shop-modal .form-group select,
+.shop-modal .form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: white;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.shop-modal .form-group input:focus,
+.shop-modal .form-group select:focus,
+.shop-modal .form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.shop-modal .form-group textarea {
+  min-height: 80px;
+  resize: vertical;
 }
 
 @media (max-width: 640px) {
@@ -4724,67 +4389,5 @@ textarea {
     width: 100%;
     justify-content: center;
   }
-
-  .shop-modal-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .shop-preview-panel {
-    order: 1;
-  }
-}
-
-.notification-wrapper {
-  position: relative;
-  margin-right: 16px;
-}
-
-.notification-btn {
-  position: relative;
-  border: none;
-  background: transparent;
-  padding: 0;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  transition: background 0.2s ease;
-}
-
-.notification-btn:hover {
-  background: rgba(59, 130, 246, 0.08);
-}
-
-.notification-count {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 0.7rem;
-  padding: 2px 6px;
-  border-radius: 999px;
-  font-weight: 700;
-}
-
-.notification-popup {
-  position: absolute;
-  top: 48px;
-  right: 0;
-  z-index: 1200;
-}
-
-
-.notification-fade-enter-active,
-.notification-fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.notification-fade-enter-from,
-.notification-fade-leave-to {
-  opacity: 0;
 }
 </style>

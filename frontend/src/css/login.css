@@ -356,33 +356,45 @@
   margin-top: 2px;
 }
 
-/* Back to Home button */
-.back-home-btn {
+/* Back to Home button - Advanced Professional Version */
+.back-home-btn.prominent {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 30px;
+  left: 30px;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: #64748b;
+  gap: 12px;
+  color: #fff;
   text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
-  padding: 9px 16px;
-  border-radius: 10px;
-  background: white;
-  border: 1.5px solid #e2e8f0;
-  transition: all 0.2s ease;
-  z-index: 20;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  font-size: 15px;
+  font-weight: 800;
+  padding: 14px 28px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.back-home-btn:hover {
-  border-color: #2f9ed8;
-  color: #2f9ed8;
-  background: #f0f9ff;
-  transform: translateX(-2px);
-  box-shadow: 0 2px 10px rgba(47, 158, 216, 0.15);
+.back-home-btn.prominent:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-5px);
+  border-color: #fff;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+  letter-spacing: 1.5px;
+}
+
+.back-home-btn.prominent i {
+  font-size: 1.2rem;
+  transition: transform 0.3s;
+}
+
+.back-home-btn.prominent:hover i {
+  transform: scale(1.2) rotate(-10deg);
 }
 
 /* Password + Confirm Password grid row */
@@ -861,34 +873,6 @@
 
 .terms a:hover {
   text-decoration: underline;
-}
-
-.homeview-link {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-decoration: none;
-  color: #0f172a;
-  background: #d0f0ff;
-  border: 1px solid #9ad7ff;
-  box-shadow: 0 6px 18px rgba(15, 118, 255, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.homeview-link svg {
-  display: block;
-}
-
-.homeview-link:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 25px rgba(15, 118, 255, 0.2);
 }
 
 /* RESPONSIVE */

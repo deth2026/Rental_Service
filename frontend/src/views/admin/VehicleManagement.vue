@@ -76,39 +76,6 @@ const pagedVehicles = computed(() => {
   return filteredVehicles.value.slice(start, start + perPage)
 })
 
-const formatCurrency = (value) => {
-  const amount = Number(value) || 0
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-}
-
-const selectedVehicle = computed(() => {
-  if (!selected.value) return null
-  return {
-    ...selected.value,
-    shop_name: selected.value.shop_name || shopNameById.value.get(String(selected.value.shop_id)) || '—',
-  }
-})
-
-const selectedVehicleName = computed(() => selectedVehicle.value?.name || 'Unnamed vehicle')
-const selectedVehicleImage = computed(() => selectedVehicle.value?.image || selectedVehicle.value?.image_url || '')
-const selectedVehicleInitials = computed(() => {
-  const name = selectedVehicleName.value
-  const parts = name.split(/\s+/).filter(Boolean)
-  if (!parts.length) return 'VE'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
-})
-const selectedVehicleStatus = computed(() => selectedVehicle.value?.status || 'Status unknown')
-const selectedVehicleShopName = computed(() => selectedVehicle.value?.shop_name || 'Unassigned shop')
-const selectedVehicleBrand = computed(() => selectedVehicle.value?.brand || '—')
-const selectedVehicleModel = computed(() => selectedVehicle.value?.model || '—')
-const selectedVehicleCategory = computed(() => selectedVehicle.value?.category || selectedVehicle.value?.type || '—')
-const selectedVehiclePlate = computed(() => selectedVehicle.value?.plate || '—')
-const selectedVehicleFuel = computed(() => selectedVehicle.value?.fuel || selectedVehicle.value?.fuel_type || '—')
-const selectedVehicleTransmission = computed(() => selectedVehicle.value?.transmission || '—')
-const selectedVehiclePrice = computed(() => formatCurrency(selectedVehicle.value?.price_per_day ?? selectedVehicle.value?.price ?? 0))
-const selectedVehicleDescription = computed(() => selectedVehicle.value?.description || 'No additional notes.')
-
 const statusBadgeClass = (status) => {
   const s = String(status || '').toLowerCase()
   if (s === 'available') return 'badge badge-green'
@@ -277,7 +244,7 @@ onMounted(async () => {
         <h1 class="page-title">Vehicle Management</h1>
         <p class="page-subtitle">Manage fleet inventory across all shops.</p>
       </div>
-      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="openCreate">
+      <button type="button" class="btn btn-primary" @click="openCreate">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
         <span>Add Vehicle</span>
       </button>
@@ -411,7 +378,7 @@ onMounted(async () => {
     </div>
 
     <div v-if="showView" class="modal-backdrop" role="dialog" aria-modal="true" @click.self="showView = false">
-      <div class="modal modal--profile">
+      <div class="modal">
         <div class="modal-head">
           <div>
             <div class="modal-title">Vehicle Details</div>
@@ -420,55 +387,7 @@ onMounted(async () => {
           <button type="button" class="icon-action" title="Close" @click="showView = false"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-body">
-          <div class="vehicle-details">
-            <div class="vehicle-hero">
-              <div class="vehicle-hero__image">
-                <img v-if="selectedVehicleImage" :src="selectedVehicleImage" :alt="selectedVehicleName" />
-                <span v-else>{{ selectedVehicleInitials }}</span>
-              </div>
-              <div class="vehicle-hero__info">
-                <p class="vehicle-hero__title">{{ selectedVehicleName }}</p>
-                <div class="vehicle-hero__meta">
-                  <span>{{ selectedVehicleStatus }}</span>
-                  <span>{{ selectedVehicleShopName }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="detail-grid">
-              <div class="detail-row">
-                <span class="detail-label">Brand</span>
-                <span class="detail-value">{{ selectedVehicleBrand }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Model</span>
-                <span class="detail-value">{{ selectedVehicleModel }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Category</span>
-                <span class="detail-value">{{ selectedVehicleCategory }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Plate</span>
-                <span class="detail-value">{{ selectedVehiclePlate }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Fuel</span>
-                <span class="detail-value">{{ selectedVehicleFuel }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Transmission</span>
-                <span class="detail-value">{{ selectedVehicleTransmission }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Price / Day</span>
-                <span class="detail-value">{{ selectedVehiclePrice }}</span>
-              </div>
-              <div class="detail-row span-2">
-                <span class="detail-label">Description</span>
-                <span class="detail-value">{{ selectedVehicleDescription }}</span>
-              </div>
-            </div>
-          </div>
+          <pre class="code-block">{{ JSON.stringify(selected, null, 2) }}</pre>
         </div>
       </div>
     </div>
@@ -486,87 +405,14 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.vehicle-details {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.vehicle-hero {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.vehicle-hero__image {
-  width: 80px;
-  height: 80px;
-  border-radius: 999px;
-  background: rgba(148, 163, 184, 0.1);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-}
-
-.vehicle-hero__image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.vehicle-hero__info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.vehicle-hero__title {
+.code-block {
   margin: 0;
-  font-size: 1.2rem;
-  font-weight: 700;
-}
-
-.vehicle-hero__meta {
-  display: flex;
-  gap: 0.75rem;
-  font-size: 0.85rem;
-  color: #6b7280;
-  flex-wrap: wrap;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 0.85rem;
-  padding: 1rem;
-  background: var(--mp-card);
+  padding: 12px;
+  border-radius: 12px;
   border: 1px solid var(--mp-border);
-  border-radius: 16px;
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.08);
-}
-
-.detail-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.detail-label {
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #94a3b8;
-  font-weight: 600;
-}
-
-.detail-value {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.detail-row.span-2 {
-  grid-column: span 2;
+  background: rgba(148, 163, 184, 0.08);
+  overflow: auto;
+  max-height: 52vh;
+  font-size: 12px;
 }
 </style>

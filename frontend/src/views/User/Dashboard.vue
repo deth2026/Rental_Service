@@ -1,449 +1,553 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { userService, shopService } from '../../services/database.js'
-import '../../css/userDashboard.css'
-import CommonFooter from '../../components/CommonFooter.vue'
-import UserNavbar from '@/components/UserNavbar.vue'
+import { useRouter } from 'vue-router'
+import { getSessionUser, logoutUser } from '@/services/auth'
+import { shopApi } from '@/services/api'
+import CommonFooter from '@/components/CommonFooter.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import '@/css/userDashboard.css'
 
 const router = useRouter()
-const route = useRoute()
 
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+const LOCATION_CACHE_KEY = 'chong_choul_user_location'
+
+const CAMBODIA_PROVINCES = [
+  'Banteay Meanchey',
+  'Battambang',
+  'Kampong Cham',
+  'Kampong Chhnang',
+  'Kampong Speu',
+  'Kampong Thom',
+  'Kampot',
+  'Kandal',
+  'Kep',
+  'Koh Kong',
+  'Kratie',
+  'Mondulkiri',
+  'Oddar Meanchey',
+  'Pailin',
+  'Phnom Penh',
+  'Preah Sihanouk',
+  'Preah Vihear',
+  'Prey Veng',
+  'Pursat',
+  'Ratanakiri',
+  'Siem Reap',
+  'Stung Treng',
+  'Svay Rieng',
+  'Takeo',
+  'Tboung Khmum',
 ]
 
-const activeNavLabel = computed(() => {
-  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
-  return matchedItem?.label || 'Home'
-})
+const currentUser = ref(getSessionUser())
+const userDisplayName = computed(() => currentUser.value?.name || 'Customer')
 
-const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const isLoading = ref(false)
+const dataError = ref('')
+const shops = ref([])
+const provinceQuery = ref('')
+const selectedProvince = ref('Phnom Penh')
+const searchMessage = ref('')
 
-const showLogoutConfirm = ref(false)
-const handleLogout = () => {
-  showLogoutConfirm.value = true
+const userLocation = ref(getStoredLocation())
+const locationStatus = ref(userLocation.value ? 'Current location detected.' : 'Enable location for nearest distance.')
+const locating = ref(false)
+
+const mapContainer = ref(null)
+let leafletLib = null
+let mapInstance = null
+let markerLayer = null
+
+function getStoredLocation() {
+  try {
+    const raw = localStorage.getItem(LOCATION_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const lat = Number(parsed?.lat)
+    const lng = Number(parsed?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  } catch {
+    return null
+  }
 }
 
-const confirmLogout = async () => {
-  showLogoutConfirm.value = false
-  await userService.logout()
+const normalizeProvinceName = (value) => {
+  const raw = String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+
+  if (!raw) return ''
+
+  const aliases = {
+    'banteay meanchey': 'Banteay Meanchey',
+    battambang: 'Battambang',
+    'kampong cham': 'Kampong Cham',
+    'kampong chhnang': 'Kampong Chhnang',
+    'kampong speu': 'Kampong Speu',
+    'kampong thom': 'Kampong Thom',
+    kampot: 'Kampot',
+    kandal: 'Kandal',
+    kep: 'Kep',
+    'koh kong': 'Koh Kong',
+    kratie: 'Kratie',
+    mondulkiri: 'Mondulkiri',
+    'oddar meanchey': 'Oddar Meanchey',
+    pailin: 'Pailin',
+    'phnom penh': 'Phnom Penh',
+    'preah sihanouk': 'Preah Sihanouk',
+    sihanoukville: 'Preah Sihanouk',
+    'preah vihear': 'Preah Vihear',
+    'prey veng': 'Prey Veng',
+    pursat: 'Pursat',
+    ratanakiri: 'Ratanakiri',
+    'siem reap': 'Siem Reap',
+    'stung treng': 'Stung Treng',
+    'svay rieng': 'Svay Rieng',
+    takeo: 'Takeo',
+    'tbong khmum': 'Tboung Khmum',
+    'tboung khmum': 'Tboung Khmum',
+  }
+
+  return aliases[raw] || raw.replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const extractProvinceFromText = (value) => {
+  const normalized = String(value || '').toLowerCase()
+  if (!normalized) return ''
+  return CAMBODIA_PROVINCES.find((province) => normalized.includes(province.toLowerCase())) || ''
+}
+
+const parseArrayPayload = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  if (Array.isArray(payload?.data?.data)) return payload.data.data
+  return []
+}
+
+const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const toRad = (deg) => (deg * Math.PI) / 180
+  const earthRadiusKm = 6371
+
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
+const normalizeShop = (shop) => {
+  const province = normalizeProvinceName(
+    shop?.province || shop?.city?.name || extractProvinceFromText(shop?.location) || extractProvinceFromText(shop?.address)
+  )
+
+  return {
+    id: Number(shop.id),
+    name: shop.name || `Shop #${shop.id}`,
+    address: shop.address || 'Address not available',
+    province,
+    latitude: Number(shop.latitude ?? shop.lat),
+    longitude: Number(shop.longitude ?? shop.lng),
+    vehiclesCount: Number(shop.vehicles_count || 0),
+    status: String(shop.status || 'active').toLowerCase(),
+    img_url: shop.img_url_full || shop.img_url || '/images/default-shop.png'
+  }
+}
+
+const provinceOptions = computed(() => {
+  const dynamic = shops.value.map((shop) => shop.province).filter(Boolean)
+  return Array.from(new Set([...CAMBODIA_PROVINCES, ...dynamic])).sort((a, b) => a.localeCompare(b))
+})
+
+const provinceChips = computed(() => provinceOptions.value.slice(0, 12))
+
+const selectedProvinceShops = computed(() => {
+  const normalized = normalizeProvinceName(selectedProvince.value)
+  const inProvince = shops.value.filter((shop) => normalizeProvinceName(shop.province) === normalized)
+  const withDistance = inProvince.map((shop) => {
+    let distanceKm = null
+    if (userLocation.value && Number.isFinite(shop.latitude) && Number.isFinite(shop.longitude)) {
+      distanceKm = calculateDistanceKm(userLocation.value.lat, userLocation.value.lng, shop.latitude, shop.longitude)
+    }
+    return { ...shop, distanceKm }
+  })
+
+  withDistance.sort((a, b) => {
+    if (a.distanceKm !== null && b.distanceKm !== null) return a.distanceKm - b.distanceKm
+    return a.name.localeCompare(b.name)
+  })
+
+  return withDistance.map((shop, idx) => ({
+    ...shop,
+    isNearest: shop.distanceKm !== null && idx === 0,
+  }))
+})
+
+const findProvinceByInput = (input) => {
+  const normalizedInput = normalizeProvinceName(input)
+  const exact = provinceOptions.value.find(
+    (province) => normalizeProvinceName(province) === normalizeProvinceName(normalizedInput)
+  )
+  if (exact) return exact
+  return provinceOptions.value.find((province) => province.toLowerCase().includes(String(input).toLowerCase())) || ''
+}
+
+const searchProvince = () => {
+  const query = provinceQuery.value.trim()
+  if (!query) {
+    searchMessage.value = 'Please type a province and click search.'
+    return
+  }
+
+  const matched = findProvinceByInput(query)
+  if (!matched) {
+    searchMessage.value = 'Province not found. Please try another province.'
+    return
+  }
+
+  selectedProvince.value = matched
+  provinceQuery.value = matched
+  searchMessage.value = `Showing shops in ${matched}.`
+}
+
+const selectProvince = (province) => {
+  selectedProvince.value = province
+  provinceQuery.value = province
+  searchMessage.value = `Showing shops in ${province}.`
+}
+
+const loadShops = async () => {
+  isLoading.value = true
+  dataError.value = ''
+
+  try {
+    const response = await shopApi.getAll({ active_only: true })
+    shops.value = parseArrayPayload(response.data)
+      .map((shop) => normalizeShop(shop))
+      .filter((shop) => shop.status === 'active' && shop.province)
+
+    if (!shops.value.some((shop) => normalizeProvinceName(shop.province) === normalizeProvinceName(selectedProvince.value))) {
+      selectedProvince.value = shops.value[0]?.province || 'Phnom Penh'
+      provinceQuery.value = selectedProvince.value
+    }
+  } catch (error) {
+    console.error(error)
+    dataError.value = 'Unable to load shops from database.'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const viewShop = (shop) => {
+  router.push({ name: 'shop-vehicles', params: { id: String(shop.id) } })
+}
+
+const enableLocation = () => {
+  if (locating.value) return
+  if (!navigator?.geolocation) {
+    locationStatus.value = 'Geolocation is not supported in this browser.'
+    return
+  }
+
+  locating.value = true
+  locationStatus.value = 'Detecting your location...'
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLocation.value = {
+        lat: Number(position.coords.latitude),
+        lng: Number(position.coords.longitude),
+      }
+      localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(userLocation.value))
+      locationStatus.value = 'Location detected successfully.'
+      locating.value = false
+      renderMapMarkers()
+    },
+    () => {
+      locating.value = false
+      locationStatus.value = 'Could not detect location. Please allow GPS and try again.'
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  )
+}
+
+const openProfile = () => router.push('/user/profile')
+const openBookings = () => router.push('/my-bookings')
+
+const onLogout = async () => {
+  await logoutUser()
   router.push('/login')
 }
 
-const cancelLogout = () => {
-  showLogoutConfirm.value = false
-}
+const ensureLeaflet = async () => {
+  if (typeof window !== 'undefined' && window.L) return window.L
 
-const openProfile = () => {
-  router.push('/user/profile')
-}
+  await new Promise((resolve, reject) => {
+    if (typeof document === 'undefined') return reject(new Error('Document unavailable'))
 
-const shops = ref([])
-const isLoadingShops = ref(false)
-const shopsError = ref('')
-const showAllShops = ref(false)
-const expandedShops = ref(new Set())
-const shopDetailRefs = new Map()
-const scrollableShopIds = ref(new Set())
-
-const withCacheBust = (url, version) => {
-  if (!url || typeof url !== 'string') return url
-  const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}v=${encodeURIComponent(String(version))}`
-}
-
-const getApiOrigin = () => {
-  try {
-    const currentOrigin = window.location.origin
-    if (currentOrigin.includes('5173')) {
-      return 'http://127.0.0.1:8000'
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link')
+      link.id = 'leaflet-css'
+      link.rel = 'stylesheet'
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+      document.head.appendChild(link)
     }
-    return currentOrigin
-  } catch {
-    return 'http://127.0.0.1:8000'
-  }
-}
 
-const resolveShopImageUrl = (value) => {
-  if (!value || typeof value !== 'string') return value
-  if (
-    value.startsWith('http://') ||
-    value.startsWith('https://') ||
-    value.startsWith('blob:') ||
-    value.startsWith('data:')
-  ) {
-    return value
-  }
-  const clean = value.replace(/^\/+/, '')
-  if (clean.startsWith('storage/')) {
-    return `${getApiOrigin()}/${clean}`
-  }
-  return `${getApiOrigin()}/storage/${clean}`
-}
-
-const getInitials = (text, fallback = 'S') => {
-  const value = String(text || '').trim()
-  if (!value) return fallback
-  const words = value.split(/\s+/).filter(Boolean)
-  if (!words.length) return fallback
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
-}
-
-const normalizeShop = (shop) => ({
-  id: shop.id,
-  name: shop.name || `Shop #${shop.id}`,
-  address: shop.address || 'No address available',
-  phone: shop.phone || 'N/A',
-  email: shop.email || shop.owner?.email || 'N/A',
-  ownerName: shop.owner?.name || '',
-  ownerAvatar: shop.owner?.img_url || shop.owner?.profile_picture || shop.owner?.avatar_url || '',
-  rating: Number(shop.rating || 0),
-  status: shop.status || 'active',
-  // Use img_url_full accessor from backend if available
-  image: shop.img_url_full 
-    ? withCacheBust(shop.img_url_full, shop.updated_at || shop.id || Date.now())
-    : (shop.img_url || shop.image_url || shop.image)
-      ? withCacheBust(
-          resolveShopImageUrl(shop.img_url || shop.image_url || shop.image),
-          shop.updated_at || shop.id || Date.now()
-        )
-      : '',
-})
-
-const loadShops = async () => {
-  isLoadingShops.value = true
-  shopsError.value = ''
-
-  try {
-    const data = await shopService.getShops()
-    shops.value = Array.isArray(data) ? data.map((shop) => normalizeShop(shop)) : []
-  } catch (error) {
-    shopsError.value = error.message || 'Failed to load shops.'
-  } finally {
-    isLoadingShops.value = false
-  }
-}
-
-const visibleShops = computed(() => {
-  if (showAllShops.value) return shops.value
-  return shops.value.slice(0, 6)
-})
-
-const hasMoreShops = computed(() => shops.value.length > 6)
-
-const toggleShopGrid = () => {
-  showAllShops.value = !showAllShops.value
-  scheduleScrollableUpdate()
-}
-
-const toggleShopDetails = (shopId) => {
-  const nextSet = new Set(expandedShops.value)
-  if (nextSet.has(shopId)) {
-    nextSet.delete(shopId)
-  } else {
-    nextSet.add(shopId)
-  }
-  expandedShops.value = nextSet
-  scheduleScrollableUpdate()
-}
-
-const isShopExpanded = (shopId) => expandedShops.value.has(shopId)
-const isShopScrollable = (shopId) => scrollableShopIds.value.has(shopId)
-
-const viewShopVehicles = (shop) => {
-  router.push({ name: 'vehicles-by-shop', query: { shop_id: String(shop.id) } })
-}
-
-watch(shops, () => {
-  expandedShops.value = new Set()
-  showAllShops.value = false
-  scheduleScrollableUpdate()
-})
-
-watch([showAllShops, expandedShops], () => {
-  scheduleScrollableUpdate()
-})
-
-const setShopDetailRef = (shopId) => (el) => {
-  if (el) {
-    shopDetailRefs.set(shopId, el)
-  } else {
-    shopDetailRefs.delete(shopId)
-  }
-}
-
-const updateScrollableShops = () => {
-  const nextSet = new Set()
-  shopDetailRefs.forEach((el, shopId) => {
-    if (!el) return
-    if (!expandedShops.value.has(shopId)) return
-    const maxHeightValue = Number.parseFloat(window.getComputedStyle(el).maxHeight || '0')
-    const maxHeight = Number.isFinite(maxHeightValue) && maxHeightValue > 0 ? maxHeightValue : el.clientHeight
-    if (el.scrollHeight > maxHeight + 1) {
-      nextSet.add(shopId)
+    const existingScript = document.getElementById('leaflet-js')
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('Leaflet load failed')), { once: true })
+      return
     }
+
+    const script = document.createElement('script')
+    script.id = 'leaflet-js'
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error('Leaflet load failed'))
+    document.body.appendChild(script)
   })
-  scrollableShopIds.value = nextSet
+
+  return window.L
 }
 
-const scheduleScrollableUpdate = () => {
-  nextTick(updateScrollableShops)
+const provinceBanners = {
+  'Phnom Penh': 'https://images.unsplash.com/photo-1598509524136-421cbe2c19f3?q=80&w=1200', // Riverside/Royal Palace
+  'Siem Reap': 'https://images.unsplash.com/photo-1500048993953-d23a436266cf?q=80&w=1200', // Angkor Wat
+  'Preah Sihanouk': 'https://images.unsplash.com/photo-1554483731-866416049079?q=80&w=1200', // Beach
+  'Kampot': 'https://images.unsplash.com/photo-1571216694665-68a867822941?q=80&w=1200',
+  'default': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200'
 }
 
-const slides = ref([
-  {
-    id: 1,
-    title: 'Rent Your Perfect Ride',
-    description: 'Choose from our wide selection of quality vehicles for your journey.',
-    image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1920&q=80'
-  },
-  {
-    id: 2,
-    title: 'Explore New Places',
-    description: 'Adventure awaits! Rent a car and discover amazing destinations.',
-    image: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1920&q=80'
-  },
-  {
-    id: 3,
-    title: 'Premium Vehicles',
-    description: 'Experience comfort and style with our premium rental fleet.',
-    image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=1920&q=80'
-  },
-  {
-    id: 4,
-    title: 'Easy Booking',
-    description: 'Simple and fast rental process - book your vehicle in minutes.',
-    image: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1920&q=80'
-  },
-  {
-    id: 5,
-    title: 'Affordable Rates',
-    description: 'Get the best deals on quality vehicle rentals.',
-    image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1920&q=80'
-  },
-  {
-    id: 6,
-    title: '24/7 Support',
-    description: 'We are here to help you anytime, anywhere.',
-    image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?w=1920&q=80'
+const currentBanner = computed(() => provinceBanners[selectedProvince.value] || provinceBanners['default'])
+
+const createPinIcon = (shop, active) =>
+  leafletLib.divIcon({
+    className: 'dashboard-marker-container',
+    html: `
+      <div class="shop-marker-wrapper ${active ? 'active' : ''}">
+        <div class="shop-marker-bubble">
+          <i class="fa-solid fa-store"></i>
+        </div>
+        <div class="shop-marker-pin"></div>
+      </div>
+    `,
+    iconSize: [40, 50],
+    iconAnchor: [20, 45],
+  })
+
+const renderMapMarkers = () => {
+  if (!leafletLib || !mapInstance || !markerLayer) return
+
+  markerLayer.clearLayers()
+  const selected = normalizeProvinceName(selectedProvince.value)
+  const allBounds = []
+  const selectedBounds = []
+
+  for (const shop of shops.value) {
+    if (!Number.isFinite(shop.latitude) || !Number.isFinite(shop.longitude)) continue
+
+    const isActive = normalizeProvinceName(shop.province) === selected
+    const marker = leafletLib.marker([shop.latitude, shop.longitude], { 
+      icon: createPinIcon(shop, isActive),
+      zIndexOffset: isActive ? 1000 : 0
+    })
+    
+    marker.bindPopup(`<strong>${shop.name}</strong><br/>${shop.province}<br/>${shop.vehiclesCount} vehicles available`)
+    marker.on('click', () => {
+      selectProvince(shop.province)
+      mapInstance.setView([shop.latitude, shop.longitude], 14)
+    })
+    markerLayer.addLayer(marker)
+
+    allBounds.push([shop.latitude, shop.longitude])
+    if (isActive) selectedBounds.push([shop.latitude, shop.longitude])
   }
-])
 
-const activeSlideIndex = ref(0)
-const orderedSlides = computed(() => {
-  if (!slides.value.length) return []
-  const start = activeSlideIndex.value
-  return slides.value.map((_, index) => slides.value[(start + index) % slides.value.length])
-})
+  if (userLocation.value) {
+    markerLayer.addLayer(
+      leafletLib.circleMarker([userLocation.value.lat, userLocation.value.lng], {
+        radius: 8,
+        color: '#fff',
+        fillColor: '#2563eb',
+        fillOpacity: 1,
+        weight: 3,
+      }).bindPopup('You are here')
+    )
+    allBounds.push([userLocation.value.lat, userLocation.value.lng])
+  }
 
-const goToNextSlide = () => {
-  if (!slides.value.length) return
-  activeSlideIndex.value = (activeSlideIndex.value + 1) % slides.value.length
-}
-
-const goToPrevSlide = () => {
-  if (!slides.value.length) return
-  activeSlideIndex.value =
-    (activeSlideIndex.value - 1 + slides.value.length) % slides.value.length
-}
-
-const handleNextSlide = () => {
-  goToNextSlide()
-  restartSlideTimer()
-}
-
-const handlePrevSlide = () => {
-  goToPrevSlide()
-  restartSlideTimer()
-}
-
-let slideIntervalId = null
-
-const stopSlideTimer = () => {
-  if (slideIntervalId) {
-    clearInterval(slideIntervalId)
-    slideIntervalId = null
+  // On initial load or when no province is selected, show whole Cambodia
+  if (!selectedProvince.value || selectedBounds.length === 0) {
+    mapInstance.setView([12.5657, 104.991], 7)
+  } else {
+    // Zoom to selected province shops
+    if (selectedBounds.length > 0) {
+      const bounds = leafletLib.latLngBounds(selectedBounds)
+      mapInstance.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 })
+    }
   }
 }
 
-const startSlideTimer = () => {
-  if (typeof window === 'undefined') return
-  stopSlideTimer()
-  slideIntervalId = window.setInterval(goToNextSlide, 5000)
+const initMap = async () => {
+  try {
+    leafletLib = await ensureLeaflet()
+    if (!mapContainer.value) return
+
+    mapInstance = leafletLib.map(mapContainer.value, {
+      zoomControl: false,
+      scrollWheelZoom: false,
+    }).setView([12.5657, 104.991], 7)
+
+    leafletLib
+      .tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+      })
+      .addTo(mapInstance)
+
+    markerLayer = leafletLib.layerGroup().addTo(mapInstance)
+    renderMapMarkers()
+  } catch (error) {
+    console.error(error)
+  }
 }
 
-const restartSlideTimer = () => {
-  startSlideTimer()
-}
+watch([selectedProvince, shops, userLocation], () => renderMapMarkers(), { deep: true })
 
-onMounted(() => {
-  loadShops()
-  startSlideTimer()
-  window.addEventListener('resize', updateScrollableShops)
+onMounted(async () => {
+  await loadShops()
+  provinceQuery.value = selectedProvince.value
+  await nextTick()
+  await initMap()
 })
 
 onBeforeUnmount(() => {
-  stopSlideTimer()
-  window.removeEventListener('resize', updateScrollableShops)
+  if (mapInstance) {
+    mapInstance.remove()
+    mapInstance = null
+    markerLayer = null
+  }
 })
 </script>
 
 <template>
-  <div class="dashboard-wrapper">
-    <UserNavbar
-      :nav-items="navItems"
-      :active-label="activeNavLabel"
-      :show-fallback-message="false"
-      @logout-request="handleLogout"
-    />
-    <div class="rides-page">
-      <div class="rides-shell">
+  <div class="customer-page">
+    <header class="customer-topbar">
+      <div class="brand-left">
+        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
+        <span>Chong Choul</span>
+      </div>
 
-      <section class="slideshow-section">
-      <div class="containers">
-        <div class="slide">
-          <article
-            v-for="(slide, index) in orderedSlides"
-            :key="slide.id"
-            class="item"
-            :class="`item-${index + 1}`"
-            :style="`background-image: url('${slide.image}')`"
-          >
-            <div class="content">
-              <div class="name">{{ slide.title }}</div>
-              <div class="des">{{ slide.description }}</div>
-              <button type="button">See More</button>
-            </div>
-          </article>
-        </div>
-          <div class="button">
-            <button class="btn-reset prev" type="button" aria-label="Previous slide" @click="handlePrevSlide">
-              <i class="fa-solid fa-arrow-left"></i>
-            </button>
-            <button class="btn-reset next" type="button" aria-label="Next slide" @click="handleNextSlide">
-              <i class="fa-solid fa-arrow-right"></i>
-            </button>
-          </div>
+      <nav class="top-links">
+        <button class="link-btn" @click="openBookings">My Bookings</button>
+        <button class="link-btn" @click="openProfile">Profile</button>
+      </nav>
+
+      <div class="top-actions">
+        <span class="user-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="onLogout" />
+      </div>
+    </header>
+
+    <main class="customer-main">
+      <section class="hero-banner-section" :style="{ backgroundImage: `linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.5)), url(${currentBanner})` }">
+        <div class="hero-banner-content">
+          <h1>{{ selectedProvince }}</h1>
+          <p>Explore the best rentals in {{ selectedProvince }}</p>
         </div>
       </section>
 
-      <section class="shops-section">
-        <div class="results-head">
-          <div class="choose-shop-box">
-            <h2>Choose a Shop</h2>
-            <p>Select one shop to view its vehicles.</p>
+      <section class="search-layout">
+        <div class="search-bar-wrap">
+          <div class="search-input-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              v-model="provinceQuery"
+              type="text"
+              class="province-search-input"
+              placeholder="Search for a province (e.g., Siem Reap)..."
+              @keydown.enter.prevent="searchProvince"
+            />
           </div>
-        </div>
-
-        <div v-if="isLoadingShops" class="status-box">Loading shops...</div>
-        <div v-else-if="shopsError" class="status-box error">{{ shopsError }}</div>
-        <div v-else-if="shops.length === 0" class="status-box">No shops found in the system.</div>
-
-        <div v-else class="shops-grid">
-          <article
-            v-for="shop in visibleShops"
-            :key="shop.id"
-            :class="['shop-card', { 'shop-card--collapsed': !isShopExpanded(shop.id) }]"
-          >
-            <div class="shop-card-image">
-              <img v-if="shop.image" :src="shop.image" :alt="shop.name" @error="shop.image = ''" />
-              <div v-else class="status-box" style="margin: 10px">No shop image</div>
-              <span :class="'status-badge status-' + (shop.status || 'active')">
-                <span v-if="(shop.status || 'active') === 'active'" class="status-green-dot"></span>
-                {{ shop.status || 'active' }}
-              </span>
-            </div>
-            <div class="shop-card-top">
-              <div class="shop-brand-mark">
-                <img
-                  v-if="shop.ownerAvatar"
-                  :src="resolveShopImageUrl(shop.ownerAvatar)"
-                  :alt="shop.ownerName || shop.name"
-                  class="shop-owner-avatar-img"
-                />
-                <span v-else>{{ getInitials(shop.ownerName || shop.name, 'S') }}</span>
-              </div>
-              <div class="shop-title-block">
-                <p class="shop-profile-eyebrow">Rental Shop</p>
-                <h3>{{ shop.name }}</h3>
-              </div>
-            </div>
-
-            <div
-              class="shop-card-details"
-              :class="{ 'shop-card-details--collapsed': !isShopExpanded(shop.id) }"
-              :ref="setShopDetailRef(shop.id)"
-            >
-              <div class="shop-scroll-hint" :class="{ 'shop-scroll-hint--active': isShopScrollable(shop.id) }">
-                {{ isShopScrollable(shop.id) ? 'Can scroll' : 'Cannot scroll' }}
-              </div>
-              <div class="shop-contact-grid">
-                <div class="shop-info">
-                  <span>Email</span>
-                  <strong>{{ shop.email }}</strong>
-                </div>
-                <div class="shop-info">
-                  <span> Phone</span>
-                  <strong>{{ shop.phone }}</strong>
-                </div>
-                <div class="shop-info" style="grid-column: span 2">
-                  <span>Address</span>
-                  <strong>{{ shop.address }}</strong>
-                </div>
-              </div>
-
-              <div class="shop-kpi-row">
-                <div class="shop-kpi">
-                  <span>Customer Rating</span>
-                  <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
-                </div>
-                <div class="shop-kpi">
-                  <span>Shop Status</span>
-                  <strong>{{ shop.status === 'active' ? '🟢 Open' : '🔴 Closed' }}</strong>
-                </div>
-              </div>
-
-            </div>
-
-            <div class="shop-card-footer">
-              <button class="shop-card-toggle" type="button" @click="toggleShopDetails(shop.id)">
-                {{ isShopExpanded(shop.id) ? 'Hide information' : 'See more' }}
-              </button>
-              <button class="view-shop-btn" type="button" @click="viewShopVehicles(shop)">View Vehicles</button>
-            </div>
-          </article>
-        </div>
-
-        <div v-if="hasMoreShops" class="shops-grid-footer">
-          <button class="btn-reset see-more-shops" type="button" @click="toggleShopGrid">
-            {{ showAllShops ? 'Show less shops' : 'See more shops' }}
+          <button class="province-search-btn" @click="searchProvince">
+            Search
           </button>
         </div>
+
+        <div class="status-row">
+          <div class="location-status-box">
+             <i class="fa-solid fa-location-dot"></i>
+             <span>{{ locationStatus }}</span>
+          </div>
+          <button class="location-btn" :disabled="locating" @click="enableLocation">
+            <i class="fa-solid fa-crosshairs"></i>
+            {{ locating ? 'Detecting...' : 'Use My Current Location' }}
+          </button>
+        </div>
+        <p v-if="dataError" class="error-note">{{ dataError }}</p>
       </section>
-      </div>
-    </div>
 
-    <!-- Logout Confirmation Modal -->
-    <div v-if="showLogoutConfirm" class="confirm-overlay" @click="cancelLogout">
-    <div class="confirm-modal" @click.stop>
-      <div class="confirm-icon">
-        <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-      </div>
-      <p class="confirm-title">Logout</p>
-      <p class="confirm-text">Are you sure you want to logout?</p>
-      <div class="confirm-actions">
-        <button class="confirm-cancel-btn" @click="cancelLogout">No</button>
-        <button class="confirm-logout-btn" @click="confirmLogout">Yes</button>
-      </div>
-    </div>
-  </div>
+      <section class="map-section-full">
+        <div class="map-container-box">
+          <div ref="mapContainer" class="hero-map"></div>
+        </div>
+      </section>
 
-    <!-- Common Footer -->
+      <section class="shop-result-section">
+        <div class="section-header">
+          <h2>Our Branches in {{ selectedProvince }}</h2>
+          <span class="shop-count">{{ selectedProvinceShops.length }} branches</span>
+        </div>
+
+        <p v-if="isLoading" class="empty-state">Finding branches...</p>
+        <p v-else-if="selectedProvinceShops.length === 0" class="empty-state">
+          We don't have a branch in {{ selectedProvince }} yet. Try searching another province!
+        </p>
+
+        <div v-else class="shop-grid">
+          <article v-for="shop in selectedProvinceShops" :key="shop.id" class="shop-card" :class="{ nearest: shop.isNearest }">
+            <div class="shop-image-container">
+              <img :src="shop.img_url" :alt="shop.name" class="shop-image" @error="(e) => e.target.src = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=800'" />
+              <div class="shop-badges">
+                <span v-if="shop.isNearest" class="nearest-badge">Nearest</span>
+                <span class="category-badge">Premium Shop</span>
+              </div>
+            </div>
+            <div class="shop-content">
+              <div class="shop-main-info">
+                <h3>{{ shop.name }}</h3>
+                <p class="shop-address"><i class="fa-solid fa-map-pin"></i> {{ shop.address }}</p>
+              </div>
+              
+              <div class="shop-distance-meter" v-if="userLocation">
+                <div class="distance-bar">
+                   <i class="fa-solid fa-person-walking"></i>
+                   <div class="bar-line"></div>
+                   <i class="fa-solid fa-store"></i>
+                </div>
+                <span class="distance-text">
+                  <strong>{{ shop.distanceKm ? shop.distanceKm.toFixed(2) : '...' }} km</strong> from your location
+                </span>
+              </div>
+
+              <div class="shop-footer">
+                <div class="shop-stats-pills">
+                  <span><i class="fa-solid fa-motorcycle"></i> {{ shop.vehiclesCount }}</span>
+                  <span><i class="fa-solid fa-star"></i> 4.8</span>
+                </div>
+                <button class="visit-btn" @click="viewShop(shop)">View Details</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
     <CommonFooter />
   </div>
 </template>

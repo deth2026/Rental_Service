@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\City;
 use App\Models\Shop;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
@@ -12,11 +13,34 @@ use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $shops = Shop::with(['owner:id,name,email,phone'])
-            ->orderByDesc('id')
-            ->get();
+        $province = trim((string) $request->query('province', ''));
+        $activeOnly = filter_var($request->query('active_only', false), FILTER_VALIDATE_BOOLEAN);
+        $normalizedProvince = strtolower($this->canonicalizeProvinceName($province));
+
+        $query = Shop::query()
+            ->with([
+                'owner:id,name,email,phone',
+                'city:id,name,status',
+            ])
+            ->withCount('vehicles')
+            ->orderByDesc('id');
+
+        if ($activeOnly) {
+            $query->where('status', 'active');
+        }
+
+        if ($normalizedProvince !== '') {
+            $query->whereHas('city', function ($cityQuery) use ($normalizedProvince) {
+                $cityQuery->whereRaw('LOWER(name) = ?', [$normalizedProvince]);
+            });
+        }
+
+        $shops = $query->get();
+        $shops->each(function ($shop) {
+            $shop->setAttribute('province', $shop->city?->name);
+        });
 
         return response()->json($shops);
     }
@@ -26,7 +50,8 @@ class ShopController extends Controller
         // Validate most fields first; img_url is handled separately because it
         // can be either a file upload (multipart) or a plain string URL.
         $payload = $request->validate([
-            'city_id' => 'nullable|integer',
+            'city_id' => 'nullable|integer|exists:cities,id',
+            'province' => 'nullable|string|max:120',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'address' => 'required|string|max:255',
@@ -42,6 +67,15 @@ class ShopController extends Controller
         if (!$this->shopColumnExists('location')) {
             unset($payload['location']);
         }
+
+        $resolvedCityId = $this->resolveCityId(
+            $request->input('province'),
+            isset($payload['city_id']) ? (int) $payload['city_id'] : null
+        );
+        if ($resolvedCityId) {
+            $payload['city_id'] = $resolvedCityId;
+        }
+        unset($payload['province']);
         
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
@@ -95,22 +129,18 @@ class ShopController extends Controller
             }
         }
 
-        $record = Shop::create($payload);
-        try {
-            NotificationService::shopCreated($record);
-        } catch (\Throwable $exception) {
-            Log::warning('Failed to send admin notification for new shop', [
-                'error' => $exception->getMessage(),
-                'shop_id' => $record->id,
-            ]);
-        }
+        $record = Shop::create($payload)->load(['owner', 'city'])->loadCount('vehicles');
+        $record->setAttribute('province', $record->city?->name);
 
         return response()->json($record, 201);
     }
 
     public function show(Shop $shop)
     {
-        return response()->json($shop->load('owner'));
+        $shop = $shop->load(['owner', 'city'])->loadCount('vehicles');
+        $shop->setAttribute('province', $shop->city?->name);
+
+        return response()->json($shop);
     }
 
     public function update(Request $request, Shop $shop)
@@ -126,7 +156,8 @@ class ShopController extends Controller
 
         // As with store(), we validate everything except img_url up front
         $payload = $request->validate([
-            'city_id' => 'nullable|integer',
+            'city_id' => 'nullable|integer|exists:cities,id',
+            'province' => 'nullable|string|max:120',
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'address' => 'sometimes|string|max:255',
@@ -141,6 +172,23 @@ class ShopController extends Controller
         if (!$this->shopColumnExists('location')) {
             unset($payload['location']);
         }
+
+        $provinceProvided = $request->has('province');
+        $resolvedCityId = $this->resolveCityId(
+            $request->input('province'),
+            isset($payload['city_id']) ? (int) $payload['city_id'] : null
+        );
+
+        if ($resolvedCityId) {
+            $payload['city_id'] = $resolvedCityId;
+        } elseif (
+            $provinceProvided &&
+            trim((string) $request->input('province')) === '' &&
+            !isset($payload['city_id'])
+        ) {
+            $payload['city_id'] = null;
+        }
+        unset($payload['province']);
 
         // validate img_url value type depending on upload or text
         if ($request->hasFile('img_url')) {
@@ -220,8 +268,10 @@ class ShopController extends Controller
         }
 
         $shop->update($payload);
+        $freshShop = $shop->fresh()->load(['owner', 'city'])->loadCount('vehicles');
+        $freshShop->setAttribute('province', $freshShop->city?->name);
 
-        return response()->json($shop->fresh());
+        return response()->json($freshShop);
     }
 
     public function destroy(Request $request, Shop $shop)
@@ -245,6 +295,82 @@ class ShopController extends Controller
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
+    }
+
+    /**
+     * Resolve a province name into a city id.
+     */
+    private function resolveCityId(?string $province, ?int $fallbackCityId = null): ?int
+    {
+        $canonicalProvince = $this->canonicalizeProvinceName($province);
+        if ($canonicalProvince === '') {
+            return $fallbackCityId;
+        }
+
+        $city = City::query()
+            ->whereRaw('LOWER(name) = ?', [strtolower($canonicalProvince)])
+            ->first();
+
+        if (!$city) {
+            $payload = ['name' => $canonicalProvince];
+            if (Schema::hasColumn('cities', 'status')) {
+                $payload['status'] = 'active';
+            }
+            if (Schema::hasColumn('cities', 'shop_id')) {
+                $payload['shop_id'] = 0;
+            }
+            $city = City::create($payload);
+        }
+
+        return (int) $city->id;
+    }
+
+    /**
+     * Normalize province text so user-typed values map cleanly.
+     */
+    private function canonicalizeProvinceName(?string $province): string
+    {
+        $raw = preg_replace('/\s+/', ' ', trim((string) $province));
+        if (!$raw) {
+            return '';
+        }
+
+        $aliases = [
+            'banteay meanchey' => 'Banteay Meanchey',
+            'battambang' => 'Battambang',
+            'kampong cham' => 'Kampong Cham',
+            'kampong chhnang' => 'Kampong Chhnang',
+            'kampong speu' => 'Kampong Speu',
+            'kampong thom' => 'Kampong Thom',
+            'kampot' => 'Kampot',
+            'kandal' => 'Kandal',
+            'kep' => 'Kep',
+            'koh kong' => 'Koh Kong',
+            'kratie' => 'Kratie',
+            'mondulkiri' => 'Mondulkiri',
+            'oddar meanchey' => 'Oddar Meanchey',
+            'pailin' => 'Pailin',
+            'phnom penh' => 'Phnom Penh',
+            'preah sihanouk' => 'Preah Sihanouk',
+            'sihanoukville' => 'Preah Sihanouk',
+            'preah vihear' => 'Preah Vihear',
+            'prey veng' => 'Prey Veng',
+            'pursat' => 'Pursat',
+            'ratanakiri' => 'Ratanakiri',
+            'siem reap' => 'Siem Reap',
+            'stung treng' => 'Stung Treng',
+            'svay rieng' => 'Svay Rieng',
+            'takeo' => 'Takeo',
+            'tbong khmum' => 'Tboung Khmum',
+            'tboung khmum' => 'Tboung Khmum',
+        ];
+
+        $lookup = strtolower($raw);
+        if (array_key_exists($lookup, $aliases)) {
+            return $aliases[$lookup];
+        }
+
+        return ucwords(strtolower($raw));
     }
 
     /**

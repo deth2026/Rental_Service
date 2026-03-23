@@ -17,12 +17,12 @@ const page = ref(1)
 const perPage = 6
 
 const showCreate = ref(false)
-const createForm = ref({ name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const createForm = ref({ name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' })
 const createImageFile = ref(null)
 const createImagePreview = ref('')
 
 const showEdit = ref(false)
-const editForm = ref({ id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const editForm = ref({ id: null, name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' })
 const editImageFile = ref(null)
 const editImagePreview = ref('')
 
@@ -34,7 +34,6 @@ const deletingShopId = ref(null)
 const statusChangingShopId = ref(null)
 
 const normalizedQuery = computed(() => String(route.query.q || '').trim().toLowerCase())
-const focusShopId = computed(() => Number(route.query.focusShop || 0))
 
 const deleteShopMessage = computed(() => {
   const name = String(deleteTarget.value?.name || '').trim()
@@ -64,7 +63,7 @@ const matchesTab = (shop) => {
 }
 
 const ownerName = (shop) => shop?.owner?.name || shop?.owner_name || shop?.owner || '—'
-const shopLocation = (shop) => shop?.location || shop?.address || shop?.city || '—'
+const shopLocation = (shop) => shop?.province || shop?.city?.name || shop?.location || shop?.address || shop?.city || '—'
 
 const matchesQuery = (shop) => {
   const q = normalizedQuery.value
@@ -218,7 +217,7 @@ const openCreate = () => {
 
 const closeCreate = () => {
   showCreate.value = false
-  createForm.value = { name: '', address: '', location: '', phone: '', description: '', img_url: '' }
+  createForm.value = { name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' }
   createImageFile.value = null
   createImagePreview.value = ''
   if (route.query.create) {
@@ -242,10 +241,13 @@ const submitCreate = async () => {
     let payload = {
       name,
       address,
+      province: createForm.value.province || null,
       location: createForm.value.location || null,
       phone: createForm.value.phone || null,
       description: createForm.value.description || null,
       img_url: createForm.value.img_url || null,
+      latitude: createForm.value.latitude || null,
+      longitude: createForm.value.longitude || null,
       status: 'inactive',
     }
 
@@ -254,9 +256,12 @@ const submitCreate = async () => {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (createForm.value.province) formData.append('province', createForm.value.province)
       if (createForm.value.location) formData.append('location', createForm.value.location)
       if (createForm.value.phone) formData.append('phone', createForm.value.phone)
       if (createForm.value.description) formData.append('description', createForm.value.description)
+      if (createForm.value.latitude) formData.append('latitude', createForm.value.latitude)
+      if (createForm.value.longitude) formData.append('longitude', createForm.value.longitude)
       formData.append('status', 'inactive')
       formData.append('img_url', createImageFile.value)
       payload = formData
@@ -280,10 +285,13 @@ const openEdit = (shop) => {
     id,
     name: shop?.name || '',
     address: shop?.address || '',
+    province: shop?.province || shop?.city?.name || '',
     location: shop?.location || '',
     phone: shop?.phone || '',
     description: shop?.description || '',
     img_url: shop?.img_url || '',
+    latitude: shop?.latitude || '',
+    longitude: shop?.longitude || '',
   }
   editImageFile.value = null
   editImagePreview.value = ''
@@ -292,7 +300,7 @@ const openEdit = (shop) => {
 
 const closeEdit = () => {
   showEdit.value = false
-  editForm.value = { id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' }
+  editForm.value = { id: null, name: '', address: '', province: '', location: '', phone: '', description: '', img_url: '', latitude: '', longitude: '' }
   editImageFile.value = null
   editImagePreview.value = ''
 }
@@ -313,19 +321,25 @@ const submitEdit = async () => {
     let payload = {
       name,
       address,
+      province: editForm.value.province || null,
       location: editForm.value.location || null,
       phone: editForm.value.phone || null,
       description: editForm.value.description || null,
       img_url: editForm.value.img_url || null,
+      latitude: editForm.value.latitude || null,
+      longitude: editForm.value.longitude || null,
     }
 
     if (editImageFile.value) {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (editForm.value.province) formData.append('province', editForm.value.province)
       if (editForm.value.location) formData.append('location', editForm.value.location)
       if (editForm.value.phone) formData.append('phone', editForm.value.phone)
       if (editForm.value.description) formData.append('description', editForm.value.description)
+      if (editForm.value.latitude) formData.append('latitude', editForm.value.latitude)
+      if (editForm.value.longitude) formData.append('longitude', editForm.value.longitude)
       formData.append('img_url', editImageFile.value)
       payload = formData
     }
@@ -396,19 +410,6 @@ watch(
   { immediate: true }
 )
 
-watch(
-  [() => focusShopId.value, () => (admin.state.shops || []).length],
-  ([focus]) => {
-    if (!focus) return
-    const shop = (admin.state.shops || []).find((item) => Number(item.id) === focus)
-    if (!shop) return
-    openEdit(shop)
-    const nextQuery = { ...route.query }
-    delete nextQuery.focusShop
-    router.replace({ query: nextQuery })
-  }
-)
-
 onMounted(() => {
   // Use cached data first, then force-refresh if empty so Admin page always tries to recover.
   admin.load()
@@ -430,7 +431,7 @@ onMounted(() => {
         <h1 class="page-title">Shop Management</h1>
         <p class="page-subtitle">Manage, verify, and monitor all registered rental shops.</p>
       </div>
-      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="openCreate">
+      <button type="button" class="btn btn-primary" @click="openCreate">
         <i class="fa-solid fa-plus" aria-hidden="true"></i>
         <span>Add New Shop</span>
       </button>
@@ -545,77 +546,46 @@ onMounted(() => {
         </div>
 
 
-        <div class="modal-body create-shop-layout">
-          <div class="create-shop-preview">
-            <div class="create-shop-preview__image">
-              <img
-                v-if="createImagePreview"
-                :src="createImagePreview"
-                alt="Shop preview"
-              />
-              <div v-else class="create-shop-preview__placeholder">
-                <i class="fa-solid fa-shop"></i>
-              </div>
+        <div class="modal-body form-grid">
+          <label class="field">
+            <span class="field-label">Shop Name</span>
+            <input v-model="createForm.name" type="text" placeholder="e.g. Berlin Elite Rentals" />
+          </label>
+          <label class="field">
+            <span class="field-label">Address</span>
+            <input v-model="createForm.address" type="text" placeholder="Street, City, Country" />
+          </label>
+          <label class="field">
+            <span class="field-label">Location</span>
+            <input v-model="createForm.location" type="text" placeholder="City, Country" />
+          </label>
+          <label class="field">
+            <span class="field-label">Province</span>
+            <input v-model="createForm.province" type="text" placeholder="Phnom Penh" />
+          </label>
+          <label class="field">
+            <span class="field-label">Phone</span>
+            <input v-model="createForm.phone" type="text" placeholder="+855..." />
+          </label>
+          <label class="field">
+            <span class="field-label">Latitude</span>
+            <input v-model="createForm.latitude" type="text" placeholder="11.5564" />
+          </label>
+          <label class="field">
+            <span class="field-label">Longitude</span>
+            <input v-model="createForm.longitude" type="text" placeholder="104.9282" />
+          </label>
+          <label class="field span-2">
+            <span class="field-label">Description</span>
+            <textarea v-model="createForm.description" rows="3" placeholder="Short shop description (optional)"></textarea>
+          </label>
+          <label class="field span-2">
+            <span class="field-label">Shop Image</span>
+            <input type="file" accept="image/*" @change="onCreateImageChange" />
+            <div v-if="createImagePreview" class="image-preview">
+              <img :src="createImagePreview" alt="Shop preview" />
             </div>
-            <div class="create-shop-preview__info">
-              <p class="create-shop-preview__title">
-                {{ createForm.name || 'Untitled shop' }}
-              </p>
-              <p class="create-shop-preview__subtitle">
-                {{ createForm.address || 'Add a location and contact details' }}
-              </p>
-              <p class="create-shop-preview__location">
-                {{ createForm.location || 'City, Country' }}
-              </p>
-            </div>
-            <div class="create-shop-preview__meta">
-              <span class="muted">Status</span>
-              <strong>Pending</strong>
-            </div>
-          </div>
-
-          <div class="create-shop-form">
-            <label class="upload-drop">
-              <input type="file" accept="image/*" @change="onCreateImageChange" />
-              <div class="upload-drop__content">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-                <strong>Upload shop cover</strong>
-                <span>Drop an image or click to browse files</span>
-              </div>
-            </label>
-            <div class="field-grid two-column">
-              <label class="field">
-                <span class="field-label">Shop Name</span>
-                <input
-                  v-model="createForm.name"
-                  type="text"
-                  placeholder="e.g. Berlin Elite Rentals"
-                />
-              </label>
-              <label class="field">
-                <span class="field-label">Address</span>
-                <input v-model="createForm.address" type="text" placeholder="Street, City, Country" />
-              </label>
-            </div>
-            <div class="field-grid two-column">
-              <label class="field">
-                <span class="field-label">Location</span>
-                <input v-model="createForm.location" type="text" placeholder="City, Country" />
-              </label>
-              <label class="field">
-                <span class="field-label">Phone</span>
-                <input v-model="createForm.phone" type="text" placeholder="+855..." />
-              </label>
-            </div>
-            <label class="field">
-              <span class="field-label">Description</span>
-              <textarea
-                v-model="createForm.description"
-                rows="4"
-                placeholder="Describe the shop, services or fleet."
-              ></textarea>
-            </label>
-          </div>
+          </label>
         </div>
 
         <div class="modal-actions">
@@ -651,8 +621,20 @@ onMounted(() => {
             <input v-model="editForm.location" type="text" />
           </label>
           <label class="field">
+            <span class="field-label">Province</span>
+            <input v-model="editForm.province" type="text" />
+          </label>
+          <label class="field">
             <span class="field-label">Phone</span>
             <input v-model="editForm.phone" type="text" />
+          </label>
+          <label class="field">
+            <span class="field-label">Latitude</span>
+            <input v-model="editForm.latitude" type="text" />
+          </label>
+          <label class="field">
+            <span class="field-label">Longitude</span>
+            <input v-model="editForm.longitude" type="text" />
           </label>
           <label class="field span-2">
             <span class="field-label">Description</span>
@@ -689,152 +671,10 @@ onMounted(() => {
 </template>
 
 <style>
-  .sort-menu {
-    padding: 10px;
-  }
-  .sort-menu button {
-    margin: 4px;
-  }
-
-  .create-shop-layout {
-    display: grid;
-    grid-template-columns: minmax(220px, 280px) 1fr;
-    gap: 24px;
-    align-items: start;
-  }
-
-  .create-shop-preview {
-    background: #f8fafc;
-    border-radius: 20px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
-    text-align: center;
-  }
-
-  .create-shop-preview__image {
-    width: 100%;
-    padding-top: 56%;
-    position: relative;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #fff;
-    box-shadow: inset 0 0 0 1px #e5e7eb;
-  }
-
-  .create-shop-preview__image img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-
-  .create-shop-preview__placeholder {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-    font-size: 32px;
-  }
-
-  .create-shop-preview__info {
-    text-align: left;
-  }
-
-  .create-shop-preview__title {
-    margin: 0;
-    font-weight: 700;
-    font-size: 1.15rem;
-    color: #0f172a;
-  }
-
-  .create-shop-preview__subtitle,
-  .create-shop-preview__location {
-    margin: 4px 0 0;
-    color: #475569;
-    font-size: 0.9rem;
-  }
-
-  .create-shop-preview__meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    border-radius: 12px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    color: #475569;
-    font-size: 0.85rem;
-  }
-
-  .create-shop-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .upload-drop {
-    border: 2px dashed #cbd5f5;
-    border-radius: 18px;
-    padding: 32px;
-    text-align: center;
-    background: #fdfdfd;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-  }
-
-  .upload-drop:hover {
-    border-color: #2563eb;
-  }
-
-  .upload-drop input {
-    display: none;
-  }
-
-  .upload-drop__content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    color: #475569;
-  }
-
-  .upload-drop__content i {
-    font-size: 32px;
-    color: #2563eb;
-  }
-
-  .field-grid {
-    display: grid;
-    gap: 16px;
-  }
-
-  .field-grid.two-column {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .field label {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .field input,
-  .field textarea {
-    border-radius: 12px;
-    border: 1px solid #d6dbec;
-    padding: 10px 12px;
-    font-size: 0.95rem;
-    font-family: 'Inter', system-ui, sans-serif;
-  }
-
-  .field textarea {
-    min-height: 120px;
-    resize: vertical;
-  }
+.sort-menu {
+  padding: 10px;
+}
+.sort-menu  button {
+margin: 4px;
+}
 </style>

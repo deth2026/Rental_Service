@@ -12,10 +12,13 @@ class City extends Model
     public $timestamps = false;
     protected $fillable = [
         'name',
+        'status',
+        'shop_id',
         'created_at'
     ];
 
     protected $casts = [
+        'shop_id' => 'integer',
         'created_at' => 'datetime'
     ];
 }

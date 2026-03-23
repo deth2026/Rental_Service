@@ -31,14 +31,52 @@ const createForm = reactive({
   phone: "",
   description: "",
   address: "",
+  province: "",
   location: "",
   latitude: "",
   longitude: "",
   status: "active",
+  font: "Modern Sans-serif",
+  primary_color: "#2563eb",
+  accent_color: "#10b981",
   instagram: "",
   facebook: "",
   img_url: "",
 });
+const fieldErrors = reactive({
+  name: "",
+  status: "",
+  address: "",
+  province: "",
+  phone: "",
+  description: "",
+});
+
+const colorPalette = [
+  "#2563eb",
+  "#0ea5e9",
+  "#10b981",
+  "#f97316",
+  "#f43f5e",
+  "#a855f7",
+  "#fbbf24",
+  "#94a3b8",
+];
+const accentPalette = ["#111827", "#1f2937", "#4c1d95", "#0f172a", "#1d4ed8"];
+const fontOptions = [
+  "Modern Sans-serif",
+  "Classic Serif",
+  "Minimalist",
+  "Bold Display",
+];
+
+const setPrimaryColor = (color) => {
+  createForm.primary_color = color;
+};
+
+const setAccentColor = (color) => {
+  createForm.accent_color = color;
+};
 
 const asArray = (payload) => payload?.data || payload || [];
 
@@ -189,13 +227,23 @@ const resetForm = () => {
   createForm.phone = "";
   createForm.description = "";
   createForm.address = "";
+  createForm.province = "";
   createForm.location = "";
   createForm.latitude = "";
   createForm.longitude = "";
   createForm.status = "active";
+  createForm.font = fontOptions[0];
+  createForm.primary_color = colorPalette[0];
+  createForm.accent_color = accentPalette[0];
   createForm.instagram = "";
   createForm.facebook = "";
   createForm.img_url = "";
+  fieldErrors.name = "";
+  fieldErrors.status = "";
+  fieldErrors.address = "";
+  fieldErrors.province = "";
+  fieldErrors.phone = "";
+  fieldErrors.description = "";
   shopImageFile.value = null;
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value);
@@ -204,16 +252,44 @@ const resetForm = () => {
   error.value = "";
 };
 
+const clearFieldError = (field) => {
+  if (fieldErrors[field]) fieldErrors[field] = "";
+};
+
 const validateCreateForm = () => {
+  fieldErrors.name = "";
+  fieldErrors.status = "";
+  fieldErrors.address = "";
+  fieldErrors.province = "";
+  fieldErrors.phone = "";
+  fieldErrors.description = "";
+
   const name = createForm.name.trim();
+  const status = createForm.status.trim();
   const address = createForm.address.trim();
+  const province = createForm.province.trim();
   const phone = createForm.phone.trim();
   const description = createForm.description.trim();
 
-  if (!name || !address || !phone || !description) {
-    return false;
+  if (!name) fieldErrors.name = "Shop name is required.";
+  if (!status) fieldErrors.status = "Status is required.";
+  if (!address) fieldErrors.address = "Address is required.";
+  if (!province) fieldErrors.province = "Province is required.";
+  if (!phone) {
+    fieldErrors.phone = "Phone number is required.";
+  } else if (!/^[0-9+\-\s()]{8,20}$/.test(phone)) {
+    fieldErrors.phone = "Please enter a valid phone number.";
   }
-  return /^[0-9+\-\s()]{8,20}$/.test(phone);
+  if (!description) fieldErrors.description = "Description is required.";
+
+  return (
+    !fieldErrors.name &&
+    !fieldErrors.status &&
+    !fieldErrors.address &&
+    !fieldErrors.province &&
+    !fieldErrors.phone &&
+    !fieldErrors.description
+  );
 };
 
 const applyShopImageFile = (file) => {
@@ -234,6 +310,13 @@ const applyShopImageFile = (file) => {
 const onShopImageChange = (event) => {
   const file = event.target.files?.[0] || null;
   applyShopImageFile(file);
+};
+
+const triggerShopImagePicker = () => {
+  if (shopImageInputRef.value) {
+    shopImageInputRef.value.value = "";
+    shopImageInputRef.value.click();
+  }
 };
 
 const onShopImageDrop = (event) => {
@@ -393,6 +476,7 @@ const createShop = async () => {
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
+      payload.append("province", createForm.province.trim());
       if (createForm.location)
         payload.append("location", createForm.location.trim());
       if (createForm.latitude) payload.append("latitude", createForm.latitude);
@@ -408,6 +492,7 @@ const createShop = async () => {
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
+        province: createForm.province.trim(),
         location: createForm.location.trim() || null,
         latitude: createForm.latitude || null,
         longitude: createForm.longitude || null,
@@ -581,6 +666,10 @@ onBeforeUnmount(() => {
           <input type="text" :value="shop.phone || 'N/A'" readonly />
         </label>
         <label class="settings-field">
+          <span>Province</span>
+          <input type="text" :value="shop.province || shop.city?.name || 'N/A'" readonly />
+        </label>
+        <label class="settings-field">
           <span>Password</span>
           <div class="password-field">
             <input
@@ -619,12 +708,11 @@ onBeforeUnmount(() => {
     >
       <div class="modal-card create-shop-modal">
         <div class="modal-header create-shop-header">
-          <div>
-            <h3>Create New Shop</h3>
-            <p class="shop-header-sub">
-              Add a new rental shop (pending approval by default).
-            </p>
+          <div class="step-bar">
+            <span class="step active"></span>
+            <span class="step"></span>
           </div>
+          <h3>Create Your Shop</h3>
           <button
             class="close-btn"
             @click="closeCreateModal"
@@ -635,114 +723,213 @@ onBeforeUnmount(() => {
         </div>
 
         <form class="create-shop-form" @submit.prevent="createShop">
-          <div class="shop-modal-grid">
-            <article class="shop-preview-card">
-              <div class="shop-preview-image">
+          <div class="create-grid">
+            <section
+              class="photo-panel"
+              :class="{ dragging: isShopImageDragOver }"
+              @dragover.prevent="isShopImageDragOver = true"
+              @dragleave.prevent="isShopImageDragOver = false"
+              @drop.prevent="onShopImageDrop"
+            >
+              <div class="photo-circle">
                 <img
                   v-if="shopImagePreview"
                   :src="shopImagePreview"
                   alt="Shop preview"
                 />
-                <div v-else class="shop-preview-placeholder">
+                <div v-else class="photo-placeholder">
                   <svg
                     viewBox="0 0 80 80"
                     fill="none"
                     stroke="#94a3b8"
-                    stroke-width="1.5"
+                    stroke-width="1.6"
                   >
-                    <rect x="14" y="20" width="52" height="36" rx="12" />
-                    <path d="M24 36h32" />
-                    <path d="M32 28h16" />
+                    <rect x="8" y="18" width="64" height="44" rx="14" />
+                    <path d="M16 38h48" />
+                    <circle cx="34" cy="31" r="5" />
+                    <path d="M34 45h12" />
                   </svg>
                 </div>
               </div>
-              <div class="shop-preview-info">
-                <h4>{{ createForm.name || "Untitled shop" }}</h4>
-                <p>{{ createForm.description || "Add a location and contact details" }}</p>
-                <p class="shop-preview-meta">
-                  {{ createForm.address || "City, Country" }}
+              <div class="photo-note">
+                <p>Shop Profile Image</p>
+                <button
+                  type="button"
+                  class="upload-btn"
+                  @click="triggerShopImagePicker"
+                >
+                  {{ shopImageFile ? "Change Photo" : "Upload Photo" }}
+                </button>
+                <p class="upload-help">
+                  Drag and drop or click to upload your shop's logo (PNG, JPG,
+                  WEBP).
                 </p>
               </div>
-              <div class="shop-preview-status">
-                <span>Status</span>
-                <strong>Pending</strong>
-              </div>
-            </article>
+              <input
+                ref="shopImageInputRef"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="hidden-file-input"
+                @change="onShopImageChange"
+              />
+            </section>
 
-            <section class="shop-panel">
-              <label
-                class="upload-card"
-                :class="{ active: isShopImageDragOver }"
-                @dragover.prevent="isShopImageDragOver = true"
-                @dragleave.prevent="isShopImageDragOver = false"
-                @drop.prevent="onShopImageDrop"
-              >
-                <input
-                  ref="shopImageInputRef"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  class="hidden-file-input"
-                  @change="onShopImageChange"
-                />
-                <div class="upload-content">
-                  <div class="upload-icon">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#2563eb"
-                      stroke-width="1.6"
-                    >
-                      <path d="M12 5v14m0-14l-4 4m4-4l4 4"></path>
-                      <path d="M6 19h12a2 2 0 1 0 2-2v-5"></path>
-                    </svg>
-                  </div>
-                  <div>
-                    <p class="upload-title">Upload shop cover</p>
-                    <p class="upload-sub">Drop an image or click to browse files</p>
-                  </div>
+            <section class="brand-panel">
+              <div class="section-title-row">
+                <div>
+                  <p class="section-kicker">Customization & Branding</p>
+                  <h4>Shop Color Palette</h4>
                 </div>
+                <p class="section-subtext">Pick a tone for your store front</p>
+              </div>
+
+              <div class="color-group">
+                <div class="color-label">Primary Colour</div>
+                <div class="color-palette-grid">
+                  <button
+                    v-for="color in colorPalette"
+                    :key="`primary-${color}`"
+                    type="button"
+                    class="color-chip"
+                    :style="{ backgroundColor: color }"
+                    :class="{ selected: createForm.primary_color === color }"
+                    @click="setPrimaryColor(color)"
+                  ></button>
+                </div>
+              </div>
+
+              <div class="color-group">
+                <div class="color-label">Accent Colour</div>
+                <div class="color-palette-grid">
+                  <button
+                    v-for="color in accentPalette"
+                    :key="`accent-${color}`"
+                    type="button"
+                    class="color-chip accent"
+                    :style="{ backgroundColor: color }"
+                    :class="{ selected: createForm.accent_color === color }"
+                    @click="setAccentColor(color)"
+                  ></button>
+                </div>
+              </div>
+
+              <label class="font-select">
+                <span>Shop Font</span>
+                <select v-model="createForm.font">
+                  <option v-for="font in fontOptions" :key="font" :value="font">
+                    {{ font }}
+                  </option>
+                </select>
               </label>
 
-              <div class="field-grid">
-                <label class="form-field">
-                  <span>Shop Name</span>
+              <label class="about-field">
+                <span>About Us Section</span>
+                <textarea
+                  v-model="createForm.description"
+                  rows="3"
+                  placeholder="Share your passion and the story behind your shop"
+                  @input="clearFieldError('description')"
+                ></textarea>
+                <small v-if="fieldErrors.description" class="field-error">{{
+                  fieldErrors.description
+                }}</small>
+              </label>
+
+              <div class="basic-info-grid">
+                <label>
+                  <span>Shop Name *</span>
                   <input
                     v-model="createForm.name"
+                    required
                     type="text"
-                    placeholder="e.g. Berlin Elite Rentals"
+                    placeholder="Enter shop name"
+                    @input="clearFieldError('name')"
                   />
+                  <small v-if="fieldErrors.name" class="field-error">{{
+                    fieldErrors.name
+                  }}</small>
                 </label>
-                <label class="form-field">
-                  <span>Address</span>
+
+                <label>
+                  <span>Status *</span>
+                  <select
+                    v-model="createForm.status"
+                    @change="clearFieldError('status')"
+                  >
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                  <small v-if="fieldErrors.status" class="field-error">{{
+                    fieldErrors.status
+                  }}</small>
+                </label>
+
+                <label class="wide">
+                  <span>Address *</span>
                   <input
                     v-model="createForm.address"
+                    required
                     type="text"
-                    placeholder="Street, City, Country"
+                    placeholder="Enter address"
+                    @input="clearFieldError('address')"
                   />
+                  <small v-if="fieldErrors.address" class="field-error">{{
+                    fieldErrors.address
+                  }}</small>
                 </label>
-                <label class="form-field">
-                  <span>Location</span>
+
+                <label>
+                  <span>Province *</span>
                   <input
-                    v-model="createForm.location"
+                    v-model="createForm.province"
+                    required
                     type="text"
-                    placeholder="City, Country"
+                    placeholder="Type province name (e.g. Phnom Penh)"
+                    @input="clearFieldError('province')"
                   />
+                  <small v-if="fieldErrors.province" class="field-error">{{
+                    fieldErrors.province
+                  }}</small>
                 </label>
-                <label class="form-field">
-                  <span>Phone</span>
+
+                <label>
+                  <span>Phone *</span>
                   <input
                     v-model="createForm.phone"
+                    required
                     type="text"
-                    placeholder="+855..."
+                    placeholder="Enter phone number"
+                    @input="clearFieldError('phone')"
                   />
+                  <small v-if="fieldErrors.phone" class="field-error">{{
+                    fieldErrors.phone
+                  }}</small>
                 </label>
-                <label class="form-field full">
-                  <span>Description</span>
-                  <textarea
-                    v-model="createForm.description"
-                    rows="4"
-                    placeholder="Describe the shop, services or fleet."
-                  ></textarea>
+              </div>
+
+              <div class="social-section">
+                <p>Social Links</p>
+                <label>
+                  <span>Instagram</span>
+                  <div class="addon-input">
+                    <span>@</span>
+                    <input
+                      v-model="createForm.instagram"
+                      type="text"
+                      placeholder="yourhandle"
+                    />
+                  </div>
+                </label>
+                <label>
+                  <span>Facebook</span>
+                  <div class="addon-input">
+                    <span>facebook.com/</span>
+                    <input
+                      v-model="createForm.facebook"
+                      type="text"
+                      placeholder="yourhandle"
+                    />
+                  </div>
                 </label>
               </div>
             </section>

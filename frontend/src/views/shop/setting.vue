@@ -59,6 +59,16 @@
               <input v-model="form.phone" type="text" />
             </label>
 
+            <label class="field">
+              <span>Latitude</span>
+              <input v-model="form.latitude" type="text" placeholder="11.5564" />
+            </label>
+
+            <label class="field">
+              <span>Longitude</span>
+              <input v-model="form.longitude" type="text" placeholder="104.9282" />
+            </label>
+
 
             <label class="field">
               <span>{{ t('password') }}</span>
@@ -280,6 +290,8 @@ const form = reactive({
   shop_status: 'active',
   phone: '',
   shop_address: '',
+  latitude: '',
+  longitude: '',
   notifications_enabled: true,
   password: '',
 });
@@ -391,6 +403,8 @@ const loadData = async () => {
       form.shop_status = cachedShop.status || 'active';
       form.shop_address = cachedShop.address || '';
       form.phone = cachedShop.phone || storedUser.phone || '';
+      form.latitude = cachedShop.latitude || '';
+      form.longitude = cachedShop.longitude || '';
     }
 
     const [usersResult, shopsResult] = await Promise.allSettled([
@@ -619,7 +633,9 @@ const saveSettings = async () => {
       name: form.shop_name,
       address: form.shop_address || '',
       phone: form.phone || '',
-      status: form.shop_status || 'active'
+      status: form.shop_status || 'active',
+      latitude: form.latitude || null,
+      longitude: form.longitude || null
     };
 
     if (currentShopId.value) {
@@ -633,7 +649,9 @@ const saveSettings = async () => {
       name: form.shop_name,
       status: form.shop_status || 'active',
       address: form.shop_address,
-      phone: form.phone
+      phone: form.phone,
+      latitude: form.latitude,
+      longitude: form.longitude
     });
 
     localStorage.setItem(`${NOTIFY_KEY_PREFIX}${user.id}`, form.notifications_enabled ? '1' : '0');

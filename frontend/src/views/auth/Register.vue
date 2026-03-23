@@ -5,36 +5,22 @@
       <div class="overlay">
         <div class="logo">
           <div class="logo-icon-wrap">
-            <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- Location Pin -->
-              <path d="M30 2C23.37 2 17 7.37 17 14C17 21.5 30 30 30 30C30 30 43 21.5 43 14C43 7.37 36.63 2 30 2Z" fill="white"/>
-              <circle cx="30" cy="14" r="5" fill="rgba(25,100,210,0.6)"/>
-              <!-- Car Cabin -->
-              <path d="M18 42L21 33Q23 30 27 30H33Q37 30 39 33L42 42Z" fill="white"/>
-              <!-- Car Body -->
-              <rect x="6" y="42" width="48" height="15" rx="4" fill="white"/>
-              <!-- Windshield -->
-              <path d="M23 41L25 32H35L37 41Z" fill="rgba(25,100,210,0.45)"/>
-              <!-- Left Wheel -->
-              <circle cx="16" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-              <!-- Right Wheel -->
-              <circle cx="44" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-            </svg>
+            <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="login-logo-img" />
           </div>
-          <span>GoRent</span>
-        </div>
+            <span>CHONG CHOUL</span>
+          </div>
 
-        <div class="left-content">
-          <div class="hero-badge">
-            <span class="hero-badge-dot"></span>
-            Premium Car Rental
+          <div class="left-content">
+            <div class="hero-badge">
+              <span class="hero-badge-dot"></span>
+              Premium Vehicle Rental
+            </div>
+            <h1>Join Our Community<br /><span class="journey-highlight">Today.</span></h1>
+            <p>
+              Experience the best vehicle rental service in Cambodia.
+              Professional, reliable, and modern.
+            </p>
           </div>
-          <h1>Start your journey<br /><span class="journey-highlight">in minutes.</span></h1>
-          <p>
-            Access a fleet of premium vehicles at your fingertips. Rent for an
-            hour, drive for a lifetime.
-          </p>
-        </div>
 
         <div class="review-card">
           <div class="stars">★★★★★</div>
@@ -53,11 +39,9 @@
     <!-- RIGHT SIDE -->
     <div class="right">
       <!-- Back to Home -->
-      <router-link to="/" class="back-home-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Back to Home
+      <router-link to="/" class="back-home-btn prominent">
+        <i class="fa-solid fa-house"></i>
+        <span>Back to Home</span>
       </router-link>
 
       <!-- Floating decorative elements for right side -->
@@ -299,7 +283,7 @@
         </div>
 
         <p class="terms">
-          By creating an account, you agree to GoRent's
+          By creating an account, you agree to CHONG CHOUL's
           <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
         </p>
       </div>
@@ -308,13 +292,21 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { registerUser } from "../../services/auth";
 import "../../css/login.css";
 
 const router = useRouter();
 const route = useRoute();
+
+onMounted(() => {
+  const isGranted = localStorage.getItem('chong_choul_location_granted') === 'true';
+  if (!isGranted) {
+    console.warn("Security: Location not allowed. Redirecting to home.");
+    router.push('/');
+  }
+});
 const isLoading = ref(false);
 const errors = ref({});
 const successMessage = ref("");

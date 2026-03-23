@@ -21,6 +21,9 @@ const isLoadingShop = ref(false)
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const isAuthenticated = computed(() => {
+  return Boolean(localStorage.getItem('auth_token') || localStorage.getItem('token'))
+})
 
 const isOwnerRole = computed(() => {
   const role = String(currentUser.value?.role || '').toLowerCase()
@@ -80,6 +83,39 @@ const normalizeType = (raw) => {
   if (t.includes('bicy')) return 'bicycle'
   if (t.includes('car') || t.includes('suv')) return 'car'
   return t
+}
+
+const extractProvinceFromAddress = (address) => {
+  const normalized = String(address || '').toLowerCase()
+  if (!normalized) return ''
+  const provinces = [
+    'Banteay Meanchey',
+    'Battambang',
+    'Kampong Cham',
+    'Kampong Chhnang',
+    'Kampong Speu',
+    'Kampong Thom',
+    'Kampot',
+    'Kandal',
+    'Kep',
+    'Koh Kong',
+    'Kratie',
+    'Mondulkiri',
+    'Oddar Meanchey',
+    'Pailin',
+    'Phnom Penh',
+    'Preah Sihanouk',
+    'Preah Vihear',
+    'Prey Veng',
+    'Pursat',
+    'Ratanakiri',
+    'Siem Reap',
+    'Stung Treng',
+    'Svay Rieng',
+    'Takeo',
+    'Tboung Khmum',
+  ]
+  return provinces.find((province) => normalized.includes(province.toLowerCase())) || ''
 }
 
 const normalizeVehicle = (vehicle) => {
@@ -175,7 +211,12 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-const viewVehicleDetails = (vehicle) => {
+const bookNow = (vehicle) => {
+  if (!isAuthenticated.value) {
+    router.push('/login')
+    return
+  }
+
   router.push(`/vehicles/${vehicle.id}`)
 }
 
@@ -230,6 +271,80 @@ const selectedShopCoords = computed(() => {
   return { lat: parsedLat, lng: parsedLng }
 })
 
+const getStoredUserLocation = () => {
+  try {
+    const raw = localStorage.getItem('chong_choul_user_location')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    const lat = Number(parsed?.lat)
+    const lng = Number(parsed?.lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  } catch {
+    return null
+  }
+}
+
+const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const toRad = (deg) => (deg * Math.PI) / 180
+  const earthRadiusKm = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
+const userDistanceToShop = computed(() => {
+  const userLoc = getStoredUserLocation()
+  const shopCoords = selectedShopCoords.value
+  if (!userLoc || !shopCoords) return null
+
+  return calculateDistanceKm(userLoc.lat, userLoc.lng, shopCoords.lat, shopCoords.lng)
+})
+
+const shopProvince = computed(() => {
+  return shop.value?.province || shop.value?.city?.name || extractProvinceFromAddress(shop.value?.address) || 'Cambodia'
+})
+
+const PROVINCE_BANNERS = {
+  'Phnom Penh':
+    'https://images.unsplash.com/photo-1578469645742-46cae010e5d4?auto=format&fit=crop&w=1600&q=80',
+  'Siem Reap':
+    'https://images.unsplash.com/photo-1630393505475-d59f8fbe4fcf?auto=format&fit=crop&w=1600&q=80',
+  Battambang:
+    'https://images.unsplash.com/photo-1584896892483-36b5d6675a5b?auto=format&fit=crop&w=1600&q=80',
+  default:
+    'https://images.unsplash.com/photo-1518544866330-4e5be53f13f0?auto=format&fit=crop&w=1600&q=80',
+}
+
+const provinceBannerUrl = computed(() => {
+  return PROVINCE_BANNERS[shopProvince.value] || PROVINCE_BANNERS.default
+})
+
+const categoryShowcaseCards = computed(() => {
+  const definitions = [
+    { label: 'Bikes', value: 'bicycle', icon: 'fa-solid fa-bicycle' },
+    { label: 'Cars', value: 'car', icon: 'fa-solid fa-car-side' },
+    { label: 'Moto', value: 'motorbike', icon: 'fa-solid fa-motorcycle' },
+  ]
+
+  return definitions.map((definition) => {
+    const items = vehicles.value
+      .filter((vehicle) => normalizeType(vehicle.type || vehicle.category || vehicle.vehicle_type) === definition.value)
+      .slice(0, 3)
+
+    return {
+      ...definition,
+      count: items.length,
+      items,
+    }
+  })
+})
+
 // Optional: Google Maps Embed API key to render the richer place card UI when available
 const googleMapsEmbedKey = import.meta.env?.VITE_GOOGLE_MAPS_EMBED_KEY || ''
 
@@ -244,7 +359,7 @@ const mapEmbedUrl = computed(() => {
   if (address) queryParts.push(address)
   const baseQuery = queryParts.join(', ') || fallback
 
-  // Use the official Embed API when a key is configured — this shows the place card UI like in the screenshot
+  // Use the official Embed API when a key is configured; this shows the place card UI like in the screenshot
   if (googleMapsEmbedKey) {
     const placeTarget = coords ? `${coords.lat},${coords.lng}` : baseQuery
     return `https://www.google.com/maps/embed/v1/place?key=${googleMapsEmbedKey}&q=${encodeURIComponent(placeTarget)}&maptype=satellite`
@@ -290,7 +405,8 @@ const openMap = () => {
     <main class="vehicles-content">
       <div class="page-header">
         <h1>Available Vehicles</h1>
-        <p>Browse vehicles from this shop</p>
+        <p v-if="userDistanceToShop !== null">Browse vehicles from this shop - {{ userDistanceToShop.toFixed(2) }} km from your location</p>
+        <p v-else>Browse vehicles from this shop</p>
       </div>
 
       <div v-if="shopError" class="status-box error" style="margin-bottom: 1rem;">
@@ -332,6 +448,60 @@ const openMap = () => {
           </div>
         </div>
       </div>
+
+      <section v-if="shop" class="province-banner" :style="{ backgroundImage: `linear-gradient(120deg, rgba(9, 32, 86, 0.84), rgba(18, 67, 175, 0.68)), url(${provinceBannerUrl})` }">
+        <div class="province-banner-content">
+          <p class="province-banner-kicker">{{ shopProvince }}</p>
+          <h2>{{ shop?.name || 'Rental Shop' }}</h2>
+          <p v-if="userDistanceToShop !== null">Current location: {{ userDistanceToShop.toFixed(2) }} km away</p>
+          <p v-else>Allow location in Home page to calculate real distance to this shop.</p>
+        </div>
+      </section>
+
+      <section class="map-section" v-if="shop">
+        <div class="map">
+          <iframe
+            class="map-frame"
+            :src="mapEmbedUrl"
+            title="Google map location"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+          <button class="btn-reset open-map-btn" @click="openMap">
+            Open in Google Maps
+          </button>
+        </div>
+      </section>
+
+      <section class="category-showcase" v-if="categoryShowcaseCards.some((card) => card.count > 0)">
+        <div class="category-showcase-head">
+          <h2>Category View</h2>
+          <p>Select Bikes, Cars, or Moto from this shop and click Book Now.</p>
+        </div>
+
+        <div class="category-showcase-grid">
+          <article v-for="card in categoryShowcaseCards" :key="card.value" class="category-showcase-card">
+            <div class="category-showcase-title">
+              <i :class="card.icon"></i>
+              <h3>{{ card.label }}</h3>
+              <span>{{ card.count }}</span>
+            </div>
+
+            <div v-if="card.items.length" class="category-list">
+              <div v-for="item in card.items" :key="item.id" class="category-item">
+                <div>
+                  <strong>{{ item.brand }} {{ item.model }}</strong>
+                  <p>${{ item.price_per_day }}/day</p>
+                </div>
+                <button class="mini-book-btn" @click="bookNow(item)">Book Now</button>
+              </div>
+            </div>
+            <p v-else class="category-empty">No vehicles in this category yet.</p>
+
+            <button class="browse-category-btn" @click="selectedCategory = card.value">Browse {{ card.label }}</button>
+          </article>
+        </div>
+      </section>
 
       <div class="filters-row" v-if="vehicles.length">
         <div class="filter-chips">
@@ -402,27 +572,12 @@ const openMap = () => {
               <span class="price-period">/day</span>
             </div>
 
-            <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">
-              View Details
+            <button class="view-details-btn" @click="bookNow(vehicle)">
+              Book Now
             </button>
           </div>
         </article>
       </div>
-
-      <section class="map-section" v-if="shop">
-        <div class="map">
-          <iframe
-            class="map-frame"
-            :src="mapEmbedUrl"
-            title="Google map location"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-          <button class="btn-reset open-map-btn" @click="openMap">
-            Open in Google Maps
-          </button>
-        </div>
-      </section>
     </main>
   </div>
 
@@ -534,6 +689,40 @@ const openMap = () => {
 
 .page-header p {
   color: #666;
+}
+
+.province-banner {
+  margin-bottom: 1.4rem;
+  border-radius: 20px;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  overflow: hidden;
+}
+
+.province-banner-content {
+  padding: 24px;
+  color: #fff;
+}
+
+.province-banner-kicker {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.88;
+}
+
+.province-banner-content h2 {
+  margin: 6px 0 0;
+  font-size: 1.55rem;
+}
+
+.province-banner-content p {
+  margin: 8px 0 0;
+  opacity: 0.93;
 }
 
 .owner-shop-card {
@@ -726,7 +915,7 @@ const openMap = () => {
 }
 
 .map-section {
-  margin-top: 2rem;
+  margin: 0 0 1.5rem;
 }
 
 .map {
@@ -754,6 +943,118 @@ const openMap = () => {
   color: #1e40af;
   font-size: 13px;
   font-weight: 600;
+}
+
+.category-showcase {
+  margin-bottom: 1.7rem;
+}
+
+.category-showcase-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #111827;
+}
+
+.category-showcase-head p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
+.category-showcase-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+}
+
+.category-showcase-card {
+  border: 1px solid #dbe6ff;
+  border-radius: 16px;
+  background: #fff;
+  padding: 14px;
+  box-shadow: 0 10px 20px rgba(30, 64, 175, 0.06);
+}
+
+.category-showcase-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-showcase-title i {
+  color: #1d4ed8;
+}
+
+.category-showcase-title h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.category-showcase-title span {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #e7efff;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.category-list {
+  margin-top: 11px;
+  display: grid;
+  gap: 9px;
+}
+
+.category-item {
+  border: 1px solid #e1e8f7;
+  border-radius: 12px;
+  padding: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.category-item strong {
+  font-size: 0.92rem;
+  color: #0f172a;
+}
+
+.category-item p {
+  margin: 2px 0 0;
+  color: #3b82f6;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.mini-book-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.category-empty {
+  margin: 12px 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.browse-category-btn {
+  margin-top: 12px;
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .vehicle-card {

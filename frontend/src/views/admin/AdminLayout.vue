@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '../../composables/useTheme'
-import { useNotifications } from '../../composables/useNotifications'
 import userService from '../../services/userService.js'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { CAMBODIA_TIMEZONE, cambodiaDateTimeLabel, cambodiaYear } from '../../utils/cambodiaTime.js'
@@ -18,7 +17,7 @@ const adminStore = useAdminStore()
 const { t } = useI18n()
 
 // Professional Logo path from public folder
-const logoUrl = '/images/logo-removebg.png'
+const logoUrl = '/Images/logo-removebg.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)
@@ -37,7 +36,6 @@ const navItems = [
   { label: 'Cities', to: '/admin/cities', icon: 'fa-solid fa-location-dot' },
   { label: 'Financials', to: '/admin/financials', icon: 'fa-solid fa-dollar-sign' },
   { label: 'Reports', to: '/admin/reports', icon: 'fa-solid fa-chart-column' },
-  { label: 'Notifications', to: '/admin/notifications', icon: 'fa-regular fa-bell' },
   { label: 'Settings', to: '/admin/settings', icon: 'fa-solid fa-gear' },
 ]
 
@@ -59,84 +57,9 @@ const adminInitials = computed(() => {
 })
 
 const activePath = computed(() => route.path)
-
-// Check if current page should hide search bar
-const shouldShowSearch = computed(() => {
-  const path = route.path
-  // Hide search on all admin pages
-  return !path.startsWith('/admin')
-})
-
 const isActive = (path) => {
   if (path === '/admin') return activePath.value === '/admin' || activePath.value === '/admin/'
   return activePath.value.startsWith(path)
-}
-
-const {
-  notifications,
-  unreadCount,
-  isLoading: notificationsLoading,
-  error: notificationsError,
-  loadNotifications,
-  markAllAsRead,
-  toggleReadStatus
-} = useNotifications()
-
-const showNotificationsPopup = ref(false)
-const notificationButtonRef = ref(null)
-const notificationPopupRef = ref(null)
-
-const notificationPreview = computed(() => (notifications.value || []).slice(0, 4))
-const hasAnyNotifications = computed(() => (notifications.value || []).length > 0)
-const hasUnreadNotifications = computed(() => (unreadCount.value || 0) > 0)
-const hasAdminNotifications = computed(() => (notifications.value || []).some((item) => item.role === 'admin'))
-
-const refreshNotifications = () => loadNotifications(null, { include_all: true }).catch(() => {})
-const toggleNotificationsPopup = () => {
-  showNotificationsPopup.value = !showNotificationsPopup.value
-  if (showNotificationsPopup.value) {
-    refreshNotifications()
-  }
-}
-
-const formatPopupTime = (timestamp) => {
-  const value = Number(new Date(timestamp))
-  if (!Number.isFinite(value)) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(value)
-}
-
-const canManageReadState = (item) => item?.role === 'admin'
-
-const handleToggleNotificationRead = async (item) => {
-  if (!canManageReadState(item)) return
-  try {
-    await toggleReadStatus(item.id)
-  } catch (err) {
-    console.error('Unable to toggle notification status', err)
-  }
-}
-
-const handleMarkAllNotificationsRead = async () => {
-  if (!hasAdminNotifications.value) return
-  try {
-    await markAllAsRead()
-  } catch (err) {
-    console.error('Unable to mark notifications as read', err)
-  }
-}
-
-const handleDocumentClick = (event) => {
-  if (!showNotificationsPopup.value) return
-  if (
-    notificationButtonRef.value?.contains(event.target) ||
-    notificationPopupRef.value?.contains(event.target)
-  ) {
-    return
-  }
-  showNotificationsPopup.value = false
 }
 
 const handleLogout = async () => {
@@ -197,79 +120,16 @@ watch(searchQuery, (value) => {
   }, 400)
 })
 
-watch(
-  () => route.path,
-  () => {
-    showNotificationsPopup.value = false
-  }
-)
-
 onMounted(() => {
   adminStore.load().catch(() => {})
-  fetchUserProfile()
   clockTimer = window.setInterval(() => {
     nowTick.value = Date.now()
   }, 1000)
-  document.addEventListener('click', handleDocumentClick)
 })
-
-// Fetch user profile and store in localStorage
-const fetchUserProfile = async () => {
-  const token = localStorage.getItem('auth_token')
-  if (!token) return
-  try {
-    const response = await fetch('/api/auth/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json'
-      }
-    })
-    
-    // Handle 401 unauthorized - redirect to login
-    if (response.status === 401) {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('user')
-      localStorage.removeItem('user_name')
-      localStorage.removeItem('user_email')
-      localStorage.removeItem('user_phone')
-      localStorage.removeItem('user_job_title')
-      localStorage.removeItem('user_bio')
-      localStorage.removeItem('user_profile_picture')
-      router.push('/login')
-      return
-    }
-    
-    if (!response.ok) return
-    const data = await response.json()
-    const user = data.user || {}
-    
-    // Only update if we have valid user data (name or email)
-    if (user && (user.name || user.email)) {
-      // Preserve existing values if new values are empty
-      const existingName = localStorage.getItem('user_name')
-      const existingEmail = localStorage.getItem('user_email')
-      const existingPhone = localStorage.getItem('user_phone')
-      const existingJobTitle = localStorage.getItem('user_job_title')
-      const existingBio = localStorage.getItem('user_bio')
-      const existingProfilePicture = localStorage.getItem('user_profile_picture')
-      
-      localStorage.setItem('user', JSON.stringify(user))
-      localStorage.setItem('user_name', user.name || existingName || '')
-      localStorage.setItem('user_email', user.email || existingEmail || '')
-      localStorage.setItem('user_phone', user.phone || existingPhone || '')
-      localStorage.setItem('user_job_title', user.job_title || user.role || existingJobTitle || 'Super Admin')
-      localStorage.setItem('user_bio', user.bio || existingBio || '')
-      localStorage.setItem('user_profile_picture', user.profile_picture || user.avatar_url || existingProfilePicture || '')
-    }
-  } catch (error) {
-    console.error('Failed to fetch user profile:', error)
-  }
-}
 
 onBeforeUnmount(() => {
   if (searchTimer) window.clearTimeout(searchTimer)
   if (clockTimer) window.clearInterval(clockTimer)
-  document.removeEventListener('click', handleDocumentClick)
 })
 
 const cambodiaClockLabel = computed(() => cambodiaDateTimeLabel(new Date(nowTick.value)))
@@ -281,7 +141,7 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
     <aside class="admin-sidebar">
        <div class="admin-brand">
          <div class="brand-badge" aria-hidden="true">
-           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 6px; border-radius: 90px; width: 90px; height: 90px; object-fit: contain;" />
+           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 6px; border-radius: 150px; width: 96px; height: 80px; object-fit: contain;" />
          </div>
          <div class="brand-text">
            <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
@@ -303,22 +163,21 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
 
       <button type="button" class="admin-logout" @click="showLogoutConfirm = true">
         <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-        <span>{{ t('logout') }}</span>
+        <span>Logout</span>
       </button>
     </aside>
 
     <div class="admin-main">
       <header class="admin-topbar">
-        <form v-if="shouldShowSearch" class="topbar-search" @submit.prevent="onSearchSubmit">
+        <form class="topbar-search" @submit.prevent="onSearchSubmit">
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
           <input
             v-model="searchQuery"
             type="search"
-            :placeholder="t('searchPlaceholder')"
+            placeholder="Search for shops, bookings, or users..."
             aria-label="Search"
           />
         </form>
-        <div v-else class="topbar-search"></div>
 
         <div class="topbar-actions">
           <div class="topbar-time" :title="`Cambodia time (${CAMBODIA_TIMEZONE})`">
@@ -334,72 +193,10 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
           >
             <i :class="isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon'" aria-hidden="true"></i>
           </button>
-          <div class="topbar-notifications" ref="notificationButtonRef">
-            <button
-              type="button"
-              class="icon-btn"
-              title="Notifications"
-              @click.stop="toggleNotificationsPopup"
-            >
-              <i class="fa-regular fa-bell" aria-hidden="true"></i>
-              <span v-if="hasUnreadNotifications" class="notif-dot">{{ unreadCount }}</span>
-            </button>
-            <div
-              v-if="showNotificationsPopup"
-              class="notifications-popup"
-              ref="notificationPopupRef"
-              @click.stop
-            >
-              <header class="notifications-popup__header">
-                <strong>Notifications</strong>
-                <button
-                  type="button"
-                  class="ghost-pill ghost-pill--mini"
-                  @click="handleMarkAllNotificationsRead"
-                  :disabled="notificationsLoading || !hasAdminNotifications"
-                >
-                  Mark all read
-                </button>
-              </header>
-              <section class="notifications-popup__content">
-                <div v-if="notificationsLoading" class="notifications-popup__empty">
-                  Loading…
-                </div>
-                <div v-else-if="notificationsError" class="notifications-popup__empty error">
-                  {{ notificationsError }}
-                </div>
-                <div v-else-if="!hasAnyNotifications" class="notifications-popup__empty">
-                  No notifications found.
-                </div>
-                <ul v-else class="notifications-popup__list">
-                  <li
-                    v-for="item in notificationPreview"
-                    :key="item.id"
-                    class="notifications-popup__item"
-                  >
-                    <div>
-                      <p class="notifications-popup__title">{{ item.action }}</p>
-                      <p class="notifications-popup__message">{{ item.message }}</p>
-                      <span class="notifications-popup__time">
-                        {{ formatPopupTime(item.timestamp) }}
-                      </span>
-                    </div>
-                    <button
-                      v-if="canManageReadState(item)"
-                      type="button"
-                      class="ghost-pill ghost-pill--mini"
-                      @click="handleToggleNotificationRead(item)"
-                    >
-                      {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
-                    </button>
-                  </li>
-                </ul>
-              </section>
-              <footer class="notifications-popup__footer">
-                <RouterLink to="/admin/notifications" class="link-btn">View all »</RouterLink>
-              </footer>
-            </div>
-          </div>
+          <button type="button" class="icon-btn" title="Notifications">
+            <i class="fa-regular fa-bell" aria-hidden="true"></i>
+            <span class="notif-dot" aria-hidden="true"></span>
+          </button>
 
             <div class="topbar-user">
               <div class="user-meta">
@@ -417,14 +214,12 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
         <div class="admin-content-inner">
           <RouterView />
           <footer class="admin-footer">
-            <span>{{ t('footerCopyright') }}</span>
+            <span>© 2026 Chong Choul Rental Management System. All rights reserved.</span>
           </footer>
         </div>
       </main>
     </div>
   </div>
-
-   <ToastStack />
 
    <ConfirmModal
      v-model="showLogoutConfirm"
@@ -435,130 +230,4 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
      variant="danger"
      @confirm="handleLogout"
    />
-  </template>
-
-<style scoped>
-.topbar-notifications {
-  position: relative;
-}
-.topbar-notifications .icon-btn {
-  position: relative;
-}
-.topbar-notifications .notif-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 0.65rem;
-  min-width: 18px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: #ef4444;
-  color: white;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.notifications-popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 340px;
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 0.85rem;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.25);
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-}
-.notifications-popup__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.85rem;
-  color: #374151;
-  font-weight: 600;
-}
-.notifications-popup__content {
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 0.25rem;
-}
-.notifications-popup__content::-webkit-scrollbar {
-  width: 6px;
-}
-.notifications-popup__content::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.35);
-  border-radius: 999px;
-}
-.notifications-popup__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.notifications-popup__item {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: flex-start;
-}
-.notifications-popup__title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #111827;
-}
-.notifications-popup__message {
-  margin: 0.2rem 0;
-  font-size: 0.85rem;
-  color: #4b5563;
-}
-.notifications-popup__time {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-.notifications-popup__empty {
-  text-align: center;
-  color: #6b7280;
-  font-size: 0.85rem;
-  padding: 0.75rem 0;
-}
-.notifications-popup__empty.error {
-  color: #dc2626;
-}
-.notifications-popup__footer {
-  display: flex;
-  justify-content: flex-end;
-}
-.link-btn {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #047857;
-}
-.ghost-pill--mini {
-  border-radius: 999px;
-  border: 1px solid #d1d5db;
-  background: transparent;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.7rem;
-  cursor: pointer;
-  color: #374151;
-}
-.ghost-pill--mini:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-@media (max-width: 900px) {
-  .notifications-popup {
-    right: -10px;
-    left: auto;
-    width: 90vw;
-  }
-}
-</style>
+   </template>

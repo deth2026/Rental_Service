@@ -4,7 +4,7 @@ import { useCssModule } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import userService from '@/services/userService.js'
 import CommonFooter from '../../components/CommonFooter.vue'
-import UserNavbar from '@/components/UserNavbar.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const styles = useCssModule()
 const router = useRouter()
@@ -127,15 +127,27 @@ const overviewMetrics = computed(() => [
 
 const navItems = [
     { label: 'Home', route: '/view_shop' },
-    { label: 'My Bookings', route: '/my-bookings' },
+    { label: 'My Bookings', route: '' },
     { label: 'Promotions', route: '/promotions' },
 ]
 
-const activeNavLabel = computed(() => {
+const activeNav = computed(() => {
     const currentPath = route.path
     const matched = navItems.find((item) => item.route && currentPath.startsWith(item.route))
     return matched?.label || 'Home'
 })
+
+const setActiveNav = (item) => {
+    if (item.route) {
+        router.push(item.route)
+        return
+    }
+    notify('My Bookings page is not available yet.')
+}
+
+const notify = (message) => {
+    console.log(message)
+}
 
 const timelineEvents = [
     {
@@ -421,13 +433,30 @@ onMounted(fetchProfile)
 </script>
 <template>
     <div class="settings-page-root">
-        <UserNavbar
-            :nav-items="navItems"
-            :active-label="activeNavLabel"
-            :show-fallback-message="true"
-            @logout-request="handleLogout"
-        />
-        <div :class="styles['page']">
+        <header class="topbar">
+            <div class="brand">
+                <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+                <span>Chong Choul</span>
+            </div>
+
+            <nav class="nav-links">
+                <button
+                    v-for="item in navItems"
+                    :key="item.label"
+                    class="btn-reset nav-link"
+                    :class="{ active: activeNav === item.label }"
+                    @click="setActiveNav(item)"
+                >
+                    {{ item.label }}
+                </button>
+            </nav>
+
+            <div class="top-actions">
+                <span class="user-display-name">{{ userDisplayName }}</span>
+                <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+            </div>
+    </header>
+    <div :class="styles['page']">
         <transition name="slide-right">
             <div
                 v-if="toast.show"
@@ -776,8 +805,9 @@ onMounted(fetchProfile)
             </div>
         </div>
     </div>
-        <!-- Common Footer -->
-        <CommonFooter />
+
+    <!-- Common Footer -->
+    <CommonFooter />
     </div>
 </template>
 <style module>

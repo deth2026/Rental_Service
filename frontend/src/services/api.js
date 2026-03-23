@@ -50,7 +50,7 @@ export const vehicleApi = {
 
 // Shop API calls
 export const shopApi = {
-  getAll: () => api.get('/shops'),
+  getAll: (params = {}) => api.get('/shops', { params }),
   getById: (id) => api.get(`/shops/${id}`),
   create: (data) => api.post('/shops', data),
   update: (id, data) => {
@@ -65,7 +65,7 @@ export const shopApi = {
 
 // City API calls
 export const cityApi = {
-  getAll: () => api.get('/cities')
+  getAll: (params = {}) => api.get('/cities', { params })
 };
 
 // Category API calls
