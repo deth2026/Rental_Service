@@ -5,7 +5,7 @@
       <div class="overlay">
         <div class="logo">
           <div class="logo-icon-wrap">
-            <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="login-logo-img" />
+            <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="login-logo-img" />
           </div>
             <span>CHONG CHOUL</span>
           </div>

@@ -16,7 +16,7 @@ import { useToast } from "@/composables/useToast";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/images/logo-removebg.png";
+const logoUrl = "/Images/logo-removebg.png";
 const { showToast } = useToast();
 
 const sections = [

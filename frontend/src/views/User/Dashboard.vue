@@ -439,7 +439,7 @@ onBeforeUnmount(() => {
   <div class="customer-page">
     <header class="customer-topbar">
       <div class="brand-left">
-        <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
+        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
         <span>Chong Choul</span>
       </div>
 

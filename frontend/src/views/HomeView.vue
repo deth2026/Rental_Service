@@ -5,7 +5,7 @@
     <div v-if="showSplash" class="location-splash">
       <div class="splash-content">
         <div class="splash-logo-container">
-          <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="splash-img" />
+          <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="splash-img" />
           <h1 class="splash-brand">CHONG CHOUL</h1>
         </div>
         <div class="splash-loader-container">
@@ -21,7 +21,7 @@
     <div v-if="showLocationPopup" class="location-popup-overlay">
       <div class="location-popup-card">
         <div class="popup-brand-header">
-           <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="popup-logo-big" />
+           <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="popup-logo-big" />
            <h3 class="popup-brand-name">CHONG CHOUL</h3>
         </div>
         
