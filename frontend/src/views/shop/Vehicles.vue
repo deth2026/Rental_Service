@@ -85,6 +85,8 @@ const fetchVehicles = async () => {
 
             return {
                 ...source,
+                shop_id: source.shop_id,
+                type: source.type,
                 category: source.category || source.type,
                 plate: source.plate_number || source.plate,
                 price: Number(source.price_per_day ?? source.price) || 0,
@@ -333,12 +335,14 @@ const saveVehicle = async () => {
                     brand: updatedData.brand,
                     model: updatedData.model,
                     category: updatedData.type,
+                    type: updatedData.type,
                     plate: updatedData.plate_number,
                     price: updatedData.price_per_day,
                     status: updatedData.status,
                     description: updatedData.description,
                     fuel: updatedData.fuel_type,
                     transmission: updatedData.transmission,
+                    shop_id: updatedData.shop_id,
                     previewUrl: imageUrl || (form.base64Photos && form.base64Photos[0]) || sampleThumb,
                     image_url_full: updatedData.image_url_full,
                     photos: form.base64Photos || [],
@@ -363,12 +367,14 @@ const saveVehicle = async () => {
                 brand: newData.brand,
                 model: newData.model,
                 category: newData.type,
+                type: newData.type,
                 plate: newData.plate_number,
                 price: newData.price_per_day,
                 status: newData.status,
                 description: newData.description,
                 fuel: newData.fuel_type,
                 transmission: newData.transmission,
+                shop_id: newData.shop_id,
                 // Use full image URL from API response
                 previewUrl: newData.image_url_full || newData.image_url || photoPreview.value,
                 image_url_full: newData.image_url_full,
@@ -643,7 +649,7 @@ const onPhotoDrop = async (e) => {
           <tr>
             <th>Image</th>
             <th>Vehicle</th>
-            <th>Brand / Model</th>
+            <th>Category</th>
             <th>Plate Number</th>
             <th>Price/Day</th>
             <th>Status</th>
@@ -672,7 +678,7 @@ const onPhotoDrop = async (e) => {
               ></i>
               <span>{{ v.name }}</span>
             </td>
-            <td>{{ v.brand }} / {{ v.model }}</td>
+            <td>{{ v.category }}</td>
             <td>{{ v.plate }}</td>
             <td>${{ v.price }}</td>
             <td>

@@ -199,25 +199,8 @@ class VehicleController extends Controller
             return VehicleResource::collection($query->paginate(15));
         }
 
-        $user = $request->user();
-
-        if ($user && $user->role === 'shop_owner') {
-            $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
-
-            if (empty($shopIds)) {
-                return response()->json([
-                    'data' => [],
-                    'current_page' => 1,
-                    'last_page' => 1,
-                    'per_page' => 15,
-                    'total' => 0
-                ]);
-            }
-
-            $query = $this->ratingAwareVehicleQuery()->whereIn('shop_id', $shopIds);
-            return VehicleResource::collection($query->paginate(15));
-        }
-
+        // Return all vehicles for all users (including shop owners)
+        // This ensures shop owners can see their vehicles in the frontend
         $query = $this->ratingAwareVehicleQuery();
         return VehicleResource::collection($query->paginate(15));
     }

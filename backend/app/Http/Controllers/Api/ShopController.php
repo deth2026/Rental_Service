@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Rating;
 use App\Models\Shop;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,14 @@ class ShopController extends Controller
 
         // Manually add img_url_full to ensure it's included
         $shopsWithImages = $shops->map(function ($shop) {
+            // Calculate rating from Rating table based on shop_id
+            $shopRatings = Rating::where('shop_id', $shop->id)->get();
+            
+            // Only include rating and total_reviews if there are ratings for this shop
+            $hasRatings = $shopRatings->isNotEmpty();
+            $rating = $hasRatings ? round($shopRatings->avg('rating'), 1) : null;
+            $totalReviews = $hasRatings ? $shopRatings->count() : null;
+
             return [
                 'id' => $shop->id,
                 'owner_id' => $shop->owner_id,
@@ -34,7 +43,8 @@ class ShopController extends Controller
                 'image' => $shop->img_url_full, // Add image field for frontend compatibility
                 'latitude' => $shop->latitude,
                 'longitude' => $shop->longitude,
-                'total_reviews' => $shop->total_reviews,
+                'rating' => $rating,
+                'total_reviews' => $totalReviews,
                 'status' => $shop->status,
                 'created_at' => $shop->created_at,
                 'updated_at' => $shop->updated_at,

@@ -612,21 +612,16 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <div class="shop-kpi-row">
-                  <div class="shop-kpi">
-                    <span>Customer Rating</span>
-
-                    <strong>⭐ {{ shop.rating.toFixed(1) }}</strong>
-                  </div>
-
+                                <div class="shop-kpi-row">
                   <div class="shop-kpi">
                     <span>Shop Status</span>
 
                     <strong>{{
-                      shop.status === "active" ? "🟢 Open" : "🔴 Closed"
+                      shop.status === "active" ? "? Open" : "?? Closed"
                     }}</strong>
                   </div>
                 </div>
+
               </div>
 
               <div class="shop-card-footer">
