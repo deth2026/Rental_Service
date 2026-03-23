@@ -521,9 +521,6 @@ const getTotalDays = (start, end) => {
             <span :class="['payment-status', getPaymentStatusClass(booking.payment_status)]">
               {{ getPaymentStatusLabel(booking.payment_status) }}
             </span>
-            <span v-if="booking.payment_method && booking.payment_method !== 'N/A'" class="payment-method">
-              ({{ booking.payment_method }})
-            </span>
           </p>
 
           <div class="action-buttons">
@@ -777,7 +774,6 @@ const getTotalDays = (start, end) => {
         <div class="booking-detail-vehicle">
           <h4>Vehicle specs</h4>
           <div class="booking-detail-specs">
-            <span>Type: <strong>{{ detailVehicleData?.category || 'N/A' }}</strong></span>
             <span>Brand: <strong>{{ detailVehicleData?.brand || 'N/A' }}</strong></span>
             <span>Fuel: <strong>{{ detailVehicleData?.fuel_type || 'N/A' }}</strong></span>
             <span>Transmission: <strong>{{ detailVehicleData?.transmission || 'N/A' }}</strong></span>

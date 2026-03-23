@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { vehicleApi, shopApi } from '@/services/api'
+import { vehicleApi, shopApi, ratingApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
@@ -18,6 +18,7 @@ const isLoading = ref(true)
 const error = ref('')
 const shopError = ref('')
 const isLoadingShop = ref(false)
+const ratingSummaryMap = ref({})
 
 const currentUser = computed(() => userService.getCurrentUser())
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
@@ -146,6 +147,37 @@ const fetchVehicles = async () => {
   }
 }
 
+const buildRatingSummaryMap = (summaries) => {
+  const map = {}
+  if (!Array.isArray(summaries)) {
+    ratingSummaryMap.value = {}
+    return
+  }
+  summaries.forEach((entry) => {
+    const vehicleId = Number(entry?.id)
+    if (!vehicleId) return
+    const avg = entry.average_rating
+    const count = entry.total_ratings
+    map[vehicleId] = {
+      averageRating:
+        avg === null || avg === undefined ? null : Number(avg),
+      totalRatings: Number(count || 0),
+    }
+  })
+  ratingSummaryMap.value = map
+}
+
+const fetchVehicleRatingSummary = async () => {
+  try {
+    const response = await ratingApi.getVehicleRatingsSummary()
+    const entries = Array.isArray(response.data) ? response.data : []
+    buildRatingSummaryMap(entries)
+  } catch (err) {
+    console.error('Error fetching vehicle rating summary:', err)
+    ratingSummaryMap.value = {}
+  }
+}
+
 const fetchShop = async () => {
   isLoadingShop.value = true
   shopError.value = ''
@@ -189,9 +221,29 @@ const getStatusClass = (status) => {
   return 'status-available'
 }
 
+const vehiclesWithRatingInfo = computed(() => {
+  return vehicles.value.map((vehicle) => {
+    const idKey = Number(vehicle?.id)
+    const summary = ratingSummaryMap.value[idKey]
+    if (!summary) return vehicle
+    return {
+      ...vehicle,
+      rating:
+        summary.averageRating !== null && summary.averageRating !== undefined
+          ? summary.averageRating
+          : vehicle.rating,
+      ratingCount:
+        summary.totalRatings !== undefined
+          ? summary.totalRatings
+          : vehicle.ratingCount,
+    }
+  })
+})
+
 const filteredVehicles = computed(() => {
-  if (selectedCategory.value === 'all') return vehicles.value
-  return vehicles.value.filter((v) => {
+  const source = vehiclesWithRatingInfo.value
+  if (selectedCategory.value === 'all') return source
+  return source.filter((v) => {
     const type = normalizeType(v.type || v.category || v.vehicle_type || v.kind || v.name)
     if (type === selectedCategory.value) return true
     // looser matching: e.g., "motorbikes", "motor" or text mentions
@@ -205,8 +257,8 @@ const filteredVehicles = computed(() => {
     if (selectedCategory.value === 'car') {
       return ['car', 'suv', 'auto', 'sedan', 'truck'].some((k) => type.includes(k) || text.includes(k))
     }
-    return false
-  })
+  return false
+})
 })
 
 const categoryButtons = [
@@ -219,6 +271,7 @@ const categoryButtons = [
 onMounted(() => {
   fetchVehicles()
   fetchShop()
+  fetchVehicleRatingSummary()
 })
 
 const selectedShopCoords = computed(() => {

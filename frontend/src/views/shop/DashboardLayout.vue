@@ -62,7 +62,6 @@ const sections = [
   { id: "vehicles", label: "Vehicles", icon: "car" },
   { id: "bookings", label: "Bookings", icon: "calendar" },
   { id: "payments", label: "Payments", icon: "dollar" },
-  { id: "damage", label: "Damage Reports", icon: "warning" },
   { id: "reviews", label: "Reviews & Feedback", icon: "star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
@@ -525,6 +524,58 @@ const saveShop = async () => {
 fetchCities();
 
 // Fetch shop owner bookings for dashboard stats
+const normalizePaymentStatusKey = (value) => {
+  const raw = (value || "").toString().trim().toLowerCase();
+  if (!raw) return "pending";
+  const cleaned = raw.replace(/[\s-]+/g, "_");
+  const aliases = {
+    canceled: "cancelled",
+    cancel: "cancelled",
+    cencel: "cancelled",
+    comfirmed: "confirmed",
+    process: "processing",
+    processing: "processing",
+    in_process: "processing",
+    in_progress: "processing",
+    success: "paid",
+    successful: "paid",
+    succeeded: "paid",
+    complete: "completed",
+    completed: "completed",
+    confirm: "confirmed",
+    confirmed: "confirmed",
+    paid: "paid",
+    pending_payment: "pending",
+  };
+  return aliases[cleaned] || cleaned;
+};
+
+const isPaidPayment = (payment) => {
+  const statusKey = normalizePaymentStatusKey(payment?.status || payment?.payment_status);
+  return ["paid", "confirmed", "completed"].includes(statusKey);
+};
+
+const getPaymentDate = (payment) => {
+  return payment?.paid_at || payment?.created_at || payment?.date || "";
+};
+
+const getDateKey = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const shopMatchesEntry = (entry) => {
+  const shopId = Number(shop.value?.id);
+  if (!shopId) return true;
+  const bookingShopId = entry.shop_id || entry.booking?.shop_id || entry.vehicle?.shop_id;
+  return Number(bookingShopId) === shopId;
+};
+
 const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
   dashboardError.value = null;
@@ -541,7 +592,36 @@ const fetchShopBookings = async () => {
   }
 };
 
+const fetchFeedback = async () => {
+  try {
+    const response = await api.get("/feedback");
+    const raw = response.data?.data || response.data || [];
+    const data = Array.isArray(raw) ? raw : [];
+    const filtered = data.filter(shopMatchesEntry);
+    feedback.value = filtered.map((entry) => ({
+      ...entry,
+      rating: Number(entry.rating || entry.score || 0),
+    }));
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    feedback.value = [];
+  }
+};
+
+const fetchShopPayments = async () => {
+  try {
+    const response = await api.get("/shop-payments");
+    const data = response.data || [];
+    payments.value = Array.isArray(data) ? data : data.data || [];
+    console.log("Dashboard payments loaded:", payments.value.length);
+  } catch (error) {
+    console.error("Error fetching shop payments:", error);
+    payments.value = [];
+  }
+};
+
 fetchShopBookings();
+fetchShopPayments();
 
 // Fetch vehicles from database
 const fetchVehicles = async () => {
@@ -711,6 +791,14 @@ initializeShopData = async () => {
 
 initializeShopData().catch(() => {});
 
+watch(
+  shop,
+  () => {
+    fetchFeedback().catch(() => {});
+  },
+  { immediate: true },
+);
+
 const khTime = () => {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-GB", {
@@ -790,12 +878,17 @@ const filteredVehicles = computed(() => {
 
 const totalBookings = computed(() => bookings.value.length);
 const totalEarnings = computed(() =>
-  payments.value
-    .filter((p) => p.status === "Paid")
-    .reduce((a, b) => a + b.amount, 0),
+  payments.value.reduce((sum, payment) => {
+    if (!isPaidPayment(payment)) return sum;
+    return sum + Number(payment.amount || payment.total_price || 0);
+  }, 0),
 );
 const todayBookings = computed(
-  () => bookings.value.filter((b) => b.date === today.value).length,
+  () =>
+    bookings.value.filter((b) => {
+      const key = getDateKey(b.start_date || b.created_at || b.startDate);
+      return key && key === today.value;
+    }).length,
 );
 const totalVehicles = computed(() => vehicles.value.length);
 const availableVehicles = computed(
@@ -804,7 +897,23 @@ const availableVehicles = computed(
 const maintenanceVehicles = computed(
   () => vehicles.value.filter((v) => v.status === "Maintenance").length,
 );
-const monthlyIncome = computed(() => totalEarnings.value);
+const monthlyIncome = computed(() => {
+  const now = new Date();
+  return payments.value.reduce((sum, payment) => {
+    if (!isPaidPayment(payment)) return sum;
+    const dateStr = getPaymentDate(payment);
+    if (!dateStr) return sum;
+    const date = new Date(dateStr);
+    if (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth()
+    ) {
+      return sum + Number(payment.amount || payment.total_price || 0);
+    }
+    return sum;
+  }, 0);
+});
 const newCustomers = computed(
   () => new Set(bookings.value.map((b) => b.customer)).size,
 );
@@ -1320,10 +1429,6 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
         <ReviewsFeedback />
-      </section>
-
-      <section v-else-if="active === 'damage'" class="damage-view">
-        <DamageReports />
       </section>
 
       <section v-else-if="active === 'payments'" class="payments-view">

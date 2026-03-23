@@ -15,7 +15,7 @@ class BookingController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Booking::with(['vehicle', 'user', 'shop'])
+        $query = Booking::with(['vehicle', 'user', 'shop', 'payment'])
             ->orderBy('created_at', 'desc');
 
         if ($user && $user->role === 'shop_owner') {

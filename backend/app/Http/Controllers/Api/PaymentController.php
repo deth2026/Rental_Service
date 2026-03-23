@@ -48,12 +48,14 @@ class PaymentController extends Controller
             
             if ($shopIds->isEmpty()) {
                 \Log::warning('PaymentController.shopPayments: No shops found for user', ['user_id' => $user->id]);
-                // Instead of returning empty, try to get ALL payments (for debugging)
-                // Don't filter - return all payments for debugging
+                // return all payments when the user has no shops
             } else {
-                // Filter payments by shops owned by this user - using vehicle's shop_id
-                $query->whereHas('booking.vehicle', function ($q) use ($shopIds) {
-                    $q->whereIn('shop_id', $shopIds);
+                // Filter payments by booking shop_id or vehicle shop_id
+                $query->whereHas('booking', function ($bookingQuery) use ($shopIds) {
+                    $bookingQuery->whereIn('shop_id', $shopIds)
+                        ->orWhereHas('vehicle', function ($vehicleQuery) use ($shopIds) {
+                            $vehicleQuery->whereIn('shop_id', $shopIds);
+                        });
                 });
             }
             

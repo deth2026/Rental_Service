@@ -149,15 +149,9 @@ const fetchPayments = async () => {
     error.value = null
     
     // First load the shop to get shop_id
-    const shop = await loadShop()
-    const shopId = shop?.id
-    
-    // If no shop exists, show empty payments
-    if (!shopId) {
-      payments.value = []
-      loading.value = false
-      return
-    }
+    const storedUser = getStoredUser()
+    const isAdmin = storedUser?.role === 'admin'
+    await loadShop()
     
     console.log('Fetching payments from /shop-payments...')
     
@@ -177,10 +171,7 @@ const fetchPayments = async () => {
           : []
 
     // Filter payments by shop_id
-    const filteredPayments = allPayments.filter((p) => {
-      const paymentShopId = p.shop_id || p.booking?.shop_id || p.booking?.vehicle?.shop_id
-      return Number(paymentShopId) === Number(shopId)
-    })
+    const filteredPayments = allPayments
 
     console.log('Filtered payments by shop:', filteredPayments)
     payments.value = filteredPayments.map(mapPaymentToRow)

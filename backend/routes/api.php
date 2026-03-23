@@ -99,12 +99,16 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
+// Public vehicle ratings (view only, no auth required)
+Route::get('/vehicle-ratings', [RatingController::class, 'vehicleRatings']);
+Route::get('/vehicle-ratings-summary', [RatingController::class, 'vehicleRatingsSummary']);
+
 // Public vehicle routes (for customers to view vehicles)
+Route::get('/vehicles', [VehicleController::class, 'index']);
 Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
 
-// Protected vehicle routes - require authentication for listing vehicles
+// Protected vehicle routes - require authentication for create, update, delete
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/vehicles', [VehicleController::class, 'index']);
     
     // Shop owner can create, update, delete their own vehicles
     Route::post('/vehicles', [VehicleController::class, 'store']);
@@ -115,7 +119,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/bookings/{booking}/rating', [RatingController::class, 'store']);
     Route::get('/vehicle-ratings', [RatingController::class, 'vehicleRatings']);
     Route::get('/vehicle-ratings-summary', [RatingController::class, 'vehicleRatingsSummary']);
-    Route::apiResource('booking-status-logs', BookingStatusLogController::class);
     Route::apiResource('damage-reports', DamageReportController::class);
     Route::apiResource('feedback', FeedbackController::class);
     Route::apiResource('histories', HistoryController::class);

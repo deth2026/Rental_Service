@@ -23,7 +23,7 @@
             Rent motorbikes, cars, and bicycles from trusted local shops—fast booking, fair prices, and flexible plans.
           </p>
           <div class="hero-actions">
-            <RouterLink class="hero-btn primary" to="/view_shop">Explore Vehicles</RouterLink>
+            <RouterLink class="hero-btn primary" to="/register">Explore Vehicles</RouterLink>
             <RouterLink class="hero-btn ghost" to="/register">List Your Shop</RouterLink>
           </div>
         </div>
