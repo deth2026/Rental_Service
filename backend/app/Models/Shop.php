@@ -32,7 +32,6 @@ class Shop extends Model
         'longitude' => 'decimal:7',
         'total_reviews' => 'integer'
     ];
-
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');

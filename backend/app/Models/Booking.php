@@ -67,5 +67,9 @@ class Booking extends Model
     {
         return $this->hasMany(BookingStatusLog::class)->orderBy('changed_at', 'desc');
     }
-}
 
+    public function rating()
+    {
+        return $this->hasOne(Rating::class);
+    }
+}

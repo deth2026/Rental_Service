@@ -14,6 +14,17 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    public static function hasLastLoginColumn(): bool
+    {
+        static $hasLastLoginColumn = null;
+
+        if ($hasLastLoginColumn === null) {
+            $hasLastLoginColumn = Schema::hasColumn((new static())->getTable(), 'last_login');
+        }
+
+        return $hasLastLoginColumn;
+    }
+
     public function getCreatedAtColumn()
     {
         static $createdColumn = null;
@@ -45,6 +56,9 @@ class User extends Authenticatable
         'is_verified',
         'img_url',
         'profile_picture',
+        'job_title',
+        'bio',
+        'last_login',
     ];
 
     protected $hidden = [
@@ -87,5 +101,13 @@ class User extends Authenticatable
         }
 
         return asset($normalized);
+    }
+
+    /**
+     * Get the shop that owns this user (if user is a shop owner)
+     */
+    public function shop()
+    {
+        return $this->hasOne(Shop::class, 'owner_id');
     }
 }

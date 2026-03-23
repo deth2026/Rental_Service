@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
@@ -240,30 +241,69 @@ class UserController extends Controller
             'name'            => 'sometimes|required|string|max:255',
             'email'           => 'sometimes|required|email|unique:users,email,' . $userId,
             'phone'           => 'nullable|string|max:30',
+            'job_title'       => 'nullable|string|max:255',
+            'bio'             => 'nullable|string|max:1000',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ];
 
         $validated = $request->validate($validationRules);
 
         // Handle file upload - store in profile_picture column
+        error_log('hasFile profile_picture: ' . ($request->hasFile('profile_picture') ? 'true' : 'false'));
+        
         if ($request->hasFile('profile_picture')) {
             try {
+                // Validate the file manually to get better error messages
+                $file = $request->file('profile_picture');
+                error_log('File info: ' . json_encode([
+                    'name' => $file->getClientOriginalName(),
+                    'isValid' => $file->isValid(),
+                    'error' => $file->getError(),
+                    'size' => $file->getSize()
+                ]));
+                
+                if (!$file->isValid()) {
+                    throw new \Exception('Uploaded file is not valid');
+                }
+                
                 // Remove old file from storage
                 if ($user->profile_picture) {
                     Storage::disk('public')->delete($user->profile_picture);
                 }
-                $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+                $path = $file->store('profile_pictures', 'public');
+                error_log('Stored path: ' . $path);
                 $validated['profile_picture'] = $path;
+                error_log('Validated profile_picture: ' . ($validated['profile_picture'] ?? 'NOT SET'));
             } catch (\Exception $e) {
-                // Ignore storage errors, continue with other updates
+                \Log::error('Profile picture upload error: ' . $e->getMessage());
+                throw new \Exception('Failed to upload profile picture: ' . $e->getMessage());
             }
+        } else {
+            error_log('No file uploaded - checking request all');
+            error_log('Request all: ' . json_encode($request->all()));
         }
 
         $user->update($validated);
 
+        $updatedUser = $user->fresh();
+        
         return response()->json([
             'message' => 'Profile updated successfully',
-            'user'    => $user->fresh(),
+            'user'    => [
+                'id' => $updatedUser->id,
+                'name' => $updatedUser->name,
+                'email' => $updatedUser->email,
+                'phone' => $updatedUser->phone,
+                'role' => $updatedUser->role,
+                'job_title' => $updatedUser->job_title,
+                'bio' => $updatedUser->bio,
+                'is_verified' => $updatedUser->is_verified,
+                'profile_picture' => $updatedUser->profile_picture,
+                'avatar_url' => $updatedUser->avatar_url,
+                'last_login' => User::hasLastLoginColumn() ? $updatedUser->last_login : null,
+                'created_at' => $updatedUser->created_at,
+                'updated_at' => $updatedUser->updated_at,
+            ],
         ]);
     }
 

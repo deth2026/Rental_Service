@@ -1,36 +1,13 @@
-
-
-<template>
-  <div class="home-page">
+   <template>
+  <main class="home-page">
     <header class="top-nav">
       <div class="brand-container">
-        <svg class="brand-logo" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#1E40AF;stop-opacity:1" />
-              <stop offset="100%" style="stop-color:#2563EB;stop-opacity:1" />
-            </linearGradient>
-          </defs>
-          <rect width="120" height="120" rx="20" fill="url(#bgGrad)"/>
-          <g transform="translate(30, 45)">
-            <path d="M10 20c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm0-13c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5z" fill="white" opacity="0.9"/>
-            <path d="M10 12c-4.4 0-8 3.6-8 8v2h20v-2c0-4.4-3.6-8-8-8z" fill="white" opacity="0.5"/>
-            <g transform="translate(15, -5)">
-              <rect x="0" y="0" width="30" height="18" rx="2" ry="2" fill="none" stroke="white" stroke-width="1.5"/>
-              <circle cx="4" cy="14" r="1.5" fill="white" opacity="0.8"/>
-              <circle cx="26" cy="14" r="1.5" fill="white" opacity="0.8"/>
-              <path d="M0 8h30" stroke="white" stroke-width="1" opacity="0.6"/>
-            </g>
-          </g>
-        </svg>
-        <div class="brand-text">
-          <div class="brand">Chong Choul</div>
-          <!-- <div class="brand-tagline">Vehicle Rental</div> -->
-        </div>
+        <Logo class="home-brand" theme="light" size="lg" :showTagline="true" src="/Images/logo.png" />
       </div>
 
       <div class="nav-auth">
         <RouterLink class="link-login" to="/login">Login</RouterLink>
+        <span class="nav-sep" aria-hidden="true">|</span>
         <RouterLink class="btn-signup" to="/chooserole">Sign Up</RouterLink>
       </div>
     </header>
@@ -42,25 +19,27 @@
             <span class="hero-line">Find Your Perfect Ride and Explore</span>
             <span class="hero-line"><span>Cambodia</span> in Style!</span>
           </h1>
+          <p class="hero-sub">
+            Rent motorbikes, cars, and bicycles from trusted local shops—fast booking, fair prices, and flexible plans.
+          </p>
+          <div class="hero-actions">
+            <RouterLink class="hero-btn primary" to="/view_shop">Explore Vehicles</RouterLink>
+            <RouterLink class="hero-btn ghost" to="/register">List Your Shop</RouterLink>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="section-head">
+      <div class="section-head section-head-center">
         <div>
           <h2>Browse by Category</h2>
           <p>Find the right ride for your journey</p>
         </div>
-        
       </div>
 
       <div class="category-grid">
-        <article
-          v-for="item in categories"
-          :key="item.title"
-          class="category-card"
-        >
+        <article v-for="item in categories" :key="item.title" class="category-card">
           <img :src="item.image" :alt="item.title" />
           <div class="card-overlay"></div>
           <div class="card-text">
@@ -79,11 +58,7 @@
         </div>
         <div class="features-divider"></div>
         <div class="features-grid">
-          <article
-            v-for="feature in features"
-            :key="feature.title"
-            class="feature-item"
-          >
+          <article v-for="feature in features" :key="feature.title" class="feature-item">
             <div class="feature-content">
               <div class="feature-icon" aria-hidden="true">
                 <span>{{ feature.icon }}</span>
@@ -112,9 +87,8 @@
             <h4>{{ ride.name }}</h4>
             <p>{{ ride.detail }}</p>
             <div class="ride-bottom">
-              <span
-                ><strong>${{ ride.price }}</strong> /day</span
-              >
+              <span class="rating"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ ride.rating }}</span>
+              <span><strong>${{ ride.price }}</strong> /day</span>
             </div>
           </div>
         </article>
@@ -135,93 +109,144 @@
       </div>
     </section>
 
+    <footer class="footer">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <div class="footer-brand-head">
+            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/Images/logo.png" />
+          </div>
+          <p class="footer-desc">The premier vehicle rental marketplace in Cambodia.</p>
+          <div class="footer-social" aria-label="Social media">
+            <a class="footer-social-link" href="#" @click.prevent aria-label="Facebook">
+              <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+            </a>
+            <a class="footer-social-link" href="#" @click.prevent aria-label="Instagram">
+              <i class="fa-brands fa-instagram" aria-hidden="true"></i>
+            </a>
+            <a class="footer-social-link" href="#" @click.prevent aria-label="TikTok">
+              <i class="fa-brands fa-tiktok" aria-hidden="true"></i>
+            </a>
+            <a class="footer-social-link" href="#" @click.prevent aria-label="X">
+              <i class="fa-brands fa-x-twitter" aria-hidden="true"></i>
+            </a>
+          </div>
+          <small class="footer-legal">© 2026 Chong Choul. All rights reserved.</small>
+        </div>
 
-  </div>
+        <div class="footer-col">
+          <h5 class="footer-title">Payment Methods</h5>
+          <ul class="footer-list">
+            <li><span>Visa</span></li>
+            <li><span>Mastercard</span></li>
+            <li><span>Bank Transfer</span></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5 class="footer-title">Quick Links</h5>
+          <ul class="footer-list">
+            <li><RouterLink class="footer-link" to="/">Home</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/view_shop">Explore Vehicles</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/register">List Your Shop</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/login">Login</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/chooserole">Sign Up</RouterLink></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5 class="footer-title">Newsletter</h5>
+          <p class="footer-note">Stay updated with the latest offers.</p>
+          <form class="newsletter" @submit.prevent>
+            <input type="email" placeholder="Your email" autocomplete="email" />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </div>
+    </footer>
+  </main>
 </template>
 
-<script setup>
-import { reactive } from 'vue'
+<script>
+import Logo from '@/components/Logo.vue'
+import '@/css/HomeView.css'
 
-const search = reactive({
-  type: 'All Vehicles',
-  location: 'Phnom Penh',
-  pickupDate: ''
-})
-
-const categories = [
-  {
-    title: 'Cars',
-    availability: '120+ Vehicles Available',
-    image: 'https://i.pinimg.com/1200x/76/4d/1e/764d1e19a2fb69a9046e53ceb4381391.jpg'
+export default {
+  components: {
+    Logo,
   },
-  {
-    title: 'Motorbikes',
-    availability: '450+ Vehicles Available',
-    image: 'https://i.pinimg.com/1200x/b3/a3/84/b3a384d5a8624aba2943bf7d41edd5e2.jpg'
-  },
-  {
-    title: 'Bicycles',
-    availability: '85+ Vehicles Available',
-    image: 'https://i.pinimg.com/1200x/9d/a8/87/9da8873b9c5bfdc2ac0dd4915e594d02.jpg'
+  data() {
+    return {
+      categories: [
+        {
+          tag: 'CITY',
+          title: 'Cars',
+          availability: '120+ Vehicles Available',
+          image: 'https://i.pinimg.com/1200x/76/4d/1e/764d1e19a2fb69a9046e53ceb4381391.jpg'
+        },
+        {
+          tag: 'POPULAR',
+          title: 'Motorbikes',
+          availability: '450+ Vehicles Available',
+          image: 'https://i.pinimg.com/1200x/b3/a3/84/b3a384d5a8624aba2943bf7d41edd5e2.jpg'
+        },
+        {
+          tag: 'ECO',
+          title: 'Bicycles',
+          availability: '85+ Vehicles Available',
+          image: 'https://i.pinimg.com/1200x/9d/a8/87/9da8873b9c5bfdc2ac0dd4915e594d02.jpg'
+        }
+      ],
+      features: [
+        {
+          icon: 'Q',
+          step: '1.',
+          title: 'Browse & Select',
+          description: 'Filter by vehicle type, location, and your travel dates to find the best match.'
+        },
+        {
+          icon: 'C',
+          step: '2.',
+          title: 'Secure Booking',
+          description: 'Book instantly using ABA, Wing, or international cards. No hidden fees.'
+        },
+        {
+          icon: 'K',
+          step: '3.',
+          title: 'Pick Up & Go',
+          description: 'Meet your host at the shop or get the vehicle delivered to your hotel.'
+        }
+      ],
+      rides: [
+        {
+          name: 'Small Camper Van/RV',
+          detail: 'Small Camper Van/RV - Siem Reap',
+          rating: '4.9',
+          price: 120,
+          image: 'https://i.pinimg.com/1200x/aa/4f/54/aa4f548f44f2ad9a5917c99bb85ad06a.jpg'
+        },
+        {
+          name: 'Adventure Touring Motorcycle',
+          detail: 'Motorbike - Siem Reap',
+          rating: '4.8',
+          price: 12,
+          image: 'https://i.pinimg.com/1200x/29/d1/13/29d11367c93335cdd7232c6f0594c344.jpg'
+        },
+        {
+          name: 'Road Bicycle',
+          detail: 'Bicycle - Siem Reap',
+          rating: '4.7',
+          price: 5,
+          image: 'https://i.pinimg.com/1200x/02/32/61/0232617f4158002b9f542b15f113cd9b.jpg'
+        },
+        {
+          name: 'Step-through City Bicycle',
+          detail: 'Bicycle - Siem Reap',
+          rating: '5.0',
+          price: 25,
+          image: 'https://i.pinimg.com/1200x/26/88/ba/2688ba0b802e2a168450e8f598ddc8d9.jpg'
+        }
+      ]
+    };
   }
-]
-
-const features = [
-  {
-    icon: 'Q',
-    step: '1.',
-    title: 'Browse & Select',
-    description: 'Filter by vehicle type, location, and your travel dates to find the best match.'
-  },
-  {
-    icon: 'C',
-    step: '2.',
-    title: 'Secure Booking',
-    description: 'Book instantly using ABA, Wing, or international cards. No hidden fees.'
-  },
-  {
-    icon: 'K',
-    step: '3.',
-    title: 'Pick Up & Go',
-    description: 'Meet your host at the shop or get the vehicle delivered to your hotel.'
-  }
-]
-
-const rides = [
-  {
-    name: 'Small Camper Van/RV',
-    detail: 'Small Camper Van/RV - Siem Reap',
-    rating: '4.9',
-    price: 120,
-    image: 'https://i.pinimg.com/1200x/aa/4f/54/aa4f548f44f2ad9a5917c99bb85ad06a.jpg'
-  },
-  {
-    name: 'Adventure Touring Motorcycle',
-    detail: 'Motorbike - Siem Reap',
-    rating: '4.8',
-    price: 12,
-    image: 'https://i.pinimg.com/1200x/29/d1/13/29d11367c93335cdd7232c6f0594c344.jpg'
-  },
-  {
-    name: 'Road Bicycle',
-    detail: 'Bicycle - Siem Reap',
-    rating: '4.7',
-    price: 5,
-    image: 'https://i.pinimg.com/1200x/02/32/61/0232617f4158002b9f542b15f113cd9b.jpg'
-  },
-  {
-    name: 'Step-through City Bicycle',
-    detail: 'Bicycle - Siem Reap',
-    rating: '5.0',
-    price: 25,
-    image: 'https://i.pinimg.com/1200x/26/88/ba/2688ba0b802e2a168450e8f598ddc8d9.jpg'
-  }
-]
+};
 </script>
-
-<style>
-@import "../css/HomeView.css";
-</style>
-
-
-

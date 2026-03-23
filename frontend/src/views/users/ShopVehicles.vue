@@ -5,10 +5,15 @@ import { vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Booking', route: '/my-bookings' },
+  { label: 'Promotions', route: '/promotions' }
+]
 
 const shopId = computed(() => route.params.id)
 const vehicles = ref([])
@@ -20,7 +25,10 @@ const shopError = ref('')
 const isLoadingShop = ref(false)
 
 const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const activeNavLabel = computed(() => {
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
+  return matchedItem?.label || 'Home'
+})
 
 const isOwnerRole = computed(() => {
   const role = String(currentUser.value?.role || '').toLowerCase()
@@ -124,7 +132,9 @@ const normalizeVehicle = (vehicle) => {
     description: vehicle.description || '',
     imageUrl: resolveVehicleImageUrl(imageUrl),
     photos: parsedPhotos,
-    photoUrls: vehicle.photo_urls || []
+    photoUrls: vehicle.photo_urls || [],
+    rating: typeof vehicle.rating === 'number' || !Number.isNaN(Number(vehicle.rating)) ? Number(vehicle.rating) : null,
+    ratingCount: Number(vehicle.rating_count ?? 0)
   }
 }
 
@@ -161,10 +171,6 @@ const fetchShop = async () => {
 
 const goBack = () => {
   router.push('/view_shop')
-}
-
-const openProfile = () => {
-  router.push('/user/profile')
 }
 
 const handleLogout = async () => {
@@ -272,20 +278,12 @@ const openMap = () => {
 <template>
   <div class="shop-vehicles-wrapper">
   <div class="shop-vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <button class="back-btn" @click="goBack">
-          <i class="fa-solid fa-arrow-left"></i>
-        </button>
-        <div class="brand-icon"><i class="fa-solid fa-car" aria-hidden="true"></i></div>
-        <span>Shop Vehicles</span>
-      </div>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="vehicles-content">
       <div class="page-header">
@@ -395,6 +393,12 @@ const openMap = () => {
                 <i class="fa-solid fa-gear"></i>
                 <span>{{ vehicle.transmission }}</span>
               </div>
+            </div>
+            
+            <div class="vehicle-rating" v-if="vehicle.rating">
+              <i class="fa-solid fa-star"></i>
+              <span>{{ vehicle.rating.toFixed(1) }}</span>
+              <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
             </div>
 
             <div class="vehicle-price">
@@ -849,6 +853,24 @@ const openMap = () => {
   background: #f3f4f6;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
+}
+
+.vehicle-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0.75rem;
+  color: #047857;
+  font-weight: 600;
+}
+
+.vehicle-rating i {
+  color: #fbbf24;
+}
+
+.vehicle-rating small {
+  font-size: 0.75rem;
+  color: #475569;
 }
 
 .detail-item i {

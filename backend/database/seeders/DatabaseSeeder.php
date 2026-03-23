@@ -3,6 +3,11 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Booking;
+use App\Models\BookingStatusLog;
+use App\Models\Message;
+use App\Models\NotificationRecord;
+use App\Services\NotificationService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -32,6 +37,18 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Admin User',
                 'phone' => '+855 12 345 679',
+                'password' => Hash::make('admin123'),
+                'role' => 'admin',
+                'is_verified' => true,
+            ]
+        );
+        
+        // Create admin@chongchoul.com user
+        \App\Models\User::updateOrCreate(
+            ['email' => 'admin@chongchoul.com'],
+            [
+                'name' => 'Admin User',
+                'phone' => '+855 12 345 678',
                 'password' => Hash::make('admin123'),
                 'role' => 'admin',
                 'is_verified' => true,
@@ -225,6 +242,59 @@ class DatabaseSeeder extends Seeder
                 $data + ['shop_id' => $shop->id]
             );
         }
+<<<<<<< HEAD
 >>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
+=======
+
+        $testUser = \App\Models\User::where('email', 'test@example.com')->first();
+        $vehicle = \App\Models\Vehicle::where('status', 'available')->first();
+
+        if ($testUser && $vehicle) {
+            $startDate = '2026-04-01';
+            $booking = Booking::updateOrCreate(
+                ['user_id' => $testUser->id, 'vehicle_id' => $vehicle->id, 'start_date' => $startDate],
+                [
+                    'shop_id' => $vehicle->shop_id,
+                    'total_days' => 3,
+                    'total_price' => 120,
+                    'status' => 'pending',
+                    'daily_rate' => 40,
+                    'rider_details' => 'John Doe · +855 12 345 678',
+                    'insurance_fee' => 5,
+                    'taxes_fee' => 3,
+                    'deposit_amount' => 0,
+                    'deposit_status' => 'unpaid',
+                ]
+            );
+
+            BookingStatusLog::firstOrCreate(
+                ['booking_id' => $booking->id, 'status' => $booking->status],
+                ['changed_at' => now()]
+            );
+
+            if (!NotificationRecord::where('related_type', Booking::class)
+                ->where('related_id', $booking->id)
+                ->where('title', 'Booking received')
+                ->exists()) {
+                NotificationService::bookingCreated($booking);
+            }
+
+            $message = Message::firstOrCreate(
+                [
+                    'sender_id' => $shopOwner->id,
+                    'receiver_id' => $testUser->id,
+                    'booking_id' => $booking->id,
+                    'subject' => 'Pickup reminder',
+                ],
+                ['body' => 'Thanks for choosing us! We will confirm the key exchange once the vehicle is ready.']
+            );
+
+            if (!NotificationRecord::where('related_type', Message::class)
+                ->where('related_id', $message->id)
+                ->exists()) {
+                NotificationService::messageReceived($message);
+            }
+        }
+>>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
     }
 }

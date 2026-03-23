@@ -130,10 +130,6 @@ onMounted(async () => {
         <p class="page-subtitle">Review and approve pending earnings distribution to rental partners.</p>
       </div>
 
-      <button type="button" class="btn btn-primary" @click="processAll" :disabled="isProcessingAll || payoutRows.length === 0">
-        <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-        <span>Process All Pending Payouts</span>
-      </button>
     </header>
 
 

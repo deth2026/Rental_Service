@@ -5,16 +5,17 @@ import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import HomeView from '../views/HomeView.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/user/Dashboard.vue';
-import UserBookings from '../views/user/MyBookings.vue';
-import PromotionView from '../views/user/Promotion.vue';
-import SettingUser from '../views/user/Setting_user.vue';
+import UserDashboard from '../views/users/Dashboard.vue';
+import UserBookings from '../views/users/MyBookings.vue';
+import PromotionView from '../views/users/Promotion.vue';
+import SettingUser from '../views/users/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/user/ShopVehicles.vue';
-import VehiclesByShop from '../views/user/VehiclesByShop.vue';
-import Booking from '../views/user/Booking.vue';
-import ViewDetail from '../views/user/ViewDetail.vue';
+import ShopVehicles from '../views/users/ShopVehicles.vue';
+import VehiclesByShop from '../views/users/VehiclesByShop.vue';
+import Booking from '../views/users/Booking.vue';
+import ViewDetail from '../views/users/ViewDetail.vue';
 import AdminLayout from '../views/admin/AdminLayout.vue';
+import UserNotifications from '../views/users/Notification.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
@@ -64,53 +65,7 @@ const router = createRouter({
       component: Login,
       meta: { guest: true, allowAuthenticated: true }
     },
-    {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: ShopDashboard,
-      meta: { requiresAuth: true, allowedRoles: ['shop_owner', 'admin'] }
-    },
-    {
-      path: '/view_shop',
-      name: 'view_shop',
-      component: UserDashboard,
-      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
-    },
-    {
-      path: '/booking/:id?',
-      name: 'booking',
-      component: Booking,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
-    },
-    {
-      path: '/bookings/:id?',
-      name: 'user-booking',
-      component: UserBookings,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
-    },
-    {
-      path: '/my-bookings',
-      name: 'my-bookings',
-      component: UserBookings,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
-    },
-    {
-      path: '/user/profile',
-      name: 'user-profile',
-      component: SettingUser,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
-    },
-    {
-      path: '/promotions',
-      name: 'promotions',
-      component: PromotionView,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: SettingUser
-    },
+    // Admin routes should be defined BEFORE shop routes to ensure proper matching
     {
       path: '/admin',
       component: AdminLayout,
@@ -171,11 +126,85 @@ const router = createRouter({
           component: () => import('../views/admin/ReportManagement.vue')
         },
         {
+          path: 'notifications',
+          name: 'admin-notifications',
+          component: () => import('../views/admin/Notification_admin.vue')
+        },
+        {
           path: 'settings',
           name: 'admin-settings',
-          component: () => import('../views/admin/SettingManagement.vue')
+          component: () => import('../views/admin/Admins_setting.vue')
+        },
+        {
+          path: 'profile',
+          name: 'admin-profile',
+          component: () => import('../views/admin/Update_profile_admin.vue')
         }
       ]
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: ShopDashboard,
+      meta: { requiresAuth: true, allowedRoles: ['shop_owner'] }
+    },
+    {
+      path: '/shop/notifications',
+      name: 'shop-notifications',
+      component: ShopDashboard,
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['shop_owner'],
+        defaultSection: 'notifications'
+      }
+    },
+    {
+      path: '/view_shop',
+      name: 'view_shop',
+      component: UserDashboard,
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/booking/:id?',
+      name: 'booking',
+      component: Booking,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/bookings/:id?',
+      name: 'user-booking',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/my-bookings',
+      name: 'my-bookings',
+      component: UserBookings,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/user/profile',
+      name: 'user-profile',
+      component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/promotions',
+      name: 'promotions',
+      component: PromotionView,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: SettingUser,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/notifications',
+      name: 'notifications',
+      component: UserNotifications,
+      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/vehicles',
@@ -194,6 +223,10 @@ const router = createRouter({
       name: 'shop-vehicles',
       component: ShopVehicles,
       meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/login'
     }
   ]
 });
@@ -202,7 +235,8 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isGuestOnly = to.matched.some(record => record.meta.guest);
-  const allowedRoles = to.matched.find(record => record.meta.allowedRoles)?.meta.allowedRoles || [];
+  // Get allowedRoles from the LAST matched record (most specific route)
+  const allowedRoles = [...to.matched].reverse().find(record => record.meta.allowedRoles)?.meta.allowedRoles || [];
   const isAuth = isAuthenticated();
   const userRole = getUserRole();
 
