@@ -17,8 +17,7 @@
   </transition>
 
   <!-- Location Permission Popup -->
-  <transition name="modal-fade">
-    <div v-if="showLocationPopup" class="location-popup-overlay">
+  <div v-if="showLocationPopup" class="location-popup-overlay">
       <div class="location-popup-card">
         <div class="popup-brand-header">
            <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="popup-logo-big" />
@@ -50,7 +49,6 @@
         </div>
       </div>
     </div>
-  </transition>
 
   <div v-if="!showSplash" class="home-page">
     <header class="top-nav">
@@ -202,6 +200,8 @@ import { reactive, onMounted, ref } from 'vue'
 
 const showSplash = ref(true)
 const showLocationPopup = ref(false)
+// DEBUG: Force show popup for testing - set to false after testing
+const FORCE_SHOW_POPUP = true
 const isLocationAllowed = ref(localStorage.getItem('chong_choul_location_granted') === 'true')
 const LOCATION_CACHE_KEY = 'chong_choul_user_location'
 
@@ -243,13 +243,14 @@ onMounted(() => {
   setTimeout(() => {
     showSplash.value = false
     
-    // Show the location permission popup 2 seconds AFTER the splash screen is gone
-    // ONLY if it hasn't been allowed yet (Security Measure)
-    setTimeout(() => {
-      if (!isLocationAllowed.value) {
+    // Show the location permission popup IMMEDIATELY after splash screen is gone
+    // ALWAYS show for testing (FORCE_SHOW_POPUP = true)
+    if (FORCE_SHOW_POPUP || localStorage.getItem('chong_choul_location_granted') !== 'true') {
+      // Use nextTick to ensure DOM is updated
+      setTimeout(() => {
         showLocationPopup.value = true
-      }
-    }, 2000)
+      }, 100)
+    }
   }, 2500)
 })
 
