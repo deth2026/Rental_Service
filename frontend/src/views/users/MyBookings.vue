@@ -1,11 +1,29 @@
 <script setup>
-import { computed, ref, reactive, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, reactive, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { vehicleService, userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 import '../../css/MyBookings.css'
 
 const router = useRouter()
+const route = useRoute()
+
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Booking', route: '/my-bookings' },
+  { label: 'Promotions', route: '/promotions' }
+]
+
+const activeNavLabel = computed(() => {
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
+  return matchedItem?.label || 'My Booking'
+})
+
+const handleLogout = async () => {
+  await userService.logout()
+  router.push('/login')
+}
 
 const activeTab = ref('all')
 const searchQuery = ref('')
@@ -186,7 +204,6 @@ const resetVisibleCount = () => {
 }
 
 // Reset visible count when filters change
-import { watch } from 'vue'
 watch([activeTab, searchQuery], () => {
   resetVisibleCount()
 })
@@ -549,6 +566,13 @@ const skipRating = () => {
 </script>
 
 <template>
+  <UserNavbar
+    :nav-items="navItems"
+    :active-label="activeNavLabel"
+    :show-fallback-message="false"
+    @logout-request="handleLogout"
+  />
+
   <div class="bookings-page">
     <section class="bookings-panel">
       <div class="panel-head">

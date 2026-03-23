@@ -17,6 +17,10 @@ class NotificationController extends Controller
 {
     public function index(Request $request)
     {
+        if (!Schema::hasTable('notifications')) {
+            return response()->json([]);
+        }
+
         $user = $request->user();
         $query = NotificationRecord::with([
             'user:id,name,email,profile_picture,img_url',
@@ -63,6 +67,10 @@ class NotificationController extends Controller
 
     public function markAllAsRead(Request $request)
     {
+        if (!Schema::hasTable('notifications')) {
+            return response()->json(['updated' => 0]);
+        }
+
         $user = $request->user();
         $query = NotificationRecord::where(function ($builder) use ($user) {
             $builder->where('user_id', $user->id);

@@ -1,0 +1,11 @@
+Connected to database
+Deleted all payments
+Found 7 bookings
+Created payment for booking 9
+Created payment for booking 10
+Created payment for booking 11
+Created payment for booking 12
+Created payment for booking 13
+Created payment for booking 14
+Created payment for booking 15
+Total payments after: 7

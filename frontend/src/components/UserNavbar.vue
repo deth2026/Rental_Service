@@ -108,7 +108,7 @@ const handleNavClick = (item) => {
   if (hasRoute) {
     router.push(item.route)
   } else if (props.showFallbackMessage) {
-    notify(item.fallbackMessage || 'My Bookings page is not available yet.')
+    notify(item.fallbackMessage || 'My Booking page is not available yet.')
   }
 
   emit('nav-click', item)
@@ -124,7 +124,7 @@ const requestLogout = () => {
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar user-navbar">
     <div class="brand">
       <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
       <span>Chong Choul</span>
@@ -143,7 +143,6 @@ const requestLogout = () => {
     </nav>
 
     <div class="top-actions">
-      <span class="user-display-name">{{ userDisplayName }}</span>
       <div class="notification-wrapper" ref="notificationRoot">
         <button
           type="button"
@@ -166,114 +165,120 @@ const requestLogout = () => {
 </template>
 
 <style scoped>
-.topbar {
-  width: 100%;
+.topbar.user-navbar {
+  width: auto;
   height: 74px;
-  padding: 0 32px;
-  display: flex;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: calc(32px + (50vw - 50%));
+  padding-block: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: 32px;
   background: #ffffff;
-  border-bottom: 1px solid #e4e7f0;
-  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+  border-bottom: 1px solid #d8dee7;
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 220;
+  box-sizing: border-box;
 }
 
-.brand {
+.topbar.user-navbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+.topbar.user-navbar .brand span {
+  color: #2563eb;
+}
+
+.topbar.user-navbar .brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #dbeafe;
+  display: grid;
+  place-items: center;
+}
+
+.topbar.user-navbar .brand-icon i {
+  color: #2563eb;
+  font-size: 1rem;
+}
+
+.topbar.user-navbar .nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  justify-self: center;
+}
+
+.topbar.user-navbar .nav-link {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.topbar.user-navbar .nav-link:hover {
+  background: #eef7ff;
+  color: #2563eb;
+}
+
+.topbar.user-navbar .nav-link.active {
+  background: #eef7ff;
+  color: #2563eb;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.topbar.user-navbar .top-actions {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1d4ed8;
+  justify-self: end;
+  white-space: nowrap;
 }
 
-.brand span {
-  color: #1d4ed8;
-}
-
-.brand-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
-  display: grid;
-  place-items: center;
-  box-shadow: inset 0 0 0 1px rgba(224, 229, 255, 0.9);
-}
-
-.brand-icon i {
-  color: #2563eb;
-  font-size: 1.1rem;
-}
-
-.nav-links {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-}
-
-.nav-link {
-  padding: 10px 26px;
-  border-radius: 999px;
-  border: 1px solid transparent;
-  color: #475569;
-  font-size: 0.95rem;
-  font-weight: 600;
-  background: transparent;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.nav-link:hover {
-  background: #eef2ff;
-  color: #1d4ed8;
-}
-
-.nav-link.active {
-  background: #dbeafe;
-  color: #1d4ed8;
-  border-color: #c7d2fe;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.notification-wrapper {
+.topbar.user-navbar .notification-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.notification-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 24px;
-  border: none;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-  color: #fff;
-  font-size: 1.1rem;
+.topbar.user-navbar .notification-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid #d8dee7;
+  background: #f4f8fc;
+  color: #2563eb;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.notification-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(124, 58, 237, 0.45);
+.topbar.user-navbar .notification-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
 }
 
-.notification-count {
+.topbar.user-navbar .notification-count {
   position: absolute;
   top: -4px;
   right: -4px;
@@ -286,45 +291,85 @@ const requestLogout = () => {
   font-weight: 700;
 }
 
-.user-display-name {
-  font-weight: 600;
-  color: #334155;
+.topbar.user-navbar .notification-popup {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 260;
 }
 
-@media (max-width: 1100px) {
-  .topbar {
-    padding: 0 20px;
+.topbar.user-navbar .notification-popup::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 18px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  transform: rotate(45deg);
+}
+
+.notification-fade-enter-active,
+.notification-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notification-fade-enter-from,
+.notification-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (max-width: 1080px) {
+  .topbar.user-navbar {
+    grid-template-columns: 1fr;
+    padding-inline: calc(20px + (50vw - 50%));
+    gap: 10px;
   }
 
-  .nav-links {
-    gap: 12px;
+  .topbar.user-navbar .nav-links {
+    justify-self: start;
+  }
+
+  .topbar.user-navbar .top-actions {
+    justify-self: start;
   }
 }
 
-@media (max-width: 820px) {
-  .topbar {
-    flex-wrap: wrap;
-    justify-content: center;
+@media (max-width: 640px) {
+  .topbar.user-navbar {
     height: auto;
-    padding: 12px 20px;
+    padding-block: 12px;
+    padding-inline: calc(12px + (50vw - 50%));
   }
 
-  .nav-links {
-    width: 100%;
-    order: 3;
+  .topbar.user-navbar .nav-links {
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: flex-start;
   }
 
-  .top-actions {
-    order: 2;
-    margin-top: 6px;
+  .topbar.user-navbar .top-actions {
+    gap: 8px;
   }
 
-  .brand {
-    order: 1;
-    width: 100%;
-    justify-content: center;
+  .topbar.user-navbar .brand {
+    font-size: 16px;
+  }
+
+  .topbar.user-navbar .brand-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .topbar.user-navbar .notification-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .topbar.user-navbar .notification-popup {
+    right: -6px;
   }
 }
 </style>

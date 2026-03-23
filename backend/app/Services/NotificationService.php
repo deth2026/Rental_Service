@@ -38,6 +38,7 @@ class NotificationService
     protected const TABLE_NAME = 'notifications';
 
     protected static ?bool $shopIdColumnExists = null;
+    protected static ?bool $notificationsTableExists = null;
 
     public static function bookingCreated(Booking $booking): ?NotificationRecord
     {
@@ -313,7 +314,13 @@ class NotificationService
 
     protected static function persistNotification(array $attributes): NotificationRecord
     {
-        return NotificationRecord::create(static::filterMissingColumns($attributes));
+        $attributes = static::filterMissingColumns($attributes);
+
+        if (!static::hasNotificationsTable()) {
+            return new NotificationRecord($attributes);
+        }
+
+        return NotificationRecord::create($attributes);
     }
 
     protected static function filterMissingColumns(array $attributes): array
@@ -342,5 +349,16 @@ class NotificationService
             Schema::hasColumn(static::TABLE_NAME, 'shop_id');
 
         return static::$shopIdColumnExists;
+    }
+
+    protected static function hasNotificationsTable(): bool
+    {
+        if (static::$notificationsTableExists !== null) {
+            return static::$notificationsTableExists;
+        }
+
+        static::$notificationsTableExists = Schema::hasTable(static::TABLE_NAME);
+
+        return static::$notificationsTableExists;
     }
 }

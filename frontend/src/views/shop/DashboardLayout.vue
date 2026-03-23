@@ -114,19 +114,6 @@ const normalizeVehicleImageUrl = (url) => {
   return `/${normalized}`;
 };
 
-const normalizeShopImageUrl = (url) => {
-  if (!url) return ''
-  if (/^https?:\/\//.test(url) || /^data:image\//.test(url)) return url
-  const normalized = String(url).replace(/^\/+/, '')
-  const origin = apiOrigin.value || ''
-  if (normalized.startsWith('storage/')) return `${origin}/${normalized}`
-  if (normalized.startsWith('shops/')) return `${origin}/storage/${normalized}`
-  return `${origin}/${normalized}`
-}
-
-const shopAvatarFallback =
-  'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80'
-
 const displayAvatarUrl = computed(() => {
   if (avatarLoadFailed.value) return "";
   return normalizeAvatarUrl(
@@ -448,6 +435,7 @@ const saveShop = async () => {
   isLoadingShop.value = true;
   try {
     const ownerId = Number(sessionUser.value?.id || getUserId());
+    let savedShop = null;
 
     // If an image file has been selected, use FormData to send multipart request
     if (shopImageFile.value) {
@@ -468,15 +456,17 @@ const saveShop = async () => {
 
       if (shop.value?.id) {
         // Update existing shop
-        await api.post(`/shops/${shop.value.id}?_method=PUT`, formData, {
+        const response = await api.post(`/shops/${shop.value.id}?_method=PUT`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
+        savedShop = response.data;
         showToast("Shop updated successfully!", "success");
       } else {
         // Create new shop
         const response = await api.post("/shops", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
+        savedShop = response.data;
         shop.value = response.data;
         showToast("Shop created successfully!", "success");
       }
@@ -497,11 +487,13 @@ const saveShop = async () => {
 
       if (shop.value?.id) {
         // Update existing shop
-        await api.put(`/shops/${shop.value.id}`, payload);
+        const response = await api.put(`/shops/${shop.value.id}`, payload);
+        savedShop = response.data;
         showToast("Shop updated successfully!", "success");
       } else {
         // Create new shop
         const response = await api.post("/shops", payload);
+        savedShop = response.data;
         shop.value = response.data;
         showToast("Shop created successfully!", "success");
       }
@@ -512,9 +504,18 @@ const saveShop = async () => {
     shopImageFile.value = null;
     shopImagePreview.value = "";
     await fetchShop();
+    await loadOwnerShopName();
+    form.shop = savedShop?.name || shop.value?.name || currentShopName.value;
   } catch (error) {
     console.error("Error saving shop:", error);
-    showToast("Failed to save shop. Please try again.", "error");
+    const validationErrors = error.response?.data?.errors;
+    const firstValidationError = validationErrors
+      ? Object.values(validationErrors)[0]
+      : null;
+    const errorMessage = Array.isArray(firstValidationError)
+      ? firstValidationError[0]
+      : firstValidationError || error.response?.data?.message || "Failed to save shop. Please try again.";
+    showToast(errorMessage, "error");
   } finally {
     isLoadingShop.value = false;
   }
@@ -639,7 +640,6 @@ const fetchVehicles = async () => {
     const response = await vehicleApi.getAll();
     const allVehicles = response.data.data || response.data || [];
     
-    // Filter vehicles by shop_id
     vehicles.value = allVehicles
       .filter((v) => Number(v.shop_id) === Number(shopId))
       .map((v) => {
@@ -662,6 +662,10 @@ const fetchVehicles = async () => {
           fuel: v.fuel_type,
           fuel_type: v.fuel_type,
           transmission: v.transmission,
+          totalVehiclesInput: v.total_vehicles ?? 1,
+          riderDetails: v.rider_details ?? "",
+          insuranceFee: v.insurance_fee ?? "",
+          taxesFee: v.taxes_fee ?? "",
           createdAt: createdAtValue,
           updatedAt: v.updated_at,
           image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
@@ -697,6 +701,10 @@ const form = reactive({
   price: "",
   fuel: "",
   transmission: "",
+  totalVehiclesInput: 1,
+  riderDetails: "",
+  insuranceFee: "",
+  taxesFee: "",
   status: "Available",
   description: "",
   shop: "",
@@ -704,6 +712,15 @@ const form = reactive({
   createdAt: "",
   updatedAt: "",
 });
+
+const normalizeOptionalNumber = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const currentShopName = ref("No Shop Found");
 
@@ -720,11 +737,6 @@ const getUserId = () => {
     return 1;
   }
 };
-
-const shopImageUrl = computed(() => {
-  if (!shop.value?.img_url) return ''
-  return normalizeShopImageUrl(shop.value.img_url)
-})
 
 const loadOwnerShopName = async () => {
   try {
@@ -952,6 +964,10 @@ const openCreate = async () => {
     price: "",
     fuel: "",
     transmission: "",
+    totalVehiclesInput: 1,
+    riderDetails: "",
+    insuranceFee: "",
+    taxesFee: "",
     status: "Available",
     description: "",
     shop: currentShopName.value,
@@ -972,6 +988,10 @@ const openEdit = (v) => {
     price: v.price || "",
     fuel: v.fuel || "",
     transmission: v.transmission || "",
+    totalVehiclesInput: v.totalVehiclesInput ?? 1,
+    riderDetails: v.riderDetails || "",
+    insuranceFee: v.insuranceFee ?? "",
+    taxesFee: v.taxesFee ?? "",
     status: v.status || "Available",
     description: v.description || "",
     shop: v.shop || currentShopName.value,
@@ -1030,6 +1050,10 @@ const saveVehicle = async () => {
     shop_id: shopId,
     fuel: form.fuel,
     transmission: form.transmission,
+    total_vehicles: normalizeOptionalNumber(form.totalVehiclesInput) ?? 1,
+    rider_details: form.riderDetails,
+    insurance_fee: normalizeOptionalNumber(form.insuranceFee),
+    taxes_fee: normalizeOptionalNumber(form.taxesFee),
     photos: form.image ? [form.image] : [],
     previewUrl: form.image,
   };
@@ -1037,13 +1061,31 @@ const saveVehicle = async () => {
   try {
     if (editId.value) {
       // Update existing vehicle
-      await vehicleApi.update(editId.value, payload);
+      const response = await vehicleApi.update(editId.value, payload);
+      const updatedData = response.data;
       const index = vehicles.value.findIndex((v) => v.id === editId.value);
       if (index >= 0) {
         vehicles.value[index] = {
           ...vehicles.value[index],
           ...payload,
-          image: form.image,
+          name: updatedData.name,
+          type: updatedData.type,
+          category: updatedData.type,
+          brand: updatedData.brand,
+          plate: updatedData.plate_number,
+          price: updatedData.price_per_day,
+          status: updatedData.status,
+          description: updatedData.description,
+          fuel: updatedData.fuel_type,
+          transmission: updatedData.transmission,
+          totalVehiclesInput: updatedData.total_vehicles ?? form.totalVehiclesInput ?? 1,
+          riderDetails: updatedData.rider_details ?? "",
+          insuranceFee: updatedData.insurance_fee ?? "",
+          taxesFee: updatedData.taxes_fee ?? "",
+          image:
+            updatedData.image_url_full ||
+            normalizeVehicleImageUrl(updatedData.image_url || "") ||
+            form.image,
           updatedAt: khTime(),
         };
       }
@@ -1052,12 +1094,30 @@ const saveVehicle = async () => {
     } else {
       // Create new vehicle - wait for API response
       const response = await vehicleApi.create(payload);
+      const newData = response.data;
 
       // Add vehicle to list with real ID from server
       vehicles.value.unshift({
-        id: response.data.id,
+        id: newData.id,
         ...payload,
-        image: form.image,
+        name: newData.name,
+        type: newData.type,
+        category: newData.type,
+        brand: newData.brand,
+        plate: newData.plate_number,
+        price: newData.price_per_day,
+        status: newData.status,
+        description: newData.description,
+        fuel: newData.fuel_type,
+        transmission: newData.transmission,
+        totalVehiclesInput: newData.total_vehicles ?? form.totalVehiclesInput ?? 1,
+        riderDetails: newData.rider_details ?? "",
+        insuranceFee: newData.insurance_fee ?? "",
+        taxesFee: newData.taxes_fee ?? "",
+        image:
+          newData.image_url_full ||
+          normalizeVehicleImageUrl(newData.image_url || "") ||
+          form.image,
         createdAt: khTime(),
         updatedAt: khTime(),
       });
@@ -1199,11 +1259,7 @@ const iconSvg = (name) => {
         </span>
       </button>
       <div class="menu-area">
-        <div class="menu-title">
-          <span class="menu-title-icon" v-html="iconSvg('grid')"></span>
-          <span class="menu-title-text">Menu</span>
-          <span class="menu-title-line"></span>
-        </div>
+        <div class="menu-title">MENU</div>
         <button
           v-for="item in sections"
           :key="item.id"
@@ -1619,6 +1675,15 @@ const iconSvg = (name) => {
                   placeholder="e.g. 2023 Luxury Sedan White"
                 />
               </div>
+              <div class="form-group">
+                  <label>Total Vehicles</label>
+                  <input
+                    v-model="form.totalVehiclesInput"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                  />
+                </div>
               <div class="form-row">
                 <div class="form-group">
                   <label>Category</label>
@@ -1634,6 +1699,39 @@ const iconSvg = (name) => {
                   <input
                     v-model="form.brand"
                     placeholder="e.g. Toyota, Honda"
+                  />
+                </div>
+              </div>
+            </div>
+            <!-- Vehicle Information -->
+            <div class="form-card">
+              <h3 class="card-title">Booking</h3>
+              <div class="form-group">
+
+                  <label>Rider Details</label>
+                  <select v-model="form.riderDetails">
+                    <option value="" disabled>Select Rider Details</option>
+                    <option>1 Rider</option>
+                    <option>2 Riders</option>
+                    <option>3 Riders</option>
+                    <option>4+ Riders</option>
+                  </select>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Insurance Fee ($)</label>
+                  <input
+                    v-model="form.insuranceFee"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Taxes & Fees ($)</label>
+                  <input
+                    v-model="form.taxesFee"
+                    type="number"
+                    placeholder="$ 0.00"
                   />
                 </div>
               </div>
@@ -2349,46 +2447,10 @@ const iconSvg = (name) => {
 }
 
 .menu-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: #6f84b5;
   padding: 8px 10px;
-  margin: 6px 6px 10px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #a8bce8;
-  background: linear-gradient(90deg, rgba(15, 33, 72, 0.8), rgba(15, 33, 72, 0.2));
-  border: 1px solid rgba(53, 78, 128, 0.6);
-}
-
-.menu-title-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #67e8f9;
-  background: rgba(34, 211, 238, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.28);
-  flex: 0 0 22px;
-}
-
-.menu-title-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
-}
-
-.menu-title-text {
-  line-height: 1;
-}
-
-.menu-title-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.55), rgba(148, 163, 184, 0));
 }
 
 .menu-item {
@@ -3225,7 +3287,8 @@ textarea {
     font-size: 24px;
   }
 
-  .brand p {
+  .brand p,
+  .menu-title {
     font-size: 14px;
   }
 

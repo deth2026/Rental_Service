@@ -1,29 +1,11 @@
 <template>
   <div class="motoride-container">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          <i :class="getNavIcon(item)" class="nav-icon"></i>
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="content">
       <p v-if="isLoading" class="action-message">Loading vehicle details...</p>
@@ -88,16 +70,20 @@
                 <p class="booking-card-subtitle">Select options and review the total.</p>
               </div>
             </div>
+            
             <div class="price-row">
               <span class="price-label">
-                <i class="fas fa-user"></i>
-                Rider Details
+                <i class="fas fa-calendar"></i>
+                Duration
               </span>
-              <select v-model="riderDetails" class="rider-select">
-                <option value="1 Rider">1 Rider</option>
-                <option value="2 Riders">2 Riders</option>
-                <option value="3 Riders">3 Riders</option>
-                <option value="4+ Riders">4+ Riders</option>
+              <select v-model.number="bookingDuration" class="rider-select">
+                <option :value="1">1 Day</option>
+                <option :value="2">2 Days</option>
+                <option :value="3">3 Days</option>
+                <option :value="4">4 Days</option>
+                <option :value="5">5 Days</option>
+                <option :value="10">10 Days</option>
+                <option :value="30">30 Days</option>
               </select>
             </div>
             <div class="price-row">
@@ -110,12 +96,9 @@
             <div class="price-row">
               <span class="price-label">
                 <i class="fas fa-users"></i>
-                Riders
+                Rider Details
               </span>
-              <span class="price-value"
-                >{{ riderCount }}
-                {{ riderCount === 1 ? "Rider" : "Riders" }}</span
-              >
+              <span class="rider-info">{{ riderDetails }}</span>
             </div>
             <div class="price-row price-row-toggle">
               <label class="toggle-label">
@@ -144,7 +127,7 @@
               </span>
               <span class="price-blue">{{ formatCurrency(totalPrice) }}</span>
             </div>
-            <button class="book-btn" @click="goToBooking">
+            <button class="book-btn" @click="showBookingConfirmModal">
               <i class="fas fa-check-circle"></i>
               Book This Bike
             </button>
@@ -299,7 +282,150 @@
       </template>
     </main>
 
-    <footer class="site-footer">
+    <!-- Booking Confirmation Modal -->
+    <div v-if="showBookingConfirm" class="modal-overlay" @click="cancelBooking">
+      <div class="modal-content animate-modal" @click.stop>
+        <div class="modal-header">
+          <div class="modal-icon">
+            <i class="fas fa-calendar-check"></i>
+          </div>
+          <div class="modal-title">
+            <h3>Confirm Your Booking</h3>
+            <p>Please review your booking details</p>
+          </div>
+          <button class="modal-close-btn" @click="cancelBooking">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="booking-summary">
+            <div class="summary-item">
+              <div class="summary-icon">
+                <i class="fas fa-motorcycle"></i>
+              </div>
+              <div class="summary-content">
+                <span class="summary-label">Vehicle</span>
+                <span class="summary-value">{{ vehicleName }}</span>
+              </div>
+            </div>
+
+            <div class="summary-item">
+              <div class="summary-icon">
+                <i class="fas fa-store"></i>
+              </div>
+              <div class="summary-content">
+                <span class="summary-label">Shop</span>
+                <span class="summary-value">{{ vehicleShopName }}</span>
+              </div>
+            </div>
+
+            <div class="summary-item">
+              <div class="summary-icon">
+                <i class="fas fa-clock"></i>
+              </div>
+              <div class="summary-content">
+                <span class="summary-label">Duration</span>
+                <span class="summary-value">{{ bookingDurationLabel }}</span>
+              </div>
+            </div>
+
+            <div class="summary-item total-item">
+              <div class="summary-icon">
+                <i class="fas fa-dollar-sign"></i>
+              </div>
+              <div class="summary-content">
+                <span class="summary-label">Total Price</span>
+                <span class="summary-value total-price">{{ formatCurrency(totalPrice) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="booking-notice">
+            <div class="notice-icon">
+              <i class="fas fa-info-circle"></i>
+            </div>
+            <p v-if="!hasValidBookingDuration">Please select at least 1 day before confirming your booking.</p>
+            <p v-else>By confirming this booking, you agree to our terms and conditions. Cancellation policy applies.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-cancel" @click="cancelBooking" :disabled="isBooking">
+            <i class="fas fa-times"></i>
+            Cancel
+          </button>
+          <button class="btn-confirm" @click="confirmBooking" :disabled="isBooking || !hasValidBookingDuration">
+            <i v-if="isBooking" class="fas fa-spinner fa-spin"></i>
+            <i v-else class="fas fa-check"></i>
+            <span v-if="isBooking">Processing...</span>
+            <span v-else>Confirm Booking</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showBookingSuccess" class="modal-overlay">
+      <div class="success-modal booking-status-modal animate-modal" @click.stop>
+        <div class="booking-status-hero">
+          <div v-if="bookingFlowState === 'processing'" class="booking-loader-wrap" aria-hidden="true">
+            <div class="booking-loader-circle"></div>
+            <div class="booking-loader-core"></div>
+          </div>
+
+          <div v-else class="booking-check-wrap" aria-hidden="true">
+            <svg class="booking-check-svg" viewBox="0 0 120 120" fill="none">
+              <circle class="booking-check-ring" cx="60" cy="60" r="46" />
+              <path class="booking-check-path" d="M38 62l14 14 30-32" />
+            </svg>
+          </div>
+        </div>
+
+        <span class="booking-status-kicker">
+          {{ bookingFlowState === "processing" ? "Processing Booking" : "Booking Confirmed" }}
+        </span>
+        <h3>{{ bookingFlowState === "processing" ? "Please wait a moment" : "Booking Successful" }}</h3>
+        <p class="booking-status-text">
+          {{
+            bookingFlowState === "processing"
+              ? "We are confirming your booking and preparing the final details."
+              : "Your booking was created successfully. Here is a quick summary."
+          }}
+        </p>
+
+        <div v-if="bookingFlowState === 'success'" class="success-booking-card">
+          <div class="success-booking-row">
+            <span>Vehicle</span>
+            <strong>{{ vehicleName }}</strong>
+          </div>
+          <div class="success-booking-row">
+            <span>Booking Date</span>
+            <strong>{{ bookingDateRangeLabel }}</strong>
+          </div>
+          <div class="success-booking-row">
+            <span>Quantity</span>
+            <strong>{{ bookingQuantityLabel }}</strong>
+          </div>
+          <div class="success-booking-row">
+            <span>Total Price</span>
+            <strong class="success-booking-total">{{ formatCurrency(totalPrice) }}</strong>
+          </div>
+        </div>
+
+        <div v-if="bookingFlowState === 'success'" class="success-actions">
+          <button class="success-secondary-btn" @click="goToUserDashboard">
+            Later
+          </button>
+          <button class="success-primary-btn" @click="goToPaymentPage">
+            Pay Now
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Common Footer -->
+    <UserFooter class="detail-page-footer" />
+    <footer v-if="false" class="site-footer">
       <div class="footer-wrap">
         <div class="footer-top">
           <div class="footer-brand">
@@ -318,12 +444,10 @@
 
           <div class="footer-nav">
             <div class="footer-nav-links">
-              <button class="btn-reset footer-nav-link" type="button">About</button>
-              <button class="btn-reset footer-nav-link" type="button">Blog</button>
-              <button class="btn-reset footer-nav-link" type="button">Menu</button>
-              <button class="btn-reset footer-nav-link" type="button">Services</button>
-              <button class="btn-reset footer-nav-link" type="button">FAQ</button>
-              <button class="btn-reset footer-nav-link" type="button">Support</button>
+              <button class="btn-reset footer-nav-link" type="button">Home</button>
+              <button class="btn-reset footer-nav-link" type="button">View Detail</button>
+              <button class="btn-reset footer-nav-link" type="button">Booking</button>
+              <button class="btn-reset footer-nav-link" type="button">Promotion</button>
             </div>
 
             <div class="footer-about">
@@ -365,21 +489,40 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
-import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import UserNavbar from '@/components/UserNavbar.vue';
+import UserFooter from '@/components/UserFooter.vue';
+import {
+  parseDateInputValue,
+  parseQuantityValue,
+} from "@/utils/bookingAvailability";
 
 const router = useRouter();
 const route = useRoute();
 
-const navItems = ["Home", "View Details", "Bookings"];
-const activeNav = ref("Home");
+const navItems = [
+  { label: "Home", route: "/view_shop" },
+  { label: "My Booking", route: "/my-bookings" },
+  { label: "Promotions", route: "/promotions" },
+];
 const actionMessage = ref("");
 const avatarLoadFailed = ref(false);
 const currentUser = computed(() => userService.getCurrentUser());
-const userDisplayName = computed(() => currentUser.value?.name || "customer");
+const activeNavLabel = computed(() => {
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route));
+  return matchedItem?.label || "Home";
+});
+
+// Booking confirmation modal
+const showBookingConfirm = ref(false);
+const showBookingSuccess = ref(false);
+const isBooking = ref(false);
+const createdBookingRecordId = ref(null);
+const bookingFlowState = ref("idle");
+let bookingFlowTimer = null;
 
 const normalizeAvatarUrl = (url) => {
   if (!url) return "";
@@ -389,47 +532,169 @@ const normalizeAvatarUrl = (url) => {
   return `/storage/${normalized}`;
 };
 
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return "";
-  const src =
-    currentUser.value?.avatar_url ||
-    currentUser.value?.profile_picture ||
-    currentUser.value?.img_url ||
-    "";
-  return normalizeAvatarUrl(src);
-});
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
-};
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value)
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-  if (words.length === 0) return "CU";
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ""}${words[1][0] || ""}`.toUpperCase();
-});
-
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === "Home") {
-    router.replace("/view_shop");
-    return;
-  }
-  actionMessage.value = `${item} is not available yet.`;
-};
-
-const openProfile = () => {
-  router.push("/user/profile");
-};
-
 const handleLogout = async () => {
   await userService.logout();
   router.push("/login");
 };
+
+const showBookingConfirmModal = () => {
+  showBookingConfirm.value = true;
+};
+
+const cancelBooking = () => {
+  showBookingConfirm.value = false;
+};
+
+const clearBookingFlowTimer = () => {
+  if (bookingFlowTimer !== null) {
+    window.clearTimeout(bookingFlowTimer);
+    bookingFlowTimer = null;
+  }
+};
+
+const waitForBookingFlow = (ms) =>
+  new Promise((resolve) => {
+    clearBookingFlowTimer();
+    bookingFlowTimer = window.setTimeout(() => {
+      bookingFlowTimer = null;
+      resolve();
+    }, ms);
+  });
+
+const closeBookingSuccessModal = () => {
+  showBookingSuccess.value = false;
+  bookingFlowState.value = "idle";
+  clearBookingFlowTimer();
+};
+
+const parseRouteDate = (value) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return parseDateInputValue(raw) ? String(raw).trim() : "";
+};
+
+const selectedBookingStartDate = computed(() => {
+  return parseRouteDate(route.query.startDate) || new Date().toISOString().split("T")[0];
+});
+
+const selectedBookingEndDate = computed(() => parseRouteDate(route.query.endDate));
+
+const syncBookingDurationFromRoute = () => {
+  const startDate = parseRouteDate(route.query.startDate);
+  const endDate = parseRouteDate(route.query.endDate);
+  if (!startDate || !endDate) return;
+
+  const start = parseDateInputValue(startDate);
+  const end = parseDateInputValue(endDate);
+  if (!start || !end) return;
+
+  const diffDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays > 0) {
+    bookingDuration.value = diffDays;
+  }
+};
+
+const goToUserDashboard = () => {
+  closeBookingSuccessModal();
+  router.push({ name: "view_shop" });
+};
+
+const goToPaymentPage = () => {
+  const currentVehicleId = route.params.id || vehicle.value?.id || 1;
+  const query = {
+    insuranceFee: String(insuranceAmount.value),
+    taxesFee: String(taxesAmount.value),
+    includeInsurance: includeInsurance.value ? "1" : "0",
+    includeTaxes: includeTaxes.value ? "1" : "0",
+    totalDays: String(bookingDuration.value),
+    startDate: selectedBookingStartDate.value,
+  };
+
+  if (selectedBookingEndDate.value) {
+    query.endDate = selectedBookingEndDate.value;
+  }
+
+  if (riderDetails.value) {
+    query.riderDetails = riderDetails.value;
+  }
+
+  if (createdBookingRecordId.value) {
+    query.bookingRecordId = String(createdBookingRecordId.value);
+  }
+
+  closeBookingSuccessModal();
+  router.push({ name: "booking", params: { id: currentVehicleId }, query });
+};
+
+const confirmBooking = async () => {
+  if (!vehicle.value) return;
+  if (bookingDuration.value <= 0) {
+    alert("Please select at least 1 day.");
+    return;
+  }
+
+  const authToken = localStorage.getItem("auth_token") || localStorage.getItem("token");
+  if (!authToken || !currentUser.value?.id) {
+    alert("Please log in before creating a booking.");
+    router.push("/login");
+    return;
+  }
+
+  isBooking.value = true;
+  createdBookingRecordId.value = null;
+  showBookingConfirm.value = false;
+  showBookingSuccess.value = true;
+  bookingFlowState.value = "processing";
+  const requestStartedAt = Date.now();
+  try {
+    const bookingData = {
+      user_id: currentUser.value.id,
+      vehicle_id: vehicle.value.id,
+      shop_id: vehicle.value.shop_id ?? null,
+      coupon_id: null,
+      start_date: selectedBookingStartDate.value,
+      total_days: bookingDuration.value,
+      rider_details: riderDetails.value || null,
+      daily_rate: Number(dailyRate.value || 0),
+      insurance_fee: includeInsurance.value ? Number(insuranceFee.value) : 0,
+      taxes_fee: includeTaxes.value ? Number(taxesFee.value) : 0,
+      total_price: Number(totalPrice.value || 0),
+      status: 'pending',
+      deposit_amount: 0,
+      deposit_status: 'unpaid',
+    };
+
+    const response = await api.post('/bookings', bookingData);
+    const record = response?.data?.data || response?.data;
+    const recordId = Number(record?.id);
+    createdBookingRecordId.value = Number.isFinite(recordId) && recordId > 0 ? recordId : null;
+    const elapsed = Date.now() - requestStartedAt;
+    const remainingSpinnerTime = Math.max(700 - elapsed, 0);
+    if (remainingSpinnerTime > 0) {
+      await waitForBookingFlow(remainingSpinnerTime);
+    }
+    bookingFlowState.value = "success";
+
+  } catch (error) {
+    closeBookingSuccessModal();
+    console.error('Booking error:', error);
+    const firstValidationMessage = Object.values(error?.response?.data?.errors || {})
+      .flat()
+      .find(Boolean);
+    const message =
+      firstValidationMessage ||
+      error?.response?.data?.message ||
+      (error?.response?.status === 401 ? 'Your session has expired. Please log in again.' : '') ||
+      error?.message ||
+      'Failed to create booking. Please try again.';
+    alert(message);
+  } finally {
+    isBooking.value = false;
+  }
+};
+
+onBeforeUnmount(() => {
+  clearBookingFlowTimer();
+});
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -447,9 +712,11 @@ const shopNamesById = ref({});
 const isLoading = ref(false);
 const loadingError = ref("");
 const insuranceFee = ref(30);
+const taxesFee = ref(0);
 const includeInsurance = ref(false);
 const includeTaxes = ref(false);
 const riderDetails = ref("1 Rider");
+const bookingDuration = ref(1);
 const currentImageIndex = ref(0);
 const isFavorite = ref(false);
 const vehicleId = computed(() => {
@@ -457,7 +724,17 @@ const vehicleId = computed(() => {
   return Number.isFinite(value) && value > 0 ? value : null;
 });
 
-const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
+const getVehicleName = (item) => {
+  const explicitName = String(item?.name || "").trim();
+  if (explicitName) return explicitName;
+
+  const fallbackName = [item?.brand, item?.model]
+    .filter((part) => String(part || "").trim())
+    .join(" ")
+    .trim();
+
+  return fallbackName;
+};
 const getVehicleShop = (item) =>
   item?.shop_id
     ? shopNamesById.value[item.shop_id] || "Unknown Shop"
@@ -494,16 +771,54 @@ const vehicleTransmission = computed(
 const vehicleFuel = computed(() => vehicle.value?.fuel_type || "N/A");
 const vehicleType = computed(() => vehicle.value?.type || "Vehicle");
 const vehicleImage = computed(() => getVehicleImage(vehicle.value));
+const hasValidBookingDuration = computed(() => Number(bookingDuration.value) > 0);
+const bookingDurationLabel = computed(() => {
+  const days = Number(bookingDuration.value || 0);
+  return `${days} ${days === 1 ? "Day" : "Days"}`;
+});
+
+const formatBookingDateLabel = (value) => {
+  const parsed = parseDateInputValue(value);
+  if (!parsed) return "";
+  return parsed.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const bookingEndDateLabel = computed(() => {
+  if (selectedBookingEndDate.value) {
+    return formatBookingDateLabel(selectedBookingEndDate.value);
+  }
+
+  const start = parseDateInputValue(selectedBookingStartDate.value);
+  const totalDays = Number(bookingDuration.value || 0);
+  if (!start || totalDays <= 0) return "";
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + totalDays);
+  return end.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+});
+
+const bookingDateRangeLabel = computed(() => {
+  const start = formatBookingDateLabel(selectedBookingStartDate.value);
+  const end = bookingEndDateLabel.value;
+  if (start && end) return `${start} -> ${end}`;
+  return start || "Selected dates";
+});
+
+const bookingQuantityLabel = computed(() => "1 Vehicle");
 
 const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
 const riderCount = computed(() => {
-  const match = String(riderDetails.value).match(/^\s*(\d+)/);
-  if (!match) return 1;
-  const count = Number(match[1]);
-  return Number.isFinite(count) && count > 0 ? count : 1;
+  return parseQuantityValue(riderDetails.value, 1);
 });
-const baseAmount = computed(() => dailyRate.value * riderCount.value);
-const taxesFee = computed(() => baseAmount.value * 0.1);
+const baseAmount = computed(() => dailyRate.value * riderCount.value * bookingDuration.value);
 
 const insuranceAmount = computed(() =>
   includeInsurance.value ? Number(insuranceFee.value || 0) : 0,
@@ -584,6 +899,28 @@ const loadVehicleDetail = async () => {
   }
 };
 
+// Watch for vehicle data changes and update fee values from backend
+watch(
+  () => vehicle.value,
+  (newVehicle) => {
+    if (newVehicle) {
+      // Update insurance fee from backend data
+      if (newVehicle.insurance_fee !== undefined && newVehicle.insurance_fee !== null) {
+        insuranceFee.value = Number(newVehicle.insurance_fee);
+      }
+      // Update taxes fee from backend data
+      if (newVehicle.taxes_fee !== undefined && newVehicle.taxes_fee !== null) {
+        taxesFee.value = Number(newVehicle.taxes_fee);
+      }
+      // Update rider details from backend data if available
+      if (newVehicle.rider_details) {
+        riderDetails.value = newVehicle.rider_details;
+      }
+    }
+  },
+  { immediate: true }
+);
+
 const goToBooking = () => {
   const vehicleId = route.params.id;
   const insuranceValue = Number(insuranceAmount.value);
@@ -641,7 +978,16 @@ const viewAllPhotos = () => {
   console.log('Viewing all photos');
 };
 
+watch(
+  () => [route.query.startDate, route.query.endDate],
+  () => {
+    syncBookingDurationFromRoute();
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
+  syncBookingDurationFromRoute();
   loadVehicleDetail();
 });
 </script>
@@ -655,6 +1001,13 @@ onMounted(() => {
   color: #1a1d23;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
+  padding: 0 40px;
+}
+
+.detail-page-footer {
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
 }
 
 .btn-reset {
@@ -673,7 +1026,10 @@ onMounted(() => {
   grid-template-columns: auto 1fr auto;
   gap: 32px;
   align-items: center;
-  padding: 14px 24px;
+  width: calc(100% + 80px);
+  margin-left: -40px;
+  margin-right: -40px;
+  padding: 14px 20px;
   background: #fff;
   border-bottom: 1px solid #d8dee7;
   box-sizing: border-box;
@@ -685,11 +1041,8 @@ onMounted(() => {
   gap: 16px;
   font-size: 20px;
   font-weight: 700;
-  color: #1d4ed8;
+  color: #2563eb;
   white-space: nowrap;
-}
-.brand span {
-  margin-right: 0;
 }
 
 .brand-icon {
@@ -707,9 +1060,8 @@ onMounted(() => {
 
 .nav-links {
   display: flex;
-  gap: 50px;
+  gap: 24px;
   justify-self: center;
-  margin-right: 0;
 }
 
 .nav-link {
@@ -780,9 +1132,9 @@ onMounted(() => {
 
 /* Main Content */
 .content {
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 22px 0 36px;
 }
 
 .action-message {
@@ -1826,6 +2178,10 @@ onMounted(() => {
 }
 
 .book-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
   width: 100%;
   background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   color: white;
@@ -1834,8 +2190,9 @@ onMounted(() => {
   border-radius: 16px;
   font-weight: 700;
   font-size: 1.1rem;
+  text-align: center;
   cursor: pointer;
-  margin-top: 18px;
+  margin: 18px auto 0;
   transition: all 0.3s ease;
   box-shadow: 0 8px 25px rgba(29, 78, 216, 0.3);
 }
@@ -2151,8 +2508,21 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .motoride-container {
+    padding: 0 16px;
+  }
+
+  .detail-page-footer {
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-right: -16px;
+  }
+
   .topbar {
     grid-template-columns: 1fr;
+    width: calc(100% + 32px);
+    margin-left: -16px;
+    margin-right: -16px;
     gap: 10px;
     padding: 12px 16px;
   }
@@ -2167,7 +2537,7 @@ onMounted(() => {
   }
 
   .content {
-    padding: 1rem;
+    padding: 1rem 0;
   }
 
   .name-label h2 {
@@ -2201,8 +2571,21 @@ onMounted(() => {
 }
 
 @media (max-width: 480px) {
+  .motoride-container {
+    padding: 0 12px;
+  }
+
+  .detail-page-footer {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+
   .topbar {
-    padding: 12px 16px;
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    margin-right: -12px;
+    padding: 12px;
   }
 
   .brand {
@@ -2222,6 +2605,613 @@ onMounted(() => {
   .view-all {
     padding: 0.5rem 1rem;
     font-size: 0.9rem;
+  }
+}
+/* Booking Confirmation Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+}
+
+.success-modal {
+  width: 100%;
+  max-width: 440px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 28px;
+  border: 1px solid #dbe7f4;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
+  padding: 34px 30px 28px;
+  text-align: center;
+  animation: slideUp 0.3s ease;
+}
+
+.booking-status-modal::before {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin: -34px -30px 28px;
+  background: linear-gradient(90deg, #1d4ed8 0%, #38bdf8 100%);
+}
+
+.booking-status-hero {
+  margin-bottom: 14px;
+}
+
+.booking-loader-wrap,
+.booking-check-wrap {
+  width: 112px;
+  height: 112px;
+  margin: 0 auto;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.booking-loader-circle {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: 6px solid rgba(59, 130, 246, 0.15);
+  border-top-color: #2563eb;
+  border-right-color: #38bdf8;
+  animation: bookingSpin 0.9s linear infinite;
+}
+
+.booking-loader-core {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: radial-gradient(circle at top, #ffffff 0%, #dbeafe 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.booking-check-wrap {
+  border-radius: 50%;
+  background: radial-gradient(circle at top, rgba(187, 247, 208, 0.7), rgba(220, 252, 231, 0.2));
+}
+
+.booking-check-svg {
+  width: 112px;
+  height: 112px;
+  filter: drop-shadow(0 14px 30px rgba(34, 197, 94, 0.2));
+}
+
+.booking-check-ring,
+.booking-check-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.booking-check-ring {
+  stroke: #22c55e;
+  stroke-width: 6;
+  stroke-dasharray: 289;
+  stroke-dashoffset: 289;
+  animation: bookingCircleReveal 0.55s ease forwards;
+}
+
+.booking-check-path {
+  stroke: #16a34a;
+  stroke-width: 7;
+  stroke-dasharray: 64;
+  stroke-dashoffset: 64;
+  animation: bookingCheckReveal 0.35s ease 0.45s forwards;
+}
+
+.booking-status-kicker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.success-modal h3 {
+  margin: 0 0 10px;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.success-modal p {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.booking-status-text {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.success-booking-card {
+  margin-top: 20px;
+  border-radius: 20px;
+  border: 1px solid #dbe7f4;
+  background: #ffffff;
+  box-shadow: 0 14px 30px rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+  text-align: left;
+}
+
+.success-booking-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.success-booking-row:last-child {
+  border-bottom: none;
+}
+
+.success-booking-row span {
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.success-booking-row strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.success-booking-total {
+  color: #1d4ed8 !important;
+}
+
+.success-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.success-primary-btn,
+.success-secondary-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.success-primary-btn {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 8px 22px rgba(29, 78, 216, 0.28);
+}
+
+.success-primary-btn:hover,
+.success-secondary-btn:hover {
+  transform: translateY(-2px);
+}
+
+.success-primary-btn:hover {
+  box-shadow: 0 12px 28px rgba(29, 78, 216, 0.36);
+}
+
+.success-secondary-btn {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  box-shadow: 0 8px 22px rgba(148, 163, 184, 0.18);
+}
+
+@keyframes bookingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bookingCircleReveal {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes bookingCheckReveal {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 20px;
+  margin-right: 16px;
+}
+
+.modal-title {
+  flex: 1;
+}
+
+.modal-title h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1d23;
+  margin: 0 0 4px 0;
+}
+
+.modal-title p {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.modal-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: none;
+  color: #64748b;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-btn:hover {
+  background: #e2e8f0;
+  color: #1a1d23;
+  transform: scale(1.05);
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.booking-summary {
+  margin-bottom: 24px;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.summary-item:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.summary-item:last-child {
+  margin-bottom: 0;
+}
+
+.summary-item.total-item {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #bfdbfe;
+  margin-top: 16px;
+  padding: 20px;
+}
+
+.summary-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  font-size: 16px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.summary-item.total-item .summary-icon {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  color: white;
+}
+
+.summary-content {
+  flex: 1;
+}
+
+.summary-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.summary-value {
+  display: block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1d23;
+}
+
+.summary-item.total-item .summary-value {
+  font-size: 1.3rem;
+  color: #1d4ed8;
+}
+
+.booking-notice {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.notice-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fed7aa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ea580c;
+  font-size: 14px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.booking-notice p {
+  font-size: 0.9rem;
+  color: #7c2d12;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 24px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.btn-cancel,
+.btn-confirm {
+  flex: 1;
+  padding: 14px 24px;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-cancel {
+  background: white;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-confirm {
+  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(29, 78, 216, 0.3);
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(29, 78, 216, 0.4);
+}
+
+.btn-cancel:disabled,
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-confirm:disabled {
+  box-shadow: none;
+}
+
+/* Responsive Design for Modal */
+@media (max-width: 768px) {
+  .modal-content {
+    margin: 0 16px;
+  }
+
+  .success-modal {
+    margin: 0 16px;
+    padding: 28px 22px 22px;
+  }
+
+  .booking-status-modal::before {
+    margin: -28px -22px 24px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 20px;
+  }
+
+  .modal-title h3 {
+    font-size: 1.3rem;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-confirm {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-content {
+    margin: 0 12px;
+    border-radius: 20px;
+  }
+
+  .success-modal {
+    margin: 0 12px;
+    border-radius: 20px;
+    padding: 24px 18px;
+  }
+
+  .booking-status-modal::before {
+    margin: -24px -18px 20px;
+  }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 16px;
+  }
+
+  .modal-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .modal-title h3 {
+    font-size: 1.2rem;
+  }
+
+  .success-modal h3 {
+    font-size: 1.35rem;
+  }
+
+  .booking-loader-wrap,
+  .booking-check-wrap,
+  .booking-check-svg,
+  .booking-loader-circle {
+    width: 92px;
+    height: 92px;
+  }
+
+  .booking-loader-core {
+    width: 62px;
+    height: 62px;
+  }
+
+  .success-booking-row {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .success-booking-row strong {
+    text-align: left;
+  }
+
+  .summary-item {
+    padding: 12px;
+  }
+
+  .summary-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+  .btn-cancel,
+  .btn-confirm {
+    padding: 12px 20px;
+    font-size: 0.95rem;
   }
 }
 </style>

@@ -62,6 +62,10 @@ class VehicleResource extends JsonResource
             'price_per_day' => $this->price_per_day,
             'fuel_type' => $this->fuel_type,
             'transmission' => $this->transmission,
+            'total_vehicles' => $this->total_vehicles,
+            'rider_details' => $this->rider_details,
+            'insurance_fee' => $this->insurance_fee,
+            'taxes_fee' => $this->taxes_fee,
             'status' => $this->status,
             'description' => $this->description,
             // Original image_url field

@@ -116,7 +116,7 @@ const router = useRouter()
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '/bookings' },
+  { label: 'My Booking', route: '/my-bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 

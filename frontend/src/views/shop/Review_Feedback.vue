@@ -615,6 +615,10 @@ const getRatingDistribution = (ratings) => {
   text-align: center;
   transition: all 0.3s ease;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .stat-card:hover {
@@ -1036,14 +1040,16 @@ const getRatingDistribution = (ratings) => {
 
 .vehicle-details {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .vehicle-name {
   font-size: 1.1rem;
   font-weight: 700;
   color: #1e293b;
-  margin: 0 0 4px 0;
+  display: inline;
 }
 
 .vehicle-rating-summary {

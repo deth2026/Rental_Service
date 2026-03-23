@@ -111,15 +111,16 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth-token')->plainTextToken;
-        
-        // Update last login time
-        $user->last_login = now();
-        $user->save();
+
+        if (User::hasLastLoginColumn()) {
+            $user->last_login = now();
+            $user->save();
+        }
 
         return response()->json([
             'user' => $user,
             'token' => $token,
-            'last_login' => $user->last_login,
+            'last_login' => User::hasLastLoginColumn() ? $user->last_login : null,
         ]);
     }
 
@@ -149,7 +150,7 @@ class AuthController extends Controller
                 'is_verified' => $user->is_verified,
                 'profile_picture' => $user->profile_picture,
                 'avatar_url' => $user->avatar_url,
-                'last_login' => $user->last_login,
+                'last_login' => User::hasLastLoginColumn() ? $user->last_login : null,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
             ],

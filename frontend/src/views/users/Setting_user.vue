@@ -127,7 +127,7 @@ const overviewMetrics = computed(() => [
 
 const navItems = [
     { label: 'Home', route: '/view_shop' },
-    { label: 'My Bookings', route: '/my-bookings' },
+    { label: 'My Booking', route: '/my-bookings' },
     { label: 'Promotions', route: '/promotions' },
 ]
 

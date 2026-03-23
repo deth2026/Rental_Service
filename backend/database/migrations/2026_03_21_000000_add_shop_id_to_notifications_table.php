@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('notifications') || Schema::hasColumn('notifications', 'shop_id')) {
+            return;
+        }
+
         Schema::table('notifications', function (Blueprint $table) {
             $table->foreignId('shop_id')->nullable()->constrained('shops')->nullOnDelete();
             $table->index('shop_id');
@@ -16,6 +20,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!Schema::hasTable('notifications') || !Schema::hasColumn('notifications', 'shop_id')) {
+            return;
+        }
+
         Schema::table('notifications', function (Blueprint $table) {
             $table->dropForeign(['shop_id']);
             $table->dropColumn('shop_id');
