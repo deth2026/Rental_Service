@@ -259,6 +259,18 @@ class BookingController extends Controller
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
                 $shop = $vehicle ? $vehicle->shop : null;
+                $vehicleDisplayName = trim((string) ($vehicle->name ?? ''));
+                if ($vehicleDisplayName === '') {
+                    $vehicleDisplayName = trim(implode(' ', array_filter([
+                        $vehicle->brand ?? '',
+                        $vehicle->model ?? '',
+                    ])));
+                }
+
+                if ($vehicleDisplayName === '') {
+                    $vehicleDisplayName = 'N/A';
+                }
+
                 $vehicleImage = '';
                 if ($vehicle) {
                     $vehicleImage = $vehicle->image_url_full ?? $vehicle->image_url ?? '';
@@ -277,7 +289,10 @@ class BookingController extends Controller
                 return [
                     'id' => $booking->id,
                     'vehicle_id' => $booking->vehicle_id,
-                    'vehicle_name' => $vehicle ? ($vehicle->brand . ' ' . $vehicle->model) : 'N/A',
+                    'vehicle_name' => $vehicleDisplayName,
+                    'vehicle_custom_name' => $vehicle->name ?? '',
+                    'vehicle_brand' => $vehicle->brand ?? '',
+                    'vehicle_model' => $vehicle->model ?? '',
                     'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
                     'shop_name' => $shop ? $shop->name : 'N/A',
                     'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',

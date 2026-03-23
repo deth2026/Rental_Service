@@ -19,6 +19,7 @@ import { useNotifications } from "@/composables/useNotifications";
 // Toast notifications
 const router = useRouter();
 const route = useRoute();
+const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
 const showToast = (message, type = "success") => {
   toast.value = { show: true, message, type };
@@ -28,6 +29,11 @@ const showToast = (message, type = "success") => {
 const { unreadCount } = useNotifications();
 const showNotifications = ref(false);
 const notificationRoot = ref(null);
+const isDarkMode = ref(false);
+
+const themeModeLabel = computed(() =>
+  isDarkMode.value ? "Dark mode" : "Light mode",
+);
 
 const badgeLabel = computed(() => {
   if (!unreadCount.value) return "";
@@ -40,6 +46,24 @@ const toggleNotifications = () => {
 
 const closeNotifications = () => {
   showNotifications.value = false;
+};
+
+const loadStoredTheme = () => {
+  try {
+    const storedTheme = window.localStorage.getItem(SHOP_DASHBOARD_THEME_KEY);
+    if (storedTheme === "dark" || storedTheme === "light") {
+      isDarkMode.value = storedTheme === "dark";
+      return;
+    }
+    isDarkMode.value =
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  } catch {
+    isDarkMode.value = false;
+  }
+};
+
+const toggleThemeMode = () => {
+  isDarkMode.value = !isDarkMode.value;
 };
 
 const goToOwnerNotifications = () => {
@@ -162,6 +186,17 @@ watch(
   }
 );
 
+watch(isDarkMode, (enabled) => {
+  try {
+    window.localStorage.setItem(
+      SHOP_DASHBOARD_THEME_KEY,
+      enabled ? "dark" : "light",
+    );
+  } catch {
+    // Ignore storage failures and keep the theme in memory for this session.
+  }
+});
+
 watch(
   () => route.meta.defaultSection,
   (section) => {
@@ -187,6 +222,7 @@ const onAvatarError = () => {
 };
 
 onMounted(() => {
+  loadStoredTheme();
   window.addEventListener("storage", refreshSessionUser);
   window.addEventListener("user-updated", refreshSessionUser);
   document.addEventListener("mousedown", handleDocumentClick);
@@ -1122,13 +1158,21 @@ const iconSvg = (name) => {
     brand:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M10 17a2 2 0 0 0 4 0"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77"/></svg>',
   };
   return icons[name] || "";
 };
 </script>
 
 <template>
-  <div class="page" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+  <div
+    class="page"
+    :class="{
+      'sidebar-collapsed': isSidebarCollapsed,
+      'dark-theme': isDarkMode,
+    }"
+  >
     <aside
       class="sidebar"
       :style="{ width: `${sidebarWidth}px`, flexBasis: `${sidebarWidth}px` }"
@@ -1182,6 +1226,18 @@ const iconSvg = (name) => {
           <h1>{{ sections.find((s) => s.id === active)?.label }}</h1>
         </div>
         <div class="topbar-right">
+          <button
+            type="button"
+            class="theme-toggle"
+            :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+            @click="toggleThemeMode"
+          >
+            <span
+              class="theme-toggle-icon"
+              v-html="iconSvg(isDarkMode ? 'sun' : 'moon')"
+            ></span>
+            <span class="theme-toggle-label">{{ themeModeLabel }}</span>
+          </button>
           <div class="notification-wrapper" ref="notificationRoot">
             <button
               type="button"
@@ -2462,6 +2518,53 @@ const iconSvg = (name) => {
   margin-left: auto;
   margin-right: 80px;
   flex-shrink: 0;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #dbe1ea;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.12);
+}
+
+.theme-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  line-height: 0;
+}
+
+.theme-toggle-icon :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.theme-toggle-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .bell-btn {
@@ -4865,5 +4968,266 @@ textarea {
 .notification-fade-enter-from,
 .notification-fade-leave-to {
   opacity: 0;
+}
+
+.page.dark-theme {
+  background: #060f1d;
+  color: #e2e8f0;
+}
+
+.page.dark-theme .main {
+  background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
+}
+
+.page.dark-theme .sidebar {
+  background: #071121;
+  color: #bfd0ee;
+  border-right-color: #182742;
+}
+
+.page.dark-theme .sidebar-toggle {
+  background: #121d31;
+  border-color: #24344f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.page.dark-theme .toggle-icon,
+.page.dark-theme .menu-title,
+.page.dark-theme .menu-label,
+.page.dark-theme .sidebar-profile-btn,
+.page.dark-theme .sidebar-user-info p {
+  color: #9fb2d4;
+}
+
+.page.dark-theme .sidebar-user-info strong,
+.page.dark-theme .brand-text,
+.page.dark-theme .menu-item.active,
+.page.dark-theme .logout-item {
+  color: #e2e8f0;
+}
+
+.page.dark-theme .menu-item:hover {
+  background: #102142;
+  color: #f8fafc;
+}
+
+.page.dark-theme .menu-item.active {
+  background: #12264c;
+}
+
+.page.dark-theme .topbar {
+  background: rgba(10, 18, 32, 0.95);
+  border-bottom-color: #20314b;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.page.dark-theme .topbar h1,
+.page.dark-theme .topbar-icon,
+.page.dark-theme .user-info strong,
+.page.dark-theme .dropdown-user-info strong,
+.page.dark-theme .dashboard-view h2,
+.page.dark-theme .card h3,
+.page.dark-theme .panel h3,
+.page.dark-theme .activity-card h3,
+.page.dark-theme .card-title,
+.page.dark-theme .shop-modal-header h2,
+.page.dark-theme .form-card__header h3,
+.page.dark-theme th,
+.page.dark-theme td strong {
+  color: #f8fafc;
+}
+
+.page.dark-theme .sub,
+.page.dark-theme .card span,
+.page.dark-theme .card small,
+.page.dark-theme .panel p,
+.page.dark-theme .user-info p,
+.page.dark-theme .dropdown-user-info p,
+.page.dark-theme .shop-modal-sub,
+.page.dark-theme .form-card__header p,
+.page.dark-theme td,
+.page.dark-theme .delete-message,
+.page.dark-theme .delete-warning {
+  color: #94a3b8;
+}
+
+.page.dark-theme .theme-toggle {
+  background: #111b2f;
+  border-color: #24344f;
+  color: #dbeafe;
+}
+
+.page.dark-theme .theme-toggle:hover {
+  background: #18253d;
+  border-color: #36527d;
+  color: #ffffff;
+}
+
+.page.dark-theme .bell-btn {
+  background: #111b2f;
+  border-color: #24344f;
+  color: #cbd5e1;
+}
+
+.page.dark-theme .bell-btn:hover,
+.page.dark-theme .user-dropdown:hover {
+  background: #162235;
+  border-color: #31445f;
+  color: #f8fafc;
+}
+
+.page.dark-theme .user-dropdown {
+  border-color: transparent;
+}
+
+.page.dark-theme .dropdown-arrow {
+  color: #94a3b8;
+}
+
+.page.dark-theme .user-dropdown-menu,
+.page.dark-theme .dashboard-cards .card,
+.page.dark-theme .card,
+.page.dark-theme .activity-card,
+.page.dark-theme .panel,
+.page.dark-theme .table-wrap,
+.page.dark-theme .modal-like-page,
+.page.dark-theme .add-vehicle-modal,
+.page.dark-theme .delete-modal,
+.page.dark-theme .shop-modal,
+.page.dark-theme .form-card {
+  background: #111a2d;
+  border-color: #22314a;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.page.dark-theme .dropdown-header,
+.page.dark-theme .shop-modal-header,
+.page.dark-theme .shop-modal-footer,
+.page.dark-theme .add-vehicle-header,
+.page.dark-theme .add-vehicle-footer {
+  background: #0d1627;
+  border-color: #22314a;
+}
+
+.page.dark-theme .dropdown-divider {
+  background: #22314a;
+}
+
+.page.dark-theme table {
+  background: transparent;
+}
+
+.page.dark-theme thead {
+  background: #0f172a;
+}
+
+.page.dark-theme tbody tr {
+  border-bottom-color: #1f2b40;
+}
+
+.page.dark-theme tbody tr:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.page.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.page.dark-theme select,
+.page.dark-theme textarea,
+.page.dark-theme .rounded-input,
+.page.dark-theme .shop-name-input[readonly] {
+  background: #0b1322;
+  color: #e2e8f0;
+  border-color: #22314a;
+}
+
+.page.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"])::placeholder,
+.page.dark-theme textarea::placeholder {
+  color: #64748b;
+}
+
+.page.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.page.dark-theme select:focus,
+.page.dark-theme textarea:focus,
+.page.dark-theme .rounded-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.page.dark-theme .delete-icon-wrapper {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.page.dark-theme .delete-title,
+.page.dark-theme .delete-cancel-btn {
+  color: #f8fafc;
+}
+
+.page.dark-theme .delete-cancel-btn {
+  background: #111a2d;
+  border-color: #2a3953;
+}
+
+.page.dark-theme .delete-cancel-btn:hover {
+  background: #172236;
+  border-color: #3b4d69;
+  color: #ffffff;
+}
+
+.page.dark-theme .delete-vehicle-name {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fda4af;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel) {
+  background: #111a2d;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  border: 1px solid #22314a;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel__header h3),
+.page.dark-theme .notification-popup :deep(.notification-item__title) {
+  color: #f8fafc;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel__subtitle),
+.page.dark-theme .notification-popup :deep(.notification-item__description),
+.page.dark-theme .notification-popup :deep(.notification-item__time),
+.page.dark-theme .notification-popup :deep(.notification-panel__empty),
+.page.dark-theme .notification-popup :deep(.notification-panel__state) {
+  color: #94a3b8;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel__state) {
+  background: #0b1322;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-tab),
+.page.dark-theme .notification-popup :deep(.mark-read) {
+  background: #0b1322;
+  color: #cbd5e1;
+  border-color: #22314a;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-tab.active),
+.page.dark-theme .notification-popup :deep(.view-all) {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-item) {
+  background: #0d1627;
+  border-color: #22314a;
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .theme-toggle {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .theme-toggle-label {
+    display: none;
+  }
 }
 </style>

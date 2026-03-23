@@ -152,7 +152,7 @@ const filteredBookings = computed(() => {
     if (!q) return true
 
     const haystack = [
-      b.vehicle_name,
+      getBookingVehicleName(b),
       b.booking_code,
       b.shop_name,
       b.status,
@@ -245,10 +245,29 @@ const getBookingImage = (booking) => {
   return booking.vehicle_image || booking.image_url || booking.image || ''
 }
 
+const getBookingVehicleName = (booking) => {
+  const explicitName = String(booking?.vehicle_custom_name || booking?.name || '').trim()
+  if (explicitName) return explicitName
+
+  const fallbackName = [
+    booking?.vehicle_brand || booking?.brand,
+    booking?.vehicle_model || booking?.model,
+  ]
+    .filter((part) => String(part || '').trim())
+    .join(' ')
+    .trim()
+
+  if (fallbackName) return fallbackName
+
+  const legacyName = String(booking?.vehicle_name || '').trim()
+  return legacyName && legacyName !== 'N/A' ? legacyName : 'Unnamed Vehicle'
+}
+
 const normalizeVehicle = (vehicle) => {
   if (!vehicle) return null
   return {
     id: vehicle.id || null,
+    name: vehicle.name || '',
     brand: vehicle.brand || '',
     model: vehicle.model || '',
     category: vehicle.category || vehicle.type || '',
@@ -381,10 +400,13 @@ const openDetails = async (booking) => {
 }
 
 const detailTitle = computed(() => {
+  if (selectedVehicle.value?.name) {
+    return selectedVehicle.value.name
+  }
   if (selectedVehicle.value?.brand || selectedVehicle.value?.model) {
     return `${selectedVehicle.value.brand || ''} ${selectedVehicle.value.model || ''}`.trim()
   }
-  return selectedBooking.value?.vehicle_name || 'Vehicle'
+  return getBookingVehicleName(selectedBooking.value)
 })
 
 const detailDays = computed(() => {
@@ -610,12 +632,12 @@ const skipRating = () => {
       </div>
       <article v-for="booking in displayedBookings" :key="booking.id" class="booking-card">
         <div class="booking-image">
-          <img :src="getBookingImage(booking)" :alt="booking.vehicle_name" class="vehicle-img" />
+          <img :src="getBookingImage(booking)" :alt="getBookingVehicleName(booking)" class="vehicle-img" />
         </div>
 
         <div class="booking-info">
           <div class="booking-header">
-            <h3 class="vehicle-name">{{ booking.vehicle_name }}</h3>
+            <h3 class="vehicle-name">{{ getBookingVehicleName(booking) }}</h3>
             <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
           </div>
 
@@ -772,7 +794,7 @@ const skipRating = () => {
       </div>
       <p class="rating-alert-title">Rate your experience</p>
       <p class="rating-alert-subtitle">
-        {{ ratingOverlay.booking?.vehicle_name || 'Your rental' }} finished successfully.
+        {{ getBookingVehicleName(ratingOverlay.booking) || 'Your rental' }} finished successfully.
       </p>
       <div class="rating-alert-stars">
         <button
@@ -820,7 +842,7 @@ const skipRating = () => {
       <div class="cancel-modal-body">
         <p>Are you sure you want to cancel this booking?</p>
         <div class="cancel-modal-details">
-          <p><strong>Vehicle:</strong> {{ cancelModal.booking?.vehicle_name }}</p>
+          <p><strong>Vehicle:</strong> {{ getBookingVehicleName(cancelModal.booking) }}</p>
           <p><strong>Booking ID:</strong> {{ cancelModal.booking?.booking_code }}</p>
           <p><strong>Date:</strong> {{ formatDate(cancelModal.booking?.start_date) }} to {{ formatDate(cancelModal.booking?.end_date) }}</p>
           <p><strong>Total:</strong> {{ formatCurrency(cancelModal.booking?.total_price) }}</p>
