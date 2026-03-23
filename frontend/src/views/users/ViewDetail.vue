@@ -565,7 +565,18 @@ const closeBookingSuccessModal = () => {
   showBookingSuccess.value = false;
   bookingFlowState.value = "idle";
   clearBookingFlowTimer();
+  
+  // Refresh bookings to update available vehicles count
+  refreshAvailableVehicles();
 };
+
+// Emit event to refresh available vehicles in parent component
+const emit = defineEmits(['refresh-bookings'])
+
+const refreshAvailableVehicles = () => {
+  // This will trigger a refresh of the vehicle list with updated booking counts
+  emit('refresh-bookings')
+}
 
 const parseRouteDate = (value) => {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -627,6 +638,14 @@ const goToPaymentPage = () => {
 
 const confirmBooking = async () => {
   if (!vehicle.value) return;
+  
+  // Check if vehicle has available stock
+  const totalVehicles = vehicle.value.total_vehicles || 1;
+  if (totalVehicles <= 0) {
+    alert('Sorry, this vehicle is not available for booking.');
+    return;
+  }
+  
   if (bookingDuration.value <= 0) {
     alert("Please select at least 1 day.");
     return;

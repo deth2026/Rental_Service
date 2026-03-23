@@ -135,7 +135,11 @@ const normalizeVehicle = (vehicle) => {
     photos: parsedPhotos,
     photoUrls: vehicle.photo_urls || [],
     rating: typeof vehicle.rating === 'number' || !Number.isNaN(Number(vehicle.rating)) ? Number(vehicle.rating) : null,
-    ratingCount: Number(vehicle.rating_count ?? 0)
+    ratingCount: Number(vehicle.rating_count ?? 0),
+    total_vehicles: vehicle.total_vehicles ?? 1,
+    rider_details: vehicle.rider_details || '',
+    insurance_fee: vehicle.insurance_fee ?? 0,
+    taxes_fee: vehicle.taxes_fee ?? 0
   }
 }
 
@@ -147,12 +151,53 @@ const fetchVehicles = async () => {
     const response = await vehicleApi.getAll({ shop_id: shopId.value })
     const data = response.data.data || response.data || []
     vehicles.value = data.map(normalizeVehicle)
+    
+    // Fetch active bookings to calculate available vehicles
+    await fetchActiveBookings()
   } catch (err) {
     console.error('Error fetching vehicles:', err)
     error.value = 'Failed to load vehicles. Please try again.'
   } finally {
     isLoading.value = false
   }
+}
+
+// Fetch active bookings to calculate available vehicles
+const activeBookingsMap = ref({})
+
+const fetchActiveBookings = async () => {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/bookings?shop_id=' + shopId.value, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+      }
+    })
+    const result = await response.json()
+    const bookings = result.data || result || []
+    
+    // Count active bookings per vehicle (bookings that are not completed/returned)
+    const counts = {}
+    bookings.forEach(booking => {
+      const vehicleId = booking.vehicle_id
+      const status = booking.status?.toLowerCase() || ''
+      // Only count active bookings (not returned, not cancelled)
+      if (status !== 'returned' && status !== 'completed' && status !== 'cancelled' && status !== 'canceled') {
+        counts[vehicleId] = (counts[vehicleId] || 0) + 1
+      }
+    })
+    activeBookingsMap.value = counts
+  } catch (err) {
+    console.error('Error fetching active bookings:', err)
+    activeBookingsMap.value = {}
+  }
+}
+
+// Calculate available vehicles (total - active bookings)
+const getAvailableVehicles = (vehicle) => {
+  const total = vehicle.total_vehicles || 1
+  const activeBookings = activeBookingsMap.value[vehicle.id] || 0
+  return Math.max(0, total - activeBookings)
 }
 
 const buildRatingSummaryMap = (summaries) => {
@@ -276,7 +321,17 @@ onMounted(() => {
   fetchVehicles()
   fetchShop()
   fetchVehicleRatingSummary()
+  
+  // Refresh bookings when user returns to this page
+  window.addEventListener('focus', handleVisibilityChange)
 })
+
+// Handle visibility change to refresh when user returns to this page
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    fetchVehicles()
+  }
+}
 
 const selectedShopCoords = computed(() => {
   if (!shop.value) return null
@@ -446,6 +501,25 @@ const openMap = () => {
                 <i class="fa-solid fa-gear"></i>
                 <span>{{ vehicle.transmission }}</span>
               </div>
+              <div class="detail-item available-stock" v-if="vehicle.total_vehicles">
+                <i class="fa-solid fa-car"></i>
+                <span>{{ getAvailableVehicles(vehicle) }} available</span>
+              </div>
+            </div>
+
+            <div class="vehicle-extra-fees" v-if="vehicle.insurance_fee || vehicle.taxes_fee || vehicle.rider_details">
+              <div class="fee-item" v-if="vehicle.rider_details">
+                <i class="fa-solid fa-user"></i>
+                <span>{{ vehicle.rider_details }}</span>
+              </div>
+              <div class="fee-item" v-if="vehicle.insurance_fee">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Insurance: ${{ vehicle.insurance_fee }}</span>
+              </div>
+              <div class="fee-item" v-if="vehicle.taxes_fee">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>Taxes: ${{ vehicle.taxes_fee }}</span>
+              </div>
             </div>
             
             <div class="vehicle-rating" v-if="vehicle.rating">
@@ -459,8 +533,12 @@ const openMap = () => {
               <span class="price-period">/day</span>
             </div>
 
-            <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">
-              View Details
+            <button 
+              class="view-details-btn" 
+              @click="viewVehicleDetails(vehicle)"
+              :disabled="getAvailableVehicles(vehicle) <= 0"
+            >
+              {{ getAvailableVehicles(vehicle) <= 0 ? 'Not Available' : 'View Details' }}
             </button>
           </div>
         </article>
@@ -908,6 +986,12 @@ const openMap = () => {
   border-radius: 6px;
 }
 
+.detail-item.available-stock {
+  background: #dcfce7;
+  color: #16a34a;
+  font-weight: 600;
+}
+
 .vehicle-rating {
   display: inline-flex;
   align-items: center;
@@ -932,6 +1016,28 @@ const openMap = () => {
 
 .vehicle-price {
   margin-bottom: 1rem;
+}
+
+.vehicle-extra-fees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.fee-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.fee-item i {
+  color: #1e40af;
 }
 
 .price-amount {
@@ -959,6 +1065,12 @@ const openMap = () => {
 
 .view-details-btn:hover {
   opacity: 0.9;
+}
+
+.view-details-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 @media (max-width: 768px) {

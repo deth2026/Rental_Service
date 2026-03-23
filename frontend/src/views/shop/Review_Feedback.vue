@@ -1,7 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { feedbackApi, ratingApi } from '@/services/api'
+import { getSessionUser } from '@/services/auth'
 import '../../css/Feedback.css'
+
+const props = defineProps({
+  shopId: {
+    type: [String, Number],
+    default: null
+  }
+})
 
 const loading = ref(true)
 const error = ref(null)
@@ -49,7 +57,10 @@ const fetchVehicleRatings = async () => {
   try {
     vehicleLoading.value = true
     vehicleError.value = null
-    const response = await ratingApi.getVehicleRatingsSummary()
+    
+    // Build query params with shop_id if provided
+    const params = props.shopId ? { shop_id: props.shopId } : {}
+    const response = await ratingApi.getVehicleRatingsSummary(params)
     const data = response.data || []
     vehicleRatings.value = data
   } catch (err) {

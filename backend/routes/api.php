@@ -102,6 +102,7 @@ Route::get('/shops/{shop}', [ShopController::class, 'show']);
 // Public vehicle ratings (view only, no auth required)
 Route::get('/vehicle-ratings', [RatingController::class, 'vehicleRatings']);
 Route::get('/vehicle-ratings-summary', [RatingController::class, 'vehicleRatingsSummary']);
+Route::get('/shop-rating', [RatingController::class, 'shopAverageRating']);
 
 // Public vehicle routes (for customers to view vehicles)
 Route::get('/vehicles', [VehicleController::class, 'index']);

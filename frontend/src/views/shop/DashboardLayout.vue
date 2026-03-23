@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
 import Payments from "./Payments.vue";
-import DamageReports from "./Demage_reports.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
 import MyShop from "./myShop.vue";
@@ -311,6 +310,7 @@ const dashboardError = ref(null);
 
 // Shop data
 const shop = ref(null);
+const shopRating = ref({ average_rating: 0, total_ratings: 0 });
 const shopModal = ref(false);
 const shopForm = reactive({
   name: "",
@@ -645,6 +645,21 @@ const fetchFeedback = async () => {
   }
 };
 
+const fetchShopRating = async () => {
+  const shopId = shop.value?.id;
+  if (!shopId) {
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
+    return;
+  }
+  try {
+    const response = await api.get(`/shop-rating?shop_id=${shopId}`);
+    shopRating.value = response.data || { average_rating: 0, total_ratings: 0 };
+  } catch (error) {
+    console.error("Error fetching shop rating:", error);
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
+  }
+};
+
 const fetchShopPayments = async () => {
   try {
     const response = await api.get("/shop-payments");
@@ -841,8 +856,14 @@ initializeShopData().catch(() => {});
 
 watch(
   shop,
-  () => {
-    fetchFeedback().catch(() => {});
+  (current) => {
+    if (current?.id) {
+      fetchFeedback().catch(() => {});
+      fetchShopRating().catch(() => {});
+      return;
+    }
+    feedback.value = [];
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
   },
   { immediate: true },
 );
@@ -965,13 +986,13 @@ const monthlyIncome = computed(() => {
 const newCustomers = computed(
   () => new Set(bookings.value.map((b) => b.customer)).size,
 );
-const averageRating = computed(() =>
-  feedback.value.length
-    ? (
-        feedback.value.reduce((a, b) => a + b.rating, 0) / feedback.value.length
-      ).toFixed(1)
-    : "0",
-);
+const averageRating = computed(() => {
+  // Only show rating if shop has ratings
+  if (!shopRating.value.total_ratings || shopRating.value.total_ratings === 0) {
+    return "- ";
+  }
+  return String(shopRating.value.average_rating || "0");
+});
 const potentialPerDay = computed(() =>
   vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0),
 );
@@ -1486,7 +1507,7 @@ const iconSvg = (name) => {
             <h3>{{ newCustomers }}</h3>
             <b class="stat-icon icon-teal" v-html="iconSvg('users')"></b>
           </article>
-          <article class="card">
+          <article class="card" v-if="shopRating.total_ratings > 0">
             <span>Average Rating</span>
             <h3>{{ averageRating }}</h3>
             <b class="stat-icon icon-yellow" v-html="iconSvg('star')"></b>
@@ -1502,6 +1523,7 @@ const iconSvg = (name) => {
                   <th>Vehicle</th>
                   <th>Category</th>
                   <th>Plate Number</th>
+                  <th>Stock</th>
                   <th>Price/Day</th>
                   <th>Status</th>
                 </tr>
@@ -1511,11 +1533,12 @@ const iconSvg = (name) => {
                   <td>{{ vehicle.name }}</td>
                   <td>{{ vehicle.category }}</td>
                   <td>{{ vehicle.plate }}</td>
+                  <td>{{ vehicle.total_vehicles ?? 1 }}</td>
                   <td>${{ vehicle.price }}</td>
                   <td>{{ vehicle.status }}</td>
                 </tr>
                 <tr v-if="latestVehicles.length === 0">
-                  <td colspan="5" class="empty">No vehicles yet.</td>
+                  <td colspan="6" class="empty">No vehicles yet.</td>
                 </tr>
               </tbody>
             </table>
@@ -1540,7 +1563,7 @@ const iconSvg = (name) => {
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
-        <ReviewsFeedback />
+        <ReviewsFeedback :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'payments'" class="payments-view">
@@ -1601,6 +1624,7 @@ const iconSvg = (name) => {
                 <th>Vehicle</th>
                 <th>Category</th>
                 <th>Plate Number</th>
+                <th>Stock</th>
                 <th>Price/Day</th>
                 <th>Status</th>
                 <th>Created At</th>
@@ -1632,6 +1656,7 @@ const iconSvg = (name) => {
                 </td>
                 <td>{{ v.category }}</td>
                 <td>{{ v.plate }}</td>
+                <td>{{ v.total_vehicles ?? 1 }}</td>
                 <td>${{ v.price }}</td>
                 <td>
                   <span :class="['status-badge', getStatusClass(v.status)]">
