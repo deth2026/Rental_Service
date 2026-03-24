@@ -645,6 +645,7 @@ const onPhotoDrop = async (e) => {
             <th>Vehicle</th>
             <th>Brand / Model</th>
             <th>Plate Number</th>
+            <th>Stock</th>
             <th>Price/Day</th>
             <th>Status</th>
             <th>Created At</th>
@@ -674,6 +675,7 @@ const onPhotoDrop = async (e) => {
             </td>
             <td>{{ v.brand }} / {{ v.model }}</td>
             <td>{{ v.plate }}</td>
+            <td>{{ v.total_vehicles ?? 1 }}</td>
             <td>${{ v.price }}</td>
             <td>
               <span :class="['status-badge', getStatusClass(v.status)]">

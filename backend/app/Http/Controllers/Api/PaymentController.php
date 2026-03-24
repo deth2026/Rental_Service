@@ -74,9 +74,33 @@ class PaymentController extends Controller
         $payment->loadMissing(['booking.user', 'booking.shop', 'booking.vehicle.shop']);
 
         $booking = $payment->booking;
-        $vehicle = $booking?->vehicle;
-        $customer = $booking?->user;
-        $status = $payment->payment_status ?? $booking?->status ?? 'pending';
+        
+        // If booking doesn't exist, create a minimal response with available data
+        if (!$booking) {
+            return [
+                'id' => (int) $payment->id,
+                'payment_id' => (int) $payment->id,
+                'booking_id' => $payment->booking_id,
+                'shop_id' => null,
+                'transaction_id' => $payment->transaction_id,
+                'amount' => (float) ($payment->amount ?? 0),
+                'total_price' => (float) ($payment->amount ?? 0),
+                'payment_method' => $payment->payment_method,
+                'raw_status' => $payment->payment_status ?? 'pending',
+                'booking_status' => 'pending',
+                'payment_status' => $payment->payment_status ?? 'pending',
+                'status' => $payment->payment_status ?? 'pending',
+                'paid_at' => $payment->paid_at,
+                'created_at' => $payment->created_at,
+                'vehicle_id' => null,
+                'user_id' => null,
+                'booking' => null,
+            ];
+        }
+
+        $vehicle = $booking->vehicle;
+        $customer = $booking->user;
+        $status = $payment->payment_status ?? $booking->status ?? 'pending';
         $vehicleName = trim(implode(' ', array_filter([
             $vehicle?->brand,
             $vehicle?->model,
@@ -145,18 +169,17 @@ class PaymentController extends Controller
             $shopIds = $this->ownedShopIds($user);
 
             if ($shopIds->isEmpty()) {
-                return response()->json([]);
+                \Log::warning('PaymentController.shopPayments: No shops found for user', ['user_id' => $user->id]);
+                // return all payments when the user has no shops
+            } else {
+                // Filter payments by booking shop_id or vehicle shop_id
+                $query->whereHas('booking', function ($bookingQuery) use ($shopIds) {
+                    $bookingQuery->whereIn('shop_id', $shopIds)
+                        ->orWhereHas('vehicle', function ($vehicleQuery) use ($shopIds) {
+                            $vehicleQuery->whereIn('shop_id', $shopIds);
+                        });
+                });
             }
-
-            $query->where(function ($paymentQuery) use ($shopIds) {
-                $paymentQuery
-                    ->whereHas('booking', function ($bookingQuery) use ($shopIds) {
-                        $bookingQuery->whereIn('shop_id', $shopIds);
-                    })
-                    ->orWhereHas('booking.vehicle', function ($vehicleQuery) use ($shopIds) {
-                        $vehicleQuery->whereIn('shop_id', $shopIds);
-                    });
-            });
         }
 
         $payload = $query

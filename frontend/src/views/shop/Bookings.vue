@@ -376,6 +376,7 @@ const hasMoreBookings = computed(() => {
   return filteredBookings.value.length > visibleCount.value
 })
 
+
 const showMore = () => {
   visibleCount.value += 4
 }
@@ -515,14 +516,10 @@ const getTotalDays = (start, end) => {
             {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
-
           <p>
             <span class="meta-label">Payment:</span>
             <span :class="['payment-status', getPaymentStatusClass(booking.payment_status)]">
               {{ getPaymentStatusLabel(booking.payment_status) }}
-            </span>
-            <span v-if="booking.payment_method && booking.payment_method !== 'N/A'" class="payment-method">
-              ({{ booking.payment_method }})
             </span>
           </p>
 
@@ -777,12 +774,15 @@ const getTotalDays = (start, end) => {
         <div class="booking-detail-vehicle">
           <h4>Vehicle specs</h4>
           <div class="booking-detail-specs">
-            <span>Type: <strong>{{ detailVehicleData?.category || 'N/A' }}</strong></span>
             <span>Brand: <strong>{{ detailVehicleData?.brand || 'N/A' }}</strong></span>
             <span>Fuel: <strong>{{ detailVehicleData?.fuel_type || 'N/A' }}</strong></span>
             <span>Transmission: <strong>{{ detailVehicleData?.transmission || 'N/A' }}</strong></span>
             <span>Plate: <strong>{{ detailVehicleData?.plate || detailVehicleData?.plate_number || 'N/A' }}</strong></span>
             <span>Status: <strong>{{ detailVehicleData?.status || 'N/A' }}</strong></span>
+            <span v-if="detailVehicleData?.total_vehicles">Total Vehicles: <strong>{{ detailVehicleData.total_vehicles }}</strong></span>
+            <span v-if="detailVehicleData?.rider_details">Rider: <strong>{{ detailVehicleData.rider_details }}</strong></span>
+            <span v-if="detailVehicleData?.insurance_fee">Insurance: <strong>${{ detailVehicleData.insurance_fee }}</strong></span>
+            <span v-if="detailVehicleData?.taxes_fee">Taxes: <strong>${{ detailVehicleData.taxes_fee }}</strong></span>
           </div>
         </div>
       </div>

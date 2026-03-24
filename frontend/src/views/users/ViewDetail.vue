@@ -137,6 +137,21 @@
           </aside>
         </div>
 
+        <transition name="fade">
+          <div
+            v-if="showImageModalFlag"
+            class="image-modal-overlay"
+            @click.self="closeImageModal"
+          >
+            <div class="image-modal-content">
+              <button class="btn-reset image-modal-close" @click="closeImageModal">
+                <i class="fas fa-times"></i>
+              </button>
+              <img :src="vehicleImage" :alt="vehicleName" class="image-modal-img" />
+            </div>
+          </div>
+        </transition>
+
         <!-- Middle Section: Name Label and Content Boxes -->
         <div class="middle-section">
           <!-- Two Side-by-Side Boxes -->
@@ -550,7 +565,18 @@ const closeBookingSuccessModal = () => {
   showBookingSuccess.value = false;
   bookingFlowState.value = "idle";
   clearBookingFlowTimer();
+  
+  // Refresh bookings to update available vehicles count
+  refreshAvailableVehicles();
 };
+
+// Emit event to refresh available vehicles in parent component
+const emit = defineEmits(['refresh-bookings'])
+
+const refreshAvailableVehicles = () => {
+  // This will trigger a refresh of the vehicle list with updated booking counts
+  emit('refresh-bookings')
+}
 
 const parseRouteDate = (value) => {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -612,6 +638,14 @@ const goToPaymentPage = () => {
 
 const confirmBooking = async () => {
   if (!vehicle.value) return;
+  
+  // Check if vehicle has available stock
+  const totalVehicles = vehicle.value.total_vehicles || 1;
+  if (totalVehicles <= 0) {
+    alert('Sorry, this vehicle is not available for booking.');
+    return;
+  }
+  
   if (bookingDuration.value <= 0) {
     alert("Please select at least 1 day.");
     return;
@@ -940,9 +974,12 @@ const getNavIcon = (item) => {
   return iconMap[item] || 'fas fa-circle';
 };
 
+const showImageModalFlag = ref(false);
 const openImageModal = () => {
-  // Future: Open image modal/lightbox
-  console.log('Opening image modal');
+  showImageModalFlag.value = true;
+};
+const closeImageModal = () => {
+  showImageModalFlag.value = false;
 };
 
 const toggleFavorite = () => {
@@ -1147,15 +1184,19 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  aspect-ratio: 16 / 9;
+  width: 100%;
+  max-width: 640px;
+  min-height: 360px;
   max-height: 520px;
 }
 
 .image-vehicle .main-img {
-  width: 100%;
+  width: auto;
   height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  object-fit: contain;
   transition: transform 0.5s ease;
+  object-position: center;
 }
 
 .image-vehicle:hover .main-img {
@@ -1170,6 +1211,77 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.image-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+}
+
+.image-modal-content {
+  position: relative;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 2rem;
+  max-width: 760px;
+  width: min(95vw, 760px);
+  max-height: 80vh;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1.5rem;
+}
+
+.image-modal-img {
+  width: 100%;
+  max-height: 30vh;
+  max-width: 70vw;
+  object-fit: contain;
+  border-radius: 12px;
+  align-self: center;
+}
+
+.image-modal-img {
+  width: 100%;
+  max-height: 40vh;
+  max-width: 70vw;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.image-modal-close {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 50%;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+  color: #1f2937;
+}
+
+.image-modal-close:hover {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
 /* Enhanced Image Overlay */

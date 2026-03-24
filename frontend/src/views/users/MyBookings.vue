@@ -112,8 +112,24 @@ const fetchBookings = async () => {
     if (!response.ok) {
       throw new Error('Failed to fetch bookings')
     }
-    const data = await response.json()
-    bookings.value = Array.isArray(data) ? data : (data.data || [])
+    const raw = await response.json()
+    const parsed = Array.isArray(raw) ? raw : raw.data || []
+    bookings.value = parsed.map((entry) => {
+      const vehicle = entry.vehicle || entry.vehicle_details || {}
+      const vehicleName =
+        entry.vehicle_name ||
+        entry.vehicle?.name ||
+        vehicle.name ||
+        `${vehicle.brand || ''} ${vehicle.model || ''}`
+          .trim()
+          .replace(/\s+/g, ' ')
+      const shop = entry.shop || entry.shop_details || {}
+      return {
+        ...entry,
+        vehicle_name: vehicleName || 'Vehicle',
+        shop_name: entry.shop_name || shop.name || 'N/A',
+      }
+    })
     handleBookingStatusUpdates(bookings.value)
   } catch (e) {
     error.value = e.message || 'Unable to load bookings'
@@ -705,8 +721,16 @@ const skipRating = () => {
                 :alt="detailTitle"
               />
             </div>
-            <div class="detail-thumbnail-row">
-              <div v-for="n in 3" :key="n" class="thumbnail-placeholder"></div>
+            <div class="detail-rating-row" v-if="selectedBooking?.rating?.rating">
+              <span class="detail-rating-label">Rating</span>
+              <strong>{{ selectedBooking.rating.rating.toFixed(1) }}</strong>
+              <div class="detail-rating-stars">
+                <span
+                  v-for="star in 5"
+                  :key="`rating-${star}`"
+                  :class="{ filled: star <= Math.round(selectedBooking.rating.rating) }"
+                >★</span>
+              </div>
             </div>
           </div>
 

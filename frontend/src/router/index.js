@@ -210,7 +210,7 @@ const router = createRouter({
       path: '/vehicles',
       name: 'vehicles-by-shop',
       component: VehiclesByShop,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/vehicles/:id',
@@ -222,7 +222,7 @@ const router = createRouter({
       path: '/shop/:id/vehicles',
       name: 'shop-vehicles',
       component: ShopVehicles,
-      meta: { requiresAuth: true, allowedRoles: ['customer', 'user', 'admin'] }
+      meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
       path: '/:pathMatch(.*)*',

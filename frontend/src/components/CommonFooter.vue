@@ -66,7 +66,7 @@ const currentYear = new Date().getFullYear()
       <span>
         &copy; {{ currentYear }} Chong Choul Rides. Made with
         <span class="common-footer__heart" aria-hidden="true">&hearts;</span>
-        in Siem Reap.
+        in Cambodia.
       </span>
       <div class="common-footer__legal">
         <a href="#" class="common-footer__legal-link">Privacy Policy</a>

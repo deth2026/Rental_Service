@@ -3,6 +3,106 @@ import { computed, onMounted, ref, watch } from 'vue'
 import api, { paymentApi } from '@/services/api'
 import '../../css/Payment.css'
 
+// Get current user's shop
+const getStoredUser = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem('user')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const getCachedShop = (userId) => {
+  if (!userId || typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(`settings_shop_${userId}`)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const currentShop = ref(null)
+
+const loadShop = async () => {
+  const storedUser = getStoredUser()
+  if (!storedUser?.id) return null
+  
+  const cachedShop = getCachedShop(storedUser.id)
+  if (cachedShop) {
+    currentShop.value = cachedShop
+    return cachedShop
+  }
+  
+  try {
+    const response = await api.get('/shops')
+    const shops = response.data.data || response.data || []
+    const userShops = shops.filter((s) => Number(s.owner_id) === Number(storedUser.id))
+    if (userShops.length > 0) {
+      currentShop.value = userShops[0]
+      return userShops[0]
+    }
+  } catch (e) {
+    console.error('Error fetching shops:', e)
+  }
+  return null
+}
+
+const mapPaymentToRow = (payment) => {
+  const bookingValue = payment?.booking_id || payment?.bookingId || payment?.booking?.id
+  const bookingId = bookingValue ? `BK${bookingValue}` : '-'
+  const paymentId = payment?.transaction_id || payment?.payment_id || (payment?.id ? `PAY-${payment.id}` : '-')
+  const amountValue = Number(payment?.amount ?? payment?.total_price ?? 0)
+  const rawStatus =
+    payment?.raw_status ??
+    payment?.booking_status ??
+    payment?.booking?.status ??
+    payment?.status ??
+    payment?.payment_status ??
+    'pending'
+  const rawStatusText = (rawStatus ?? '').toString().trim()
+  const statusKey = normalizeStatus(rawStatusText || 'pending')
+  const status = toStatusLabel(statusKey, rawStatusText || 'pending')
+  const date = toIsoDate(payment?.paid_at || payment?.created_at)
+
+  return {
+    id: paymentId,
+    bookingId,
+    amount: Number.isFinite(amountValue) ? amountValue : 0,
+    date,
+    status,
+    rawStatus: rawStatusText || status,
+    statusKey,
+    customerName: payment?.booking?.user?.name || 'Unknown',
+    vehicleTitle: payment?.booking?.vehicle?.title || 'Unknown Vehicle'
+  }
+}
+
+const toStatusLabel = (statusKey, rawStatus) => {
+  const labels = {
+    pending: 'Pending',
+    paid: 'Paid',
+    confirmed: 'Confirmed',
+    completed: 'Completed',
+    processing: 'Processing',
+    cancelled: 'Cancelled',
+    failed: 'Failed',
+    refunded: 'Refunded'
+  }
+  if (labels[statusKey]) return labels[statusKey]
+  const fallback = (rawStatus || '').toString().trim()
+  if (!fallback) return 'Pending'
+  return fallback
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+}
+
 const filter = ref('all')
 const dateFrom = ref('')
 const dateTo = ref('')
@@ -30,19 +130,6 @@ const normalizeStatus = (status) => {
   if (!raw) return 'pending'
   if (raw === 'canceled') return 'cancelled'
   return raw
-}
-
-const toStatusLabel = (status) => {
-  const labels = {
-    pending: 'Pending',
-    confirmed: 'Confirmed',
-    completed: 'Completed',
-    cancelled: 'Cancelled',
-    paid: 'Paid',
-    failed: 'Failed'
-  }
-
-  return labels[normalizeStatus(status)] || 'Pending'
 }
 
 const toIsoDate = (value) => {
@@ -124,9 +211,21 @@ const mapBookingToPayment = (entry) => {
 const fetchPayments = async () => {
   try {
     loading.value = true
-    error.value = ''
-    actionMessage.value = ''
-
+    error.value = null
+    
+    // First load the shop to get shop_id
+    const shop = await loadShop()
+    const shopId = shop?.id
+    
+    // If no shop exists, show empty payments
+    if (!shopId) {
+      payments.value = []
+      loading.value = false
+      return
+    }
+    
+    console.log('Fetching payments from /shop-payments...')
+    
     const response = await api.get('/shop-payments')
     const payload = response?.data
     const allPayments = Array.isArray(payload)
@@ -137,14 +236,16 @@ const fetchPayments = async () => {
           ? payload.data.data
           : []
 
-    payments.value = allPayments.map(mapBookingToPayment).sort((left, right) => {
-      if (!left.date && !right.date) return 0
-      if (!left.date) return 1
-      if (!right.date) return -1
-      return right.date.localeCompare(left.date)
+    // Filter payments by shop_id
+    const filteredPayments = allPayments.filter((p) => {
+      const paymentShopId = p.shop_id || p.booking?.shop_id || p.booking?.vehicle?.shop_id
+      return Number(paymentShopId) === Number(shopId)
     })
+
+    console.log('Filtered payments by shop:', filteredPayments)
+    payments.value = filteredPayments.map(mapPaymentToRow)
   } catch (err) {
-    console.error('Error fetching shop payments:', err)
+    console.error('Error fetching payments:', err)
     error.value = 'Failed to load payment activity for this shop.'
   } finally {
     loading.value = false

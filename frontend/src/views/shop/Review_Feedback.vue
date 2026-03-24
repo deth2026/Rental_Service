@@ -1,7 +1,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { feedbackApi, ratingApi } from '@/services/api'
+import { getSessionUser } from '@/services/auth'
 import '../../css/Feedback.css'
+
+const props = defineProps({
+  shopId: {
+    type: [String, Number],
+    default: null
+  }
+})
 
 const loading = ref(true)
 const error = ref(null)
@@ -49,7 +57,10 @@ const fetchVehicleRatings = async () => {
   try {
     vehicleLoading.value = true
     vehicleError.value = null
-    const response = await ratingApi.getVehicleRatingsSummary()
+    
+    // Build query params with shop_id if provided
+    const params = props.shopId ? { shop_id: props.shopId } : {}
+    const response = await ratingApi.getVehicleRatingsSummary(params)
     const data = response.data || []
     vehicleRatings.value = data
   } catch (err) {
@@ -221,7 +232,6 @@ const getRatingDistribution = (ratings) => {
       <h1 class="page-title">Reviews & Feedback</h1>
       <p class="page-subtitle">Manage customer feedback and vehicle ratings</p>
     </div>
-
     <!-- Tab Navigation -->
     <div class="tab-navigation">
       <div class="tabs-left">
@@ -444,7 +454,7 @@ const getRatingDistribution = (ratings) => {
     <div v-if="selected" class="modal-overlay" @click.self="closeReply">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>Reply to {{ selected.customer }}</h2>
+          <h2>The comment from  {{ selected.customer }}</h2>
           <button class="close-btn" @click="closeReply">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -612,10 +622,14 @@ const getRatingDistribution = (ratings) => {
 .stat-card {
   background: #fff;
   border: 1px solid #e2e8f0;
-  padding: 8px;
+  padding: 8px 12px;
   text-align: center;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .stat-card:hover {
@@ -664,19 +678,19 @@ const getRatingDistribution = (ratings) => {
 }
 
 .stat-value {
-  font-size: 1.5rem;
-  font-weight: 800;
+  font-size: 1.25rem;
+  font-weight: 700;
   line-height: 1;
   color: #343b1e;
 }
 
 .stat-card.main-stat .stat-value {
   color: #1e293b;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 
 .stat-card.main-stat .stat-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
 }
 
 .stat-label {
@@ -989,9 +1003,9 @@ const getRatingDistribution = (ratings) => {
 .vehicle-rating-card {
   background: #fff;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
   transition: all 0.3s ease;
 }
 
@@ -1001,20 +1015,20 @@ const getRatingDistribution = (ratings) => {
 
 .vehicle-info {
   display: flex;
-  gap: 20px;
+  gap: 12px;
   align-items: center;
-  padding-bottom: 20px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
 }
 
 .vehicle-image {
-  width: 140px;
-  height: 100px;
-  border-radius: 16px;
+  width: 80px;
+  height: 60px;
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   background: #f1f5f9;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .vehicle-image img {
@@ -1037,15 +1051,16 @@ const getRatingDistribution = (ratings) => {
 
 .vehicle-details {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .vehicle-name {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  font-size: 30px;
   color: #1e293b;
-  margin: 0 0 8px 0;
+  display: inline;
 }
 
 .vehicle-rating-summary {
@@ -1073,13 +1088,13 @@ const getRatingDistribution = (ratings) => {
 }
 
 .rating-number {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #1e293b;
 }
 
 .rating-progress {
-  width: 120px;
+  width: 80px;
 }
 
 .progress-bar {
