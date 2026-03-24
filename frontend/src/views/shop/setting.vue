@@ -69,6 +69,11 @@
               <input v-model="form.longitude" type="text" placeholder="104.9282" />
             </label>
 
+            <label class="field">
+              <span>Map Link</span>
+              <input v-model="form.location" type="text" placeholder="Google Maps URL" />
+            </label>
+
 
             <label class="field">
               <span>{{ t('password') }}</span>
@@ -292,6 +297,7 @@ const form = reactive({
   shop_address: '',
   latitude: '',
   longitude: '',
+  location: '',
   notifications_enabled: true,
   password: '',
 });
@@ -405,6 +411,7 @@ const loadData = async () => {
       form.phone = cachedShop.phone || storedUser.phone || '';
       form.latitude = cachedShop.latitude || '';
       form.longitude = cachedShop.longitude || '';
+      form.location = cachedShop.location || '';
     }
 
     const [usersResult, shopsResult] = await Promise.allSettled([
@@ -439,6 +446,7 @@ const loadData = async () => {
     form.shop_name = selectedShop?.name || '';
     form.shop_status = selectedShop?.status || 'active';
     form.shop_address = selectedShop?.address || '';
+    form.location = selectedShop?.location || '';
     form.password = '';
 
     const notifyRaw = localStorage.getItem(`${NOTIFY_KEY_PREFIX}${user.id}`);
@@ -635,7 +643,8 @@ const saveSettings = async () => {
       phone: form.phone || '',
       status: form.shop_status || 'active',
       latitude: form.latitude || null,
-      longitude: form.longitude || null
+      longitude: form.longitude || null,
+      location: form.location || null
     };
 
     if (currentShopId.value) {
@@ -651,7 +660,8 @@ const saveSettings = async () => {
       address: form.shop_address,
       phone: form.phone,
       latitude: form.latitude,
-      longitude: form.longitude
+      longitude: form.longitude,
+      location: form.location
     });
 
     localStorage.setItem(`${NOTIFY_KEY_PREFIX}${user.id}`, form.notifications_enabled ? '1' : '0');

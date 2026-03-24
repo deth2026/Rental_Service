@@ -251,6 +251,29 @@
   gap: 8px;
 }
 
+.btn-back-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 4px;
+  transition: color 0.2s ease;
+}
+
+.btn-back-row:hover {
+  color: var(--primary);
+}
+
+.btn-back-row i {
+  font-size: 1rem;
+}
+
 .checkout-progress {
   margin-top: 12px;
 

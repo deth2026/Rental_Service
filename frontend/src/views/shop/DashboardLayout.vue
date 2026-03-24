@@ -16,8 +16,8 @@ import { useToast } from "@/composables/useToast";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/Images/logo-removebg.png";
-const { showToast } = useToast();
+const logoUrl = "/images/logo-removebg.png";
+const { toast, showToast } = useToast();
 
 const sections = [
   { id: "dashboard", label: "Dashboard", icon: "dashboard" },
@@ -139,7 +139,7 @@ const onAvatarError = () => {
   avatarLoadFailed.value = true;
 };
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener("storage", refreshSessionUser);
   window.addEventListener("user-updated", refreshSessionUser);
 });
@@ -422,10 +422,6 @@ const saveShop = async () => {
   }
 };
 
-// Load shop and cities on mount
-fetchShop();
-fetchCities();
-
 // Fetch vehicles from database
 const fetchVehicles = async () => {
   try {
@@ -570,8 +566,6 @@ const resolveOwnerShop = async () => {
   form.shop = currentShopName.value;
   return shop.value;
 };
-
-loadOwnerShopName();
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -873,6 +867,53 @@ const removeVehicle = async () => {
     cancelDelete();
   }
 };
+
+// --- Missing Fetchers for Dashboard Stats ---
+const fetchBookings = async () => {
+  try {
+    const ownerId = getUserId();
+    const response = await api.get("/bookings");
+    const allBookings = response.data?.data || response.data || [];
+    // Only show bookings related to this owner's shop(s)
+    bookings.value = allBookings.filter(b => Number(b.shop_id) === shop.value?.id);
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+  }
+};
+
+const fetchPayments = async () => {
+  try {
+    const response = await api.get("/payments");
+    const allPayments = response.data?.data || response.data || [];
+    payments.value = allPayments.filter(p => Number(p.shop_id) === shop.value?.id);
+  } catch (error) {
+    console.error("Error fetching payments:", error);
+  }
+};
+
+const fetchFeedback = async () => {
+  try {
+    const response = await api.get("/feedback");
+    const allFeedback = response.data?.data || response.data || [];
+    feedback.value = allFeedback.filter(f => Number(f.shop_id) === shop.value?.id);
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+  }
+};
+
+onMounted(async () => {
+  // Initialize data in order
+  await loadOwnerShopName();
+  await fetchShop();
+  await fetchCities();
+  await fetchVehicles();
+  
+  // Now fetch stats
+  await fetchBookings();
+  await fetchPayments();
+  await fetchFeedback();
+});
+
 const onPhotos = (e) => {
   const file = e.target.files?.[0];
   if (file) {
@@ -1741,6 +1782,17 @@ const iconSvg = (name) => {
               placeholder="Enter address"
             />
           </div>
+
+          <!-- Map Link -->
+          <div class="form-group">
+            <label>Map Link (Google Maps URL)</label>
+            <input
+              v-model="shopForm.location"
+              type="text"
+              placeholder="Paste Google Maps URL here"
+            />
+          </div>
+
           <!-- Description -->
           <div class="form-group">
             <label>Description</label>

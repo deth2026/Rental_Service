@@ -5,8 +5,8 @@
     <div class="left">
         <div class="overlay">
         <div class="logo">
-            <div class="logo-icon-wrap">
-              <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="login-logo-img" />
+              <div class="logo-icon-wrap">
+              <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="login-logo-img" />
             </div>
             <span>CHONG CHOUL</span>
           </div>
@@ -162,11 +162,7 @@ import "../../css/login.css";
 const router = useRouter();
 
 onMounted(() => {
-  const isGranted = localStorage.getItem('chong_choul_location_granted') === 'true';
-  if (!isGranted) {
-    console.warn("Security: Location not allowed. Redirecting to home.");
-    router.push('/');
-  }
+  // Logic here if needed later
 });
 const isLoading = ref(false);
 const errors = ref({});

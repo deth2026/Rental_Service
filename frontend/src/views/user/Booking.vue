@@ -32,6 +32,9 @@
 
       <div class="page-heading-row">
         <div class="title-block">
+          <button class="btn-back-row" @click="goBack">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
           <h1>Checkout</h1>
           <span class="step-pill">Step 2 of 3</span>
         </div>
@@ -590,6 +593,10 @@ const handleLogout = async () => {
 
 const goHome = () => {
   router.push('/');
+};
+
+const goBack = () => {
+  router.back();
 };
 
 const onAvatarError = () => {

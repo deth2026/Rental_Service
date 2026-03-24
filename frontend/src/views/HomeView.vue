@@ -5,7 +5,7 @@
     <div v-if="showSplash" class="location-splash">
       <div class="splash-content">
         <div class="splash-logo-container">
-          <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="splash-img" />
+          <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="splash-img" />
           <h1 class="splash-brand">CHONG CHOUL</h1>
         </div>
         <div class="splash-loader-container">
@@ -20,7 +20,7 @@
   <div v-if="showLocationPopup" class="location-popup-overlay">
       <div class="location-popup-card">
         <div class="popup-brand-header">
-           <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="popup-logo-big" />
+           <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="popup-logo-big" />
            <h3 class="popup-brand-name">CHONG CHOUL</h3>
         </div>
         
@@ -185,7 +185,12 @@
             Join Cambodia's largest vehicle rental network and connect with more
             customers.
           </p>
-          <RouterLink to="/register"><button type="button">Register Your Shop</button></RouterLink>
+          <template v-if="isLocationAllowed">
+            <RouterLink to="/register"><button type="button">Register Your Shop</button></RouterLink>
+          </template>
+          <template v-else>
+            <button type="button" @click="showLocationPopup = true">Register Your Shop</button>
+          </template>
         </div>
         <div class="cta-device"></div>
       </div>

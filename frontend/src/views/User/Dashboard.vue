@@ -317,10 +317,31 @@ const ensureLeaflet = async () => {
 }
 
 const provinceBanners = {
-  'Phnom Penh': 'https://images.unsplash.com/photo-1598509524136-421cbe2c19f3?q=80&w=1200', // Riverside/Royal Palace
-  'Siem Reap': 'https://images.unsplash.com/photo-1500048993953-d23a436266cf?q=80&w=1200', // Angkor Wat
-  'Preah Sihanouk': 'https://images.unsplash.com/photo-1554483731-866416049079?q=80&w=1200', // Beach
+  'Phnom Penh': 'https://images.unsplash.com/photo-1598509524136-421cbe2c19f3?q=80&w=1200',
+  'Siem Reap': 'https://images.unsplash.com/photo-1500048993953-d23a436266cf?q=80&w=1200',
+  'Preah Sihanouk': 'https://images.unsplash.com/photo-1554483731-866416049079?q=80&w=1200',
   'Kampot': 'https://images.unsplash.com/photo-1571216694665-68a867822941?q=80&w=1200',
+  'Kep': 'https://images.unsplash.com/photo-1554483731-866416049079?q=80&w=1200',
+  'Battambang': 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1200',
+  'Mondulkiri': 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=1200',
+  'Ratanakiri': 'https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?q=80&w=1200',
+  'Koh Kong': 'https://images.unsplash.com/photo-1554483731-866416049079?q=80&w=1200',
+  'Kandal': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Kampong Cham': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Kampong Chhnang': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Kampong Speu': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Kampong Thom': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Kratie': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Oddar Meanchey': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Pailin': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Preah Vihear': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Prey Veng': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Pursat': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Stung Treng': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Svay Rieng': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Takeo': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Tboung Khmum': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
+  'Banteay Meanchey': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200',
   'default': 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200'
 }
 
@@ -332,13 +353,14 @@ const createPinIcon = (shop, active) =>
     html: `
       <div class="shop-marker-wrapper ${active ? 'active' : ''}">
         <div class="shop-marker-bubble">
-          <i class="fa-solid fa-store"></i>
+          <i class="fa-solid fa-motorcycle"></i>
+          <span class="shop-marker-name">${shop.name.split(' ').slice(0, 2).join(' ')}</span>
         </div>
         <div class="shop-marker-pin"></div>
       </div>
     `,
-    iconSize: [40, 50],
-    iconAnchor: [20, 45],
+    iconSize: [120, 50],
+    iconAnchor: [60, 45],
   })
 
 const renderMapMarkers = () => {
@@ -439,7 +461,7 @@ onBeforeUnmount(() => {
   <div class="customer-page">
     <header class="customer-topbar">
       <div class="brand-left">
-        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
+        <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
         <span>Chong Choul</span>
       </div>
 

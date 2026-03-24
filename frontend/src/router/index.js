@@ -198,6 +198,11 @@ const router = createRouter({
   ]
 });
 
+// Check if location is granted
+const isLocationGranted = () => {
+  return localStorage.getItem('chong_choul_location_granted') === 'true';
+};
+
 // Navigation guard
 router.beforeEach((to, from, next) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
@@ -205,6 +210,14 @@ router.beforeEach((to, from, next) => {
   const allowedRoles = to.matched.find(record => record.meta.allowedRoles)?.meta.allowedRoles || [];
   const isAuth = isAuthenticated();
   const userRole = getUserRole();
+
+  // Location requirement check for auth-related routes
+  const authRoutes = ['login', 'register', 'chooserole'];
+  if (authRoutes.includes(to.name) && !isLocationGranted()) {
+    console.warn("Security: Location not granted. Redirecting to home.");
+    next('/');
+    return;
+  }
 
   if (requiresAuth && !isAuth) {
     next('/login');

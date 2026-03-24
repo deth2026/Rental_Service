@@ -6,11 +6,7 @@ import "../css/chooserole.css";
 const router = useRouter();
 
 onMounted(() => {
-  const isGranted = localStorage.getItem('chong_choul_location_granted') === 'true';
-  if (!isGranted) {
-    console.warn("Security: Location not allowed. Redirecting to home.");
-    router.push('/');
-  }
+  // Logic here if needed later
 });
 
 const selectRole = (role) => {
