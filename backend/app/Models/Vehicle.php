@@ -16,7 +16,7 @@ class Vehicle extends Model
 {
     use HasFactory;
 
-    protected $appends = ['image_url_full', 'photo_urls'];
+    protected $appends = ['image_url_full', 'photo_urls', 'vehicle_name', 'is_available'];
 
     public function getCreatedAtColumn()
     {
@@ -121,6 +121,47 @@ class Vehicle extends Model
         }
 
         return $urls;
+    }
+
+    /**
+     * Get the display name for the vehicle
+     * Uses custom name first, falls back to brand + model
+     */
+    public function getVehicleNameAttribute(): string
+    {
+        $name = trim((string) ($this->name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+        
+        $brandModel = trim(implode(' ', array_filter([
+            $this->brand ?? '',
+            $this->model ?? '',
+        ])));
+        
+        return $brandModel ?: 'Unnamed Vehicle';
+    }
+
+    /**
+     * Check if vehicle is available for booking
+     * A vehicle is unavailable if it has only 1 total_vehicles and has an active booking
+     */
+    public function getIsAvailableAttribute(): bool
+    {
+        $totalVehicles = (int) ($this->total_vehicles ?? 1);
+        
+        // If more than 1 vehicle, always available
+        if ($totalVehicles > 1) {
+            return true;
+        }
+        
+        // If only 1 vehicle, check for active bookings
+        $activeStatuses = ['pending', 'confirmed', 'rented', 'completed'];
+        $hasActiveBooking = Booking::where('vehicle_id', $this->id)
+            ->whereIn('status', $activeStatuses)
+            ->exists();
+        
+        return !$hasActiveBooking;
     }
     protected $fillable = [
         'shop_id',

@@ -6,7 +6,12 @@ const router = useRouter();
 
 const selectRole = (role) => {
   localStorage.setItem("selectedRole", role);
-  router.push(`/register?role=${role}`);
+  // Admin can only login, not register
+  if (role === 'admin') {
+    router.push("/login");
+  } else {
+    router.push(`/register?role=${role}`);
+  }
 };
 </script>
 <template>

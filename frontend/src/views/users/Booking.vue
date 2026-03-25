@@ -90,7 +90,14 @@
                 placeholder="Enter code"
                 v-model="promoCode"
               />
-              <button class="btn-secondary" type="button">Apply</button>
+              <button class="btn-secondary" type="button" @click="applyCoupon">Apply</button>
+            </div>
+            <p v-if="promoMessage" :class="['promo-message', promoSuccess ? 'success' : 'error']">
+              {{ promoMessage }}
+            </p>
+            <div v-if="promoSuccess && promoDiscount > 0" class="promo-discount">
+              <span>Discount</span>
+              <span>-${{ promoDiscount.toFixed(2) }}</span>
             </div>
           </div>
 
@@ -505,7 +512,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import api from "@/services/api";
+import api, { couponApi } from "@/services/api";
+import { jsPDF } from "jspdf";
 import paymentQrCodeImage from "@/assets/img/image.png";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
@@ -688,6 +696,10 @@ const loadVehicleDetail = async () => {
 
 const method = ref("card");
 const promoCode = ref("");
+const promoDiscount = ref(0);
+const promoCouponId = ref(null);
+const promoMessage = ref("");
+const promoSuccess = ref(false);
 const showSuccessModal = ref(false);
 const showConfirmModal = ref(false);
 const pendingPaymentAction = ref(null);
@@ -929,7 +941,9 @@ const totalAmount = computed(() => {
   const riders = riderCount.value;
   const subtotal = days * rental.value.dailyRate * riders;
   rental.value.subtotal = subtotal;
-  return rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
+  const baseTotal = rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
+  // Subtract promo discount from total
+  return Math.max(baseTotal - promoDiscount.value, 0);
 });
 
 const isFormValid = computed(() => {
@@ -993,6 +1007,36 @@ const validateDates = async () => {
   formatPeriod();
 };
 
+const applyCoupon = async () => {
+  if (!promoCode.value) {
+    promoMessage.value = "Please enter a promo code.";
+    promoSuccess.value = false;
+    return;
+  }
+
+  try {
+    const response = await couponApi.validate(promoCode.value, totalAmount.value);
+    const data = response.data;
+    
+    if (data.valid) {
+      promoCouponId.value = data.coupon_id;
+      promoDiscount.value = Number(data.discount_amount || 0);
+      promoSuccess.value = true;
+      promoMessage.value = `Coupon applied! You save ${promoDiscount.value.toFixed(2)}`;
+    } else {
+      promoCouponId.value = null;
+      promoDiscount.value = 0;
+      promoSuccess.value = false;
+      promoMessage.value = data.message || "Invalid promo code.";
+    }
+  } catch (error) {
+    promoCouponId.value = null;
+    promoDiscount.value = 0;
+    promoSuccess.value = false;
+    promoMessage.value = error?.response?.data?.message || "Failed to validate promo code.";
+  }
+};
+
 const saveBookingToDatabase = async (bookingData) => {
   const currentUser = userService.getCurrentUser();
   if (!currentUser?.id) {
@@ -1007,7 +1051,7 @@ const saveBookingToDatabase = async (bookingData) => {
     user_id: currentUser.id,
     vehicle_id: vehicleId.value,
     shop_id: vehicle.value?.shop_id ?? null,
-    coupon_id: null,
+    coupon_id: promoCouponId.value,
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
@@ -1249,29 +1293,62 @@ const closeSuccessModal = () => {
 };
 
 const downloadReceipt = () => {
-  const receipt = `
-BOOKING RECEIPT
-================
-Booking ID: ${bookingId.value}
-${paymentReferenceLabel.value}: ${paymentReferenceValue.value}
-Payment Method: ${completedPaymentLabel.value}
-Amount Paid: $${totalAmount.value.toFixed(2)}
-Date: ${transactionDateTime.value}
-
-Booking: ${rental.value.title}
-Location: ${rental.value.location}
-Period: ${rental.value.period}
-  `.trim();
-
-  const blob = new Blob([receipt], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `receipt_${paymentReferenceValue.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+  // Create PDF document
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Header
+  doc.setFontSize(24);
+  doc.setTextColor(51, 51, 51);
+  doc.text("Chong Choul Rental", pageWidth / 2, 25, { align: "center" });
+  
+  doc.setFontSize(14);
+  doc.setTextColor(102, 102, 102);
+  doc.text("Booking Receipt", pageWidth / 2, 35, { align: "center" });
+  
+  // Divider line
+  doc.setDrawColor(51, 51, 51);
+  doc.setLineWidth(0.5);
+  doc.line(20, 42, pageWidth - 20, 42);
+  
+  // Receipt Details
+  doc.setFontSize(11);
+  doc.setTextColor(85, 85, 85);
+  let yPos = 55;
+  
+  const addLine = (label, value) => {
+    doc.setFont("helvetica", "bold");
+    doc.text(label, 25, yPos);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(51, 51, 51);
+    doc.text(String(value), 80, yPos);
+    doc.setTextColor(85, 85, 85);
+    yPos += 10;
+  };
+  
+  addLine("Booking ID:", bookingId.value);
+  addLine(`${paymentReferenceLabel.value}:`, paymentReferenceValue.value);
+  addLine("Payment Method:", completedPaymentLabel.value);
+  addLine("Date:", transactionDateTime.value);
+  addLine("Vehicle:", rental.value.title);
+  addLine("Location:", rental.value.location);
+  addLine("Rental Period:", rental.value.period);
+  
+  // Total Amount
+  yPos += 10;
+  doc.setFontSize(16);
+  doc.setTextColor(46, 204, 113);
+  doc.text(`Total Paid: ${totalAmount.value.toFixed(2)}`, pageWidth / 2, yPos, { align: "center" });
+  
+  // Footer
+  yPos += 30;
+  doc.setFontSize(10);
+  doc.setTextColor(153, 153, 153);
+  doc.text("Thank you for choosing Chong Choul Rental!", pageWidth / 2, yPos, { align: "center" });
+  doc.text("For support, contact us at support@chongchoul.com", pageWidth / 2, yPos + 7, { align: "center" });
+  
+  // Save PDF
+  doc.save(`receipt_${paymentReferenceValue.value}.pdf`);
 };
 
 onBeforeUnmount(() => {

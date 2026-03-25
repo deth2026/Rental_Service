@@ -7,6 +7,8 @@ export const useAdminStore = defineStore('admin', () => {
   const totals = ref({ totalUsers: 0, totalShops: 0, totalVehicles: 0, totalBookings: 0 })
   const trends = ref({ users: 12, shops: 5, vehicles: 8, bookings: 15, revenue: 22 })
   const bookingGrossByDay = ref([])
+  const paymentTotal = ref(0)
+  const paymentRecords = ref([])
   const vehicleTypeCounts = ref({ motorbike: 0, bicycle: 0, car: 0, other: 0 })
   const recentShops = ref([])
   
@@ -82,11 +84,12 @@ export const useAdminStore = defineStore('admin', () => {
 
     try {
       // Parallel fetch for speed using api instance
-      const [usersRes, shopsRes, vehiclesRes, bookingsRes] = await Promise.allSettled([
+      const [usersRes, shopsRes, vehiclesRes, bookingsRes, paymentsRes] = await Promise.allSettled([
         api.get('/users'),
         api.get('/shops'),
         api.get('/vehicles'),
-        api.get('/bookings')
+        api.get('/bookings'),
+        api.get('/payments')
       ])
 
       // Batch state updates to minimize reactivity triggers
@@ -107,6 +110,12 @@ export const useAdminStore = defineStore('admin', () => {
       if (bookingsRes.status === 'fulfilled') {
         const data = bookingsRes.value.data
         nextState.bookings = Array.isArray(data) ? data : (data.data || [])
+      }
+      if (paymentsRes.status === 'fulfilled') {
+        const data = paymentsRes.value.data
+        paymentRecords.value = Array.isArray(data) ? data : (data.data || [])
+      } else {
+        paymentRecords.value = []
       }
 
       // Normalize booking fields so all admin pages can read consistent values.
@@ -134,19 +143,23 @@ export const useAdminStore = defineStore('admin', () => {
         else counts.other++
       })
 
-      // Revenue Calculation (Last 7 Days)
+      // Revenue Calculation (Last 7 Days) - Only count bookings with paid/completed status
       const today = new Date()
       const grossByDayMap = new Map()
+      const validStatuses = ['paid', 'completed', 'confirmed']
       for (let i = 0; i < 7; i++) {
         const d = new Date(today); d.setDate(d.getDate() - i)
         grossByDayMap.set(d.toISOString().split('T')[0], { val: 0, label: d.toLocaleDateString('en-US', { weekday: 'short' }) })
       }
 
       nextState.bookings.forEach(b => {
-        const bDate = String(b.start_date || b.created_at || '').split(' ')[0]
-        if (grossByDayMap.has(bDate)) {
-          const entry = grossByDayMap.get(bDate)
-          entry.val += toAmount(b)
+        const status = String(b.status || '').toLowerCase()
+        if (validStatuses.includes(status)) {
+          const bDate = String(b.start_date || b.created_at || '').split(' ')[0]
+          if (grossByDayMap.has(bDate)) {
+            const entry = grossByDayMap.get(bDate)
+            entry.val += toAmount(b)
+          }
         }
       })
 
@@ -171,10 +184,16 @@ export const useAdminStore = defineStore('admin', () => {
       const bookingsPrevious = nextState.bookings.filter((b) => isPreviousWindow(toDate(b.start_date || b.created_at))).length
 
       const revenueCurrent = nextState.bookings
-        .filter((b) => isCurrentWindow(toDate(b.start_date || b.created_at)))
+        .filter((b) => {
+          const status = String(b.status || '').toLowerCase()
+          return validStatuses.includes(status) && isCurrentWindow(toDate(b.start_date || b.created_at))
+        })
         .reduce((sum, b) => sum + toAmount(b), 0)
       const revenuePrevious = nextState.bookings
-        .filter((b) => isPreviousWindow(toDate(b.start_date || b.created_at)))
+        .filter((b) => {
+          const status = String(b.status || '').toLowerCase()
+          return validStatuses.includes(status) && isPreviousWindow(toDate(b.start_date || b.created_at))
+        })
         .reduce((sum, b) => sum + toAmount(b), 0)
 
       // Update refs once all processing is done
@@ -184,6 +203,11 @@ export const useAdminStore = defineStore('admin', () => {
       bookingGrossByDay.value = Array.from(grossByDayMap.entries())
         .map(([key, entry]) => ({ key, value: entry.val, label: entry.label }))
         .reverse()
+
+      paymentTotal.value = paymentRecords.value.reduce((sum, item) => {
+        const amt = Number(item.amount ?? item.total_amount ?? item.value ?? 0)
+        return sum + (Number.isFinite(amt) ? amt : 0)
+      }, 0)
 
       trends.value = {
         users: percentageTrend(usersCurrent, usersPrevious),
@@ -353,7 +377,7 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   return {
-    totals, trends, bookingGrossByDay, vehicleTypeCounts,
+    totals, trends, bookingGrossByDay, vehicleTypeCounts, paymentTotal,
     state, recentShops, formatted, load, setShopStatus, updateShop, addUser, updateUser, deleteUser, deleteShop, deleteVehicle, deleteBooking
   }
 })

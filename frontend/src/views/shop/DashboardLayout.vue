@@ -80,6 +80,9 @@ const handleDocumentClick = (event) => {
   }
 };
 
+// Professional Logo path from public folder
+const logoUrl = '/Images/logo.png'
+
 const sections = [
   { id: "dashboard", label: "Dashboard", icon: "grid" },
   { id: "my-shop", label: "My Shop", icon: "shop" },
@@ -1302,6 +1305,17 @@ const iconSvg = (name) => {
           </svg>
         </span>
       </button>
+      
+      <!-- Logo/Brand Section -->
+      <!-- <div class="brand">
+        <div class="brand-badge" aria-hidden="true">
+          <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
+        </div>
+      </div> -->
+      
       <div class="menu-area">
         <div class="menu-title">MENU</div>
         <button
@@ -2462,44 +2476,97 @@ const iconSvg = (name) => {
   transform: rotate(180deg);
 }
 
-.brand {
+/* Logo/Brand Section */
+/* .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 2px 8px 16px;
+  gap: 12px;
+  margin-right: 3px;
+  padding: 16px 20px;
   border-bottom: 1px solid #1a2a52;
-  margin-bottom: 14px;
-}
+  margin-bottom: 8px;
+} */
 
-.brand-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #0891b2;
-  font-weight: 700;
+.brand-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 60px;
   display: grid;
   place-items: center;
-  flex: 0 0 48px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--mp-cyan-2);
+  border: none;
+  overflow: visible;
+  position: relative;
+  flex-shrink: 0;
 }
 
-.brand-icon :deep(svg) {
+.brand-badge::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  border: 2px solid rgba(14, 165, 233, 0.3);
+  opacity: 0.8;
+  animation: brandRingSpin 12s linear infinite, brandRingPulse 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes brandRingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes brandRingPulse {
+  0% {
+    transform: rotate(0deg) scale(0.98);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.02);
+  }
+  100% {
+    transform: rotate(360deg) scale(0.98);
+  }
+}
+
+.brand-logo {
   width: 48px;
   height: 48px;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+  border-radius: 90px;
+  object-fit: contain;
+  display: block;
+  position: relative;
+  z-index: 1;
+  background-color: white;
+  padding: 4px;
 }
 
-.brand h2 {
-  margin: 0;
-  color: #fff;
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.brand-name {
   font-size: 18px;
-  line-height: 1.1;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
 }
 
+.brand-cyan {
+  color: #06b6d4;
+}
+
+.brand-icon,
+.brand h2,
 .brand p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: #8ca4df;
+  display: none;
 }
 
 .menu-title {
@@ -3365,9 +3432,8 @@ textarea {
   display: none;
 }
 
-.page.sidebar-collapsed .menu-item {
-  justify-content: center;
-  padding: 10px;
+.page.sidebar-collapsed .brand-badge {
+  display: none;
 }
 
 .page.sidebar-collapsed .brand {

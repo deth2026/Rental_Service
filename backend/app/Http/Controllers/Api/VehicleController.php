@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\VehicleResource;
+use App\Models\Booking;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -191,17 +192,20 @@ class VehicleController extends Controller
 
     public function index(Request $request)
     {
-        // Check if shop_id is provided in the query parameters
+        // Debug logging
         $shopId = $request->query('shop_id');
+        \Illuminate\Support\Facades\Log::info('Vehicle index request - shop_id param: ' . ($shopId ?? 'null'));
 
+        $query = null;
         if ($shopId) {
             $query = $this->ratingAwareVehicleQuery()->where('shop_id', $shopId);
-            return VehicleResource::collection($query->paginate(15));
+            \Illuminate\Support\Facades\Log::info('Filtering vehicles by shop_id: ' . $shopId);
+        } else {
+            // Return all vehicles for all users (including shop owners)
+            $query = $this->ratingAwareVehicleQuery();
+            \Illuminate\Support\Facades\Log::info('No shop_id provided, returning all vehicles');
         }
 
-        // Return all vehicles for all users (including shop owners)
-        // This ensures shop owners can see their vehicles in the frontend
-        $query = $this->ratingAwareVehicleQuery();
         return VehicleResource::collection($query->paginate(15));
     }
 

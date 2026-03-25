@@ -1040,9 +1040,10 @@ const getRatingDistribution = (ratings) => {
 
 .vehicle-details {
   display: flex;
-  flex-direction: row;
+  margin-top: 13px;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 3px;
 }
 
 .vehicle-name {

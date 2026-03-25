@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { vehicleApi, shopApi, api } from '@/services/api'
 import { getSessionUser } from '@/services/auth'
 import '../../css/Vehicles.css'
@@ -20,6 +20,44 @@ const currentShopId = ref(null)
 
 // Get current user
 const sessionUser = ref(getSessionUser() || {})
+
+console.log('=== Vehicles.vue Init ===')
+console.log('User from session:', sessionUser.value)
+console.log('User ID:', sessionUser.value?.id)
+
+// Shop cache utilities (same as DashboardLayout)
+const SHOP_CACHE_PREFIX = "settings_shop_"
+
+const shopCacheKey = (ownerId) => `${SHOP_CACHE_PREFIX}${ownerId}`
+
+const getCachedShop = (ownerId) => {
+  if (!ownerId) return null
+  try {
+    const raw = localStorage.getItem(shopCacheKey(ownerId))
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const setCachedShop = (ownerId, shopData) => {
+  if (!ownerId) return
+  console.log('=== setCachedShop ===')
+  console.log('ownerId:', ownerId)
+  console.log('shopData:', shopData)
+  try {
+    if (!shopData) {
+      localStorage.removeItem(shopCacheKey(ownerId))
+      return
+    }
+    localStorage.setItem(shopCacheKey(ownerId), JSON.stringify(shopData))
+    console.log('Shop cached successfully')
+  } catch (e) {
+    console.log('Error caching shop:', e)
+  }
+}
 
 // Delete confirmation modal
 const showDeleteModal = ref(false)
@@ -54,9 +92,37 @@ const vehicles = ref([])
 
 // Fetch vehicles from database
 const fetchVehicles = async () => {
+    // Wait for shop ID to be available
+    if (!currentShopId.value) {
+        console.log('Waiting for shop ID before fetching vehicles. currentShopId:', currentShopId.value)
+        return
+    }
+    
     try {
         loading.value = true
-        const response = await vehicleApi.getAll()
+        // Pass shop_id to filter vehicles by current shop
+        const params = { shop_id: currentShopId.value }
+        console.log('Fetching vehicles with shop_id:', currentShopId.value, 'params:', params)
+        const response = await vehicleApi.getAll(params)
+        console.log('Vehicles API response:', response.data)
+        // Handle paginated response
+        let vehiclesData = response.data.data || response.data || []
+        
+        // If no vehicles found with shop_id filter, try without filter (fallback)
+        if (vehiclesData.length === 0) {
+            console.log('No vehicles found with shop_id, trying without filter...')
+            const fallbackResponse = await vehicleApi.getAll()
+            vehiclesData = fallbackResponse.data.data || fallbackResponse.data || []
+            // Filter client-side by shop_id
+            vehiclesData = vehiclesData.filter(v => {
+                const vShopId = v.shop_id || v.data?.attributes?.shop_id
+                return Number(vShopId) === Number(currentShopId.value)
+            })
+            console.log('Fallback vehicles after client-side filter:', vehiclesData.length)
+        }
+        
+        console.log('Vehicles data:', vehiclesData.length, 'vehicles')
+        vehicles.value = vehiclesData
         // Handle paginated response
         vehicles.value = response.data.data || response.data || []
         // Map database fields to frontend fields
@@ -88,6 +154,7 @@ const fetchVehicles = async () => {
                 shop_id: source.shop_id,
                 type: source.type,
                 category: source.category || source.type,
+                stock: Number(source.total_vehicles ?? source.totalVehiclesInput ?? 1),
                 plate: source.plate_number || source.plate,
                 price: Number(source.price_per_day ?? source.price) || 0,
                 status: (source.status || 'Available').trim(),
@@ -110,13 +177,25 @@ const fetchVehicles = async () => {
 
 // Load vehicles and shop on mount
 onMounted(async () => {
+    console.log('=== onMounted ===')
+    // Re-read session user on mount to ensure we have the latest data
+    sessionUser.value = getSessionUser() || {}
+    console.log('Session user after init:', sessionUser.value)
     await fetchUserShop()
-    fetchVehicles()
+    await fetchVehicles()
+})
+
+// Watch for shop ID changes and refetch vehicles when shop is loaded
+watch(currentShopId, async (newShopId, oldShopId) => {
+    if (newShopId && newShopId !== oldShopId) {
+        console.log('Shop ID changed, refetching vehicles:', newShopId)
+        await fetchVehicles()
+    }
 })
 
 const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
 const photoPreview = ref(sampleThumb)
-const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [], riderDetails: '', insuranceFee: '', taxesFee: '' })
+const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [], riderDetails: '', insuranceFee: '', taxesFee: '', totalVehiclesInput: 1 })
 
 const normalizeOptionalNumber = (value) => {
     if (value === '' || value === null || value === undefined) {
@@ -131,11 +210,33 @@ const normalizeOptionalNumber = (value) => {
 const fetchUserShop = async () => {
     try {
         const ownerId = Number(sessionUser.value?.id || 0)
-        if (!ownerId) return
+        console.log('=== fetchUserShop ===')
+        console.log('ownerId:', ownerId)
+        if (!ownerId) {
+            console.log('No ownerId, returning early')
+            return
+        }
 
+        // First try to get from cache
+        let cachedShop = getCachedShop(ownerId)
+        console.log('Cached shop:', cachedShop)
+        if (cachedShop) {
+            console.log('Using cached shop:', cachedShop.id)
+            currentShop.value = cachedShop
+            currentShopId.value = cachedShop.id
+            form.shop = cachedShop.name
+            // Trigger vehicle fetch immediately since we have shop
+            await fetchVehicles()
+            return
+        }
+
+        // Fetch from API if not in cache
+        console.log('Fetching shop from API...')
         const response = await api.get('/shops')
         const shops = response.data.data || response.data || []
+        console.log('All shops:', shops.length)
         const myShops = shops.filter((s) => Number(s.owner_id) === ownerId)
+        console.log('My shops:', myShops.length)
 
         if (myShops.length > 0) {
             // Sort by creation date, newest first
@@ -144,9 +245,14 @@ const fetchUserShop = async () => {
                 const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
                 return bTime - aTime
             })
+            console.log('Selected shop:', myShops[0].id, myShops[0].name)
             currentShop.value = myShops[0]
             currentShopId.value = myShops[0].id
             form.shop = myShops[0].name
+            // Cache the shop for future use
+            setCachedShop(ownerId, myShops[0])
+        } else {
+            console.log('No shop found for this user!')
         }
     } catch (error) {
         console.error('Error fetching shop:', error)
@@ -229,7 +335,8 @@ const openCreate = async () => {
         plate: '', description: '', fuel: '', transmission: '',
         price: '', status: 'Available', updatedAt: khTime(),
         photos: [], base64Photos: [],
-        riderDetails: '', insuranceFee: '', taxesFee: ''
+        riderDetails: '', insuranceFee: '', taxesFee: '',
+        totalVehiclesInput: 1
     })
     photoPreview.value = sampleThumb
     modal.value = true
@@ -267,7 +374,8 @@ const openEdit = (v) => {
         base64Photos: photosData || [],
         riderDetails: v.riderDetails || '',
         insuranceFee: v.insuranceFee ?? '',
-        taxesFee: v.taxesFee ?? ''
+        taxesFee: v.taxesFee ?? '',
+        totalVehiclesInput: v.stock ?? 1
     })
     // Use the stored full URL or fall back to sampleThumb
     photoPreview.value = imageUrl || sampleThumb
@@ -315,7 +423,8 @@ const saveVehicle = async () => {
         previewUrl: photoPreview.value,
         rider_details: form.riderDetails,
         insurance_fee: normalizeOptionalNumber(form.insuranceFee),
-        taxes_fee: normalizeOptionalNumber(form.taxesFee)
+        taxes_fee: normalizeOptionalNumber(form.taxesFee),
+        total_vehicles: normalizeOptionalNumber(form.totalVehiclesInput) ?? 1
     }
     console.log('=== Form Data ===', form)
     console.log('=== Payload ===', payload)
@@ -355,40 +464,17 @@ const saveVehicle = async () => {
             }
             modal.value = false
             showToast('Vehicle updated successfully!', 'success')
+            // Re-fetch vehicles to ensure the list stays in sync with the database
+            await fetchVehicles()
         } else {
             // Create new vehicle - wait for API response first
             const response = await vehicleApi.create(payload)
             const newData = response.data
 
-            // Add vehicle to list with real data from server
-            const newVehicle = {
-                id: newData.id,
-                name: newData.name,
-                brand: newData.brand,
-                model: newData.model,
-                category: newData.type,
-                type: newData.type,
-                plate: newData.plate_number,
-                price: newData.price_per_day,
-                status: newData.status,
-                description: newData.description,
-                fuel: newData.fuel_type,
-                transmission: newData.transmission,
-                shop_id: newData.shop_id,
-                // Use full image URL from API response
-                previewUrl: newData.image_url_full || newData.image_url || photoPreview.value,
-                image_url_full: newData.image_url_full,
-                photos: form.base64Photos || [],
-                base64Photos: form.base64Photos || [],
-                riderDetails: newData.rider_details ?? '',
-                insuranceFee: newData.insurance_fee ?? '',
-                taxesFee: newData.taxes_fee ?? '',
-                createdAt: khTime(),
-                updatedAt: khTime()
-            }
-            vehicles.value.unshift(newVehicle)
             modal.value = false
             showToast('Vehicle created successfully!', 'success')
+            // Re-fetch vehicles to ensure the list stays in sync with the database
+            await fetchVehicles()
         }
     } catch (error) {
         console.error('Error saving vehicle:', error)
@@ -649,6 +735,7 @@ const onPhotoDrop = async (e) => {
           <tr>
             <th>Image</th>
             <th>Vehicle</th>
+            <th>Stock</th>
             <th>Category</th>
             <th>Plate Number</th>
             <th>Price/Day</th>
@@ -678,6 +765,7 @@ const onPhotoDrop = async (e) => {
               ></i>
               <span>{{ v.name }}</span>
             </td>
+            <td>{{ v.stock }}</td>
             <td>{{ v.category }}</td>
             <td>{{ v.plate }}</td>
             <td>${{ v.price }}</td>
@@ -867,6 +955,15 @@ const onPhotoDrop = async (e) => {
                     <option>3 Riders</option>
                     <option>4+ Riders</option>
                   </select>
+                </div>
+                <div class="form-group">
+                  <label>Total Vehicles</label>
+                  <input
+                    v-model="form.totalVehiclesInput"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                  />
                 </div>
               </div>
               <div class="form-row">

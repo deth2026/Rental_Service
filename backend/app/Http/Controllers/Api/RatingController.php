@@ -65,7 +65,7 @@ class RatingController extends Controller
                 
                 return [
                     'id' => $vehicle->id,
-                    'vehicle_name' => $vehicle->brand . ' ' . $vehicle->model,
+                    'vehicle_name' => $vehicle->name ?: ($vehicle->brand . ' ' . $vehicle->model),
                     'vehicle_image' => $vehicle->image_url_full,
                     'average_rating' => $avgRating ? round($avgRating, 1) : 0,
                     'total_ratings' => $totalRatings,

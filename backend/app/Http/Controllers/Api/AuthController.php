@@ -19,7 +19,7 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255',
             'phone' => 'required|string|max:20',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'nullable|in:customer,shop_owner,admin'
+            'role' => 'nullable|in:customer,shop_owner'
         ]);
 
         $normalizedEmail = strtolower(trim((string) $payload['email']));

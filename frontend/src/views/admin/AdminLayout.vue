@@ -18,7 +18,7 @@ const adminStore = useAdminStore()
 const { t } = useI18n()
 
 // Professional Logo path from public folder
-const logoUrl = '/Images/logo-removebg.png'
+const logoUrl = '/Images/logo.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)
@@ -281,7 +281,7 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
     <aside class="admin-sidebar">
        <div class="admin-brand">
          <div class="brand-badge" aria-hidden="true">
-           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 6px; border-radius: 90px; width: 90px; height: 90px; object-fit: contain;" />
+           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 4px; border-radius: 50px; width: 50px; height: 50px; object-fit: contain;" />
          </div>
          <div class="brand-text">
            <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>

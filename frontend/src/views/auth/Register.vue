@@ -324,6 +324,11 @@ const showConfirmPassword = ref(false);
 // Get role from query parameter or default to customer
 const selectedRole = ref(route.query.role || "customer");
 
+// Redirect admin to login page - admin cannot register
+if (selectedRole.value === 'admin') {
+  router.push("/login");
+}
+
 const form = reactive({
   fullName: "",
   email: "",

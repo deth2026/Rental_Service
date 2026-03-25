@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Vehicle;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -352,6 +353,19 @@ class BookingController extends Controller
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
                 $shop = optional($booking)->shop;
+                
+                // Calculate vehicle display name - use custom name first, then fallback to brand + model
+                $vehicleDisplayName = trim((string) ($vehicle->name ?? ''));
+                if ($vehicleDisplayName === '') {
+                    $vehicleDisplayName = trim(implode(' ', array_filter([
+                        $vehicle->brand ?? '',
+                        $vehicle->model ?? '',
+                    ])));
+                }
+                if ($vehicleDisplayName === '') {
+                    $vehicleDisplayName = 'N/A';
+                }
+                
                 $vehicleImage = '';
                 if ($vehicle) {
                     $vehicleImage = $vehicle->image_url_full ?? $vehicle->image_url ?? '';
@@ -376,7 +390,7 @@ class BookingController extends Controller
                 return [
                     'id' => $booking->id,
                     'vehicle_id' => $booking->vehicle_id,
-                    'vehicle_name' => $vehicle ? ($vehicle->brand . ' ' . $vehicle->model) : 'N/A',
+                    'vehicle_name' => $vehicleDisplayName,
                     'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
                     'shop_name' => $shop ? $shop->name : 'N/A',
                     'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
@@ -478,6 +492,9 @@ class BookingController extends Controller
         $validated = $this->validateBookingPayload($request);
 
         $record = Booking::create($validated);
+
+        // Create notification for the booking
+        NotificationService::bookingCreated($record);
 
         return response()->json($record, 201);
     }

@@ -71,6 +71,17 @@ const mapPaymentToRow = (payment) => {
   const status = toStatusLabel(statusKey, rawStatusText || 'pending')
   const date = toIsoDate(payment?.paid_at || payment?.created_at)
 
+  // Build vehicle name from brand + model or title
+  const vehicleBrand = payment?.booking?.vehicle?.brand ?? ''
+  const vehicleModel = payment?.booking?.vehicle?.model ?? ''
+  const vehicleTitle = payment?.booking?.vehicle?.title ?? payment?.booking?.vehicle?.name ?? ''
+  const vehicleName = [vehicleBrand, vehicleModel].filter(Boolean).join(' ') || vehicleTitle || 'Unknown Vehicle'
+  const vehicleType = payment?.booking?.vehicle?.type ?? ''
+
+  // Customer name and email
+  const customerName = payment?.booking?.user?.name || 'Unknown'
+  const customerEmail = payment?.booking?.user?.email ?? ''
+
   return {
     id: paymentId,
     bookingId,
@@ -79,8 +90,14 @@ const mapPaymentToRow = (payment) => {
     status,
     rawStatus: rawStatusText || status,
     statusKey,
-    customerName: payment?.booking?.user?.name || 'Unknown',
-    vehicleTitle: payment?.booking?.vehicle?.title || 'Unknown Vehicle'
+    customerName,
+    customerNameMissing: !customerName || customerName === 'Unknown',
+    customerEmail,
+    customerEmailMissing: !customerEmail,
+    vehicleName,
+    vehicleNameMissing: !vehicleName || vehicleName === 'Unknown Vehicle',
+    vehicleType,
+    vehicleTypeMissing: !vehicleType
   }
 }
 
@@ -453,17 +470,6 @@ const removeSelectedPayments = async () => {
         <h1>Payments Overview</h1>
         <p>Track booking revenue, monitor payment activity, and review shop collection status in one place.</p>
       </div>
-
-      <div class="hero-side">
-        <div class="hero-chip">
-          <span class="hero-chip-label">Latest activity</span>
-          <strong>{{ latestPaymentLabel }}</strong>
-        </div>
-        <div class="hero-chip hero-chip--accent">
-          <span class="hero-chip-label">Visible rows</span>
-          <strong>{{ filtered.length }}</strong>
-        </div>
-      </div>
     </section>
 
     <section class="stats-grid">
@@ -477,7 +483,6 @@ const removeSelectedPayments = async () => {
         <div class="stat-content">
           <span class="stat-label">Total Earnings</span>
           <strong class="stat-number">{{ formatCurrency(totalEarnings) }}</strong>
-          <span class="stat-note">Confirmed and completed bookings</span>
         </div>
       </article>
 
@@ -491,7 +496,6 @@ const removeSelectedPayments = async () => {
         <div class="stat-content">
           <span class="stat-label">Monthly Income</span>
           <strong class="stat-number">{{ formatCurrency(monthlyIncome) }}</strong>
-          <span class="stat-note">Current calendar month</span>
         </div>
       </article>
 
@@ -507,7 +511,6 @@ const removeSelectedPayments = async () => {
         <div class="stat-content">
           <span class="stat-label">Today's Earnings</span>
           <strong class="stat-number">{{ formatCurrency(todayEarnings) }}</strong>
-          <span class="stat-note">Collected today</span>
         </div>
       </article>
 
@@ -520,64 +523,11 @@ const removeSelectedPayments = async () => {
         <div class="stat-content">
           <span class="stat-label">Average Ticket</span>
           <strong class="stat-number">{{ formatCurrency(averageTicket) }}</strong>
-          <span class="stat-note">Average confirmed booking value</span>
         </div>
-      </article>
-    </section>
-
-    <section class="status-strip">
-      <article class="status-card status-card--confirmed">
-        <span class="status-card-label">Successful</span>
-        <strong>{{ successfulCount }}</strong>
-      </article>
-      <article class="status-card status-card--pending">
-        <span class="status-card-label">Pending</span>
-        <strong>{{ pendingCount }}</strong>
-      </article>
-      <article class="status-card status-card--revenue">
-        <span class="status-card-label">Filtered Revenue</span>
-        <strong>{{ formatCurrency(filteredRevenue) }}</strong>
-      </article>
-      <article class="status-card status-card--activity">
-        <span class="status-card-label">Current View</span>
-        <strong>{{ activeFilterLabel }}</strong>
       </article>
     </section>
 
     <section class="payments-panel">
-      <div class="panel-head">
-        <div class="panel-head-copy">
-          <span class="panel-kicker">Booking Ledger</span>
-          <div class="panel-title-row">
-            <h2>Payment Activity</h2>
-            <span class="panel-pill">Booking-linked data</span>
-          </div>
-          <p>Review payment-related booking activity for your shop and filter it by status or date.</p>
-        </div>
-
-        <div class="panel-filters">
-          <div class="filter-block">
-            <label class="filter-caption" for="payments-status-filter">Status</label>
-            <div class="filter-control-shell">
-              <select id="payments-status-filter" v-model="filter" class="filter-select">
-                <option v-for="option in statusOptions" :key="option.value" :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="filter-block filter-block--wide">
-            <label class="filter-caption">Date Range</label>
-            <div class="date-filters">
-              <input v-model="dateFrom" type="date" class="date-input" />
-              <span class="date-separator">to</span>
-              <input v-model="dateTo" type="date" class="date-input" />
-              <button class="clear-btn" @click="clearFilters">Reset</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div class="results-bar">
         <span class="results-count">{{ filtered.length }} records</span>
@@ -593,7 +543,7 @@ const removeSelectedPayments = async () => {
           </button>
         </div>
       </div>
-
+      
       <p v-if="actionMessage" :class="['payments-feedback', `payments-feedback--${actionMessageType}`]">
         {{ actionMessage }}
       </p>
@@ -628,7 +578,6 @@ const removeSelectedPayments = async () => {
               <th>Date</th>
               <th>Amount</th>
               <th>Status</th>
-              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -684,15 +633,6 @@ const removeSelectedPayments = async () => {
                 <span :class="['payments-status-badge', normalizeStatus(payment.status)]">
                   {{ payment.status }}
                 </span>
-              </td>
-              <td class="actions-cell" data-label="Actions">
-                <button
-                  class="delete-payment-btn"
-                  :disabled="!payment.paymentId || bulkDeleting || deletingPaymentId === payment.paymentId"
-                  @click="removePayment(payment)"
-                >
-                  {{ !payment.paymentId ? 'No Payment' : deletingPaymentId === payment.paymentId ? 'Deleting...' : 'Delete' }}
-                </button>
               </td>
             </tr>
           </tbody>

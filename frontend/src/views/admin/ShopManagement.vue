@@ -150,14 +150,6 @@ const fleetCountByShop = computed(() => {
   return map
 })
 
-const ratingForShop = (shop) => {
-  const str = String(shop.id || shop.name || '')
-  let hash = 0
-  for (let i = 0; i < str.length; i += 1) hash = (hash * 31 + str.charCodeAt(i)) >>> 0
-  const val = 4 + (hash % 10) / 10
-  return Math.min(4.9, Math.max(4.1, Number(val.toFixed(1))))
-}
-
 const statusBadgeClass = (status) => {
   const label = statusLabel(status)
   if (label === 'ACTIVE') return 'badge badge-green'
@@ -441,7 +433,7 @@ onMounted(() => {
         <div class="tabs">
           <button type="button" class="tab" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">All Shops</button>
           <button type="button" class="tab" :class="{ active: activeTab === 'active' }" @click="activeTab = 'active'">Active</button>
-          <button type="button" class="tab" :class="{ active: activeTab === 'pending' }" @click="activeTab = 'pending'">Pending</button>
+          <button type="button" class="tab" :class="{ active: activeTab === 'inactive' }" @click="activeTab = 'inactive'">Inactive</button>
         </div>
 
         <div class="toolbar-right">
@@ -475,7 +467,6 @@ onMounted(() => {
               <th>OWNER</th>
               <th class="num">FLEET COUNT</th>
               <th class="num">TOTAL BOOKINGS</th>
-              <th class="num">RATING</th>
               <th>STATUS</th>
               <th class="actions">ACTIONS</th>
             </tr>
@@ -489,7 +480,7 @@ onMounted(() => {
                 </span>
                 <div class="shop-meta">
                   <div class="shop-name">{{ shop.name }}</div>
-                  <div class="shop-id">ID: #{{ shop.id }}</div>
+                  <div class="shop-id">ID: {{ shop.id }}</div>
                 </div>
               </td>
               <td>{{ ownerName(shop) }}</td>
@@ -498,9 +489,6 @@ onMounted(() => {
               </td>
               <td class="num">
                 {{ admin.formatted.fmtNumber(bookingCountByShop.get(String(shop.id)) || 0) }}
-              </td>
-              <td class="num">
-                <span class="rating"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ ratingForShop(shop) }}</span>
               </td>
               <td><span :class="statusBadgeClass(shop.status)">{{ statusLabel(shop.status) }}</span></td>
               <td class="actions">

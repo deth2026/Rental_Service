@@ -22,7 +22,7 @@ class FeedbackController extends Controller
         // Transform the collection to include vehicle_name and user profile picture
         $feedback->getCollection()->transform(function ($item) {
             $item->vehicle_name = $item->booking && $item->booking->vehicle 
-                ? $item->booking->vehicle->name 
+                ? ($item->booking->vehicle->name ?: $item->booking->vehicle->brand . ' ' . $item->booking->vehicle->model)
                 : null;
             // Include user profile picture
             if ($item->user) {

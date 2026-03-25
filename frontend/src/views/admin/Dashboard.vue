@@ -41,7 +41,7 @@ const stats = computed(() => {
     { key: 'shops', label: 'TOTAL SHOPS', raw: t.totalShops, formatter: fmtNumber, trend: tr.shops, icon: 'fa-regular fa-building', tint: 'tint-purple', to: '/admin/shops' },
     { key: 'vehicles', label: 'TOTAL VEHICLES', raw: t.totalVehicles, formatter: fmtNumber, trend: tr.vehicles, icon: 'fa-solid fa-motorcycle', tint: 'tint-orange', to: '/admin/vehicles' },
     { key: 'bookings', label: 'TOTAL BOOKINGS', raw: t.totalBookings, formatter: fmtNumber, trend: tr.bookings, icon: 'fa-regular fa-calendar-check', tint: 'tint-green', to: '/admin/bookings' },
-    { key: 'revenue', label: 'TOTAL REVENUE', raw: getArr(admin.bookingGrossByDay).reduce((s, d) => s + (d.value || 0), 0), formatter: fmtMoney, trend: tr.revenue, icon: 'fa-solid fa-sack-dollar', tint: 'tint-cyan', to: '/admin/reports' }
+    { key: 'revenue', label: 'TOTAL REVENUE', raw: admin.paymentTotal, formatter: fmtMoney, trend: tr.revenue, icon: 'fa-solid fa-sack-dollar', tint: 'tint-cyan', to: '/admin/reports' }
   ]
 })
 

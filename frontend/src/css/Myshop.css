@@ -54,23 +54,22 @@
 }
 
 .shop-card {
-  border: 1px solid rgba(226, 232, 240, 0.8);
-  background: #ffffff;
-  border-radius: 32px;
-  padding: 40px 34px 44px;
-  box-shadow: 0 35px 60px rgba(15, 23, 42, 0.15);
-  width: min(960px, 96%);
-  margin: 40px auto;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
 }
 
 .shop-settings-card {
-  border: 1px solid #e2e8f0;
+  border: 1px solid rgba(226, 232, 240, 0.8);
   background: #ffffff;
-  border-radius: 18px;
-  padding: 32px;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-  width: min(1000px, 96%);
-  margin: 20px auto 0;
+  border-radius: 32px;
+  padding: 36px;
+  box-shadow: 0 35px 60px rgba(15, 23, 42, 0.12);
+  width: min(1100px, 100%);
+  margin: 40px auto 0;
 }
 
 .shop-settings-header {
@@ -118,10 +117,11 @@
 .shop-settings-profile {
   display: flex;
   align-items: center;
-  gap: 18px;
-  margin-bottom: 20px;
-  padding: 16px;
-  border-radius: 16px;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+  padding: 22px 24px;
+  border-radius: 20px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -130,6 +130,7 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .profile-btn {

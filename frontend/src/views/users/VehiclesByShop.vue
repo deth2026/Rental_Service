@@ -16,22 +16,7 @@
             <i class="fa-solid fa-car"></i>
             <span>AVAILABLE VEHICLES</span>
           </div>
-
-          <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
-          <p>Available for your selected dates ({{ dateRangeLabel }})</p>
-
-          <div class="availability-controls">
-            <label class="availability-field">
-              <span>Pick-up Date</span>
-              <input v-model="selectedStartDate" class="availability-input" type="date" :min="todayDate" />
-            </label>
-
-            <label class="availability-field">
-              <span>Return Date</span>
-              <input v-model="selectedEndDate" class="availability-input" type="date" :min="minEndDate" />
-            </label>
-          </div>
-
+  
           <p v-if="selectedDateError" class="selected-date-error">{{ selectedDateError }}</p>
           <p v-else class="availability-note">
             Vehicles that are fully booked for the selected dates are dimmed and cannot be reserved.
@@ -417,7 +402,14 @@ const getVehicleAvailabilityLabel = (vehicle) => {
   return `${availability.remainingQuantity} ${noun} available for selected dates`;
 };
 
-const isVehicleUnavailable = (vehicle) => getVehicleAvailability(vehicle).remainingQuantity <= 0;
+const isVehicleUnavailable = (vehicle) => {
+  // First check backend availability flag (for vehicles with 1 total_vehicles and active booking)
+  if (vehicle.is_available === false) {
+    return true;
+  }
+  // Then check date-based availability
+  return getVehicleAvailability(vehicle).remainingQuantity <= 0;
+};
 
 const filteredVehicles = computed(() => {
   const source = selectedShopId.value
