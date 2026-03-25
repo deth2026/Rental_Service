@@ -741,7 +741,7 @@ onMounted(async () => {
   --success: #2bc96b;
   --warning: #f97316;
   --radius: 16px;
-  font-family: 'Poppins', 'Nunito Sans', 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   color: var(--text);
   background: radial-gradient(circle at 20% -20%, #dbeafe 0%, transparent 45%), var(--bg);
   padding-bottom: .5rem

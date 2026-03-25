@@ -33,7 +33,7 @@
 
   color: var(--text);
 
-  font-family: "Manrope", "Poppins", "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
 }
 
 .main-header {

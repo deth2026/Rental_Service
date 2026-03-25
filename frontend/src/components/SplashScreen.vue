@@ -65,8 +65,6 @@ defineProps({
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap');
-
 .splash-screen {
   position: fixed;
   top: 0;
@@ -80,7 +78,7 @@ defineProps({
   align-items: center;
   z-index: 99999;
   overflow: hidden;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-sans);
 }
 
 .bg-grid {

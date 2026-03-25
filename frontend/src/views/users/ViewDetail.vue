@@ -1017,9 +1017,7 @@ onMounted(() => {
 <style scoped>
 /* Modern Design System */
 .motoride-container {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: var(--font-sans);
   color: #1a1d23;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;

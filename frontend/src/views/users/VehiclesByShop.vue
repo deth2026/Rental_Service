@@ -559,7 +559,7 @@ onUnmounted(() => {
   --muted: #c4ccda;
   min-height: 100vh;
   padding: 0 40px;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
 }
