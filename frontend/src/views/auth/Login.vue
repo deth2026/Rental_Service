@@ -35,20 +35,7 @@
     </div>
 
     <!-- RIGHT SIDE -->
-    <div class="right">
-      <!-- Back to Home -->
-      <router-link to="/" class="back-home-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Back to Home
-      </router-link>
-      <router-link to="/" class="homeview-link">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Home view
-      </router-link>
+  <div class="right">
 
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
@@ -67,6 +54,31 @@
         </div>
 
         <form @submit.prevent="handleLogin" novalidate>
+          <div class="location-guard-card" :class="{ granted: locationGranted }">
+            <div class="guard-icon">
+              <i :class="locationGranted ? 'fa-solid fa-circle-check' : 'fa-solid fa-location-crosshairs'"></i>
+            </div>
+            <div class="guard-copy">
+              <strong>{{ locationGranted ? 'Location access granted' : 'Location access is required' }}</strong>
+              <p>
+                {{
+                  locationGranted
+                    ? 'You can now sign in and use live route distance to shops.'
+                    : 'Please allow location access before Login and Register.'
+                }}
+              </p>
+              <button
+                v-if="!locationGranted"
+                type="button"
+                class="location-enable-btn"
+                @click="requestLocationAccess"
+                :disabled="isRequestingLocation"
+              >
+                {{ isRequestingLocation ? 'Detecting location...' : 'Allow Location Access' }}
+              </button>
+            </div>
+          </div>
+
           <!-- Error Alert -->
           <div v-if="generalError" class="error-alert">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -122,7 +134,7 @@
             <a href="#" class="forgot-link">Forgot password?</a>
           </div>
 
-          <button type="submit" class="login-btn" :disabled="isLoading">
+          <button type="submit" class="login-btn" :disabled="isLoading || !locationGranted">
             <span v-if="!isLoading">Sign In</span>
             <span v-else>Signing in...</span>
           </button>
@@ -159,9 +171,10 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../../services/auth";
+import { hasLocationAccess, saveLocationAccess } from "../../utils/locationAccess";
 import "../../css/login.css";
 import Logo from '@/components/Logo.vue'
 
@@ -170,6 +183,8 @@ const isLoading = ref(false);
 const errors = ref({});
 const showPassword = ref(false);
 const generalError = ref("");
+const locationGranted = ref(hasLocationAccess());
+const isRequestingLocation = ref(false);
 
 const form = reactive({
   email: "",
@@ -177,9 +192,18 @@ const form = reactive({
   remember: false,
 });
 
+const syncLocationState = () => {
+  locationGranted.value = hasLocationAccess();
+};
+
 const handleLogin = async () => {
   errors.value = {};
   generalError.value = "";
+
+  if (!locationGranted.value) {
+    generalError.value = "Please allow location access before signing in.";
+    return;
+  }
   
   if (!form.email) {
     errors.value.email = "Email is required";
@@ -232,4 +256,51 @@ const handleLogin = async () => {
     isLoading.value = false;
   }
 };
+
+const requestLocationAccess = () => {
+  if (isRequestingLocation.value) return;
+  if (!navigator?.geolocation) {
+    generalError.value = "Your browser does not support geolocation.";
+    return;
+  }
+
+  isRequestingLocation.value = true;
+  generalError.value = "";
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const location = saveLocationAccess({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      locationGranted.value = Boolean(location);
+      isRequestingLocation.value = false;
+      if (!location) {
+        generalError.value = "Could not save location. Please try again.";
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent("location-access-updated", {
+          detail: { granted: true, location },
+        })
+      );
+    },
+    (error) => {
+      isRequestingLocation.value = false;
+      generalError.value =
+        error?.code === 1
+          ? "Location permission was denied. Please allow it to continue."
+          : "Unable to get your location. Please try again.";
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  );
+};
+
+onMounted(() => {
+  window.addEventListener("location-access-updated", syncLocationState);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("location-access-updated", syncLocationState);
+});
 </script>

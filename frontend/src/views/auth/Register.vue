@@ -34,21 +34,7 @@
     </div>
 
     <!-- RIGHT SIDE --> 
-    <div class="right">
-      <!-- Back to Home -->
-      <router-link to="/" class="back-home-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Back to Home
-      </router-link>
-
-      <router-link to="/" class="homeview-link">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Home view
-      </router-link>
+  <div class="right">
 
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
@@ -97,6 +83,31 @@
         </div>
 
         <form @submit.prevent="handleRegister" novalidate>
+          <div class="location-guard-card" :class="{ granted: locationGranted }">
+            <div class="guard-icon">
+              <i :class="locationGranted ? 'fa-solid fa-circle-check' : 'fa-solid fa-location-crosshairs'"></i>
+            </div>
+            <div class="guard-copy">
+              <strong>{{ locationGranted ? 'Location access granted' : 'Location access is required' }}</strong>
+              <p>
+                {{
+                  locationGranted
+                    ? 'You can now register and view route distance to shops.'
+                    : 'Please allow location access before creating an account.'
+                }}
+              </p>
+              <button
+                v-if="!locationGranted"
+                type="button"
+                class="location-enable-btn"
+                @click="requestLocationAccess"
+                :disabled="isRequestingLocation"
+              >
+                {{ isRequestingLocation ? 'Detecting location...' : 'Allow Location Access' }}
+              </button>
+            </div>
+          </div>
+
           <div class="form-group">
             <label><span class="required-star">*</span> Full Name</label>
             <input
@@ -254,7 +265,7 @@
             </div>
           </div>
 
-          <button type="submit" class="login-btn" :disabled="isLoading">
+          <button type="submit" class="login-btn" :disabled="isLoading || !locationGranted">
             <span v-if="!isLoading">Register</span>
             <span v-else>Creating account...</span>
           </button>
@@ -298,9 +309,10 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { registerUser } from "../../services/auth";
+import { hasLocationAccess, saveLocationAccess } from "../../utils/locationAccess";
 import "../../css/login.css";
 import Logo from '@/components/Logo.vue'
 
@@ -311,6 +323,8 @@ const errors = ref({});
 const successMessage = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
+const locationGranted = ref(hasLocationAccess());
+const isRequestingLocation = ref(false);
 
 // Get role from query parameter or default to customer
 const selectedRole = ref(route.query.role || "customer");
@@ -323,6 +337,10 @@ const form = reactive({
   confirmPassword: "",
   role: selectedRole.value, // Set role from query parameter
 });
+
+const syncLocationState = () => {
+  locationGranted.value = hasLocationAccess();
+};
 
 const validateForm = () => {
   const newErrors = {};
@@ -362,6 +380,11 @@ const validateForm = () => {
 };
 
 const handleRegister = async () => {
+  if (!locationGranted.value) {
+    errors.value = { email: "Please allow location access before registering." };
+    return;
+  }
+
   if (!validateForm()) {
     return;
   }
@@ -440,6 +463,47 @@ const handleRegister = async () => {
   }
 };
 
+const requestLocationAccess = () => {
+  if (isRequestingLocation.value) return;
+  if (!navigator?.geolocation) {
+    errors.value = { email: "Your browser does not support geolocation." };
+    return;
+  }
+
+  isRequestingLocation.value = true;
+  errors.value = {};
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const location = saveLocationAccess({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      locationGranted.value = Boolean(location);
+      isRequestingLocation.value = false;
+      if (!location) {
+        errors.value = { email: "Could not save location. Please try again." };
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent("location-access-updated", {
+          detail: { granted: true, location },
+        })
+      );
+    },
+    (error) => {
+      isRequestingLocation.value = false;
+      errors.value = {
+        email:
+          error?.code === 1
+            ? "Location permission was denied. Please allow it to continue."
+            : "Unable to get your location. Please try again.",
+      };
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  );
+};
+
 const clearError = (field) => {
   if (errors.value[field]) {
     delete errors.value[field];
@@ -457,6 +521,14 @@ const toggleConfirmPassword = () => {
 const changeRole = () => {
   router.push("/chooserole");
 };
+
+onMounted(() => {
+  window.addEventListener("location-access-updated", syncLocationState);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("location-access-updated", syncLocationState);
+});
 </script>
 
 <style>

@@ -81,7 +81,6 @@ const handleDocumentClick = (event) => {
 };
 
 const sections = [
-<<<<<<< HEAD
   { id: "dashboard", label: "Dashboard", icon: "dashboard" },
   { id: "my-shop", label: "My Shop", icon: "building" },
   { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
@@ -89,14 +88,6 @@ const sections = [
   { id: "payments", label: "Payments", icon: "wallet" },
   { id: "damage", label: "Damage Reports", icon: "shield-alert" },
   { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
-=======
-  { id: "dashboard", label: "Dashboard", icon: "grid" },
-  { id: "my-shop", label: "My Shop", icon: "shop" },
-  { id: "vehicles", label: "Vehicles", icon: "car" },
-  { id: "bookings", label: "Bookings", icon: "calendar" },
-  { id: "payments", label: "Payments", icon: "dollar" },
-  { id: "reviews", label: "Reviews & Feedback", icon: "star" },
->>>>>>> 99dcfe0f153e39662c37342227f9f05ad23abc24
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
   { id: "activity", label: "Activity History", icon: "history" },

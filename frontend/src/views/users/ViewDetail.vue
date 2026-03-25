@@ -491,7 +491,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import api from "@/services/api";
+import api, { vehicleApi, shopApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import UserNavbar from '@/components/UserNavbar.vue';
 import UserFooter from '@/components/UserFooter.vue';
@@ -880,20 +880,23 @@ const loadVehicleDetail = async () => {
   loadingError.value = "";
 
   try {
-    const [vehicleList, shopList] = await Promise.all([
-      loadAllPages("vehicles"),
-      loadAllPages("shops"),
+    // Prefer fetching the specific vehicle by ID to avoid loading large lists
+    const [vehicleResp, shopResp] = await Promise.all([
+      vehicleApi.getById(vehicleId.value),
+      shopApi.getAll(),
     ]);
+
+    const found = vehicleResp?.data?.data || vehicleResp?.data;
+    const shopList = Array.isArray(shopResp?.data)
+      ? shopResp.data
+      : shopResp?.data?.data || [];
 
     shopNamesById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop.name;
       return acc;
     }, {});
 
-    const found = vehicleList.find(
-      (item) => Number(item.id) === vehicleId.value,
-    );
-    if (!found) {
+    if (!found || !found.id) {
       throw new Error("Vehicle not found.");
     }
 

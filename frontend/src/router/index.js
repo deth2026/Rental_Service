@@ -1,21 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
-import ChooseRole from '../views/ChooseRole.vue';
-import Login from '../views/auth/Login.vue';
-import Register from '../views/auth/Register.vue';
-import HomeView from '../views/HomeView.vue';
-import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/users/Dashboard.vue';
-import UserBookings from '../views/users/MyBookings.vue';
-import PromotionView from '../views/users/Promotion.vue';
-import SettingUser from '../views/users/Setting_user.vue';
-import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/users/ShopVehicles.vue';
-import VehiclesByShop from '../views/users/VehiclesByShop.vue';
-import Booking from '../views/users/Booking.vue';
-import ViewDetail from '../views/users/ViewDetail.vue';
-import AdminLayout from '../views/admin/AdminLayout.vue';
-import UserNotifications from '../views/users/Notification.vue';
+const ChooseRole = () => import('../views/ChooseRole.vue');
+const Login = () => import('../views/auth/Login.vue');
+const Register = () => import('../views/auth/Register.vue');
+const HomeView = () => import('../views/HomeView.vue');
+const ShopDashboard = () => import('../views/shop/DashboardLayout.vue');
+const UserDashboard = () => import('../views/users/Dashboard.vue');
+const UserBookings = () => import('../views/users/MyBookings.vue');
+const PromotionView = () => import('../views/users/Promotion.vue');
+const SettingUser = () => import('../views/users/Setting_user.vue');
+const AdminDashboard = () => import('../views/admin/Dashboard.vue');
+const ShopVehicles = () => import('../views/users/ShopVehicles.vue');
+const VehiclesByShop = () => import('../views/users/VehiclesByShop.vue');
+const Booking = () => import('../views/users/Booking.vue');
+const ViewDetail = () => import('../views/users/ViewDetail.vue');
+const AdminLayout = () => import('../views/admin/AdminLayout.vue');
+const UserNotifications = () => import('../views/users/Notification.vue');
 
 // Check if user is authenticated
 const isAuthenticated = () => {

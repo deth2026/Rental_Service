@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi, ratingApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import { readStoredLocation } from '@/utils/locationAccess'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 import UserNavbar from '@/components/UserNavbar.vue'
@@ -24,6 +25,12 @@ const error = ref('')
 const shopError = ref('')
 const isLoadingShop = ref(false)
 const ratingSummaryMap = ref({})
+const mapMode = ref('satellite')
+const isLocating = ref(false)
+const initialLocation = readStoredLocation()
+const originCoords = ref(
+  initialLocation ? { lat: Number(initialLocation.lat), lng: Number(initialLocation.lng) } : null
+)
 
 const currentUser = computed(() => userService.getCurrentUser())
 const activeNavLabel = computed(() => {
@@ -335,13 +342,39 @@ const handleVisibilityChange = () => {
 
 const selectedShopCoords = computed(() => {
   if (!shop.value) return null
-  const lat = shop.value.latitude ?? shop.value.lat
-  const lng = shop.value.longitude ?? shop.value.lng
+  let lat = shop.value.latitude ?? shop.value.lat
+  let lng = shop.value.longitude ?? shop.value.lng
+  if (lat == null || lng == null) {
+    const parsed = extractCoordinatesFromMapUrl(shop.value.map_url || shop.value.location || '')
+    lat = parsed?.lat
+    lng = parsed?.lng
+  }
   if (lat == null || lng == null) return null
   const parsedLat = Number(lat)
   const parsedLng = Number(lng)
   if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null
   return { lat: parsedLat, lng: parsedLng }
+})
+
+const selectedShopMapLink = computed(() => String(shop.value?.map_url || shop.value?.location || '').trim())
+
+const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const toRad = (v) => (v * Math.PI) / 180
+  const earthRadiusKm = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
+const distanceKm = computed(() => {
+  const origin = originCoords.value
+  const dest = selectedShopCoords.value
+  if (!origin || !dest) return null
+  return calculateDistanceKm(origin.lat, origin.lng, dest.lat, dest.lng)
 })
 
 // Optional: Google Maps Embed API key to render the richer place card UI when available
@@ -352,34 +385,90 @@ const mapEmbedUrl = computed(() => {
   const name = shop.value?.name || 'Shop'
   const address = shop.value?.address || ''
   const fallback = 'Siem Reap, Cambodia'
-  // Prefer name+address to trigger the place card; add coords only to help center
   const queryParts = []
   if (name) queryParts.push(name)
   if (address) queryParts.push(address)
   const baseQuery = queryParts.join(', ') || fallback
 
-  // Use the official Embed API when a key is configured — this shows the place card UI like in the screenshot
+  if (mapMode.value === 'route' && originCoords.value && coords) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${originCoords.value.lat},${originCoords.value.lng}&destination=${coords.lat},${coords.lng}&travelmode=driving`
+  }
+
   if (googleMapsEmbedKey) {
     const placeTarget = coords ? `${coords.lat},${coords.lng}` : baseQuery
-    return `https://www.google.com/maps/embed/v1/place?key=${googleMapsEmbedKey}&q=${encodeURIComponent(placeTarget)}&maptype=satellite`
+    const mapType = mapMode.value === 'road' ? 'roadmap' : 'satellite'
+    return `https://www.google.com/maps/embed/v1/place?key=${googleMapsEmbedKey}&q=${encodeURIComponent(placeTarget)}&maptype=${mapType}`
   }
 
-  // Fallback: regular embed that still centers on the shop and uses satellite view
+  const tile = mapMode.value === 'road' ? 'm' : 'k'
   if (coords) {
-    return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&ll=${coords.lat},${coords.lng}&t=k&z=19&output=embed`
+    return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&ll=${coords.lat},${coords.lng}&t=${tile}&z=18&output=embed`
   }
 
-  return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&t=k&z=19&output=embed`
+  return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&t=${tile}&z=16&output=embed`
 })
 
+const useMyLocation = () => {
+  if (isLocating.value) return
+  if (!navigator?.geolocation) return
+
+  isLocating.value = true
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      originCoords.value = {
+        lat: Number(position.coords.latitude),
+        lng: Number(position.coords.longitude),
+      }
+      isLocating.value = false
+    },
+    () => {
+      isLocating.value = false
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  )
+}
+
 const openMap = () => {
+  const mapLink = selectedShopMapLink.value
+  if (mapLink && /^https?:\/\//i.test(mapLink) && mapMode.value !== 'route') {
+    window.open(mapLink, '_blank')
+    return
+  }
+
   const coords = selectedShopCoords.value
   const name = shop.value?.name || ''
   const address = shop.value?.address || ''
   const fallback = 'Siem Reap, Cambodia'
   const destination = `${name ? `${name}, ` : ''}${address || ''}`.trim() || fallback
+  if (mapMode.value === 'route' && coords && originCoords.value) {
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&origin=${originCoords.value.lat},${originCoords.value.lng}&destination=${coords.lat},${coords.lng}&travelmode=driving`,
+      '_blank'
+    )
+    return
+  }
   const destWithCoords = coords ? `${destination} (${coords.lat},${coords.lng})` : destination
   window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destWithCoords)}`, '_blank')
+}
+
+const extractCoordinatesFromMapUrl = (value) => {
+  const url = String(value || '').trim()
+  if (!url) return null
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ]
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (!match) continue
+    const lat = Number(match[1])
+    const lng = Number(match[2])
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue
+    return { lat, lng }
+  }
+  return null
 }
 </script>
 
@@ -546,6 +635,21 @@ const openMap = () => {
 
       <section class="map-section" v-if="shop">
         <div class="map">
+          <div class="map-toolbar">
+            <div class="map-modes">
+              <button class="map-mode-btn" :class="{ active: mapMode === 'satellite' }" @click="mapMode = 'satellite'">Satellite</button>
+              <button class="map-mode-btn" :class="{ active: mapMode === 'road' }" @click="mapMode = 'road'">Roadmap</button>
+              <button class="map-mode-btn" :class="{ active: mapMode === 'route' }" @click="mapMode = 'route'">Route</button>
+            </div>
+            <button class="map-locate-btn" :disabled="isLocating" @click="useMyLocation">
+              {{ isLocating ? 'Locating...' : 'Use My Location' }}
+            </button>
+          </div>
+
+          <p v-if="distanceKm !== null" class="distance-chip">
+            Distance to shop: <strong>{{ distanceKm.toFixed(2) }} km</strong>
+          </p>
+
           <iframe
             class="map-frame"
             :src="mapEmbedUrl"
@@ -553,9 +657,9 @@ const openMap = () => {
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
-          <button class="btn-reset open-map-btn" @click="openMap">
-            Open in Google Maps
-          </button>
+          <div class="map-actions">
+            <button class="btn-reset open-map-btn" @click="openMap">Open in Google Maps</button>
+          </div>
         </div>
       </section>
     </main>
@@ -866,22 +970,37 @@ const openMap = () => {
 
 .map {
   position: relative;
-  height: 340px;
+  padding: 14px;
   border-radius: 14px;
-  overflow: hidden;
+  background: #fff;
   border: 1px solid #d8dee7;
 }
 
 .map-frame {
   width: 100%;
-  height: 100%;
+  height: 340px;
   border: 0;
+  border-radius: 10px;
 }
 
+.map-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.map-modes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-mode-btn,
+.map-locate-btn,
 .open-map-btn {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
   padding: 8px 12px;
   border-radius: 8px;
   background: #ffffff;
@@ -889,6 +1008,36 @@ const openMap = () => {
   color: #1e40af;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.map-mode-btn.active {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff;
+  border-color: transparent;
+}
+
+.map-locate-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.distance-chip {
+  margin: 0 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+}
+
+.map-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .vehicle-card {
@@ -1087,3 +1236,4 @@ const openMap = () => {
   }
 }
 </style>
+

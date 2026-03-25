@@ -1,13 +1,31 @@
-
 <template>
   <div>
   <div class="vehicles-page">
-    <UserNavbar
-      :nav-items="navItems"
-      :active-label="activeNavLabel"
-      :show-fallback-message="false"
-      @logout-request="handleLogout"
-    />
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+        </div>
+        <span>Chong Choul</span>
+      </div>
+
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item }"
+          @click="setActiveNav(item)"
+        >
+          {{ item }}
+        </button>
+      </nav>
+
+      <div class="top-actions">
+        <span class="user-display-name">{{ userDisplayName }}</span>
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+      </div>
+    </header>
 
     <main class="content">
       <section class="deals-section">
@@ -18,24 +36,7 @@
           </div>
 
           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
-          <p>Available for your selected dates ({{ dateRangeLabel }})</p>
-
-          <div class="availability-controls">
-            <label class="availability-field">
-              <span>Pick-up Date</span>
-              <input v-model="selectedStartDate" class="availability-input" type="date" :min="todayDate" />
-            </label>
-
-            <label class="availability-field">
-              <span>Return Date</span>
-              <input v-model="selectedEndDate" class="availability-input" type="date" :min="minEndDate" />
-            </label>
-          </div>
-
-          <p v-if="selectedDateError" class="selected-date-error">{{ selectedDateError }}</p>
-          <p v-else class="availability-note">
-            Vehicles that are fully booked for the selected dates are dimmed and cannot be reserved.
-          </p>
+          <p>Available for your selected dates ({{ dateRange }})</p>
 
           <div class="filter-row">
            <button  
@@ -56,16 +57,10 @@
         <p v-if="actionMessage" class="action-message">{{ actionMessage }}</p>
 
         <div class="promo-grid">
-          <article
-            class="promo-card"
-            :class="{ 'promo-card--unavailable': isVehicleUnavailable(vehicle) }"
-            v-for="vehicle in displayedVehicles"
-            :key="vehicle.id"
-          >
+          <article class="promo-card" v-for="vehicle in displayedVehicles" :key="vehicle.id">
             <div class="promo-media">
               <img :src="getVehicleImage(vehicle)" :alt="getVehicleName(vehicle)" />
               <span v-if="vehicle.bestValue" class="promo-ribbon">BEST VALUE</span>
-              <span v-if="isVehicleUnavailable(vehicle)" class="promo-unavailable-badge">Unavailable</span>
               <span class="promo-type" @click="toggleFavorite(vehicle.id, getVehicleName(vehicle))" style="cursor: pointer;">
                 <i :class="favoriteIds.has(vehicle.id) ? 'fa-solid fa-heart' : 'fa-regular fa-heart'" aria-hidden="true"></i>
               </span>
@@ -75,56 +70,59 @@
               <h3>{{ getVehicleName(vehicle) }}</h3>
 
               <div class="vehicle-meta">
-                <span class="vehicle-category">
-                  <i :class="getVehicleCategoryIcon(vehicle)" aria-hidden="true"></i> {{ getVehicleCategoryLabel(vehicle) }}
-                </span>
-                <span v-if="vehicle.transmission"><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
-                <span v-if="vehicle.fuel_type"><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
+                <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
+                <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
                 <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
               </div>
 
-              <p class="shop"><i class="fa-regular fa-building" aria-hidden="true"></i> {{ getVehicleShop(vehicle) }}</p>
-              <p class="vehicle-stock">
-                <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
-                Total Vehicles: {{ getVehicleTotalVehicles(vehicle) }}
-              </p>
-              <p
-                class="vehicle-availability"
-                :class="{ 'is-unavailable': isVehicleUnavailable(vehicle) }"
-              >
-                <i class="fa-solid fa-calendar-check" aria-hidden="true"></i>
-                {{ getVehicleAvailabilityLabel(vehicle) }}
-              </p>
+               <div class="shop-info">
+                 <img 
+                   v-if="getVehicleShopImage(vehicle)" 
+                   :src="getVehicleShopImage(vehicle)" 
+                   :alt="getVehicleShop(vehicle) + ' logo'" 
+                   class="shop-logo"
+                 >
+                 <span v-else><i class="fa-regular fa-building" aria-hidden="true"></i></span>
+                 <span class="shop-name">{{ getVehicleShop(vehicle) }}</span>
+               </div>
 
               <div class="promo-meta">
                 <div class="promo-value">
                   <strong>${{ vehicle.price_per_day }}</strong>
                   <span>per day</span>
                 </div>
-                <button class="book-btn" :disabled="isVehicleUnavailable(vehicle)" @click="bookNow(vehicle)">
-                  {{ isVehicleUnavailable(vehicle) ? 'Unavailable' : 'Book Now' }}
-                </button>
+                <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
               </div>
             </div>
           </article>
         </div>
       </section>
 
+
       <section class="map-section">
         <div class="map">
-          <iframe
-            class="map-frame"
-            :src="mapEmbedUrl"
-            title="Google map location"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          ></iframe>
-          <button class="btn-reset open-map-btn" @click="openMainLocation">
-            Open in Google Maps
-          </button>
-          <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">
-            Open Saved Location
-          </button>
+            <div class="map-controls">
+              <button class="btn-reset open-map-btn" :class="{ active: mapMode === 'satellite' }" @click="mapMode = 'satellite'">Satellite</button>
+              <button class="btn-reset open-map-btn" :class="{ active: mapMode === 'road' }" @click="mapMode = 'road'">Roadmap</button>
+              <button class="btn-reset open-map-btn" :class="{ active: mapMode === 'route' }" @click="mapMode = 'route'">Show Route</button>
+              <button class="btn-reset open-map-btn secondary" @click="useMyLocation">Use My Location</button>
+              <div class="distance-info" v-if="distanceKm !== null">
+                <strong>Distance:</strong> {{ distanceKm.toFixed(2) }} km
+              </div>
+            </div>
+
+            <iframe
+              class="map-frame"
+              :src="mapEmbedUrl"
+              title="Google map location"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            ></iframe>
+
+            <div class="map-actions">
+              <button class="btn-reset open-map-btn" @click="openMainLocation">Open in Google Maps</button>
+              <button v-if="selectedShopLocationLink" class="btn-reset open-map-btn secondary" @click="openCustomLocation">Open Saved Location</button>
+            </div>
         </div>
       </section>
     </main>
@@ -137,61 +135,30 @@
 
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
-import {
-  calculateVehicleAvailability,
-  getVehicleTotalQuantity,
-  parseDateInputValue,
-  toDateKey,
-} from '@/utils/bookingAvailability';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
-import UserNavbar from '@/components/UserNavbar.vue'
+import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const location = ref('Siem Reap');
-const toDateInputValue = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+const formatDate = (date) =>
+  `${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date)}/${date.getDate()}/${date.getFullYear()}`;
+
+const buildRollingDateRange = () => {
+  const today = new Date();
+  return formatDate(today);
 };
 
-const addDaysToDateInputValue = (value, days) => {
-  const date = parseDateInputValue(value);
-  if (!date) return '';
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return toDateInputValue(next);
-};
-
-const formatDateLabel = (value) => {
-  const date = parseDateInputValue(value);
-  if (!date) return 'Select date';
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
-};
-
-const parseRouteDate = (value) => {
-  const raw = Array.isArray(value) ? value[0] : value;
-  return parseDateInputValue(raw) ? String(raw) : '';
-};
+const dateRange = ref(buildRollingDateRange());
+let dateRangeTimer = null;
 
 const route = useRoute();
+const navItems = ['Home', 'View Details', 'Bookings'];
 const router = useRouter();
-const todayDate = toDateInputValue(new Date());
-const selectedStartDate = ref(parseRouteDate(route.query.startDate) || todayDate);
-const selectedEndDate = ref(parseRouteDate(route.query.endDate) || addDaysToDateInputValue(selectedStartDate.value, 1));
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
-];
+const activeNav = ref('Home');
 const actionMessage = ref('');
 const activeFilter = ref('all');
 const filterItems = [
@@ -204,38 +171,13 @@ const filterItems = [
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
   if (!t) return '';
-  if (['car', 'cars', 'suv', 'sedan', 'truck', 'van'].some((k) => t.includes(k))) {
-    return 'car';
-  }
-  if (['motorbike', 'motorbikes', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'moto'].some((k) => t.includes(k))) {
+  if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
     return 'motorbike';
   }
-  if (['bicycle', 'bicycles', 'cycle', 'cycles'].some((k) => t.includes(k)) || /\bbike\b/.test(t)) {
-    return 'bicycle';
-  }
+  if (t.includes('bicy')) return 'bicycle';
+  if (t.includes('car') || t.includes('suv')) return 'car';
   return t;
 };
-
-const categoryLabelByType = {
-  car: 'Car',
-  motorbike: 'Moto',
-  bicycle: 'Bike'
-};
-
-const categoryIconByType = {
-  car: 'fa-solid fa-car-side',
-  motorbike: 'fa-solid fa-motorcycle',
-  bicycle: 'fa-solid fa-bicycle'
-};
-
-const getVehicleCategoryType = (vehicle) => normalizeType(
-  vehicle?.type || vehicle?.category,
-  `${vehicle?.name || ''} ${vehicle?.brand || ''} ${vehicle?.model || ''}`
-);
-
-const getVehicleCategoryLabel = (vehicle) => categoryLabelByType[getVehicleCategoryType(vehicle)] || 'Vehicle';
-
-const getVehicleCategoryIcon = (vehicle) => categoryIconByType[getVehicleCategoryType(vehicle)] || 'fa-solid fa-car';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
 const API_ROOT = API_BASE_URL.replace(/\/api\/?$/, '');
@@ -246,7 +188,6 @@ const fallbackImageByType = {
 };
 
 const vehicles = ref([]);
-const bookings = ref([]);
 const shopNamesById = ref({});
 const isLoading = ref(false);
 const loadingError = ref('');
@@ -259,6 +200,7 @@ const selectedShopName = computed(() => {
   const shop = shopNamesById.value[selectedShopId.value];
   return typeof shop === 'object' ? shop.name : shop;
 });
+
 
 const selectedShopLocation = computed(() => {
   if (!selectedShopId.value) return location.value;
@@ -278,58 +220,117 @@ const selectedShopLocationLink = computed(() => {
   if (!selectedShopId.value) return '';
   const shop = shopNamesById.value[selectedShopId.value];
   if (!shop || typeof shop !== 'object') return '';
-  const loc = shop.location || '';
+  const loc = shop.map_url || shop.location || '';
   if (typeof loc !== 'string') return '';
   return loc.trim();
 });
+const extractCoordinatesFromMapUrl = (value) => {
+  const url = String(value || '').trim();
+  if (!url) return null;
+
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (!match) continue;
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
+
+  return null;
+};
 const selectedShopCoords = computed(() => {
   if (!selectedShopId.value) return null;
   const shop = shopNamesById.value[selectedShopId.value];
   if (!shop) return null;
-  const lat = shop.latitude ?? shop.lat;
-  const lng = shop.longitude ?? shop.lng;
+  let lat = shop.latitude ?? shop.lat;
+  let lng = shop.longitude ?? shop.lng;
+  if (lat == null || lng == null) {
+    const parsed = extractCoordinatesFromMapUrl(shop.map_url || shop.location || '');
+    lat = parsed?.lat;
+    lng = parsed?.lng;
+  }
   if (lat === null || lng === null || typeof lat === 'undefined' || typeof lng === 'undefined') return null;
   const parsedLat = Number(lat);
   const parsedLng = Number(lng);
   if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null;
   return { lat: parsedLat, lng: parsedLng };
 });
+// Map UI mode: 'satellite' | 'road' | 'route'
+const mapMode = ref('satellite');
+// Optional origin coordinates for route mode (set via geolocation or other input)
+const originCoords = ref(null);
+
+// Haversine distance (km) between originCoords and selectedShopCoords
+const distanceKm = computed(() => {
+  const dest = selectedShopCoords.value;
+  const origin = originCoords.value;
+  if (!dest || !origin) return null;
+  const toRad = (v) => (v * Math.PI) / 180;
+  const R = 6371; // km
+  const dLat = toRad(dest.lat - origin.lat);
+  const dLon = toRad(dest.lng - origin.lng);
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(toRad(origin.lat)) * Math.cos(toRad(dest.lat)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+});
+
+const useMyLocation = () => {
+  if (!navigator?.geolocation) {
+    actionMessage.value = 'Geolocation not available in this browser.';
+    return;
+  }
+  actionMessage.value = 'Fetching your location...';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      originCoords.value = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      actionMessage.value = 'Using your location as origin.';
+    },
+    (err) => {
+      console.error(err);
+      actionMessage.value = 'Could not read your location.';
+    },
+    { enableHighAccuracy: false, timeout: 10000 }
+  );
+};
 const mapEmbedUrl = computed(() => {
   const coords = selectedShopCoords.value;
   const shopAddress = selectedShopAddress.value;
   const shopName = selectedShopName.value || 'Shop';
   const fallback = 'Siem Reap, Cambodia';
 
-  // Build a clean query without "undefined"
   const queryParts = [];
   if (shopName) queryParts.push(shopName);
   if (shopAddress) queryParts.push(shopAddress);
   if (coords) queryParts.push(`${coords.lat},${coords.lng}`);
   const query = queryParts.join(' - ') || fallback;
 
-  // When we have coordinates, also set ll (map center) to avoid the world view
-  if (coords) {
-    return `https://maps.google.com/maps?hl=en&ll=${coords.lat},${coords.lng}&q=${encodeURIComponent(query)}&t=k&z=18&output=embed`;
+  // Route mode: when origin is available and mapMode is 'route', show directions
+  if (mapMode.value === 'route' && coords && originCoords.value) {
+    const o = originCoords.value;
+    return `https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lng}&destination=${coords.lat},${coords.lng}&travelmode=driving`;
   }
 
-  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=k&z=16&output=embed`;
+  // Map tiles: satellite or road
+  const tile = mapMode.value === 'satellite' ? 'k' : 'm';
+  if (coords) {
+    return `https://maps.google.com/maps?hl=en&ll=${coords.lat},${coords.lng}&q=${encodeURIComponent(query)}&t=${tile}&z=18&output=embed`;
+  }
+
+  return `https://maps.google.com/maps?hl=en&q=${encodeURIComponent(query)}&t=${tile}&z=16&output=embed`;
 });
-const activeNavLabel = computed(() => {
-  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route));
-  return matchedItem?.label || 'Home';
-});
+const currentUser = computed(() => userService.getCurrentUser());
+const userDisplayName = computed(() => currentUser.value?.name || 'customer');
 
-const getVehicleName = (vehicle) => {
-  const explicitName = String(vehicle?.name || '').trim();
-  if (explicitName) return explicitName;
 
-  const fallbackName = [vehicle?.brand, vehicle?.model]
-    .filter((part) => String(part || '').trim())
-    .join(' ')
-    .trim();
-
-  return fallbackName || 'Unnamed Vehicle';
-};
+const getVehicleName = (vehicle) => `${vehicle.brand} ${vehicle.model}`;
 const getVehicleShop = (vehicle) => {
   if (!vehicle.shop_id) return 'Unknown Shop';
   const shop = shopNamesById.value[vehicle.shop_id];
@@ -337,87 +338,7 @@ const getVehicleShop = (vehicle) => {
   return typeof shop === 'object' ? shop.name : shop;
 };
 
-const getVehicleTotalVehicles = (vehicle) => {
-  return getVehicleTotalQuantity(vehicle);
-};
-
 const favoriteIds = reactive(new Set());
-const selectedDateError = computed(() => {
-  if (!selectedStartDate.value || !selectedEndDate.value) {
-    return 'Please choose both pick-up and return dates.';
-  }
-
-  const start = toDateKey(selectedStartDate.value);
-  const end = toDateKey(selectedEndDate.value);
-  if (start === null || end === null) {
-    return 'Please choose valid booking dates.';
-  }
-
-  if (end <= start) {
-    return 'Return date must be after the pick-up date.';
-  }
-
-  return '';
-});
-
-const dateRangeLabel = computed(() => {
-  if (!selectedStartDate.value || !selectedEndDate.value) {
-    return 'Choose your booking dates';
-  }
-  return `${formatDateLabel(selectedStartDate.value)} - ${formatDateLabel(selectedEndDate.value)}`;
-});
-
-const minEndDate = computed(() => {
-  if (!selectedStartDate.value) return todayDate;
-  return addDaysToDateInputValue(selectedStartDate.value, 1);
-});
-
-const hasValidSelectedDates = computed(() => !selectedDateError.value);
-
-const availabilityMap = computed(() => {
-  const map = new Map();
-  vehicles.value.forEach((vehicle) => {
-    const vehicleId = Number(vehicle?.id);
-    if (!Number.isFinite(vehicleId) || vehicleId <= 0) {
-      return;
-    }
-
-    map.set(vehicleId, calculateVehicleAvailability({
-      vehicle,
-      bookings: bookings.value,
-      startDate: selectedStartDate.value,
-      endDate: selectedEndDate.value,
-    }));
-  });
-
-  return map;
-});
-
-const getVehicleAvailability = (vehicle) => {
-  const totalVehicles = getVehicleTotalVehicles(vehicle);
-  return availabilityMap.value.get(Number(vehicle?.id)) || {
-    totalVehicles,
-    bookedQuantity: 0,
-    remainingQuantity: totalVehicles,
-    unavailable: false,
-  };
-};
-
-const getVehicleAvailabilityLabel = (vehicle) => {
-  if (!hasValidSelectedDates.value) {
-    return 'Select valid dates to check availability';
-  }
-
-  const availability = getVehicleAvailability(vehicle);
-  if (availability.unavailable) {
-    return `Fully booked (${availability.bookedQuantity}/${availability.totalVehicles} reserved)`;
-  }
-
-  const noun = availability.remainingQuantity === 1 ? 'vehicle' : 'vehicles';
-  return `${availability.remainingQuantity} ${noun} available for selected dates`;
-};
-
-const isVehicleUnavailable = (vehicle) => getVehicleAvailability(vehicle).remainingQuantity <= 0;
 
 const filteredVehicles = computed(() => {
   const source = selectedShopId.value
@@ -428,33 +349,58 @@ if (activeFilter.value === 'all') {
     return source;
   }
   return source.filter(
-    (v) => getVehicleCategoryType(v) === activeFilter.value
+    (v) => normalizeType(v.type || v.category, `${v.name} ${v.brand} ${v.model}`) === activeFilter.value
   );
 });
 
 const displayedVehicles = computed(() => {
-  return filteredVehicles.value;
+  const limit = activeFilter.value === 'all' ? 8 : 20;
+  return filteredVehicles.value.slice(0, limit);
 });
 
 const getVehicleImage = (vehicle) => {
-  // First check for full URL (provided by backend accessor)
-  if (vehicle.image_url_full) {
-    return vehicle.image_url_full;
-  }
-  // Check photo_urls array for multiple images
-  if (vehicle.photo_urls && Array.isArray(vehicle.photo_urls) && vehicle.photo_urls.length > 0) {
-    return vehicle.photo_urls[0];
-  }
-  // Fallback to image_url processing
-  const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
-  if (image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) return image;
-    if (image.startsWith('/')) return `${API_ROOT}${image}`;
-    return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
-  }
-  const normalizedType = getVehicleCategoryType(vehicle);
-  return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
-};
+   // First check for full URL (provided by backend accessor)
+   if (vehicle.image_url_full) {
+     return vehicle.image_url_full;
+   }
+   // Check photo_urls array for multiple images
+   if (vehicle.photo_urls && Array.isArray(vehicle.photo_urls) && vehicle.photo_urls.length > 0) {
+     return vehicle.photo_urls[0];
+   }
+   // Fallback to image_url processing
+   const image = vehicle.image_url ? String(vehicle.image_url).trim() : '';
+   if (image) {
+     if (image.startsWith('http://') || image.startsWith('https://')) return image;
+     if (image.startsWith('/')) return `${API_ROOT}${image}`;
+     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+   }
+   const normalizedType = normalizeType(vehicle.type || vehicle.category, `${vehicle.name} ${vehicle.brand} ${vehicle.model}`);
+   return fallbackImageByType[normalizedType] || fallbackImageByType.motorbike;
+ };
+
+const getVehicleShopImage = (vehicle) => {
+   if (!vehicle.shop_id) return null;
+   const shop = shopNamesById.value[vehicle.shop_id];
+   if (!shop) return null;
+   
+   // Check if shop has image/logo
+   if (shop.shop_image_url) {
+     const image = shop.shop_image_url;
+     if (image.startsWith('http://') || image.startsWith('https://')) return image;
+     if (image.startsWith('/')) return `${API_ROOT}${image}`;
+     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+   }
+   
+   // Fallback to shop logo or default
+   if (shop.logo_url) {
+     const image = shop.logo_url;
+     if (image.startsWith('http://') || image.startsWith('https://')) return image;
+     if (image.startsWith('/')) return `${API_ROOT}${image}`;
+     return `${API_ROOT}/storage/${image.replace(/^storage\//, '')}`;
+   }
+   
+   return null;
+ };
 
 const loadAllPages = async (resource) => {
   let page = 1;
@@ -479,33 +425,19 @@ const loadAllPages = async (resource) => {
   return results;
 };
 
-const getVehicleSortValue = (vehicle) => {
-  const createdAt = Date.parse(vehicle?.created_at || vehicle?.create_at || vehicle?.updated_at || '');
-  if (Number.isFinite(createdAt)) {
-    return createdAt;
-  }
-
-  const numericId = Number(vehicle?.id);
-  return Number.isFinite(numericId) ? numericId : 0;
-};
-
 const loadVehiclesAndShops = async () => {
   isLoading.value = true;
   loadingError.value = '';
   try {
-    const [vehicleList, shopList, bookingList] = await Promise.all([
+    const [vehicleList, shopList] = await Promise.all([
       loadAllPages('vehicles'),
-      loadAllPages('shops'),
-      loadAllPages('bookings')
+      loadAllPages('shops')
     ]);
 
-    vehicles.value = vehicleList
-      .map((vehicle) => ({
-        ...vehicle,
-        rating: vehicle.rating ?? 4.8
-      }))
-      .sort((a, b) => getVehicleSortValue(b) - getVehicleSortValue(a));
-    bookings.value = bookingList;
+    vehicles.value = vehicleList.map((vehicle) => ({
+      ...vehicle,
+      rating: vehicle.rating ?? 4.8
+    }));
     shopNamesById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
       return acc;
@@ -518,8 +450,26 @@ const loadVehiclesAndShops = async () => {
   }
 };
 
+
+const setActiveNav = (item) => {
+  activeNav.value = item;
+  if (item === 'Home') {
+    router.push('/view_shop');
+    return;
+  }
+  if (item === 'My Bookings') {
+    router.push('/my-bookings');
+    return;
+  }
+  if (item === 'Promotion') {
+    router.push('/promotions');
+    return;
+  }
+  actionMessage.value = `${item} opened.`;
+};
+
 const handleSearch = () => {
-  actionMessage.value = `Search triggered for ${location.value}, ${dateRangeLabel.value}.`;
+  actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
 };
 
 const openMainLocation = () => {
@@ -550,6 +500,10 @@ const notify = (message) => {
   actionMessage.value = message;
 };
 
+const openProfile = () => {
+  router.push('/user/profile');
+};
+
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
@@ -571,36 +525,24 @@ const toggleFavorite = (id, name) => {
 
 const bookNow = (vehicle) => {
   const vehicleName = getVehicleName(vehicle);
-  if (selectedDateError.value) {
-    actionMessage.value = selectedDateError.value;
-    return;
-  }
-
-  if (isVehicleUnavailable(vehicle)) {
-    actionMessage.value = `${vehicleName} is fully booked for ${dateRangeLabel.value}.`;
-    return;
-  }
-
   actionMessage.value = `Booking started for ${vehicleName}.`;
   router.push({
     name: 'vehicle-detail',
     params: { id: vehicle.id },
-    query: {
-      ...(selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}),
-      startDate: selectedStartDate.value,
-      endDate: selectedEndDate.value,
-    }
+    query: selectedShopId.value ? { shop_id: String(selectedShopId.value) } : {}
   });
 };
 
 onMounted(() => {
+  dateRangeTimer = window.setInterval(() => {
+    dateRange.value = buildRollingDateRange();
+  }, 60 * 1000);
   loadVehiclesAndShops();
 });
 
-watch(selectedStartDate, (nextValue) => {
-  if (!nextValue) return;
-  if (!selectedEndDate.value || selectedEndDate.value <= nextValue) {
-    selectedEndDate.value = addDaysToDateInputValue(nextValue, 1);
+onUnmounted(() => {
+  if (dateRangeTimer) {
+    window.clearInterval(dateRangeTimer);
   }
 });
 
@@ -674,6 +616,37 @@ watch(selectedStartDate, (nextValue) => {
   white-space: nowrap;
 }
 
+
+.map-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.map-frame {
+  width: 100%;
+  height: 380px;
+  border: 0;
+  border-radius: 12px;
+}
+.map-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.open-map-btn.active {
+  background: linear-gradient(90deg,#1158d6,#0b4fc0);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.distance-info {
+  margin-left: 12px;
+  font-size: 14px;
+  color: #0b243a;
+}
+
 .brand-icon {
   width: 34px;
   height: 34px;
@@ -711,8 +684,10 @@ watch(selectedStartDate, (nextValue) => {
   color: #2563eb;
 }
 
-.brand-icon i {
-  color: #2563eb;
+.brand-icon-image {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .user-display-name {
@@ -911,6 +886,7 @@ watch(selectedStartDate, (nextValue) => {
   color: #ef4f68;
 }
 
+
 .card-image {
   height: 172px;
   background: #ffffff;
@@ -962,29 +938,6 @@ watch(selectedStartDate, (nextValue) => {
   margin: 4px 0 10px;
   font-size: 16px;
   color: #617086;
-}
-
-.vehicle-stock {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 14px;
-  font-size: 15px;
-  color: #617086;
-}
-
-.vehicle-availability {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: -6px 0 16px;
-  font-size: 0.92rem;
-  color: #2563eb;
-  font-weight: 700;
-}
-
-.vehicle-availability.is-unavailable {
-  color: #b91c1c;
 }
 
 .meta {
@@ -1042,101 +995,6 @@ watch(selectedStartDate, (nextValue) => {
 .open-map-btn.secondary {
   left: auto;
   right: 12px;
-}
-
-.availability-controls {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 220px));
-  justify-content: center;
-  gap: 14px;
-  margin: 0 auto 14px;
-}
-
-.availability-field {
-  display: grid;
-  gap: 8px;
-  text-align: left;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.availability-field span {
-  font-size: 0.85rem;
-  color: #475569;
-}
-
-.availability-input {
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #0f172a;
-  padding: 12px 14px;
-  font: inherit;
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
-}
-
-.availability-input:focus {
-  outline: none;
-  border-color: #1d6fff;
-  box-shadow: 0 0 0 4px rgba(29, 111, 255, 0.12);
-}
-
-.availability-note,
-.selected-date-error {
-  margin: 0 auto 18px;
-  max-width: 620px;
-  font-size: 0.95rem;
-}
-
-.availability-note {
-  color: #64748b;
-}
-
-.selected-date-error {
-  color: #b91c1c;
-  font-weight: 700;
-}
-
-.promo-card--unavailable {
-  opacity: 0.58;
-  filter: grayscale(0.2);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-}
-
-.promo-card--unavailable .promo-media::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.28);
-}
-
-.promo-unavailable-badge {
-  position: absolute;
-  left: 14px;
-  bottom: 14px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.84);
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-}
-
-.book-btn:disabled {
-  cursor: not-allowed;
-  background: linear-gradient(135deg, #94a3b8, #64748b);
-  box-shadow: none;
-  transform: none;
-}
-
-@media (max-width: 820px) {
-  .availability-controls {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 1080px) {

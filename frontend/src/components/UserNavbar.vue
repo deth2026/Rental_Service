@@ -126,7 +126,9 @@ const requestLogout = () => {
 <template>
   <header class="topbar user-navbar">
     <div class="brand">
-      <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+      <div class="brand-icon">
+        <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+      </div>
       <span>Chong Choul</span>
     </div>
 
@@ -206,9 +208,10 @@ const requestLogout = () => {
   place-items: center;
 }
 
-.topbar.user-navbar .brand-icon i {
-  color: #2563eb;
-  font-size: 1rem;
+.topbar.user-navbar .brand-icon-image {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .topbar.user-navbar .nav-links {
