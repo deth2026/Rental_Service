@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
+import ManageCustomer from "./ManageCustomer.vue";
 import Payments from "./Payments.vue";
 import DamageReports from "./Demage_reports.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
@@ -66,6 +67,7 @@ const sections = [
   { id: "reviews", label: "Reviews & Feedback", icon: "star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
+  { id: "manage-customer", label: "Manage Customer", icon: "users" },
   { id: "activity", label: "Activity History", icon: "history" },
   { id: "notifications", label: "Notifications", icon: "bell" },
   { id: "settings", label: "Settings", icon: "settings" },
@@ -1296,6 +1298,10 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'loyalty'" class="loyalty-view">
         <LoyaltyPoints />
+      </section>
+
+      <section v-else-if="active === 'manage-customer'" class="manage-customer-view">
+        <ManageCustomer />
       </section>
 
       <section v-else-if="active === 'activity'" class="activity-view">
