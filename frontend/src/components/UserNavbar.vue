@@ -92,6 +92,7 @@ const goBack = () => {
 </script>
 
 <template>
+<<<<<<< HEAD
   <header class="user-navbar-shell">
     <div class="topbar user-navbar">
       <div class="brand">
@@ -115,6 +116,12 @@ const goBack = () => {
 
       <div class="top-actions">
         <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
+=======
+  <header class="topbar user-navbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+>>>>>>> 70910213ee8f8b5bf336d981d9d555bd121e2611
       </div>
     </div>
 

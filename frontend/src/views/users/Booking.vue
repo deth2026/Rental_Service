@@ -1,12 +1,25 @@
 ﻿<template>
   <div class="booking-checkout-page">
     <header class="topbar">
+<<<<<<< HEAD
       <div class="brand">
         <div class="brand-icon">
           <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
         </div>
         <span>Chong Choul</span>
       </div>
+=======
+  <button class="btn-back-top" type="button" @click="goHome">
+    <span class="back-arrow" aria-hidden="true">←</span>
+    Back to Home
+  </button>
+  <div class="brand">
+    <div class="brand-icon">
+      <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+    </div>
+    <span>Chong Choul</span>
+  </div>
+>>>>>>> 70910213ee8f8b5bf336d981d9d555bd121e2611
 
       <nav class="nav-links">
         <button

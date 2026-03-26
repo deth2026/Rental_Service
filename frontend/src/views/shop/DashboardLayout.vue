@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
+import ManageCustomer from "./ManageCustomer.vue";
 import Payments from "./Payments.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
@@ -17,7 +18,7 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/images/logo-removebg.png";
+const logoUrl = "/Images/logo-removebg.png";
 const route = useRoute();
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
@@ -86,10 +87,10 @@ const sections = [
   { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
   { id: "bookings", label: "Bookings", icon: "calendar-check" },
   { id: "payments", label: "Payments", icon: "wallet" },
-  { id: "damage", label: "Damage Reports", icon: "shield-alert" },
   { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
+  { id: "manage-customer", label: "Manage Customer", icon: "users" },
   { id: "activity", label: "Activity History", icon: "history" },
   { id: "notifications", label: "Notifications", icon: "bell" },
   { id: "settings", label: "Settings", icon: "settings" },
@@ -1587,6 +1588,10 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'loyalty'" class="loyalty-view">
         <LoyaltyPoints />
+      </section>
+
+      <section v-else-if="active === 'manage-customer'" class="manage-customer-view">
+        <ManageCustomer />
       </section>
 
       <section v-else-if="active === 'activity'" class="activity-view">

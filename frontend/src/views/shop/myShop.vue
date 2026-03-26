@@ -199,27 +199,29 @@ const resetForm = () => {
 };
 
 const validateCreateForm = () => {
+  const errors = [];
   const name = createForm.name.trim();
   const address = createForm.address.trim();
   const phone = createForm.phone.trim();
   const description = createForm.description.trim();
-  const mapUrl = createForm.map_url.trim();
-  const latitude = Number(createForm.latitude);
-  const longitude = Number(createForm.longitude);
 
-  if (!name || !address || !phone || !description) {
+  // Required fields
+  if (!name) errors.push('Name');
+  if (!address) errors.push('Address');
+  if (!phone) errors.push('Phone');
+  if (!description) errors.push('Description');
+
+  // Phone validation
+  if (phone && !/^[0-9+\-\s()]{8,20}$/.test(phone)) {
+    errors.push('Invalid phone format');
+  }
+
+  if (errors.length > 0) {
+    error.value = 'Please fill all required fields: ' + errors.join(', ');
     return false;
   }
-  if (!mapUrl) {
-    return false;
-  }
-  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    return false;
-  }
-  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return false;
-  }
-  return /^[0-9+\-\s()]{8,20}$/.test(phone);
+
+  return true;
 };
 
 const extractCoordinatesFromMapUrl = (value) => {
@@ -411,13 +413,8 @@ const removeShopImage = async () => {
 };
 
 const createShop = async () => {
-  if (createForm.map_url && (!createForm.latitude || !createForm.longitude)) {
-    onMapUrlBlur();
-  }
-
   if (!validateCreateForm()) {
-    error.value =
-      "Please fill all required fields, including valid latitude, longitude, and map URL.";
+    // Error message is already set in validateCreateForm
     return;
   }
 
