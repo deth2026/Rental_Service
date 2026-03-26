@@ -23,7 +23,7 @@ class NotificationService
         ],
         'completed' => [
             'title' => 'Booking completed',
-            'message' => 'Booking {code} is complete. Thanks for riding with us!',
+            'message' => 'Booking {code} is complete. Please rate your experience to help us improve!',
         ],
     ];
 

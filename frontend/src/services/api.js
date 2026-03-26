@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 const api = axios.create({
   baseURL: '/api',
@@ -16,7 +17,6 @@ api.interceptors.request.use((config) => {
   const nextConfig = { ...config };
   const authToken = getStoredToken();
 
-  // Log for debugging
   console.log('API Interceptor: Token from localStorage:', authToken ? 'present' : 'missing');
 
   if (authToken) {
@@ -27,12 +27,29 @@ api.interceptors.request.use((config) => {
     console.log('API Interceptor: No token found, skipping Authorization header');
   }
 
+  // Add timeout for performance
+  nextConfig.timeout = 10000; // 10s
+
   // Let browser set correct multipart boundary automatically.
   if (typeof FormData !== 'undefined' && nextConfig.data instanceof FormData && nextConfig.headers) {
     delete nextConfig.headers['Content-Type'];
   }
 
   return nextConfig;
+});
+
+// Add automatic retry for network errors
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return error.code === 'ECONNABORTED' || 
+           error.message === 'Network Error' || 
+           error.response?.status >= 500;
+  },
+  onRetry: (retryCount, error) => {
+    console.log(`Retrying API call (${retryCount}/3):`, error.message);
+  }
 });
 
 // Vehicle API calls
@@ -142,8 +159,8 @@ export const bookingApi = {
 
 // Rating API calls
 export const ratingApi = {
-  getVehicleRatings: () => api.get('/vehicle-ratings'),
-  getVehicleRatingsSummary: () => api.get('/vehicle-ratings-summary'),
+  getVehicleRatings: (params) => api.get('/vehicle-ratings', { params }),
+  getVehicleRatingsSummary: (params) => api.get('/vehicle-ratings-summary', { params }),
   create: (bookingId, data) => api.post(`/bookings/${bookingId}/rating`, data)
 };
 

@@ -345,10 +345,10 @@ class BookingController extends Controller
             }
             
             // Get bookings for these shops with related data
-            $bookings = Booking::whereIn('shop_id', $shops)
-                ->with(['vehicle', 'user', 'bookingStatusLogs'])
+$bookings = Booking::whereIn('shop_id', $shops)
+                ->with(['vehicle.shop', 'user', 'bookingStatusLogs'])
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->paginate(25);
             
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
@@ -507,7 +507,17 @@ class BookingController extends Controller
     public function update(Request $request, Booking $booking)
     {
         $validated = $this->validateBookingPayload($request, $booking);
+        
+        // Track if status is changing to completed
+        $oldStatus = $booking->status;
+        $newStatus = $request->input('status');
+        
         $booking->update($validated);
+        
+        // Send notification when booking is completed
+        if ($oldStatus !== 'completed' && $newStatus === 'completed') {
+            NotificationService::bookingStatusChanged($booking, 'completed');
+        }
 
         return response()->json($booking->fresh());
     }

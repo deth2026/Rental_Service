@@ -17,7 +17,7 @@ class ShopController extends Controller
     {
         $shops = Shop::with(['owner:id,name,email,phone'])
             ->orderByDesc('id')
-            ->get();
+            ->paginate(25);
 
         // Manually add img_url_full to ensure it's included
         $shopsWithImages = $shops->map(function ($shop) {
@@ -40,7 +40,7 @@ class ShopController extends Controller
                 'phone' => $shop->phone,
                 'img_url' => $shop->img_url,
                 'img_url_full' => $shop->img_url_full,
-                'image' => $shop->img_url_full, // Add image field for frontend compatibility
+                'image' => $shop->img_url_full,
                 'latitude' => $shop->latitude,
                 'longitude' => $shop->longitude,
                 'rating' => $rating,
@@ -52,7 +52,9 @@ class ShopController extends Controller
             ];
         });
 
-        return response()->json($shopsWithImages);
+        $shops->setCollection($shopsWithImages);
+
+        return response()->json($shops);
     }
 
     public function store(Request $request)
@@ -68,6 +70,7 @@ class ShopController extends Controller
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
+            'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
             // do NOT validate img_url here; see below
@@ -75,6 +78,9 @@ class ShopController extends Controller
 
         if (!$this->shopColumnExists('location')) {
             unset($payload['location']);
+        }
+        if (!$this->shopColumnExists('map_url')) {
+            unset($payload['map_url']);
         }
         
         // handle image validation / payload separately
@@ -118,6 +124,14 @@ class ShopController extends Controller
             elseif (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
                 $payload['img_url'] = $imgUrl;
             }
+        }
+
+        [$urlLat, $urlLng] = $this->extractCoordinatesFromMapUrl($payload['map_url'] ?? null);
+        if (!isset($payload['latitude']) && $urlLat !== null) {
+            $payload['latitude'] = $urlLat;
+        }
+        if (!isset($payload['longitude']) && $urlLng !== null) {
+            $payload['longitude'] = $urlLng;
         }
 
         // If no coordinates provided, attempt to geocode from address
@@ -168,12 +182,16 @@ class ShopController extends Controller
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
+            'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
 
         if (!$this->shopColumnExists('location')) {
             unset($payload['location']);
+        }
+        if (!$this->shopColumnExists('map_url')) {
+            unset($payload['map_url']);
         }
 
         // validate img_url value type depending on upload or text
@@ -240,6 +258,17 @@ class ShopController extends Controller
         } else {
             // Remove img_url from payload if not uploading new image
             unset($payload['img_url']);
+        }
+
+        $mapUrlForCoords = array_key_exists('map_url', $payload)
+            ? $payload['map_url']
+            : $shop->map_url;
+        [$urlLat, $urlLng] = $this->extractCoordinatesFromMapUrl($mapUrlForCoords);
+        if (!$request->filled('latitude') && $urlLat !== null) {
+            $payload['latitude'] = $urlLat;
+        }
+        if (!$request->filled('longitude') && $urlLng !== null) {
+            $payload['longitude'] = $urlLng;
         }
 
         // If latitude/longitude not provided, refresh from the (possibly updated) address
@@ -323,5 +352,42 @@ class ShopController extends Controller
         }
 
         return [$result['lat'], $result['lng']];
+    }
+
+    /**
+     * Extract coordinates from common Google Maps URL patterns.
+     * Returns [lat, lng] or [null, null] when no coordinates are found.
+     */
+    private function extractCoordinatesFromMapUrl(?string $value): array
+    {
+        $url = trim((string) $value);
+        if ($url === '') {
+            return [null, null];
+        }
+
+        $patterns = [
+            '/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/',
+            '/[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/',
+            '/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (!preg_match($pattern, $url, $matches)) {
+                continue;
+            }
+
+            $lat = isset($matches[1]) ? (float) $matches[1] : null;
+            $lng = isset($matches[2]) ? (float) $matches[2] : null;
+            if ($lat === null || $lng === null) {
+                continue;
+            }
+            if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+                continue;
+            }
+
+            return [$lat, $lng];
+        }
+
+        return [null, null];
     }
 }

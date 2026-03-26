@@ -10,6 +10,8 @@ class Shop extends Model
 {
     use HasFactory;
 
+    protected $with = ['owner'];
+
     protected $appends = ['img_url_full'];
 
     protected $fillable = [
@@ -23,9 +25,10 @@ class Shop extends Model
         'img_url',
         'latitude',
         'longitude',
+        'map_url',
         'total_reviews',
         'status'
-    ];
+    ]; 
 
     protected $casts = [
         'latitude' => 'decimal:7',

@@ -1,11 +1,30 @@
 <template>
   <div class="booking-checkout-page">
-    <UserNavbar
-      :nav-items="navItems"
-      :active-label="activeNavLabel"
-      :show-fallback-message="true"
-      @logout-request="handleLogout"
-    />
+    <header class="topbar">
+  <div class="brand">
+    <div class="brand-icon">
+      <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+    </div>
+    <span>Chong Choul</span>
+  </div>
+
+  <nav class="nav-links">
+    <button
+      v-for="item in navItems"
+      :key="item"
+      class="btn-reset nav-link"
+      :class="{ active: activeNav === item }"
+      @click="setActiveNav(item)"
+    >
+      {{ item }}
+    </button>
+  </nav>
+
+  <div class="top-actions">
+    <span class="user-display-name">{{ userDisplayName }}</span>
+    <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+  </div>
+</header>
 
     <div class="page-container">
 
@@ -14,12 +33,10 @@
           <h1>Checkout</h1>
           <span class="step-pill">Step 2 of 3</span>
         </div>
-        <div class="top-actions">
-          <button class="btn-back-top" type="button" @click="goHome">
+        <button class="btn-back-top" type="button" @click="goHome">
             <span class="back-arrow" aria-hidden="true">←</span>
-            Back to Home
-          </button>
-        </div>
+              Back to Home
+        </button>
       </div>
 
       <div class="checkout-progress" aria-hidden="true">
@@ -101,6 +118,7 @@
             </div>
           </div>
 
+
           <div class="card encryption-card">
             <h4>Secure Transaction</h4>
             <p>
@@ -143,7 +161,28 @@
 
             <div class="date-selection">
               <h3>Rental dates</h3>
-              
+              <div class="date-inputs">
+                <div class="input-group">
+                  <label>Pick-up</label>
+                  <input
+                    type="date"
+                    v-model="rental.startDate"
+                    :min="minDate"
+                    @change="validateDates"
+                    required
+                  />
+                </div>
+                <div class="input-group">
+                  <label>Drop-off</label>
+                  <input
+                    type="date"
+                    v-model="rental.endDate"
+                    :min="rental.startDate || minDate"
+                    @change="validateDates"
+                    required
+                  />
+                </div>
+              </div>
 
               <div class="date-summary" v-if="rental.startDate && rental.endDate">
                 <span class="days-count">{{ calculateDays() }} days</span>
@@ -171,10 +210,7 @@
                   name="cc-number"
                   autocomplete="cc-number"
                   inputmode="numeric"
-                  placeholder="0000-0000-0000-0000"
-                  maxlength="19"
-                  pattern="\d{4}-\d{4}-\d{4}-\d{4}"
-                  @input="formatCardNumberInput"
+                  placeholder="0000 0000 0000 0000"
                   required
                 />
               </div>
@@ -206,6 +242,7 @@
                   />
                 </div>
               </div>
+
 
               <div class="secure-info-box">
                 <p>
@@ -291,14 +328,32 @@
                 </div>
 
                 <div class="qr-code-section">
-                  <div class="qr-active qr-active--asset">
+                  <div v-if="!showQR" class="qr-placeholder">
+                    <h4>Ready to generate your QR code</h4>
+                    <p>Click below and scan it with your mobile banking app.</p>
+
+                    <button
+                      type="button"
+                      class="qr-generate-btn"
+                      :disabled="!isFormValid"
+                      @click="generateQRCode"
+                    >
+                      Generate QR Code
+                    </button>
+                  </div>
+
+                  <div v-else class="qr-active">
                     <img
-                      :src="paymentQrCodeImage"
+                      v-if="qrCodeUrl"
+                      :src="qrCodeUrl"
                       alt="Payment QR Code"
                       class="qr-code-image"
                     />
 
                     <p class="payment-reference">Reference: {{ paymentId }}</p>
+
+
+                    <div class="timer-pill">Code expires in 14:59</div>
 
                     <div class="steps-grid" style="margin-bottom: 20px;">
                       <div class="step-item">
@@ -307,7 +362,7 @@
                       </div>
                       <div class="step-item">
                         <span class="step-number">2</span>
-                        <p>Scan this QR code</p>
+                        <p>Scan the QR code</p>
                       </div>
                       <div class="step-item">
                         <span class="step-number">3</span>
@@ -318,7 +373,6 @@
                     <button
                       type="button"
                       class="btn-primary-pay"
-                      :disabled="!isFormValid"
                       @click="openConfirmModal('qr')"
                     >
                       I have paid
@@ -336,7 +390,7 @@
       </div>
     </div>
 
-    <footer v-if="false" class="site-footer">
+    <footer class="site-footer">
       <div class="footer-wrap">
         <div class="footer-top">
           <div class="footer-brand">
@@ -399,6 +453,7 @@
       </div>
     </footer>
 
+
     <div
       v-if="showConfirmModal"
       class="confirm-modal-overlay"
@@ -440,67 +495,43 @@
       class="success-modal-overlay"
       @click="closeSuccessModal"
     >
-      <div class="success-modal booking-status-modal payment-status-modal" @click.stop>
-        <div class="booking-status-hero">
-          <div v-if="paymentFlowState === 'processing'" class="booking-loader-wrap" aria-hidden="true">
-            <div class="booking-loader-circle"></div>
-            <div class="booking-loader-core"></div>
-          </div>
+      <div class="success-modal" @click.stop>
+        <div class="success-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h2>Successfully</h2>
 
-          <div v-else class="booking-check-wrap" aria-hidden="true">
-            <svg class="booking-check-svg" viewBox="0 0 120 120" fill="none">
-              <circle class="booking-check-ring" cx="60" cy="60" r="46" />
-              <path class="booking-check-path" d="M38 62l14 14 30-32" />
-            </svg>
+        <div class="success-card">
+          <div class="success-row">
+            <span>Booking ID</span>
+            <strong>{{ bookingId }}</strong>
+          </div>
+          <div class="success-row">
+            <span>Transaction ID</span>
+            <strong>{{ transactionId }}</strong>
+          </div>
+          <div class="success-row">
+            <span>Payment Method</span>
+            <strong>{{ receiptPaymentLabel }}</strong>
+          </div>
+          <div class="success-row">
+            <span>Amount Paid</span>
+            <strong>${{ totalAmount.toFixed(2) }}</strong>
+          </div>
+          <div class="success-row">
+            <span>Date</span>
+            <strong>{{ transactionDateTime }}</strong>
           </div>
         </div>
 
-        <span class="booking-status-kicker">
-          {{ paymentStatusKicker }}
-        </span>
-        <h3>{{ paymentStatusTitle }}</h3>
-        <p class="booking-status-text payment-status-text-compact">
-          {{ paymentStatusDescription }}
-        </p>
-
-        <div v-if="paymentFlowState === 'success'" class="payment-summary-shell">
-          <div class="payment-summary-top">
-            <div class="payment-summary-copy">
-              <span>Vehicle</span>
-              <strong>{{ rental.title }}</strong>
-            </div>
-            <div class="payment-summary-total">
-              <span>Total</span>
-              <strong>${{ totalAmount.toFixed(2) }}</strong>
-            </div>
-          </div>
-
-          <div class="payment-summary-grid">
-            <div class="payment-summary-item">
-              <span>Booking ID</span>
-              <strong>{{ bookingId || "Pending" }}</strong>
-            </div>
-            <div class="payment-summary-item">
-              <span>Method</span>
-              <strong>{{ completedPaymentLabel }}</strong>
-            </div>
-            <div class="payment-summary-item payment-summary-item-wide">
-              <span>{{ paymentReferenceLabel }}</span>
-              <strong>{{ paymentReferenceValue }}</strong>
-            </div>
-          </div>
-        </div>
-
-        <p v-if="paymentFlowState === 'success'" class="success-inline-note payment-inline-note">
-          Pickup at {{ rental.location }} on {{ transactionDateTime }}
-        </p>
-
-        <div v-if="paymentFlowState === 'success'" class="success-actions">
-          <button class="success-secondary-btn" type="button" @click="closeSuccessModal">
-            Go to Dashboard
+        <div class="modal-actions">
+          <button class="btn-download" type="button" @click="downloadReceipt">
+            Download
           </button>
-          <button class="success-primary-btn" type="button" @click="downloadReceipt">
-            Download Receipt
+          <button class="btn-close" type="button" @click="closeSuccessModal">
+            Close
           </button>
         </div>
       </div>
@@ -510,43 +541,82 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api, { couponApi } from "@/services/api";
 import { jsPDF } from "jspdf";
 import paymentQrCodeImage from "@/assets/img/image.png";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
-import UserNavbar from '@/components/UserNavbar.vue';
-import {
-  calculateOverlappingBookedQuantity,
-  getVehicleTotalQuantity,
-  parseQuantityValue,
-} from "@/utils/bookingAvailability";
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
 const router = useRouter();
 const route = useRoute();
 
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
-];
-const activeNavLabel = computed(() => {
-  const matched = navItems.find((item) => item.route && route.path.startsWith(item.route));
-  return matched?.label || 'Home';
+// Header data from VehiclesByShop.vue
+const navItems = ['Home', 'View Details', 'Bookings'];
+const activeNav = ref('Home');
+const actionMessage = ref('');
+const avatarLoadFailed = ref(false);
+const currentUser = computed(() => userService.getCurrentUser());
+const userDisplayName = computed(() => currentUser.value?.name || 'customer');
+
+const normalizeAvatarUrl = (url) => {
+  if (!url) return '';
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
+  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
+  if (normalized.startsWith('storage/')) return `/${normalized}`;
+  return `/storage/${normalized}`;
+};
+
+const userAvatarUrl = computed(() => {
+  if (avatarLoadFailed.value) return '';
+  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
+  return normalizeAvatarUrl(src);
+});
+
+
+const userInitials = computed(() => {
+  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return 'CU';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
 });
 
 // Header functions
+const setActiveNav = (item) => {
+  activeNav.value = item;
+  if (item === 'Home') {
+    router.replace('/view_shop');
+    return;
+  }
+  actionMessage.value = `${item} is not available yet.`;
+};
+
+const openProfile = () => {
+  router.push('/user/profile');
+};
+
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
 };
 
 const goHome = () => {
-  router.push('/');
+  if (vehicleId.value) {
+    router.push({
+      name: 'vehicle-detail',
+      params: { id: String(vehicleId.value) },
+    });
+    return;
+  }
+  router.push({ name: 'vehicles-by-shop' });
+};
+
+const onAvatarError = () => {
+  avatarLoadFailed.value = true;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -558,22 +628,13 @@ const fallbackImageByType = {
 };
 
 const vehicle = ref(null);
-const bookings = ref([]);
 const shopsById = ref({});
 const isLoading = ref(false);
 const loadingError = ref("");
-const parsePositiveIntQuery = (value) => {
-  if (value === null || value === undefined) return null;
-  const raw = Array.isArray(value) ? value[0] : value;
-  const num = Number(raw);
-  return Number.isInteger(num) && num > 0 ? num : null;
-};
-
 const vehicleId = computed(() => {
   const value = Number(route.params.id);
   return Number.isFinite(value) && value > 0 ? value : null;
 });
-const existingBookingRecordId = computed(() => parsePositiveIntQuery(route.query.bookingRecordId));
 
 const getVehicleName = (item) => (item ? `${item.brand} ${item.model}` : "");
 const getVehicleImage = (item) => {
@@ -647,17 +708,16 @@ const loadVehicleDetail = async () => {
   loadingError.value = "";
 
   try {
-    const [vehicleList, shopList, bookingList] = await Promise.all([
+    const [vehicleList, shopList] = await Promise.all([
       loadAllPages("vehicles"),
       loadAllPages("shops"),
-      loadAllPages("bookings"),
     ]);
+
 
     shopsById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
       return acc;
     }, {});
-    bookings.value = bookingList;
 
     const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
     if (!found) {
@@ -668,15 +728,6 @@ const loadVehicleDetail = async () => {
     rental.value.title = getVehicleName(found) || rental.value.title;
     rental.value.location = vehicleLocation.value;
     rental.value.dailyRate = Number(found.price_per_day || 0);
-    if (found.insurance_fee !== undefined && found.insurance_fee !== null) {
-      rental.value.insurance = Number(found.insurance_fee || 0);
-    }
-    if (found.taxes_fee !== undefined && found.taxes_fee !== null) {
-      rental.value.taxes = Number(found.taxes_fee || 0);
-    }
-    if (found.rider_details) {
-      rental.value.riders = found.rider_details;
-    }
   } catch (error) {
     const status = error?.response?.status;
     const message = error?.response?.data?.message || error.message;
@@ -703,8 +754,6 @@ const promoSuccess = ref(false);
 const showSuccessModal = ref(false);
 const showConfirmModal = ref(false);
 const pendingPaymentAction = ref(null);
-const paymentFlowState = ref("idle");
-const paymentFlowMethod = ref("card");
 const dateError = ref("");
 const bookingId = ref("");
 const paymentId = ref(
@@ -713,6 +762,7 @@ const paymentId = ref(
 const transactionId = ref(
   "TXN" + Math.random().toString(36).slice(2, 14).toUpperCase()
 );
+const qrCodeUrl = ref("");
 
 const rental = ref({
   title: "Vehicle",
@@ -751,14 +801,6 @@ const parseRiderDetailsFromQuery = (value) => {
   return text;
 };
 
-const parseDateFromQuery = (value) => {
-  if (value === null || value === undefined) return null;
-  const raw = Array.isArray(value) ? value[0] : value;
-  const text = String(raw).trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
-  return text;
-};
-
 const parseBooleanFlagFromQuery = (value) => {
   if (value === null || value === undefined) return null;
   const raw = Array.isArray(value) ? value[0] : value;
@@ -769,26 +811,10 @@ const parseBooleanFlagFromQuery = (value) => {
   return null;
 };
 
-const formatCardNumberInput = (event) => {
-  const input = event?.target;
-  if (!input) return;
-
-  const digits = String(input.value || "")
-    .replace(/\D/g, "")
-    .slice(0, 16);
-
-  input.value = digits.replace(/(\d{4})(?=\d)/g, "$1-");
-};
-
 const applyRouteDefaults = () => {
   const insuranceFromQuery = parseNumberFromQuery(route.query.insuranceFee);
   if (insuranceFromQuery !== null) {
     rental.value.insurance = insuranceFromQuery;
-  }
-
-  const taxesFromQuery = parseNumberFromQuery(route.query.taxesFee);
-  if (taxesFromQuery !== null) {
-    rental.value.taxes = taxesFromQuery;
   }
 
   const includeInsuranceFromQuery = parseBooleanFlagFromQuery(route.query.includeInsurance);
@@ -804,22 +830,6 @@ const applyRouteDefaults = () => {
   const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
   if (riderFromQuery) {
     rental.value.riders = riderFromQuery;
-  }
-
-  const startDateFromQuery = parseDateFromQuery(route.query.startDate);
-  if (startDateFromQuery) {
-    rental.value.startDate = startDateFromQuery;
-  }
-
-  const totalDaysFromQuery = parsePositiveIntQuery(route.query.totalDays);
-  if (rental.value.startDate && totalDaysFromQuery) {
-    const end = new Date(rental.value.startDate);
-    end.setDate(end.getDate() + totalDaysFromQuery);
-    rental.value.endDate = end.toISOString().split("T")[0];
-  }
-
-  if (rental.value.startDate && rental.value.endDate) {
-    formatPeriod();
   }
 };
 
@@ -845,46 +855,6 @@ const receiptPaymentLabel = computed(() => {
   return "Credit Card";
 });
 
-const completedPaymentLabel = computed(() => {
-  if (paymentFlowMethod.value === "qr") return "QR Payment";
-  if (paymentFlowMethod.value === "bank_transfer") return "Bank Transfer";
-  return "Credit Card";
-});
-
-const paymentStatusKicker = computed(() => {
-  if (paymentFlowState.value === "processing") return "Processing Payment";
-  if (paymentFlowMethod.value === "bank_transfer") return "Transfer Instructions Ready";
-  return "Payment Confirmed";
-});
-
-const paymentStatusTitle = computed(() => {
-  if (paymentFlowState.value === "processing") return "Please wait a moment";
-  if (paymentFlowMethod.value === "bank_transfer") return "Bank Transfer Ready";
-  return "Payment Successful";
-});
-
-const paymentStatusDescription = computed(() => {
-  if (paymentFlowState.value === "processing") {
-    return "We are confirming your payment now.";
-  }
-
-  if (paymentFlowMethod.value === "bank_transfer") {
-    return "Your booking is ready and transfer instructions are prepared.";
-  }
-
-  return "Your payment is complete and your booking is ready.";
-});
-
-const paymentReferenceLabel = computed(() => {
-  return paymentFlowMethod.value === "bank_transfer" ? "Transfer Ref" : "Reference";
-});
-
-const paymentReferenceValue = computed(() => {
-  return paymentFlowMethod.value === "bank_transfer"
-    ? paymentId.value
-    : (transactionId.value || paymentId.value);
-});
-
 const minDate = computed(() => {
   const today = new Date();
   return today.toISOString().split("T")[0];
@@ -902,28 +872,10 @@ const calculateDays = () => {
 };
 
 const riderCount = computed(() => {
-  return parseQuantityValue(rental.value.riders, 1);
-});
-
-const selectedDateAvailability = computed(() => {
-  const totalVehicles = getVehicleTotalQuantity(vehicle.value);
-  const bookedQuantity = calculateOverlappingBookedQuantity({
-    bookings: bookings.value,
-    vehicleId: vehicleId.value,
-    startDate: rental.value.startDate,
-    endDate: rental.value.endDate,
-    ignoreBookingId: existingBookingRecordId.value,
-  });
-  const remainingQuantity = Math.max(totalVehicles - bookedQuantity, 0);
-  const requestedQuantity = 1;
-
-  return {
-    totalVehicles,
-    bookedQuantity,
-    remainingQuantity,
-    requestedQuantity,
-    fitsRequest: remainingQuantity >= 1,
-  };
+  const match = String(rental.value.riders).match(/^\s*(\d+)/);
+  if (!match) return 1;
+  const count = Number(match[1]);
+  return Number.isFinite(count) && count > 0 ? count : 1;
 });
 
 const insuranceAmount = computed(() => {
@@ -973,6 +925,22 @@ const formatPeriod = () => {
   rental.value.period = `${start.toLocaleDateString("en-US", opts)} - ${end.toLocaleDateString("en-US", opts)} (${days} ${days === 1 ? "day" : "days"})`;
 };
 
+const isDateAvailable = async (startDate, endDate) => {
+  const existingBookings = [
+    { startDate: "2026-04-10", endDate: "2026-04-12" },
+    { startDate: "2026-04-20", endDate: "2026-04-23" },
+  ];
+
+  const requestedStart = new Date(startDate);
+  const requestedEnd = new Date(endDate);
+
+  return existingBookings.every((booking) => {
+    const existingStart = new Date(booking.startDate);
+    const existingEnd = new Date(booking.endDate);
+    return requestedEnd < existingStart || requestedStart > existingEnd;
+  });
+};
+
 const validateDates = async () => {
   dateError.value = "";
 
@@ -993,14 +961,9 @@ const validateDates = async () => {
     return;
   }
 
-  const availability = selectedDateAvailability.value;
-  if (!availability.fitsRequest) {
-    if (availability.remainingQuantity <= 0) {
-      dateError.value = "Selected dates are fully booked for this vehicle.";
-      return;
-    }
-
-    dateError.value = "";
+  const available = await isDateAvailable(rental.value.startDate, rental.value.endDate);
+  if (!available) {
+    dateError.value = "Selected dates are not available. Please choose different dates.";
     return;
   }
 
@@ -1065,16 +1028,10 @@ const saveBookingToDatabase = async (bookingData) => {
   };
 
   try {
-    let recordId = existingBookingRecordId.value;
-
-    if (recordId) {
-      await api.put(`/bookings/${recordId}`, payload);
-    } else {
-      const response = await api.post("/bookings", payload);
-      const record = response?.data?.data || response?.data;
-      recordId = record?.id;
-    }
-
+    // Create the booking first
+    const response = await api.post("/bookings", payload);
+    const record = response?.data?.data || response?.data;
+    const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
 
     // Now save the payment record
@@ -1104,47 +1061,6 @@ const saveBookingToDatabase = async (bookingData) => {
   }
 };
 
-const loadExistingBooking = async () => {
-  if (!existingBookingRecordId.value) return;
-
-  try {
-    const response = await api.get(`/bookings/${existingBookingRecordId.value}`);
-    const booking = response?.data?.data || response?.data;
-    if (!booking) return;
-
-    bookingId.value = `BK${booking.id}`;
-
-    if (booking.start_date) {
-      rental.value.startDate = booking.start_date;
-    }
-
-    if (booking.start_date && Number(booking.total_days || 0) > 0) {
-      const end = new Date(booking.start_date);
-      end.setDate(end.getDate() + Number(booking.total_days));
-      rental.value.endDate = end.toISOString().split("T")[0];
-    }
-
-    if (booking.rider_details) {
-      rental.value.riders = booking.rider_details;
-    }
-
-    if (booking.daily_rate !== undefined && booking.daily_rate !== null) {
-      rental.value.dailyRate = Number(booking.daily_rate || 0);
-    }
-
-    rental.value.insurance = Number(booking.insurance_fee || 0);
-    rental.value.taxes = Number(booking.taxes_fee || 0);
-    includeInsurance.value = Number(booking.insurance_fee || 0) > 0;
-    includeTaxes.value = Number(booking.taxes_fee || 0) > 0;
-
-    if (rental.value.startDate && rental.value.endDate) {
-      formatPeriod();
-    }
-  } catch (error) {
-    console.error("Existing booking load error:", error);
-  }
-};
-
 const buildBookingData = (paymentMethod, status) => ({
   bookingId: bookingId.value,
   transactionId: transactionId.value,
@@ -1165,43 +1081,6 @@ const buildBookingData = (paymentMethod, status) => ({
   status,
   createdAt: new Date().toISOString(),
 });
-
-let paymentFlowTimerId = null;
-
-const clearPaymentFlowTimer = () => {
-  if (paymentFlowTimerId) {
-    window.clearTimeout(paymentFlowTimerId);
-    paymentFlowTimerId = null;
-  }
-};
-
-const waitForPaymentFlow = (duration = 900) =>
-  new Promise((resolve) => {
-    clearPaymentFlowTimer();
-    paymentFlowTimerId = window.setTimeout(() => {
-      paymentFlowTimerId = null;
-      resolve();
-    }, duration);
-  });
-
-const startPaymentFlow = (selectedMethod) => {
-  paymentFlowMethod.value = selectedMethod;
-  paymentFlowState.value = "processing";
-  showSuccessModal.value = true;
-};
-
-const finishPaymentFlow = async (selectedMethod) => {
-  paymentFlowMethod.value = selectedMethod;
-  await waitForPaymentFlow();
-  paymentFlowState.value = "success";
-};
-
-const resetPaymentFlow = () => {
-  clearPaymentFlowTimer();
-  paymentFlowState.value = "idle";
-  paymentFlowMethod.value = "card";
-  showSuccessModal.value = false;
-};
 
 const openConfirmModal = (action) => {
   pendingPaymentAction.value = action;
@@ -1229,14 +1108,13 @@ const handlePayment = async () => {
   await validateDates();
   if (dateError.value) return;
 
-  startPaymentFlow(method.value);
+  await new Promise((resolve) => setTimeout(resolve, 1200));
   const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
 
   if (result.success) {
     bookingId.value = result.bookingId;
-    await finishPaymentFlow(method.value);
+    showSuccessModal.value = true;
   } else {
-    resetPaymentFlow();
     alert(result.message || "Payment failed. Please try again.");
   }
 };
@@ -1245,13 +1123,11 @@ const handleBankTransfer = async () => {
   await validateDates();
   if (dateError.value) return;
 
-  startPaymentFlow("bank_transfer");
   const result = await saveBookingToDatabase(
     buildBookingData("bank_transfer", "pending_payment")
   );
 
   if (!result.success) {
-    resetPaymentFlow();
     alert(result.message || "Failed to create bank transfer instructions.");
     return;
   }
@@ -1283,13 +1159,42 @@ BANK DETAILS:
   document.body.removeChild(a);
   window.URL.revokeObjectURL(url);
 
-  await finishPaymentFlow("bank_transfer");
+
+  showSuccessModal.value = true;
+};
+
+const generateABAQRData = () => {
+  const qrData = {
+    merchant: "MOTORAL-001",
+    name: "Moto Rental",
+    amount: totalAmount.value.toFixed(2),
+    currency: "USD",
+    ref: paymentId.value,
+    desc: `Payment for ${rental.value.title}`,
+    time: new Date().toISOString(),
+  };
+
+  return `aba://payment?merchant=${qrData.merchant}&name=${encodeURIComponent(
+    qrData.name
+  )}&amount=${qrData.amount}&currency=${qrData.currency}&ref=${qrData.ref}&desc=${encodeURIComponent(
+    qrData.desc
+  )}&time=${qrData.time}`;
+};
+
+const generateQRCode = async () => {
+  await validateDates();
+  if (dateError.value) return;
+
+  const qrPayload = generateABAQRData();
+  qrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+    qrPayload
+  )}`;
+
+  showQR.value = true;
 };
 
 const closeSuccessModal = () => {
-  if (paymentFlowState.value === "processing") return;
-  resetPaymentFlow();
-  router.push({ name: "view_shop" });
+  showSuccessModal.value = false;
 };
 
 const downloadReceipt = () => {
@@ -1351,16 +1256,7 @@ const downloadReceipt = () => {
   doc.save(`receipt_${paymentReferenceValue.value}.pdf`);
 };
 
-onBeforeUnmount(() => {
-  clearPaymentFlowTimer();
-});
-
 const initDates = () => {
-  if (rental.value.startDate && rental.value.endDate) {
-    formatPeriod();
-    return;
-  }
-
   const start = new Date();
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
@@ -1370,17 +1266,17 @@ const initDates = () => {
   formatPeriod();
 };
 
-onMounted(async () => {
-  await loadVehicleDetail();
-  await loadExistingBooking();
-  initDates();
+onMounted(() => {
+  loadVehicleDetail();
 });
 
 watch(
-  () => [route.query.bookingRecordId, route.query.insuranceFee, route.query.taxesFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails, route.query.startDate, route.query.totalDays],
+  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails],
   () => {
     applyRouteDefaults();
   },
   { immediate: true }
 );
+initDates();
 </script>
+

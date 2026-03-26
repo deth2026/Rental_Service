@@ -2,7 +2,7 @@
   <main class="home-page">
     <header class="top-nav">
       <div class="brand-container">
-        <Logo class="home-brand" theme="light" size="lg" :showTagline="true" src="/Images/logo.png" />
+        <Logo class="home-brand" theme="light" size="lg" :showTagline="true" src="/images/logo.png" />
       </div>
 
       <div class="nav-auth">
@@ -113,7 +113,7 @@
       <div class="footer-main">
         <div class="footer-brand">
           <div class="footer-brand-head">
-            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/Images/logo.png" />
+            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/images/logo.png" brandName="CHONG CHOUL" />
           </div>
           <p class="footer-desc">The premier vehicle rental marketplace in Cambodia.</p>
           <div class="footer-social" aria-label="Social media">

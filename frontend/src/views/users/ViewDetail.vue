@@ -491,7 +491,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import api from "@/services/api";
+import api, { vehicleApi, shopApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import UserNavbar from '@/components/UserNavbar.vue';
 import UserFooter from '@/components/UserFooter.vue';
@@ -565,7 +565,18 @@ const closeBookingSuccessModal = () => {
   showBookingSuccess.value = false;
   bookingFlowState.value = "idle";
   clearBookingFlowTimer();
+  
+  // Refresh bookings to update available vehicles count
+  refreshAvailableVehicles();
 };
+
+// Emit event to refresh available vehicles in parent component
+const emit = defineEmits(['refresh-bookings'])
+
+const refreshAvailableVehicles = () => {
+  // This will trigger a refresh of the vehicle list with updated booking counts
+  emit('refresh-bookings')
+}
 
 const parseRouteDate = (value) => {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -627,6 +638,14 @@ const goToPaymentPage = () => {
 
 const confirmBooking = async () => {
   if (!vehicle.value) return;
+  
+  // Check if vehicle has available stock
+  const totalVehicles = vehicle.value.total_vehicles || 1;
+  if (totalVehicles <= 0) {
+    alert('Sorry, this vehicle is not available for booking.');
+    return;
+  }
+  
   if (bookingDuration.value <= 0) {
     alert("Please select at least 1 day.");
     return;
@@ -861,20 +880,23 @@ const loadVehicleDetail = async () => {
   loadingError.value = "";
 
   try {
-    const [vehicleList, shopList] = await Promise.all([
-      loadAllPages("vehicles"),
-      loadAllPages("shops"),
+    // Prefer fetching the specific vehicle by ID to avoid loading large lists
+    const [vehicleResp, shopResp] = await Promise.all([
+      vehicleApi.getById(vehicleId.value),
+      shopApi.getAll(),
     ]);
+
+    const found = vehicleResp?.data?.data || vehicleResp?.data;
+    const shopList = Array.isArray(shopResp?.data)
+      ? shopResp.data
+      : shopResp?.data?.data || [];
 
     shopNamesById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop.name;
       return acc;
     }, {});
 
-    const found = vehicleList.find(
-      (item) => Number(item.id) === vehicleId.value,
-    );
-    if (!found) {
+    if (!found || !found.id) {
       throw new Error("Vehicle not found.");
     }
 
@@ -995,9 +1017,7 @@ onMounted(() => {
 <style scoped>
 /* Modern Design System */
 .motoride-container {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  font-family: var(--font-sans);
   color: #1a1d23;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;

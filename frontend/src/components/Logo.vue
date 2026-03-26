@@ -1,6 +1,14 @@
 <template>
   <span :class="logoClass" v-bind="attrs">
-    <img v-if="src" :src="src" alt="Logo" class="app-logo__image" />
+    <template v-if="src">
+      <div class="app-logo__image-wrap">
+        <img :src="src" alt="Logo" class="app-logo__image" />
+        <div v-if="brandName || showTagline" class="app-logo__brand">
+          <span v-if="brandName" class="app-logo__brandName">{{ brandName }}</span>
+          <small v-if="showTagline" class="app-logo__tagline">Vehicle Rentals</small>
+        </div>
+      </div>
+    </template>
     <template v-else>
       <span class="app-logo__mark" aria-hidden="true">CC</span>
       <span class="app-logo__img">
@@ -19,7 +27,8 @@ const props = defineProps({
   theme: { type: String, default: 'light' },
   size: { type: String, default: 'md' },
   showTagline: { type: Boolean, default: false },
-  src: { type: String, default: '' }
+  src: { type: String, default: '' },
+  brandName: { type: String, default: '' }
 })
 
 const attrs = useAttrs()
@@ -78,6 +87,31 @@ const logoClass = computed(() => [
   height: 100%;
   width: auto;
   object-fit: contain;
+}
+
+.app-logo__image-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.app-logo__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app-logo__brandName {
+  font-weight: 900;
+  color: #0b2b73;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  font-size: 1rem;
+}
+
+.app-logo--lg .app-logo__brandName {
+  font-size: 1.35rem;
 }
 
 .app-logo--lg .app-logo__image {

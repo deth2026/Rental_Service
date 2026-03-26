@@ -9,6 +9,8 @@ class Booking extends Model
 {
     use HasFactory;
 
+    protected $with = ['vehicle.shop', 'user'];
+
     protected $fillable = [
         'user_id',
         'vehicle_id',

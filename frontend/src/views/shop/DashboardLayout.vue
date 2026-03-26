@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
 import Payments from "./Payments.vue";
-import DamageReports from "./Demage_reports.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
 import MyShop from "./myShop.vue";
@@ -18,6 +17,7 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
+const logoUrl = "/images/logo-removebg.png";
 const route = useRoute();
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
@@ -80,16 +80,14 @@ const handleDocumentClick = (event) => {
   }
 };
 
-// Professional Logo path from public folder
-const logoUrl = '/Images/logo.png'
-
 const sections = [
-  { id: "dashboard", label: "Dashboard", icon: "grid" },
-  { id: "my-shop", label: "My Shop", icon: "shop" },
-  { id: "vehicles", label: "Vehicles", icon: "car" },
-  { id: "bookings", label: "Bookings", icon: "calendar" },
-  { id: "payments", label: "Payments", icon: "dollar" },
-  { id: "reviews", label: "Reviews & Feedback", icon: "star" },
+  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { id: "my-shop", label: "My Shop", icon: "building" },
+  { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
+  { id: "bookings", label: "Bookings", icon: "calendar-check" },
+  { id: "payments", label: "Payments", icon: "wallet" },
+  { id: "damage", label: "Damage Reports", icon: "shield-alert" },
+  { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
   { id: "activity", label: "Activity History", icon: "history" },
@@ -99,7 +97,7 @@ const sections = [
 
 const active = ref("dashboard");
 const isSidebarCollapsed = ref(false);
-const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 240));
+const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 272));
 const sessionUser = ref(getSessionUser() || {});
 const avatarLoadFailed = ref(false);
 const showUserMenu = ref(false);
@@ -314,6 +312,7 @@ const dashboardError = ref(null);
 
 // Shop data
 const shop = ref(null);
+const shopRating = ref({ average_rating: 0, total_ratings: 0 });
 const shopModal = ref(false);
 const shopForm = reactive({
   name: "",
@@ -612,9 +611,17 @@ const getDateKey = (value) => {
 const shopMatchesEntry = (entry) => {
   const shopId = Number(shop.value?.id);
   if (!shopId) return true;
-  const bookingShopId = entry.shop_id || entry.booking?.shop_id || entry.vehicle?.shop_id;
+  const bookingShopId =
+    entry.shop_id ||
+    entry.booking?.shop_id ||
+    entry.vehicle?.shop_id ||
+    entry.shop?.id;
   return Number(bookingShopId) === shopId;
 };
+
+const shopPayments = computed(() =>
+  payments.value.filter((payment) => shopMatchesEntry(payment)),
+);
 
 const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
@@ -645,6 +652,21 @@ const fetchFeedback = async () => {
   } catch (error) {
     console.error("Error fetching feedback:", error);
     feedback.value = [];
+  }
+};
+
+const fetchShopRating = async () => {
+  const shopId = shop.value?.id;
+  if (!shopId) {
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
+    return;
+  }
+  try {
+    const response = await api.get(`/shop-rating?shop_id=${shopId}`);
+    shopRating.value = response.data || { average_rating: 0, total_ratings: 0 };
+  } catch (error) {
+    console.error("Error fetching shop rating:", error);
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
   }
 };
 
@@ -844,8 +866,14 @@ initializeShopData().catch(() => {});
 
 watch(
   shop,
-  () => {
-    fetchFeedback().catch(() => {});
+  (current) => {
+    if (current?.id) {
+      fetchFeedback().catch(() => {});
+      fetchShopRating().catch(() => {});
+      return;
+    }
+    feedback.value = [];
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
   },
   { immediate: true },
 );
@@ -929,7 +957,7 @@ const filteredVehicles = computed(() => {
 
 const totalBookings = computed(() => bookings.value.length);
 const totalEarnings = computed(() =>
-  payments.value.reduce((sum, payment) => {
+  shopPayments.value.reduce((sum, payment) => {
     if (!isPaidPayment(payment)) return sum;
     return sum + Number(payment.amount || payment.total_price || 0);
   }, 0),
@@ -950,7 +978,7 @@ const maintenanceVehicles = computed(
 );
 const monthlyIncome = computed(() => {
   const now = new Date();
-  return payments.value.reduce((sum, payment) => {
+  return shopPayments.value.reduce((sum, payment) => {
     if (!isPaidPayment(payment)) return sum;
     const dateStr = getPaymentDate(payment);
     if (!dateStr) return sum;
@@ -968,13 +996,13 @@ const monthlyIncome = computed(() => {
 const newCustomers = computed(
   () => new Set(bookings.value.map((b) => b.customer)).size,
 );
-const averageRating = computed(() =>
-  feedback.value.length
-    ? (
-        feedback.value.reduce((a, b) => a + b.rating, 0) / feedback.value.length
-      ).toFixed(1)
-    : "0",
-);
+const averageRating = computed(() => {
+  // Only show rating if shop has ratings
+  if (!shopRating.value.total_ratings || shopRating.value.total_ratings === 0) {
+    return "- ";
+  }
+  return String(shopRating.value.average_rating || "0");
+});
 const potentialPerDay = computed(() =>
   vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0),
 );
@@ -1242,6 +1270,25 @@ const onPhotoDrop = (e) => {
 
 const iconSvg = (name) => {
   const icons = {
+    dashboard:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    building:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/><path d="M11 21v-3h2v3"/></svg>',
+    motorcycle:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17.5" r="3.5"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M7 17.5h4.5l2.5-4.5h3.5"/><path d="M14 13h2.8l1.8 3.2"/><path d="M11.5 17.5l1.6-2.8"/><path d="M9.2 10.5H13l1.2 2.5"/><path d="M9.2 10.5 8 7.8H5.8"/></svg>',
+    "calendar-check":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="m9.5 15 2 2 4-4"/></svg>',
+    wallet:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M16 14h3"/><circle cx="15" cy="14" r=".8" fill="currentColor" stroke="none"/></svg>',
+    "shield-alert":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3 5 6v6c0 4.8 3 7.8 7 9 4-1.2 7-4.2 7-9V6z"/><path d="M12 9v4"/><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none"/></svg>',
+    "message-star":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 14a3 3 0 0 1-3 3H9l-4 4v-4H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z"/><path d="m12 7 1 2 2.2.3-1.6 1.6.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.6L11 9z"/></svg>',
+    badge:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="m9.5 12.5-1.3 8 3.8-2 3.8 2-1.3-8"/></svg>',
+    chart:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h16"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
     shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9l1.5-5h13L20 9"/><path d="M5 10h14v9H5z"/><path d="M9 14h6"/></svg>',
     car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
@@ -1289,6 +1336,17 @@ const iconSvg = (name) => {
       class="sidebar"
       :style="{ width: `${sidebarWidth}px`, flexBasis: `${sidebarWidth}px` }"
     >
+      <div class="brand">
+        <div class="brand-badge">
+          <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
+        </div>
+        <div class="brand-text">
+          <h2>
+            Chong <span class="brand-cyan">Choul</span>
+          </h2>
+          <p>Shop Owner</p>
+        </div>
+      </div>
       <button
         class="sidebar-toggle"
         @click="isSidebarCollapsed = !isSidebarCollapsed"
@@ -1317,7 +1375,6 @@ const iconSvg = (name) => {
       </div> -->
       
       <div class="menu-area">
-        <div class="menu-title">MENU</div>
         <button
           v-for="item in sections"
           :key="item.id"
@@ -1500,7 +1557,7 @@ const iconSvg = (name) => {
             <h3>{{ newCustomers }}</h3>
             <b class="stat-icon icon-teal" v-html="iconSvg('users')"></b>
           </article>
-          <article class="card">
+          <article class="card" v-if="shopRating.total_ratings > 0">
             <span>Average Rating</span>
             <h3>{{ averageRating }}</h3>
             <b class="stat-icon icon-yellow" v-html="iconSvg('star')"></b>
@@ -1516,6 +1573,7 @@ const iconSvg = (name) => {
                   <th>Vehicle</th>
                   <th>Category</th>
                   <th>Plate Number</th>
+                  <th>Stock</th>
                   <th>Price/Day</th>
                   <th>Status</th>
                 </tr>
@@ -1525,11 +1583,12 @@ const iconSvg = (name) => {
                   <td>{{ vehicle.name }}</td>
                   <td>{{ vehicle.category }}</td>
                   <td>{{ vehicle.plate }}</td>
+                  <td>{{ vehicle.total_vehicles ?? 1 }}</td>
                   <td>${{ vehicle.price }}</td>
                   <td>{{ vehicle.status }}</td>
                 </tr>
                 <tr v-if="latestVehicles.length === 0">
-                  <td colspan="5" class="empty">No vehicles yet.</td>
+                  <td colspan="6" class="empty">No vehicles yet.</td>
                 </tr>
               </tbody>
             </table>
@@ -1554,7 +1613,7 @@ const iconSvg = (name) => {
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
-        <ReviewsFeedback />
+        <ReviewsFeedback :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'payments'" class="payments-view">
@@ -1615,6 +1674,7 @@ const iconSvg = (name) => {
                 <th>Vehicle</th>
                 <th>Category</th>
                 <th>Plate Number</th>
+                <th>Stock</th>
                 <th>Price/Day</th>
                 <th>Status</th>
                 <th>Created At</th>
@@ -1646,6 +1706,7 @@ const iconSvg = (name) => {
                 </td>
                 <td>{{ v.category }}</td>
                 <td>{{ v.plate }}</td>
+                <td>{{ v.total_vehicles ?? 1 }}</td>
                 <td>${{ v.price }}</td>
                 <td>
                   <span :class="['status-badge', getStatusClass(v.status)]">
@@ -2412,21 +2473,44 @@ const iconSvg = (name) => {
 }
 
 .sidebar {
-  width: 240px;
-  flex: 0 0 240px;
+  width: 272px;
+  flex: 0 0 272px;
   min-width: 0;
-  background: #091633;
-  color: #c3d0f0;
-  border-right: 1px solid #1b2a52;
-  padding: 14px 10px;
-  position: relative;
-  overflow: visible;
+  background:
+    radial-gradient(1200px 600px at -200px -200px, rgba(34, 211, 238, 0.12), transparent 55%),
+    linear-gradient(180deg, #0b1220, #070a12);
+  color: #d2ddf2;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 18px 12px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition:
     width 0.2s ease,
     flex-basis 0.2s ease;
   z-index: 20;
   display: flex;
   flex-direction: column;
+}
+
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
 }
 
 .page.sidebar-collapsed .sidebar {
@@ -2436,9 +2520,9 @@ const iconSvg = (name) => {
 
 .sidebar-toggle {
   position: absolute;
-  right: 0;
-  transform: translateX(50%);
-  top: 72px;
+  right: 10px;
+  transform: none;
+  top: 86px;
   width: 32px !important;
   height: 32px !important;
   min-width: 32px;
@@ -2569,11 +2653,11 @@ const iconSvg = (name) => {
   display: none;
 }
 
-.menu-title {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  color: #6f84b5;
-  padding: 8px 10px;
+.brand p {
+  margin: 4px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #8ca4df;
 }
 
 .menu-item {
@@ -2583,46 +2667,49 @@ const iconSvg = (name) => {
   width: 100%;
   border: 0;
   background: transparent;
-  color: #c5d3f2;
-  border-radius: 10px;
+  color: rgba(226, 232, 240, 0.82);
+  border-radius: 12px;
   text-align: left;
-  padding: 10px 12px;
+  padding: 12px 12px;
   margin-bottom: 6px;
-  font-size: 15px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .menu-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: #102551;
-  color: #9ab1e6;
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.76);
   display: inline-grid;
   place-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex: 0 0 22px;
+  flex: 0 0 18px;
 }
 
 .menu-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 
 .menu-item:hover {
-  background: #0f2148;
+  background: rgba(148, 163, 184, 0.08);
+  color: #ffffff;
 }
 
 .menu-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.32);
   color: #fff;
-  border-left: 3px solid #22d3ee;
-  padding-left: 9px;
 }
 
 .menu-item.active .menu-icon {
-  background: rgba(34, 211, 238, 0.18);
   color: #22d3ee;
 }
 
@@ -2997,28 +3084,31 @@ const iconSvg = (name) => {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
   margin-bottom: 14px;
 }
 
 .dashboard-cards .card {
-  min-height: 110px;
-  padding: 18px 16px;
+  min-height: 120px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .dashboard-cards .card span {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   color: #64748b;
 }
 
 .dashboard-cards .card h3 {
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 700;
   color: #0f172a;
-  margin: 10px 0 0;
+  margin: 8px 0 4px;
 }
 
 .stats.compact {
@@ -3444,8 +3534,8 @@ textarea {
 
 @media (max-width: 1200px) {
   .sidebar {
-    width: 200px;
-    flex-basis: 200px;
+    width: 236px;
+    flex-basis: 236px;
   }
 
   .stats {
@@ -3453,12 +3543,11 @@ textarea {
   }
 
   .brand h2 {
-    font-size: 24px;
+    font-size: 19px;
   }
 
-  .brand p,
-  .menu-title {
-    font-size: 14px;
+  .brand p {
+    font-size: 11px;
   }
 
   .dashboard-view h2 {
@@ -3495,8 +3584,8 @@ textarea {
   }
 
   .sidebar-toggle {
-    right: 0;
-    transform: translateX(50%);
+    right: 8px;
+    transform: none;
     top: 10px;
   }
 
@@ -3576,7 +3665,7 @@ textarea {
   }
 
   .brand h2 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .brand p {
@@ -4590,7 +4679,8 @@ textarea {
 /* Sidebar layout helpers */
 .menu-area {
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
+  padding-right: 2px;
 }
 
 /* Sidebar Profile Section */
@@ -4682,24 +4772,23 @@ textarea {
 }
 
 .sidebar-footer {
-  border-top: 1px solid #1a2a52;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
   padding: 8px 0 0;
   flex-shrink: 0;
 }
 
 .logout-item {
-  color: #fca5a5 !important;
+  color: #fb7185 !important;
   margin-top: auto;
   flex-shrink: 0;
 }
 
 .logout-icon {
-  background: rgba(239, 68, 68, 0.18) !important;
-  color: #f87171 !important;
+  color: #fb7185 !important;
 }
 
 .logout-item:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
+  background: rgba(251, 113, 133, 0.08) !important;
 }
 
 /* Vehicle name cell with car icon */

@@ -16,7 +16,7 @@ class RatingController extends Controller
      */
     public function vehicleRatings(Request $request)
     {
-        $shopId = $request->user()?->shop?->id;
+        $shopId = $request->query('shop_id');
         
         // Get ratings with vehicle and user information
         $ratings = Rating::with(['vehicle', 'user', 'booking'])
@@ -30,11 +30,32 @@ class RatingController extends Controller
     }
 
     /**
+     * Get average rating for a specific shop
+     */
+    public function shopAverageRating(Request $request)
+    {
+        $shopId = $request->query('shop_id');
+        
+        if (!$shopId) {
+            return response()->json(['average_rating' => 0, 'total_ratings' => 0]);
+        }
+        
+        $ratings = Rating::where('shop_id', $shopId);
+        $totalRatings = $ratings->count();
+        $averageRating = $totalRatings > 0 ? round($ratings->avg('rating'), 1) : 0;
+        
+        return response()->json([
+            'average_rating' => $averageRating,
+            'total_ratings' => $totalRatings
+        ]);
+    }
+
+    /**
      * Get ratings grouped by vehicle (summary) - only vehicles with ratings
      */
     public function vehicleRatingsSummary(Request $request)
     {
-        $shopId = $request->user()?->shop?->id;
+        $shopId = $request->query('shop_id');
         
         // Get only vehicles that have ratings
         $vehicles = Vehicle::whereHas('directRatings', function($query) use ($shopId) {

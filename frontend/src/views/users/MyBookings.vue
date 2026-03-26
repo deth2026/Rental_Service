@@ -78,12 +78,24 @@ const normalizeStatus = (status) => {
   return String(status).toLowerCase().trim()
 }
 
-const isCompletedStatus = (status) => {
-  const normalized = normalizeStatus(status)
-  return normalized === 'completed' || normalized === 'complete'
-}
+const COMPLETED_STATUS_KEYS = new Set([
+  'completed',
+  'complete',
+  'done',
+  'finished',
+  'returned',
+  'closed',
+  'marked_as_completed'
+])
 
-const isBookingCompleted = (booking) => isCompletedStatus(booking?.status)
+const isCompletedStatus = (status) => COMPLETED_STATUS_KEYS.has(normalizeStatus(status))
+
+const isBookingCompleted = (booking) => {
+  if (!booking) return false
+  if (isCompletedStatus(booking.status)) return true
+  if (booking.completed_at || booking.is_completed) return true
+  return false
+}
 const bookingStatusMap = ref({})
 const initialLoadDone = ref(false)
 
@@ -633,9 +645,7 @@ const skipRating = () => {
     <section class="booking-list-wrap">
       <div class="booking-list-header">
         <span class="booking-list-title">Bookings</span>
-        <button class="back-home-btn" type="button" @click="goHome">
-          Back to Home
-        </button>
+        
       </div>
       <div v-if="loading" class="empty-state">
         Loading bookings...

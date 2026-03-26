@@ -78,6 +78,14 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+<<<<<<< HEAD
+        // Create sample categories
+        \App\Models\Category::create([
+            'name' => 'Cars',
+            'description' => 'Passenger vehicles for personal use',
+            'status' => 'active'
+        ]);
+=======
         $categories = [
             [
                 'name' => 'Cars',
@@ -95,6 +103,7 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ],
         ];
+>>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
 
         foreach ($categories as $category) {
             \App\Models\Category::updateOrCreate(['name' => $category['name']], $category);
@@ -144,6 +153,11 @@ class DatabaseSeeder extends Seeder
             $shopMap[$definition['name']] = $shop;
         }
 
+<<<<<<< HEAD
+        \App\Models\City::create([
+            'name' => 'Sihanoukville'
+        ]);
+=======
         $vehicleDefinitions = [
             [
                 'shop' => 'Phnom Penh City Rides',
@@ -228,6 +242,9 @@ class DatabaseSeeder extends Seeder
                 $data + ['shop_id' => $shop->id]
             );
         }
+<<<<<<< HEAD
+>>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
+=======
 
         $testUser = \App\Models\User::where('email', 'test@example.com')->first();
         $vehicle = \App\Models\Vehicle::where('status', 'available')->first();
@@ -278,5 +295,6 @@ class DatabaseSeeder extends Seeder
                 NotificationService::messageReceived($message);
             }
         }
+>>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
     }
 }

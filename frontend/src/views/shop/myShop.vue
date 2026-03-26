@@ -32,6 +32,7 @@ const createForm = reactive({
   location: "",
   latitude: "",
   longitude: "",
+  map_url: "",
   status: "active",
   instagram: "",
   facebook: "",
@@ -185,6 +186,7 @@ const resetForm = () => {
   createForm.location = "";
   createForm.latitude = "";
   createForm.longitude = "";
+  createForm.map_url = "";
   createForm.status = "active";
   createForm.instagram = "";
   createForm.facebook = "";
@@ -206,7 +208,40 @@ const validateCreateForm = () => {
   if (!name || !address || !phone || !description) {
     return false;
   }
-  return /^[0-9+\-\s()]{8,20}$/.test(phone);
+
+  // Basic phone validation - just check length
+  return phone.length >= 7;
+};
+
+const extractCoordinatesFromMapUrl = (value) => {
+  const url = String(value || "").trim();
+  if (!url) return null;
+
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (!match) continue;
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
+
+  return null;
+};
+
+const onMapUrlBlur = () => {
+  const coords = extractCoordinatesFromMapUrl(createForm.map_url);
+  if (!coords) return;
+  // Always update latitude and longitude from the map URL
+  createForm.latitude = String(coords.lat);
+  createForm.longitude = String(coords.lng);
 };
 
 const applyShopImageFile = (file) => {
@@ -361,8 +396,12 @@ const removeShopImage = async () => {
 };
 
 const createShop = async () => {
+  if (createForm.map_url && (!createForm.latitude || !createForm.longitude)) {
+    onMapUrlBlur();
+  }
+  
   if (!validateCreateForm()) {
-    error.value = "Please fill all required fields correctly.";
+    error.value = "Please fill all required fields (name, address, phone, description).";
     return;
   }
 
@@ -383,6 +422,7 @@ const createShop = async () => {
       if (createForm.latitude) payload.append("latitude", createForm.latitude);
       if (createForm.longitude)
         payload.append("longitude", createForm.longitude);
+      if (createForm.map_url) payload.append("map_url", createForm.map_url.trim());
       payload.append("phone", createForm.phone.trim());
       payload.append("status", createForm.status);
       // the backend expects the field name img_url
@@ -396,6 +436,7 @@ const createShop = async () => {
         location: createForm.location.trim() || null,
         latitude: createForm.latitude || null,
         longitude: createForm.longitude || null,
+        map_url: createForm.map_url.trim() || null,
         phone: createForm.phone.trim(),
         status: createForm.status,
         img_url: createForm.img_url || null,
@@ -422,6 +463,22 @@ const createShop = async () => {
     console.error("Create shop error", e);
   } finally {
     loading.value = false;
+  }
+};
+
+const copyStatus = ref("Copy link");
+
+const copyMapUrl = async () => {
+  const url = shop.value?.map_url;
+  if (!url || !navigator?.clipboard) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    copyStatus.value = "Copied!";
+    window.setTimeout(() => {
+      copyStatus.value = "Copy link";
+    }, 1600);
+  } catch {
+    copyStatus.value = "Try again";
   }
 };
 
@@ -712,6 +769,33 @@ onBeforeUnmount(() => {
                   />
                 </label>
                 <label class="form-field">
+                  <span>Latitude</span>
+                  <input
+                    v-model="createForm.latitude"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 11.5564"
+                  />
+                </label>
+                <label class="form-field">
+                  <span>Longitude</span>
+                  <input
+                    v-model="createForm.longitude"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 104.9282"
+                  />
+                </label>
+                <label class="form-field full">
+                  <span>Google Map URL</span>
+                  <input
+                    v-model="createForm.map_url"
+                    type="url"
+                    placeholder="https://maps.google.com/..."
+                    @blur="onMapUrlBlur"
+                  />
+                </label>
+                <label class="form-field">
                   <span>Phone</span>
                   <input
                     v-model="createForm.phone"
@@ -737,7 +821,7 @@ onBeforeUnmount(() => {
             <button type="button" class="ghost-btn" @click="closeCreateModal">
               Cancel
             </button>
-            <button type="submit" class="primary-btn" :disabled="loading">
+            <button type="button" class="primary-btn" @click="createShop">
               {{ loading ? "Creating..." : "Create Shop" }}
             </button>
           </div>
