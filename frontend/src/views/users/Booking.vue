@@ -80,7 +80,7 @@
 
           <div class="pricing-list">
             <div class="row">
-              <span>Daily Rate x {{ calculateDays() }} day(s) x {{ riderCount }} rider(s)</span>
+              <span>Daily Rate x {{ calculateDays() }} day(s)</span>
               <span>${{ rental.subtotal.toFixed(2) }}</span>
             </div>
               <div class="row">
@@ -775,6 +775,7 @@ const rental = ref({
   subtotal: 0,
   insurance: 75,
   taxes: 0,
+  totalPrice: 0,
 });
 
 const includeInsurance = ref(true);
@@ -830,6 +831,18 @@ const applyRouteDefaults = () => {
   const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
   if (riderFromQuery) {
     rental.value.riders = riderFromQuery;
+  }
+
+  // Read daily rate from query parameters
+  const dailyRateFromQuery = parseNumberFromQuery(route.query.dailyRate);
+  if (dailyRateFromQuery !== null && dailyRateFromQuery > 0) {
+    rental.value.dailyRate = dailyRateFromQuery;
+  }
+
+  // Read total price from query parameters for display purposes
+  const totalPriceFromQuery = parseNumberFromQuery(route.query.totalPrice);
+  if (totalPriceFromQuery !== null && totalPriceFromQuery > 0) {
+    rental.value.totalPrice = totalPriceFromQuery;
   }
 };
 
@@ -889,12 +902,16 @@ const taxesAmount = computed(() => {
 });
 
 const totalAmount = computed(() => {
+  // If totalPrice was passed from ViewDetail, use it directly
+  const passedTotalPrice = Number(rental.value.totalPrice || 0);
+  if (passedTotalPrice > 0) {
+    return passedTotalPrice;
+  }
+  // Otherwise, recalculate from daily rate and other components
   const days = calculateDays();
-  const riders = riderCount.value;
-  const subtotal = days * rental.value.dailyRate * riders;
+  const subtotal = days * rental.value.dailyRate;
   rental.value.subtotal = subtotal;
   const baseTotal = rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
-  // Subtract promo discount from total
   return Math.max(baseTotal - promoDiscount.value, 0);
 });
 

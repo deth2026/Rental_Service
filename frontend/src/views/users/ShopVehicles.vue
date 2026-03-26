@@ -540,10 +540,7 @@ const extractCoordinatesFromMapUrl = (value) => {
             {{ category.label }}
           </button>
         </div>
-        <p class="results-text">
-          {{ filteredVehicles.length }} vehicles found
-          <span v-if="shop?.name">in {{ shop.name }}</span>
-        </p>
+
       </div>
 
       <div v-if="isLoading" class="status-box">Loading vehicles...</div>
@@ -596,30 +593,16 @@ const extractCoordinatesFromMapUrl = (value) => {
               </div>
             </div>
 
-            <div class="vehicle-extra-fees" v-if="vehicle.insurance_fee || vehicle.taxes_fee || vehicle.rider_details">
-              <div class="fee-item" v-if="vehicle.rider_details">
-                <i class="fa-solid fa-user"></i>
-                <span>{{ vehicle.rider_details }}</span>
+            <div class="vehicle-meta-row">
+              <div class="vehicle-rating" v-if="vehicle.rating">
+                <i class="fa-solid fa-star"></i>
+                <span>{{ vehicle.rating.toFixed(1) }}</span>
+                <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
               </div>
-              <div class="fee-item" v-if="vehicle.insurance_fee">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Insurance: ${{ vehicle.insurance_fee }}</span>
+              <div class="vehicle-price">
+                <span class="price-amount">${{ vehicle.price_per_day }}</span>
+                <span class="price-period">/day</span>
               </div>
-              <div class="fee-item" v-if="vehicle.taxes_fee">
-                <i class="fa-solid fa-file-invoice"></i>
-                <span>Taxes: ${{ vehicle.taxes_fee }}</span>
-              </div>
-            </div>
-            
-            <div class="vehicle-rating" v-if="vehicle.rating">
-              <i class="fa-solid fa-star"></i>
-              <span>{{ vehicle.rating.toFixed(1) }}</span>
-              <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
-            </div>
-
-            <div class="vehicle-price">
-              <span class="price-amount">${{ vehicle.price_per_day }}</span>
-              <span class="price-period">/day</span>
             </div>
 
             <button 
@@ -1145,7 +1128,6 @@ const extractCoordinatesFromMapUrl = (value) => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 0.75rem;
   color: #047857;
   font-weight: 600;
 }
@@ -1159,6 +1141,14 @@ const extractCoordinatesFromMapUrl = (value) => {
   color: #475569;
 }
 
+.vehicle-meta-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
 .detail-item i {
   font-size: 0.75rem;
 }
@@ -1167,30 +1157,8 @@ const extractCoordinatesFromMapUrl = (value) => {
   margin-bottom: 1rem;
 }
 
-.vehicle-extra-fees {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.fee-item {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.fee-item i {
-  color: #1e40af;
-}
-
 .price-amount {
-  font-size: 1.5rem;
+  font-size: 1.7rem;
   font-weight: 700;
   color: #667eea;
 }

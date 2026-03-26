@@ -2775,7 +2775,7 @@ const iconSvg = (name) => {
   align-items: center;
   gap: 12px;
   margin-left: auto;
-  margin-right: 80px;
+  margin-right: 8px;
   flex-shrink: 0;
 }
 
@@ -4680,6 +4680,7 @@ textarea {
 .menu-area {
   flex: 1;
   overflow: visible;
+  margin-top: 30px;
   padding-right: 2px;
 }
 

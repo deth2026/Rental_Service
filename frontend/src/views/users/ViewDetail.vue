@@ -614,6 +614,8 @@ const goToPaymentPage = () => {
   const query = {
     insuranceFee: String(insuranceAmount.value),
     taxesFee: String(taxesAmount.value),
+    dailyRate: String(dailyRate.value || 0),
+    totalPrice: String(totalPrice.value || 0),
     includeInsurance: includeInsurance.value ? "1" : "0",
     includeTaxes: includeTaxes.value ? "1" : "0",
     totalDays: String(bookingDuration.value),
@@ -837,7 +839,8 @@ const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
 const riderCount = computed(() => {
   return parseQuantityValue(riderDetails.value, 1);
 });
-const baseAmount = computed(() => dailyRate.value * riderCount.value * bookingDuration.value);
+// Price per day for the vehicle (not multiplied by riders)
+const baseAmount = computed(() => dailyRate.value * bookingDuration.value);
 
 const insuranceAmount = computed(() =>
   includeInsurance.value ? Number(insuranceFee.value || 0) : 0,

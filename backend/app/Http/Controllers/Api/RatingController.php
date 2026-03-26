@@ -112,7 +112,20 @@ class RatingController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        if ($booking->status !== 'completed') {
+        // Check if booking is completed - either via status field or status logs
+        $isCompleted = false;
+        
+        // Check the status field
+        if ($booking->status === 'completed') {
+            $isCompleted = true;
+        }
+        
+        // Check if there's a completed status in the status logs
+        if (!$isCompleted && $booking->bookingStatusLogs) {
+            $isCompleted = $booking->bookingStatusLogs->contains('status', 'completed');
+        }
+        
+        if (!$isCompleted) {
             return response()->json(['error' => 'Only completed bookings can be rated'], 422);
         }
 

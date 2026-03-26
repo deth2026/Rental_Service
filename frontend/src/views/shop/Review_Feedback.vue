@@ -624,6 +624,7 @@ const getRatingDistribution = (ratings) => {
   border: 1px solid #e2e8f0;
   padding: 8px 12px;
   text-align: center;
+  border-radius: 18px;
   transition: all 0.3s ease;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
   display: flex;
@@ -738,7 +739,7 @@ const getRatingDistribution = (ratings) => {
 .feedback-card {
   background: linear-gradient(180deg, #fefefe 0%, #eef2ff 100%);
   border: none;
-  border-radius: 32px;
+  border-radius:25px;
   padding: 28px;
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.12);
 }

@@ -97,6 +97,7 @@ const isBookingCompleted = (booking) => {
   return false
 }
 const bookingStatusMap = ref({})
+const bookingCompletionMap = ref({})
 const initialLoadDone = ref(false)
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
@@ -501,15 +502,15 @@ const maybeShowRatingOverlay = () => {
 }
 
 const handleBookingStatusUpdates = (allBookings) => {
-  const previousStatuses = { ...bookingStatusMap.value }
-  
-  // Find bookings that just changed to completed status
+  const previousCompletion = { ...bookingCompletionMap.value }
+
   const newlyCompleted = initialLoadDone.value
     ? allBookings.find((booking) => {
-        const prevStatus = previousStatuses[booking.id]
+        const prevCompleted = previousCompletion[booking.id]
+        const currentCompleted = isBookingCompleted(booking)
         return (
-          !isCompletedStatus(prevStatus) &&
-          isCompletedStatus(booking.status) &&
+          !prevCompleted &&
+          currentCompleted &&
           !booking.rating &&
           !ratingSkipped[booking.id]
         )
@@ -521,18 +522,20 @@ const handleBookingStatusUpdates = (allBookings) => {
     return map
   }, {})
 
+  bookingCompletionMap.value = allBookings.reduce((map, booking) => {
+    map[booking.id] = isBookingCompleted(booking)
+    return map
+  }, {})
+
   if (!initialLoadDone.value) {
     initialLoadDone.value = true
-    // Show rating immediately for already completed bookings that haven't been rated/skipped
     maybeShowRatingOverlay()
     return
   }
 
-  // Show rating when booking status changes TO completed
   if (newlyCompleted) {
     openRatingOverlay(newlyCompleted)
   }
-  // Don't keep prompting for other completed bookings
 }
 
 const selectOverlayRating = (value) => {

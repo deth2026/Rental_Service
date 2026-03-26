@@ -301,6 +301,8 @@ class BookingController extends Controller
                     'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
                     'total_price' => $booking->total_price,
                     'status' => $booking->status,
+                    'is_completed' => $booking->status === 'completed' || ($booking->bookingStatusLogs && $booking->bookingStatusLogs->contains('status', 'completed')),
+                    'completed_at' => $this->getCompletedAt($booking),
                     'image' => $vehicleImage,
                     'total_days' => $booking->total_days,
                     'daily_rate' => $booking->daily_rate,
@@ -320,6 +322,9 @@ class BookingController extends Controller
         }
     }
 
+    /**
+     * Get bookings for shop owner (bookings made at their shop)
+     */
     /**
      * Get bookings for shop owner (bookings made at their shop)
      */
@@ -514,6 +519,15 @@ $bookings = Booking::whereIn('shop_id', $shops)
         
         $booking->update($validated);
         
+        // Create status log when status changes
+        if ($oldStatus !== $newStatus) {
+            \App\Models\BookingStatusLog::create([
+                'booking_id' => $booking->id,
+                'status' => $newStatus,
+                'changed_at' => now()
+            ]);
+        }
+        
         // Send notification when booking is completed
         if ($oldStatus !== 'completed' && $newStatus === 'completed') {
             NotificationService::bookingStatusChanged($booking, 'completed');
@@ -527,5 +541,26 @@ $bookings = Booking::whereIn('shop_id', $shops)
         $booking->delete();
 
         return response()->json(['message' => 'Booking deleted successfully']);
+    }
+
+    /**
+     * Helper method to get completed_at timestamp from booking or status logs
+     */
+    private function getCompletedAt($booking)
+    {
+        // First check if status is 'completed'
+        if ($booking->status === 'completed') {
+            return $booking->updated_at;
+        }
+        
+        // Check status logs for completed status
+        if ($booking->bookingStatusLogs) {
+            $completedLog = $booking->bookingStatusLogs->firstWhere('status', 'completed');
+            if ($completedLog) {
+                return $completedLog->changed_at;
+            }
+        }
+        
+        return null;
     }
 }
