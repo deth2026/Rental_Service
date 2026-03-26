@@ -82,7 +82,11 @@ export const shopApi = {
 
 // City API calls
 export const cityApi = {
-  getAll: () => api.get('/cities')
+  getAll: () => api.get('/cities'),
+  getById: (id) => api.get(`/cities/${id}`),
+  create: (data) => api.post('/cities', data),
+  update: (id, data) => api.put(`/cities/${id}`, data),
+  delete: (id) => api.delete(`/cities/${id}`)
 };
 
 // Category API calls

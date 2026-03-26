@@ -1,34 +1,29 @@
-<template>
+﻿<template>
   <div class="booking-checkout-page">
     <header class="topbar">
-  <button class="btn-back-top" type="button" @click="goHome">
-    <span class="back-arrow" aria-hidden="true">←</span>
-    Back to Home
-  </button>
-  <div class="brand">
-    <div class="brand-icon">
-      <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-    </div>
-    <span>Chong Choul</span>
-  </div>
+      <div class="brand">
+        <div class="brand-icon">
+          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+        </div>
+        <span>Chong Choul</span>
+      </div>
 
-  <nav class="nav-links">
-    <button
-      v-for="item in navItems"
-      :key="item"
-      class="btn-reset nav-link"
-      :class="{ active: activeNav === item }"
-      @click="setActiveNav(item)"
-    >
-      {{ item }}
-    </button>
-  </nav>
+      <nav class="nav-links">
+        <button
+          v-for="item in navItems"
+          :key="item"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item }"
+          @click="setActiveNav(item)"
+        >
+          {{ item }}
+        </button>
+      </nav>
 
-  <div class="top-actions">
-    <span class="user-display-name">{{ userDisplayName }}</span>
-    <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-  </div>
-</header>
+      <div class="top-actions">
+        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+      </div>
+    </header>
 
     <div class="page-container">
 
@@ -430,13 +425,13 @@
 
             <div class="footer-newsletter">
               <input class="footer-input" type="text" placeholder="Write Email" />
-              <button class="btn-reset footer-send" type="button">➤</button>
+              <button class="btn-reset footer-send" type="button">âž¤</button>
             </div>
           </div>
         </div>
 
         <div class="footer-bottom">
-          <span>© 2026 Chong Choul. All rights reserved.</span>
+          <span>Â© 2026 Chong Choul. All rights reserved.</span>
           <div class="footer-bottom-links">
             <span>Security</span>
             <span>Accessibility</span>
@@ -486,7 +481,7 @@
     <div
       v-if="showSuccessModal"
       class="success-modal-overlay"
-      @click="closeSuccessModal"
+      @click="returnToShopViewAfterSuccess"
     >
       <div class="success-modal" @click.stop>
         <div class="success-icon" aria-hidden="true">
@@ -523,7 +518,7 @@
           <button class="btn-download" type="button" @click="downloadReceipt">
             Download
           </button>
-          <button class="btn-close" type="button" @click="closeSuccessModal">
+          <button class="btn-close" type="button" @click="returnToShopViewAfterSuccess">
             Close
           </button>
         </div>
@@ -534,7 +529,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
@@ -550,31 +545,6 @@ const route = useRoute();
 const navItems = ['Home', 'View Details', 'Bookings'];
 const activeNav = ref('Home');
 const actionMessage = ref('');
-const avatarLoadFailed = ref(false);
-const currentUser = computed(() => userService.getCurrentUser());
-const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
 
 // Header functions
 const setActiveNav = (item) => {
@@ -593,14 +563,6 @@ const openProfile = () => {
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
-};
-
-const goHome = () => {
-  router.push('/');
-};
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -736,6 +698,7 @@ const showSuccessModal = ref(false);
 const showConfirmModal = ref(false);
 const pendingPaymentAction = ref(null);
 const dateError = ref("");
+let successRedirectTimer = null;
 const bookingId = ref("");
 const paymentId = ref(
   "PAY" + Math.random().toString(36).slice(2, 11).toUpperCase()
@@ -1063,6 +1026,9 @@ const handlePayment = async () => {
   if (result.success) {
     bookingId.value = result.bookingId;
     showSuccessModal.value = true;
+    successRedirectTimer = window.setTimeout(() => {
+      returnToShopViewAfterSuccess();
+    }, 1800);
   } else {
     alert(result.message || "Payment failed. Please try again.");
   }
@@ -1110,6 +1076,9 @@ BANK DETAILS:
 
 
   showSuccessModal.value = true;
+  successRedirectTimer = window.setTimeout(() => {
+    returnToShopViewAfterSuccess();
+  }, 1800);
 };
 
 const generateABAQRData = () => {
@@ -1142,8 +1111,13 @@ const generateQRCode = async () => {
   showQR.value = true;
 };
 
-const closeSuccessModal = () => {
+const returnToShopViewAfterSuccess = () => {
+  if (successRedirectTimer) {
+    window.clearTimeout(successRedirectTimer);
+    successRedirectTimer = null;
+  }
   showSuccessModal.value = false;
+  router.replace('/view_shop');
 };
 
 const downloadReceipt = () => {
@@ -1194,5 +1168,13 @@ watch(
   { immediate: true }
 );
 initDates();
+
+onBeforeUnmount(() => {
+  if (successRedirectTimer) {
+    window.clearTimeout(successRedirectTimer);
+    successRedirectTimer = null;
+  }
+});
 </script>
+
 

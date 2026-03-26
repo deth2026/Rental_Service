@@ -216,7 +216,7 @@ const setMessage = (type, text) => {
 
 const handleLogout = async () => {
   try {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     await fetch('/api/users/logout', {
       method: 'POST',
       headers: {
@@ -335,7 +335,7 @@ const submitForm = async () => {
   loading.value = true;
   setMessage('', '');
   try {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
     const form = new FormData();
     form.append('name', formData.fullName);
     form.append('job_title', formData.jobTitle || '');

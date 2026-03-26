@@ -108,25 +108,27 @@
   gap: 6px;
 }
 
-.back-home-btn {
+.bookings-home-btn {
   border: 1px solid #c8d8e8;
   background: #ffffff;
   color: #0f2f5c;
   border-radius: 999px;
-  padding: 10px 22px;
-  margin-top: 10px;
-  margin-left: 1230px;
+  padding: 9px 18px;
+  margin: 0;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
-.back-home-btn:hover {
+.bookings-home-btn:hover {
+  border-color: #9db5d3;
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
   transform: translateY(-1px);
 }
 
-.back-home-btn:active {
+.bookings-home-btn:active {
   transform: translateY(0);
 }
 

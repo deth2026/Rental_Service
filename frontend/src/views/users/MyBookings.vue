@@ -633,7 +633,7 @@ const skipRating = () => {
     <section class="booking-list-wrap">
       <div class="booking-list-header">
         <span class="booking-list-title">Bookings</span>
-        <button class="back-home-btn" type="button" @click="goHome">
+        <button class="bookings-home-btn" type="button" @click="goHome">
           Back to Home
         </button>
       </div>

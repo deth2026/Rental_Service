@@ -1,17 +1,16 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { getSessionUser, logoutUser } from '@/services/auth'
+import { logoutUser } from '@/services/auth'
 import { shopApi } from '@/services/api'
 import CommonFooter from '@/components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 import CambodiaMap from '@/components/CambodiaMap.vue'
-import { LOCATION_ACCESS_KEY, readStoredLocation } from '@/utils/locationAccess'
+import { readStoredLocation, saveLocationAccess } from '@/utils/locationAccess'
 import '@/css/userDashboard.css'
 
 const router = useRouter()
 
-const LOCATION_CACHE_KEY = LOCATION_ACCESS_KEY
 const SEARCH_HISTORY_KEY = 'chong_choul_province_searches'
 
 const CAMBODIA_PROVINCES = [
@@ -41,9 +40,6 @@ const CAMBODIA_PROVINCES = [
   'Takeo',
   'Tboung Khmum',
 ]
-
-const currentUser = ref(getSessionUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Customer')
 
 const isLoading = ref(false)
 const dataError = ref('')
@@ -286,11 +282,17 @@ const enableLocation = () => {
 
   navigator.geolocation.getCurrentPosition(
     (position) => {
-      userLocation.value = {
+      const nextLocation = {
         lat: Number(position.coords.latitude),
         lng: Number(position.coords.longitude),
       }
-      localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify(userLocation.value))
+      const saved = saveLocationAccess(nextLocation)
+      if (!saved) {
+        locating.value = false
+        locationStatus.value = 'Could not save location. Please try again.'
+        return
+      }
+      userLocation.value = { lat: saved.lat, lng: saved.lng }
       locationStatus.value = 'Location detected successfully.'
       locating.value = false
     },
@@ -302,8 +304,10 @@ const enableLocation = () => {
   )
 }
 
-const openProfile = () => router.push('/user/profile')
-const openBookings = () => router.push('/my-bookings')
+const dashboardNavItems = [
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' },
+]
 
 const onLogout = async () => {
   await logoutUser()
@@ -350,21 +354,12 @@ onMounted(async () => {
 
 <template>
   <div class="customer-page">
-    <header class="customer-topbar">
-      <div class="brand-left">
-        <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="top-links">
-        <button class="link-btn" @click="openBookings">My Bookings</button>
-        <button class="link-btn" @click="openProfile">Profile</button>
-      </nav>
-
-      <div class="top-actions">
-        <UserProfileMenu @settings="openProfile" @logout="onLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="dashboardNavItems"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="onLogout"
+    />
 
     <main class="customer-main">
       <!-- Hero Banner -->

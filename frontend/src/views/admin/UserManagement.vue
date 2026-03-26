@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { useToast } from '../../composables/useToast.js'
@@ -16,6 +16,7 @@ const page = ref(1)
 const perPage = 8
 const animated = ref(false)
 const showOnlyMe = ref(false)
+let activityRefreshTimer = null
 
 const showCreate = ref(false)
 const createForm = ref({ name: '', email: '', phone: '', role: 'customer', password: '' })
@@ -34,7 +35,22 @@ const editForm = ref({ id: null, name: '', phone: '', role: 'customer', is_verif
 const currentUser = computed(() => userService.getCurrentUser())
 const currentUserId = computed(() => Number(currentUser.value?.id || 0))
 
-const todayKey = () => new Date().toISOString().slice(0, 10)
+const toLocalDateKey = (value) => {
+  if (!value) return ''
+  let raw = value
+  if (typeof raw === 'string') {
+    // Handle timestamps like 2026-03-26T10:40:12.123456Z (6-digit fraction).
+    raw = raw.replace(/\.(\d{3})\d+Z$/, '.$1Z')
+  }
+  const d = raw instanceof Date ? raw : new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const todayKey = () => toLocalDateKey(new Date())
 
 const totals = computed(() => {
   const users = admin.state.users || []
@@ -43,7 +59,7 @@ const totals = computed(() => {
     if (rawStatus) return rawStatus === 'ACTIVE'
     return Boolean(u.is_verified)
   }).length
-  const joinedToday = users.filter((u) => String(u.created_at || '').slice(0, 10) === todayKey()).length
+  const joinedToday = users.filter((u) => toLocalDateKey(u.created_at) === todayKey()).length
   return { activeUsers, joinedToday }
 })
 
@@ -289,21 +305,48 @@ const registrationSeries = computed(() => {
     return d
   })
   const buckets = days.map((d) => ({
-    key: d.toISOString().slice(0, 10),
+    key: toLocalDateKey(d),
     label: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
+    registrations: 0,
+    logins: 0,
     value: 0,
   }))
   const index = new Map(buckets.map((b, i) => [b.key, i]))
   
   const users = admin.state.users || []
   users.forEach((u) => {
-    const key = String(u.created_at || '').slice(0, 10)
-    const i = index.get(key)
-    if (i == null) return
-    buckets[i].value += 1
+    const createdKey = toLocalDateKey(u.created_at)
+    const createdIndex = index.get(createdKey)
+    if (createdIndex != null) {
+      buckets[createdIndex].registrations += 1
+    }
+
+    const loginKey = toLocalDateKey(u.last_login)
+    const loginIndex = index.get(loginKey)
+    if (loginIndex != null) {
+      buckets[loginIndex].logins += 1
+    }
   })
+
+  buckets.forEach((bucket) => {
+    bucket.value = bucket.registrations + bucket.logins
+  })
+
   const max = Math.max(1, ...buckets.map((b) => b.value))
-  return buckets.map((b) => ({ ...b, pct: (b.value / max) * 100 }))
+  return buckets.map((b) => ({
+    ...b,
+    pct: b.value > 0 ? Math.max(8, (b.value / max) * 100) : 0,
+  }))
+})
+
+const activityTotals = computed(() => {
+  return registrationSeries.value.reduce(
+    (sum, item) => ({
+      registrations: sum.registrations + item.registrations,
+      logins: sum.logins + item.logins,
+    }),
+    { registrations: 0, logins: 0 }
+  )
 })
 
 const roleDistribution = computed(() => {
@@ -492,14 +535,24 @@ const exportList = () => {
 }
 
 onMounted(async () => {
-  await admin.load().catch(() => { })
+  await admin.load({ force: true }).catch(() => { })
   triggerAnimation()
+  activityRefreshTimer = window.setInterval(() => {
+    admin.load({ force: true }).catch(() => {})
+  }, 30000)
 })
 
 watch(
-  () => admin.state.users?.length,
+  () => (admin.state.users || []).map((u) => `${u.id}:${u.created_at || ''}:${u.last_login || ''}`).join('|'),
   () => triggerAnimation()
 )
+
+onBeforeUnmount(() => {
+  if (activityRefreshTimer) {
+    window.clearInterval(activityRefreshTimer)
+    activityRefreshTimer = null
+  }
+})
 </script>
 
 <template>
@@ -674,14 +727,26 @@ watch(
     <section class="grid-2 wide">
       <section class="card">
         <div class="card-head">
-          <h2 class="card-title">User Registration Trends</h2>
+          <div>
+            <h2 class="card-title">User Registration & Login Trends</h2>
+            <p class="card-subtitle">
+              Last 7 days - {{ activityTotals.registrations }} registrations, {{ activityTotals.logins }} logins
+            </p>
+          </div>
         </div>
         <div class="chart-bars small" :class="{ animated }">
-          <div v-for="point in registrationSeries" :key="point.key" class="bar-col">
+          <div
+            v-for="point in registrationSeries"
+            :key="point.key"
+            class="bar-col"
+            :title="`${point.label}: ${point.registrations} register, ${point.logins} login`"
+          >
+            <div class="bar-value">{{ point.value }}</div>
             <div class="bar">
               <div class="bar-fill light" :style="{ height: `${point.pct}%` }"></div>
             </div>
             <div class="bar-label">{{ point.label }}</div>
+            <div class="bar-meta">{{ point.registrations }}R / {{ point.logins }}L</div>
           </div>
         </div>
       </section>
@@ -881,6 +946,36 @@ watch(
 </template>
 
 <style scoped>
+.chart-bars.small {
+  align-items: stretch;
+  min-height: 240px;
+}
+
+.chart-bars.small .bar-col {
+  height: 100%;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 8px;
+}
+
+.chart-bars.small .bar {
+  height: 100%;
+  min-height: 150px;
+}
+
+.bar-value {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #1f7bff;
+  line-height: 1;
+}
+
+.bar-meta {
+  font-size: 0.67rem;
+  color: #6b7f98;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .user-details {
   display: flex;
   flex-direction: column;

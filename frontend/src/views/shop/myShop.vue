@@ -8,6 +8,12 @@ const ownerName = ref("");
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
+const shopMapLink = computed(() => {
+  const primary = String(shop.value?.map_url || "").trim();
+  if (primary) return primary;
+  const fallback = String(shop.value?.location || "").trim();
+  return /^https?:\/\//i.test(fallback) ? fallback : "";
+});
 
 const showCreateModal = ref(false);
 const showSuccessPopup = ref(false);
@@ -248,6 +254,9 @@ const onMapUrlBlur = () => {
   if (!createForm.longitude) {
     createForm.longitude = String(coords.lng);
   }
+  if (!String(createForm.location || '').trim()) {
+    createForm.location = String(createForm.map_url || '').trim().slice(0, 255);
+  }
 };
 
 const applyShopImageFile = (file) => {
@@ -415,6 +424,11 @@ const createShop = async () => {
   loading.value = true;
   error.value = "";
 
+  const normalizedLocation =
+    String(createForm.location || '').trim() ||
+    String(createForm.map_url || '').trim().slice(0, 255) ||
+    String(createForm.address || '').trim();
+
   try {
     let payload;
     // if an image file has been selected, use FormData to send multipart request
@@ -424,8 +438,7 @@ const createShop = async () => {
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
-      if (createForm.location)
-        payload.append("location", createForm.location.trim());
+      if (normalizedLocation) payload.append("location", normalizedLocation);
       if (createForm.latitude) payload.append("latitude", createForm.latitude);
       if (createForm.longitude)
         payload.append("longitude", createForm.longitude);
@@ -440,7 +453,7 @@ const createShop = async () => {
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
-        location: createForm.location.trim() || null,
+        location: normalizedLocation || null,
         latitude: createForm.latitude || null,
         longitude: createForm.longitude || null,
         map_url: createForm.map_url.trim() || null,
@@ -604,7 +617,7 @@ onBeforeUnmount(() => {
         <div class="field field-wide">
           <b>Map URL</b>
           <span>
-            <a v-if="shop.map_url" :href="shop.map_url" target="_blank" rel="noopener noreferrer">
+            <a v-if="shopMapLink" :href="shopMapLink" target="_blank" rel="noopener noreferrer">
               Open map link
             </a>
             <template v-else>N/A</template>

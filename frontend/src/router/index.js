@@ -27,7 +27,7 @@ const getUserRole = () => {
   const userStr = localStorage.getItem('user');
   if (userStr) {
     const user = JSON.parse(userStr);
-    return user.role || 'customer';
+    return String(user.role || user.user_type || 'customer').toLowerCase();
   }
   return null;
 };

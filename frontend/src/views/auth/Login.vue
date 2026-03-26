@@ -235,11 +235,11 @@ const handleLogin = async () => {
     // Redirect based on user role
     const userRole = user?.role;
     if (userRole === 'admin') {
-      router.push('/admin');
+      router.replace('/admin');
     } else if (userRole === 'shop_owner') {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } else {
-      router.push('/view_shop');
+      router.replace('/view_shop');
     }
   } catch (error) {
     console.error('Login error:', error);

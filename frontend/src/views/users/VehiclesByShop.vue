@@ -1,31 +1,11 @@
 <template>
   <div>
   <div class="vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon">
-          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-        </div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="content">
       <section class="deals-section">

@@ -17,8 +17,8 @@ const { isDark, toggleTheme } = useTheme()
 const adminStore = useAdminStore()
 const { t } = useI18n()
 
-// Professional Logo path from public folder
-const logoUrl = '/Images/logo-removebg.png'
+// Admin logo from public/images
+const logoUrl = '/images/logo-removebg.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)
@@ -281,7 +281,7 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
     <aside class="admin-sidebar">
        <div class="admin-brand">
          <div class="brand-badge" aria-hidden="true">
-           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 6px; border-radius: 90px; width: 90px; height: 90px; object-fit: contain;" />
+           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
          </div>
          <div class="brand-text">
            <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
@@ -430,9 +430,11 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
      v-model="showLogoutConfirm"
      title="Logout"
      message="Are you sure you want to logout?"
-     cancel-text="Cancel"
-     confirm-text="Yes, Logout"
-     variant="danger"
+     cancel-text="No"
+     confirm-text="Yes"
+     layout="compact"
+     icon-class="fa-solid fa-right-from-bracket"
+     variant="primary"
      @confirm="handleLogout"
    />
   </template>

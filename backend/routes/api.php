@@ -59,7 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Admin only routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::apiResource('users', UserController::class)->except(['create', 'edit']);
+    Route::apiResource('users', UserController::class)->except(['create', 'edit', 'update']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('cities', CityController::class)->except(['index']);
     Route::get('admin/stats', [AdminController::class, 'stats']);
@@ -77,11 +77,9 @@ Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () 
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
-// User routes - make update public for testing (remove auth for now)
-Route::put('/users/{user}', [UserController::class, 'update']);
-
 // Authenticated user routes
 Route::middleware('auth:sanctum')->group(function () {
+    Route::match(['put', 'patch'], '/users/{user}', [UserController::class, 'update']);
     Route::post('/users/{user}/avatar', [UserController::class, 'uploadAvatar']);
     Route::delete('/users/{user}/avatar', [UserController::class, 'removeAvatar']);
 });
