@@ -5,14 +5,14 @@ import ChooseRole from '../views/ChooseRole.vue';
 import Login from '../views/auth/Login.vue';
 import Register from '../views/auth/Register.vue';
 import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/User/Dashboard.vue';
-import UserBookings from '../views/User/Bookings.vue';
-import PromotionView from '../views/User/Promotion.vue';
-import SettingUser from '../views/User/Setting_user.vue';
+import UserDashboard from '../views/users/Dashboard.vue';
+import UserBookings from '../views/users/Bookings.vue';
+import PromotionView from '../views/users/Promotion.vue';
+import SettingUser from '../views/users/Setting_user.vue';
 import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/User/ShopVehicles.vue';
-import VehiclesByShop from '../views/User/VehiclesByShop.vue';
-import ViewDetail from '../views/User/ViewDetail.vue';
+import ShopVehicles from '../views/users/ShopVehicles.vue';
+import VehiclesByShop from '../views/users/VehiclesByShop.vue';
+import ViewDetail from '../views/users/ViewDetail.vue';
 
 // Check if user is authenticated
 const isAuthenticated = () => {
