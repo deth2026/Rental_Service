@@ -23,8 +23,8 @@ const fetchCustomers = async () => {
     // Use the main bookings endpoint to get shop owner's bookings
     console.log('ManageCustomer - Fetching from /api/bookings...')
     console.log('ManageCustomer - Token available:', !!token)
-    console.log('ManageCustomer - Response status:', response.status)
     const response = await fetch('/api/bookings', { headers })
+    console.log('ManageCustomer - Response status:', response.status)
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
@@ -42,6 +42,10 @@ const fetchCustomers = async () => {
     // Group bookings by customer
     const customerMap = new Map()
     
+    // Get today's date for comparison
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
     bookings.forEach(booking => {
       const user = booking.user
       if (!user || !user.id) return
@@ -57,9 +61,9 @@ const fetchCustomers = async () => {
           firstBookingDate: booking.created_at,
           lastBookingDate: booking.created_at,
           totalSpent: 0,
-          pendingCount: 0,
-          activeCount: 0,
-          completedCount: 0,
+          newTodayCount: 0,       // Pending bookings from today (not accepted)
+          activeCount: 0,         // Bookings in progress (confirmed/in_use/rented)
+          completedCount: 0,      // Completed bookings (returned)
           bookingStatuses: []
         })
       }
@@ -70,11 +74,17 @@ const fetchCustomers = async () => {
       
       // Track booking statuses
       const status = booking.status?.toLowerCase()
-      if (status === 'pending') {
-        customer.pendingCount++
+      const bookingDate = new Date(booking.created_at)
+      bookingDate.setHours(0, 0, 0, 0)
+      
+      if (status === 'pending' && bookingDate.getTime() === today.getTime()) {
+        // New: Pending booking from today (not yet accepted by shop)
+        customer.newTodayCount++
       } else if (status === 'confirmed' || status === 'in_use' || status === 'rented') {
+        // Active: Booking in progress (customer has the vehicle)
         customer.activeCount++
       } else if (status === 'completed') {
+        // Complete: Booking completed (vehicle returned)
         customer.completedCount++
       }
       
@@ -83,7 +93,6 @@ const fetchCustomers = async () => {
       }
       
       // Update first and last booking dates
-      const bookingDate = new Date(booking.created_at)
       const firstDate = new Date(customer.firstBookingDate)
       const lastDate = new Date(customer.lastBookingDate)
       
@@ -120,13 +129,13 @@ const filteredCustomers = computed(() => {
     // Filter by tab based on booking status
     let tabMatch = true
     if (activeTab.value === 'new') {
-      // New: Customers with pending bookings (not yet accepted)
-      tabMatch = customer.pendingCount > 0
+      // New: Customers with pending bookings from today (not accepted by shop)
+      tabMatch = customer.newTodayCount > 0
     } else if (activeTab.value === 'active') {
-      // Active: Customers with active/confirmed bookings (not yet completed)
+      // Active: Customers with active bookings (confirmed/in_use/rented - not returned yet)
       tabMatch = customer.activeCount > 0
-    } else if (activeTab.value === 'returning') {
-      // Returning: Customers with completed bookings (returned vehicle)
+    } else if (activeTab.value === 'complete') {
+      // Complete: Customers with completed bookings (returned product)
       tabMatch = customer.completedCount > 0
     }
     
@@ -149,12 +158,12 @@ const filteredCustomers = computed(() => {
 
 const getStatusInfo = (customer) => {
   // Determine the most relevant status for display
-  if (customer.pendingCount > 0) {
+  if (customer.newTodayCount > 0) {
     return { type: 'new', label: 'New', class: 'status-new' }
   } else if (customer.activeCount > 0) {
     return { type: 'active', label: 'Active', class: 'status-active' }
   } else if (customer.completedCount > 0) {
-    return { type: 'returning', label: 'Completed', class: 'status-returning' }
+    return { type: 'complete', label: 'Complete', class: 'status-complete' }
   }
   return { type: 'new', label: 'New', class: 'status-new' }
 }
@@ -205,7 +214,7 @@ const normalizeAvatarUrl = (url) => {
           <button class="tab-btn" :class="{ active: activeTab === 'all' }" @click="activeTab = 'all'">All</button>
           <button class="tab-btn" :class="{ active: activeTab === 'new' }" @click="activeTab = 'new'">New</button>
           <button class="tab-btn" :class="{ active: activeTab === 'active' }" @click="activeTab = 'active'">Active</button>
-          <button class="tab-btn" :class="{ active: activeTab === 'returning' }" @click="activeTab = 'returning'">Completed</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'complete' }" @click="activeTab = 'complete'">Complete</button>
         </div>
 
         <div class="search-row">

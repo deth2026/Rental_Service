@@ -1,14 +1,20 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { vehicleApi, shopApi } from '@/services/api'
+import { vehicleApi, shopApi, ratingApi } from '@/services/api'
 import { userService } from '../../services/database.js'
+import { readStoredLocation } from '@/utils/locationAccess'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const route = useRoute()
 const router = useRouter()
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Booking', route: '/my-bookings' },
+  { label: 'Promotions', route: '/promotions' }
+]
 
 const shopId = computed(() => route.params.id)
 const vehicles = ref([])
@@ -18,9 +24,19 @@ const isLoading = ref(true)
 const error = ref('')
 const shopError = ref('')
 const isLoadingShop = ref(false)
+const ratingSummaryMap = ref({})
+const mapMode = ref('satellite')
+const isLocating = ref(false)
+const initialLocation = readStoredLocation()
+const originCoords = ref(
+  initialLocation ? { lat: Number(initialLocation.lat), lng: Number(initialLocation.lng) } : null
+)
 
 const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const activeNavLabel = computed(() => {
+  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
+  return matchedItem?.label || 'Home'
+})
 
 const isOwnerRole = computed(() => {
   const role = String(currentUser.value?.role || '').toLowerCase()
@@ -124,7 +140,13 @@ const normalizeVehicle = (vehicle) => {
     description: vehicle.description || '',
     imageUrl: resolveVehicleImageUrl(imageUrl),
     photos: parsedPhotos,
-    photoUrls: vehicle.photo_urls || []
+    photoUrls: vehicle.photo_urls || [],
+    rating: typeof vehicle.rating === 'number' || !Number.isNaN(Number(vehicle.rating)) ? Number(vehicle.rating) : null,
+    ratingCount: Number(vehicle.rating_count ?? 0),
+    total_vehicles: vehicle.total_vehicles ?? 1,
+    rider_details: vehicle.rider_details || '',
+    insurance_fee: vehicle.insurance_fee ?? 0,
+    taxes_fee: vehicle.taxes_fee ?? 0
   }
 }
 
@@ -136,11 +158,83 @@ const fetchVehicles = async () => {
     const response = await vehicleApi.getAll({ shop_id: shopId.value })
     const data = response.data.data || response.data || []
     vehicles.value = data.map(normalizeVehicle)
+    
+    // Fetch active bookings to calculate available vehicles
+    await fetchActiveBookings()
   } catch (err) {
     console.error('Error fetching vehicles:', err)
     error.value = 'Failed to load vehicles. Please try again.'
   } finally {
     isLoading.value = false
+  }
+}
+
+// Fetch active bookings to calculate available vehicles
+const activeBookingsMap = ref({})
+
+const fetchActiveBookings = async () => {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/api/bookings?shop_id=' + shopId.value, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
+      }
+    })
+    const result = await response.json()
+    const bookings = result.data || result || []
+    
+    // Count active bookings per vehicle (bookings that are not completed/returned)
+    const counts = {}
+    bookings.forEach(booking => {
+      const vehicleId = booking.vehicle_id
+      const status = booking.status?.toLowerCase() || ''
+      // Only count active bookings (not returned, not cancelled)
+      if (status !== 'returned' && status !== 'completed' && status !== 'cancelled' && status !== 'canceled') {
+        counts[vehicleId] = (counts[vehicleId] || 0) + 1
+      }
+    })
+    activeBookingsMap.value = counts
+  } catch (err) {
+    console.error('Error fetching active bookings:', err)
+    activeBookingsMap.value = {}
+  }
+}
+
+// Calculate available vehicles (total - active bookings)
+const getAvailableVehicles = (vehicle) => {
+  const total = vehicle.total_vehicles || 1
+  const activeBookings = activeBookingsMap.value[vehicle.id] || 0
+  return Math.max(0, total - activeBookings)
+}
+
+const buildRatingSummaryMap = (summaries) => {
+  const map = {}
+  if (!Array.isArray(summaries)) {
+    ratingSummaryMap.value = {}
+    return
+  }
+  summaries.forEach((entry) => {
+    const vehicleId = Number(entry?.id)
+    if (!vehicleId) return
+    const avg = entry.average_rating
+    const count = entry.total_ratings
+    map[vehicleId] = {
+      averageRating:
+        avg === null || avg === undefined ? null : Number(avg),
+      totalRatings: Number(count || 0),
+    }
+  })
+  ratingSummaryMap.value = map
+}
+
+const fetchVehicleRatingSummary = async () => {
+  try {
+    const response = await ratingApi.getVehicleRatingsSummary()
+    const entries = Array.isArray(response.data) ? response.data : []
+    buildRatingSummaryMap(entries)
+  } catch (err) {
+    console.error('Error fetching vehicle rating summary:', err)
+    ratingSummaryMap.value = {}
   }
 }
 
@@ -163,10 +257,6 @@ const goBack = () => {
   router.push('/view_shop')
 }
 
-const openProfile = () => {
-  router.push('/user/profile')
-}
-
 const handleLogout = async () => {
   await userService.logout()
   localStorage.removeItem('auth_token')
@@ -187,9 +277,29 @@ const getStatusClass = (status) => {
   return 'status-available'
 }
 
+const vehiclesWithRatingInfo = computed(() => {
+  return vehicles.value.map((vehicle) => {
+    const idKey = Number(vehicle?.id)
+    const summary = ratingSummaryMap.value[idKey]
+    if (!summary) return vehicle
+    return {
+      ...vehicle,
+      rating:
+        summary.averageRating !== null && summary.averageRating !== undefined
+          ? summary.averageRating
+          : vehicle.rating,
+      ratingCount:
+        summary.totalRatings !== undefined
+          ? summary.totalRatings
+          : vehicle.ratingCount,
+    }
+  })
+})
+
 const filteredVehicles = computed(() => {
-  if (selectedCategory.value === 'all') return vehicles.value
-  return vehicles.value.filter((v) => {
+  const source = vehiclesWithRatingInfo.value
+  if (selectedCategory.value === 'all') return source
+  return source.filter((v) => {
     const type = normalizeType(v.type || v.category || v.vehicle_type || v.kind || v.name)
     if (type === selectedCategory.value) return true
     // looser matching: e.g., "motorbikes", "motor" or text mentions
@@ -203,8 +313,8 @@ const filteredVehicles = computed(() => {
     if (selectedCategory.value === 'car') {
       return ['car', 'suv', 'auto', 'sedan', 'truck'].some((k) => type.includes(k) || text.includes(k))
     }
-    return false
-  })
+  return false
+})
 })
 
 const categoryButtons = [
@@ -217,17 +327,54 @@ const categoryButtons = [
 onMounted(() => {
   fetchVehicles()
   fetchShop()
+  fetchVehicleRatingSummary()
+  
+  // Refresh bookings when user returns to this page
+  window.addEventListener('focus', handleVisibilityChange)
 })
+
+// Handle visibility change to refresh when user returns to this page
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    fetchVehicles()
+  }
+}
 
 const selectedShopCoords = computed(() => {
   if (!shop.value) return null
-  const lat = shop.value.latitude ?? shop.value.lat
-  const lng = shop.value.longitude ?? shop.value.lng
+  let lat = shop.value.latitude ?? shop.value.lat
+  let lng = shop.value.longitude ?? shop.value.lng
+  if (lat == null || lng == null) {
+    const parsed = extractCoordinatesFromMapUrl(shop.value.map_url || shop.value.location || '')
+    lat = parsed?.lat
+    lng = parsed?.lng
+  }
   if (lat == null || lng == null) return null
   const parsedLat = Number(lat)
   const parsedLng = Number(lng)
   if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) return null
   return { lat: parsedLat, lng: parsedLng }
+})
+
+const selectedShopMapLink = computed(() => String(shop.value?.map_url || shop.value?.location || '').trim())
+
+const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
+  const toRad = (v) => (v * Math.PI) / 180
+  const earthRadiusKm = 6371
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return earthRadiusKm * c
+}
+
+const distanceKm = computed(() => {
+  const origin = originCoords.value
+  const dest = selectedShopCoords.value
+  if (!origin || !dest) return null
+  return calculateDistanceKm(origin.lat, origin.lng, dest.lat, dest.lng)
 })
 
 // Optional: Google Maps Embed API key to render the richer place card UI when available
@@ -238,54 +385,102 @@ const mapEmbedUrl = computed(() => {
   const name = shop.value?.name || 'Shop'
   const address = shop.value?.address || ''
   const fallback = 'Siem Reap, Cambodia'
-  // Prefer name+address to trigger the place card; add coords only to help center
   const queryParts = []
   if (name) queryParts.push(name)
   if (address) queryParts.push(address)
   const baseQuery = queryParts.join(', ') || fallback
 
-  // Use the official Embed API when a key is configured — this shows the place card UI like in the screenshot
+  if (mapMode.value === 'route' && originCoords.value && coords) {
+    return `https://www.google.com/maps/dir/?api=1&origin=${originCoords.value.lat},${originCoords.value.lng}&destination=${coords.lat},${coords.lng}&travelmode=driving`
+  }
+
   if (googleMapsEmbedKey) {
     const placeTarget = coords ? `${coords.lat},${coords.lng}` : baseQuery
-    return `https://www.google.com/maps/embed/v1/place?key=${googleMapsEmbedKey}&q=${encodeURIComponent(placeTarget)}&maptype=satellite`
+    const mapType = mapMode.value === 'road' ? 'roadmap' : 'satellite'
+    return `https://www.google.com/maps/embed/v1/place?key=${googleMapsEmbedKey}&q=${encodeURIComponent(placeTarget)}&maptype=${mapType}`
   }
 
-  // Fallback: regular embed that still centers on the shop and uses satellite view
+  const tile = mapMode.value === 'road' ? 'm' : 'k'
   if (coords) {
-    return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&ll=${coords.lat},${coords.lng}&t=k&z=19&output=embed`
+    return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&ll=${coords.lat},${coords.lng}&t=${tile}&z=18&output=embed`
   }
 
-  return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&t=k&z=19&output=embed`
+  return `https://www.google.com/maps?q=${encodeURIComponent(baseQuery)}&t=${tile}&z=16&output=embed`
 })
 
+const useMyLocation = () => {
+  if (isLocating.value) return
+  if (!navigator?.geolocation) return
+
+  isLocating.value = true
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      originCoords.value = {
+        lat: Number(position.coords.latitude),
+        lng: Number(position.coords.longitude),
+      }
+      isLocating.value = false
+    },
+    () => {
+      isLocating.value = false
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  )
+}
+
 const openMap = () => {
+  const mapLink = selectedShopMapLink.value
+  if (mapLink && /^https?:\/\//i.test(mapLink) && mapMode.value !== 'route') {
+    window.open(mapLink, '_blank')
+    return
+  }
+
   const coords = selectedShopCoords.value
   const name = shop.value?.name || ''
   const address = shop.value?.address || ''
   const fallback = 'Siem Reap, Cambodia'
   const destination = `${name ? `${name}, ` : ''}${address || ''}`.trim() || fallback
+  if (mapMode.value === 'route' && coords && originCoords.value) {
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&origin=${originCoords.value.lat},${originCoords.value.lng}&destination=${coords.lat},${coords.lng}&travelmode=driving`,
+      '_blank'
+    )
+    return
+  }
   const destWithCoords = coords ? `${destination} (${coords.lat},${coords.lng})` : destination
   window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destWithCoords)}`, '_blank')
+}
+
+const extractCoordinatesFromMapUrl = (value) => {
+  const url = String(value || '').trim()
+  if (!url) return null
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ]
+  for (const pattern of patterns) {
+    const match = url.match(pattern)
+    if (!match) continue
+    const lat = Number(match[1])
+    const lng = Number(match[2])
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue
+    return { lat, lng }
+  }
+  return null
 }
 </script>
 
 <template>
   <div class="shop-vehicles-wrapper">
   <div class="shop-vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <button class="back-btn" @click="goBack">
-          <i class="fa-solid fa-arrow-left"></i>
-        </button>
-        <div class="brand-icon"><i class="fa-solid fa-car" aria-hidden="true"></i></div>
-        <span>Shop Vehicles</span>
-      </div>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="vehicles-content">
       <div class="page-header">
@@ -395,6 +590,31 @@ const openMap = () => {
                 <i class="fa-solid fa-gear"></i>
                 <span>{{ vehicle.transmission }}</span>
               </div>
+              <div class="detail-item available-stock" v-if="vehicle.total_vehicles">
+                <i class="fa-solid fa-car"></i>
+                <span>{{ getAvailableVehicles(vehicle) }} available</span>
+              </div>
+            </div>
+
+            <div class="vehicle-extra-fees" v-if="vehicle.insurance_fee || vehicle.taxes_fee || vehicle.rider_details">
+              <div class="fee-item" v-if="vehicle.rider_details">
+                <i class="fa-solid fa-user"></i>
+                <span>{{ vehicle.rider_details }}</span>
+              </div>
+              <div class="fee-item" v-if="vehicle.insurance_fee">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Insurance: ${{ vehicle.insurance_fee }}</span>
+              </div>
+              <div class="fee-item" v-if="vehicle.taxes_fee">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>Taxes: ${{ vehicle.taxes_fee }}</span>
+              </div>
+            </div>
+            
+            <div class="vehicle-rating" v-if="vehicle.rating">
+              <i class="fa-solid fa-star"></i>
+              <span>{{ vehicle.rating.toFixed(1) }}</span>
+              <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
             </div>
 
             <div class="vehicle-price">
@@ -402,8 +622,12 @@ const openMap = () => {
               <span class="price-period">/day</span>
             </div>
 
-            <button class="view-details-btn" @click="viewVehicleDetails(vehicle)">
-              View Details
+            <button 
+              class="view-details-btn" 
+              @click="viewVehicleDetails(vehicle)"
+              :disabled="getAvailableVehicles(vehicle) <= 0"
+            >
+              {{ getAvailableVehicles(vehicle) <= 0 ? 'Not Available' : 'View Details' }}
             </button>
           </div>
         </article>
@@ -411,6 +635,21 @@ const openMap = () => {
 
       <section class="map-section" v-if="shop">
         <div class="map">
+          <div class="map-toolbar">
+            <div class="map-modes">
+              <button class="map-mode-btn" :class="{ active: mapMode === 'satellite' }" @click="mapMode = 'satellite'">Satellite</button>
+              <button class="map-mode-btn" :class="{ active: mapMode === 'road' }" @click="mapMode = 'road'">Roadmap</button>
+              <button class="map-mode-btn" :class="{ active: mapMode === 'route' }" @click="mapMode = 'route'">Route</button>
+            </div>
+            <button class="map-locate-btn" :disabled="isLocating" @click="useMyLocation">
+              {{ isLocating ? 'Locating...' : 'Use My Location' }}
+            </button>
+          </div>
+
+          <p v-if="distanceKm !== null" class="distance-chip">
+            Distance to shop: <strong>{{ distanceKm.toFixed(2) }} km</strong>
+          </p>
+
           <iframe
             class="map-frame"
             :src="mapEmbedUrl"
@@ -418,9 +657,9 @@ const openMap = () => {
             loading="lazy"
             referrerpolicy="no-referrer-when-downgrade"
           ></iframe>
-          <button class="btn-reset open-map-btn" @click="openMap">
-            Open in Google Maps
-          </button>
+          <div class="map-actions">
+            <button class="btn-reset open-map-btn" @click="openMap">Open in Google Maps</button>
+          </div>
         </div>
       </section>
     </main>
@@ -731,22 +970,37 @@ const openMap = () => {
 
 .map {
   position: relative;
-  height: 340px;
+  padding: 14px;
   border-radius: 14px;
-  overflow: hidden;
+  background: #fff;
   border: 1px solid #d8dee7;
 }
 
 .map-frame {
   width: 100%;
-  height: 100%;
+  height: 340px;
   border: 0;
+  border-radius: 10px;
 }
 
+.map-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.map-modes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.map-mode-btn,
+.map-locate-btn,
 .open-map-btn {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
   padding: 8px 12px;
   border-radius: 8px;
   background: #ffffff;
@@ -754,6 +1008,36 @@ const openMap = () => {
   color: #1e40af;
   font-size: 13px;
   font-weight: 600;
+  cursor: pointer;
+}
+
+.map-mode-btn.active {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #fff;
+  border-color: transparent;
+}
+
+.map-locate-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.distance-chip {
+  margin: 0 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.85rem;
+}
+
+.map-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .vehicle-card {
@@ -851,12 +1135,58 @@ const openMap = () => {
   border-radius: 6px;
 }
 
+.detail-item.available-stock {
+  background: #dcfce7;
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.vehicle-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 0.75rem;
+  color: #047857;
+  font-weight: 600;
+}
+
+.vehicle-rating i {
+  color: #fbbf24;
+}
+
+.vehicle-rating small {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
 .detail-item i {
   font-size: 0.75rem;
 }
 
 .vehicle-price {
   margin-bottom: 1rem;
+}
+
+.vehicle-extra-fees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.fee-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.fee-item i {
+  color: #1e40af;
 }
 
 .price-amount {
@@ -886,6 +1216,12 @@ const openMap = () => {
   opacity: 0.9;
 }
 
+.view-details-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 @media (max-width: 768px) {
   .topbar {
     padding: 1rem;
@@ -900,3 +1236,4 @@ const openMap = () => {
   }
 }
 </style>
+

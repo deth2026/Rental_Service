@@ -9,6 +9,7 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -16,6 +17,10 @@ class NotificationController extends Controller
 {
     public function index(Request $request)
     {
+        if (!Schema::hasTable('notifications')) {
+            return response()->json([]);
+        }
+
         $user = $request->user();
         $query = NotificationRecord::with([
             'user:id,name,email,profile_picture,img_url',
@@ -36,7 +41,7 @@ class NotificationController extends Controller
         }
 
         $shopId = $request->query('shop_id');
-        if ($shopId) {
+        if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
             $query->where('shop_id', $shopId);
         }
 
@@ -62,6 +67,10 @@ class NotificationController extends Controller
 
     public function markAllAsRead(Request $request)
     {
+        if (!Schema::hasTable('notifications')) {
+            return response()->json(['updated' => 0]);
+        }
+
         $user = $request->user();
         $query = NotificationRecord::where(function ($builder) use ($user) {
             $builder->where('user_id', $user->id);
@@ -70,7 +79,7 @@ class NotificationController extends Controller
             }
         });
         $shopId = $request->input('shop_id');
-        if ($shopId) {
+        if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
             $query->where('shop_id', $shopId);
         }
         $updated = $query->update(['is_read' => true]);

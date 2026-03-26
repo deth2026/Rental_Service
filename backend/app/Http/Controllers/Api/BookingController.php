@@ -4,18 +4,210 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
-use App\Services\NotificationService;
+use App\Models\Vehicle;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
+    private const BLOCKING_BOOKING_STATUSES = [
+        'pending',
+        'pending_payment',
+        'confirmed',
+        'paid',
+    ];
+
+    private function normalizeNullableString(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
+    }
+
+    private function normalizeNullableNumber(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return is_numeric($value) ? (float) $value : null;
+    }
+
+    private function normalizePositiveInteger(mixed $value, int $fallback = 1): int
+    {
+        if (is_numeric($value)) {
+            $normalized = (int) $value;
+            return $normalized > 0 ? $normalized : $fallback;
+        }
+
+        if (preg_match('/^\s*(\d+)/', (string) $value, $matches) === 1) {
+            $normalized = (int) $matches[1];
+            return $normalized > 0 ? $normalized : $fallback;
+        }
+
+        return $fallback;
+    }
+
+    private function getBookingQuantity(array|Booking $booking): int
+    {
+        return 1;
+    }
+
+    private function isBlockingBookingStatus(mixed $status): bool
+    {
+        return in_array(strtolower(trim((string) $status)), self::BLOCKING_BOOKING_STATUSES, true);
+    }
+
+    private function getBookingEndDate(?string $startDate, mixed $totalDays): ?Carbon
+    {
+        if (!$startDate) {
+            return null;
+        }
+
+        $days = $this->normalizePositiveInteger($totalDays, 0);
+        if ($days < 1) {
+            return null;
+        }
+
+        return Carbon::parse($startDate)->startOfDay()->addDays($days);
+    }
+
+    private function prepareBookingPayload(Request $request, ?Booking $booking = null): void
+    {
+        $data = $booking
+            ? array_merge($booking->only([
+                'user_id',
+                'vehicle_id',
+                'shop_id',
+                'coupon_id',
+                'start_date',
+                'total_days',
+                'rider_details',
+                'daily_rate',
+                'insurance_fee',
+                'taxes_fee',
+                'total_price',
+                'status',
+                'deposit_amount',
+                'deposit_status',
+            ]), $request->all())
+            : $request->all();
+        $data['user_id'] = $booking?->user_id ?? Auth::id();
+
+        if (array_key_exists('rider_details', $data)) {
+            $data['rider_details'] = $this->normalizeNullableString($data['rider_details']);
+        }
+
+        foreach (['daily_rate', 'insurance_fee', 'taxes_fee', 'total_price', 'deposit_amount'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = $this->normalizeNullableNumber($data[$field]);
+            }
+        }
+
+        $request->replace($data);
+    }
+
+    private function validateVehicleAvailability(array $validated, ?Booking $ignoredBooking = null): void
+    {
+        if (!$this->isBlockingBookingStatus($validated['status'] ?? 'pending')) {
+            return;
+        }
+
+        $vehicleId = (int) ($validated['vehicle_id'] ?? 0);
+        $vehicle = Vehicle::find($vehicleId);
+        if (!$vehicle) {
+            return;
+        }
+
+        $requestedStart = Carbon::parse($validated['start_date'])->startOfDay();
+        $requestedEnd = $this->getBookingEndDate($validated['start_date'] ?? null, $validated['total_days'] ?? null);
+        if (!$requestedEnd) {
+            return;
+        }
+
+        $totalVehicles = max((int) ($vehicle->total_vehicles ?? 1), 1);
+        $requestedQuantity = 1;
+
+        $overlappingQuantity = Booking::query()
+            ->where('vehicle_id', $vehicleId)
+            ->when($ignoredBooking?->id, function ($query, $ignoredId) {
+                $query->where('id', '!=', $ignoredId);
+            })
+            ->get()
+            ->reduce(function (int $sum, Booking $booking) use ($requestedStart, $requestedEnd) {
+                if (!$this->isBlockingBookingStatus($booking->status)) {
+                    return $sum;
+                }
+
+                $existingStart = $booking->start_date
+                    ? Carbon::parse($booking->start_date)->startOfDay()
+                    : null;
+                $existingEnd = $this->getBookingEndDate(
+                    $booking->start_date?->toDateString() ?? null,
+                    $booking->total_days
+                );
+
+                if (!$existingStart || !$existingEnd) {
+                    return $sum;
+                }
+
+                $overlaps = $requestedStart->lt($existingEnd) && $requestedEnd->gt($existingStart);
+                if (!$overlaps) {
+                    return $sum;
+                }
+
+                return $sum + $this->getBookingQuantity($booking);
+            }, 0);
+
+        $remainingQuantity = max($totalVehicles - $overlappingQuantity, 0);
+        if ($remainingQuantity <= 0) {
+            throw ValidationException::withMessages([
+                'start_date' => 'Selected dates are fully booked for this vehicle.',
+            ]);
+        }
+        if ($requestedQuantity > $remainingQuantity) {
+            throw ValidationException::withMessages([
+                'start_date' => "Only {$remainingQuantity} vehicle(s) are available for the selected dates.",
+            ]);
+        }
+    }
+
+    private function validateBookingPayload(Request $request, ?Booking $booking = null): array
+    {
+        $this->prepareBookingPayload($request, $booking);
+
+        $validated = $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+            'vehicle_id' => 'required|integer|exists:vehicles,id',
+            'shop_id' => 'nullable|integer',
+            'coupon_id' => 'nullable|integer',
+            'start_date' => 'required|date',
+            'total_days' => 'required|integer|min:1',
+            'rider_details' => 'nullable|string|max:255',
+            'daily_rate' => 'nullable|numeric|min:0',
+            'insurance_fee' => 'nullable|numeric|min:0',
+            'taxes_fee' => 'nullable|numeric|min:0',
+            'total_price' => 'required|numeric|min:0',
+            'status' => 'nullable|string|max:50',
+            'deposit_amount' => 'nullable|numeric|min:0',
+            'deposit_status' => 'nullable|string|max:50',
+        ]);
+
+        $this->validateVehicleAvailability($validated, $booking);
+
+        return $validated;
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = Booking::with(['vehicle', 'user', 'shop'])
+        $query = Booking::with(['vehicle', 'user', 'shop', 'payment'])
             ->orderBy('created_at', 'desc');
 
         if ($user && $user->role === 'shop_owner') {
@@ -60,13 +252,25 @@ class BookingController extends Controller
             }
             
             $bookings = Booking::where('user_id', $user->id)
-                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs'])
+                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs', 'rating'])
                 ->orderBy('created_at', 'desc')
                 ->get();
             
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
                 $shop = $vehicle ? $vehicle->shop : null;
+                $vehicleDisplayName = trim((string) ($vehicle->name ?? ''));
+                if ($vehicleDisplayName === '') {
+                    $vehicleDisplayName = trim(implode(' ', array_filter([
+                        $vehicle->brand ?? '',
+                        $vehicle->model ?? '',
+                    ])));
+                }
+
+                if ($vehicleDisplayName === '') {
+                    $vehicleDisplayName = 'N/A';
+                }
+
                 $vehicleImage = '';
                 if ($vehicle) {
                     $vehicleImage = $vehicle->image_url_full ?? $vehicle->image_url ?? '';
@@ -85,7 +289,10 @@ class BookingController extends Controller
                 return [
                     'id' => $booking->id,
                     'vehicle_id' => $booking->vehicle_id,
-                    'vehicle_name' => $vehicle ? ($vehicle->brand . ' ' . $vehicle->model) : 'N/A',
+                    'vehicle_name' => $vehicleDisplayName,
+                    'vehicle_custom_name' => $vehicle->name ?? '',
+                    'vehicle_brand' => $vehicle->brand ?? '',
+                    'vehicle_model' => $vehicle->model ?? '',
                     'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
                     'shop_name' => $shop ? $shop->name : 'N/A',
                     'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
@@ -96,8 +303,14 @@ class BookingController extends Controller
                     'image' => $vehicleImage,
                     'total_days' => $booking->total_days,
                     'daily_rate' => $booking->daily_rate,
-                    'status_logs' => $statusLogs,
-                ];
+                'status_logs' => $statusLogs,
+                'rating' => $booking->rating ? [
+                    'id' => $booking->rating->id,
+                    'rating' => $booking->rating->rating,
+                    'comment' => $booking->rating->comment,
+                    'created_at' => $booking->rating->created_at,
+                ] : null,
+            ];
             });
             
             return response()->json($formattedBookings);
@@ -131,10 +344,10 @@ class BookingController extends Controller
             }
             
             // Get bookings for these shops with related data
-            $bookings = Booking::whereIn('shop_id', $shops)
-                ->with(['vehicle', 'user', 'bookingStatusLogs'])
+$bookings = Booking::whereIn('shop_id', $shops)
+                ->with(['vehicle.shop', 'user', 'bookingStatusLogs'])
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->paginate(25);
             
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
@@ -189,80 +402,45 @@ class BookingController extends Controller
     }
 
     /**
-     * Get payments data from bookings for shop payments dashboard
+     * Get payments data from bookings table for shop payments dashboard
      */
     public function shopPayments(Request $request)
     {
         try {
             $user = Auth::user();
-            
-            // DEBUG: Log user info
-            \Log::info('shopPayments: User', [
-                'user_id' => $user->id,
-                'user_role' => $user->role,
-                'user_name' => $user->name
-            ]);
-            
-            // Get all bookings with relationships
-            $bookings = Booking::with(['user', 'vehicle', 'shop', 'payment'])
-                ->orderBy('created_at', 'desc')
-                ->get();
 
-            // DEBUG: Log total bookings count
-            \Log::info('shopPayments: Total bookings', ['count' => $bookings->count()]);
-            
-            // DEBUG: Log ALL booking shop_ids (not just first 3)
-            \Log::info('shopPayments: All bookings shop_ids', [
-                'bookings' => $bookings->map(function($b) {
-                    return [
-                        'booking_id' => $b->id,
-                        'booking_shop_id' => $b->shop_id,
-                        'vehicle_shop_id' => $b->vehicle?->shop_id,
-                        'booking_status' => $b->status,
-                        'total_price' => $b->total_price,
-                        'created_at' => $b->created_at
-                    ];
-                })->toArray()
-            ]);
+            $query = \App\Models\Booking::with(['payment', 'user', 'vehicle'])
+                ->orderBy('created_at', 'desc');
 
-            // If user is not admin, filter by their shop (using vehicle's shop_id)
-            // For now, we'll skip filtering if shop_id doesn't exist in bookings table
+            // If user is not admin, include bookings from all shops owned by this user
             if ($user->role !== 'admin') {
-                $shops = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
-                
-                // If user has shops, filter by vehicle's shop_id
-                if (!$shops->isEmpty()) {
-                    $bookings = $bookings->filter(function ($booking) use ($shops) {
-                        $vehicleShopId = $booking->vehicle?->shop_id ?? null;
-                        return $vehicleShopId && $shops->contains($vehicleShopId);
-                    });
+                $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
+
+                if ($shopIds->isEmpty()) {
+                    return response()->json([]);
                 }
+
+                $query->whereHas('vehicle', function ($vehicleQuery) use ($shopIds) {
+                    $vehicleQuery->whereIn('shop_id', $shopIds);
+                });
             }
 
+            $bookings = $query->get();
+
             // Map bookings to payment format
-            $payments = $bookings->map(function ($booking) {
-                // Debug: log total_price
-                \Log::info('shopPayments mapping booking', [
-                    'booking_id' => $booking->id,
-                    'total_price' => $booking->total_price,
-                    'price_per_day' => $booking->vehicle?->price_per_day ?? 'no vehicle',
-                    'status' => $booking->status,
-                    'vehicle_shop_id' => $booking->vehicle?->shop_id
-                ]);
-                
-                // Use booking's total_price, fallback to vehicle's price_per_day
-                $amount = (float) ($booking->total_price ?? 0);
-                if ($amount === 0 && $booking->vehicle) {
-                    $amount = (float) ($booking->vehicle->price_per_day ?? 0);
-                }
-                
+            $formattedPayments = $bookings->map(function ($booking) {
+                $vehicleName = $booking->vehicle?->name
+                    ?? $booking->vehicle?->model
+                    ?? $booking->vehicle?->brand
+                    ?? 'Unknown Vehicle';
+
                 return [
-                    'id' => $booking->id,
+                    'id' => $booking->payment?->id ?? $booking->id,
+                    'payment_id' => $booking->payment?->id,
                     'booking_id' => $booking->id,
                     'shop_id' => $booking->shop_id, // Include shop_id for debugging
                     'transaction_id' => $booking->payment?->transaction_id ?? 'BK-' . $booking->id,
-                    'amount' => $amount,
-                    'total_price' => $amount, // Also include as total_price for frontend
+                    'amount' => (float) ($booking->payment?->amount ?? $booking->total_price ?? 0),
                     'status' => $booking->status ?? 'pending',
                     'raw_status' => $booking->status ?? 'pending',
                     'payment_status' => $booking->payment?->payment_status ?? $booking->status ?? 'pending',
@@ -271,19 +449,21 @@ class BookingController extends Controller
                     'booking' => [
                         'id' => $booking->id,
                         'status' => $booking->status ?? 'pending',
-                        'total_price' => (float) ($booking->total_price ?? 0),
+                        'total_price' => $booking->total_price ?? 0,
                         'user' => [
                             'name' => $booking->user?->name ?? 'Unknown User',
                             'email' => $booking->user?->email ?? ''
                         ],
                         'vehicle' => [
-                            'title' => $booking->vehicle ? ($booking->vehicle->brand . ' ' . $booking->vehicle->model) : 'Unknown Vehicle'
+                            'title' => $vehicleName,
+                            'name' => $vehicleName,
+                            'type' => $booking->vehicle?->type ?? ''
                         ]
                     ]
                 ];
             });
 
-            return response()->json($payments);
+            return response()->json($formattedPayments);
             
         } catch (\Exception $e) {
             return response()->json([
@@ -293,41 +473,11 @@ class BookingController extends Controller
         }
     }
 
-    public function store(Request $_request)
+    public function store(Request $request)
     {
-        // Get the vehicle to automatically assign shop_id
-        $vehicle = \App\Models\Vehicle::find($_request->vehicle_id);
-        
-        if (!$vehicle) {
-            return response()->json(['error' => 'Vehicle not found'], 404);
-        }
-        
-        // Add shop_id from the vehicle (only if column exists)
-        $bookingData = $_request->all();
-        try {
-            $hasShopIdColumn = \Illuminate\Support\Facades\Schema::hasColumn('bookings', 'shop_id');
-            if ($hasShopIdColumn) {
-                $bookingData['shop_id'] = $vehicle->shop_id;
-            }
-        } catch (\Exception $e) {
-            // Schema check failed, skip shop_id
-        }
+        $validated = $this->validateBookingPayload($request);
 
-        $record = Booking::create($bookingData);
-
-        // Create status log entry
-        \App\Models\BookingStatusLog::create([
-            'booking_id' => $record->id,
-            'status' => $record->status ?? 'pending',
-            'changed_at' => now(),
-        ]);
-
-        // Send notification (silently fail if table doesn't exist)
-        try {
-            NotificationService::bookingCreated($record);
-        } catch (\Exception $e) {
-            // Notification table might not exist, silently fail
-        }
+        $record = Booking::create($validated);
 
         return response()->json($record, 201);
     }
@@ -337,39 +487,10 @@ class BookingController extends Controller
         return response()->json($booking);
     }
 
-    public function update(Request $_request, Booking $booking)
+    public function update(Request $request, Booking $booking)
     {
-        $oldStatus = $booking->status;
-        $booking->update($_request->all());
-        
-        // Create status log entry if status changed
-        if (isset($_request->status) && $_request->status !== $oldStatus) {
-            \App\Models\BookingStatusLog::create([
-                'booking_id' => $booking->id,
-                'status' => $_request->status,
-                'changed_at' => now(),
-            ]);
-
-            // When booking is confirmed, update the associated payment status to 'paid'
-            if ($_request->status === 'confirmed') {
-                // Reload the payment relationship
-                $booking->load('payment');
-                
-                if ($booking->payment) {
-                    $booking->payment->update([
-                        'payment_status' => 'paid',
-                        'paid_at' => now()
-                    ]);
-                }
-            }
-
-            // Send notification (silently fail if table doesn't exist)
-            try {
-                NotificationService::bookingStatusChanged($booking->fresh(), $_request->status);
-            } catch (\Exception $e) {
-                // Notification table might not exist, silently fail
-            }
-        }
+        $validated = $this->validateBookingPayload($request, $booking);
+        $booking->update($validated);
 
         return response()->json($booking->fresh());
     }

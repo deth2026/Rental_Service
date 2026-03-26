@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
+use App\Http\Controllers\Api\RatingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -98,12 +99,17 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/shops', [ShopController::class, 'index']);
 Route::get('/shops/{shop}', [ShopController::class, 'show']);
 
+// Public vehicle ratings (view only, no auth required)
+Route::get('/vehicle-ratings', [RatingController::class, 'vehicleRatings']);
+Route::get('/vehicle-ratings-summary', [RatingController::class, 'vehicleRatingsSummary']);
+Route::get('/shop-rating', [RatingController::class, 'shopAverageRating']);
+
 // Public vehicle routes (for customers to view vehicles)
+Route::get('/vehicles', [VehicleController::class, 'index']);
 Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
 
-// Protected vehicle routes - require authentication for listing vehicles
+// Protected vehicle routes - require authentication for create, update, delete
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/vehicles', [VehicleController::class, 'index']);
     
     // Shop owner can create, update, delete their own vehicles
     Route::post('/vehicles', [VehicleController::class, 'store']);
@@ -111,7 +117,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
     Route::apiResource('shops', ShopController::class)->except(['index', 'show']);
     Route::apiResource('bookings', BookingController::class);
-    Route::apiResource('booking-status-logs', BookingStatusLogController::class);
+    Route::post('/bookings/{booking}/rating', [RatingController::class, 'store']);
+    Route::get('/vehicle-ratings', [RatingController::class, 'vehicleRatings']);
+    Route::get('/vehicle-ratings-summary', [RatingController::class, 'vehicleRatingsSummary']);
     Route::apiResource('damage-reports', DamageReportController::class);
     Route::apiResource('feedback', FeedbackController::class);
     Route::apiResource('histories', HistoryController::class);

@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\NotificationRecord;
 use App\Models\Shop;
 use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationService
 {
@@ -33,6 +34,11 @@ class NotificationService
         'rejected' => 'cancelled',
         'completed' => 'completed',
     ];
+
+    protected const TABLE_NAME = 'notifications';
+
+    protected static ?bool $shopIdColumnExists = null;
+    protected static ?bool $notificationsTableExists = null;
 
     public static function bookingCreated(Booking $booking): ?NotificationRecord
     {
@@ -203,7 +209,7 @@ class NotificationService
             'is_read' => $options['is_read'] ?? false,
         ], $options['attributes'] ?? []);
 
-        return NotificationRecord::create($attributes);
+        return static::persistNotification($attributes);
     }
 
     protected static function notifyAdmins(string $title, string $message, array $options = []): NotificationRecord
@@ -227,7 +233,7 @@ class NotificationService
         $attributes = array_merge($base, $options['attributes'] ?? []);
         $attributes['role'] = $role;
 
-        return NotificationRecord::create($attributes);
+        return static::persistNotification($attributes);
     }
 
     protected static function resolveUser(Booking $booking): ?User
@@ -304,5 +310,55 @@ class NotificationService
             return $booking->shop_id;
         }
         return $booking->shop?->id ?? null;
+    }
+
+    protected static function persistNotification(array $attributes): NotificationRecord
+    {
+        $attributes = static::filterMissingColumns($attributes);
+
+        if (!static::hasNotificationsTable()) {
+            return new NotificationRecord($attributes);
+        }
+
+        return NotificationRecord::create($attributes);
+    }
+
+    protected static function filterMissingColumns(array $attributes): array
+    {
+        if (!array_key_exists('shop_id', $attributes)) {
+            return $attributes;
+        }
+
+        if (static::hasShopIdColumn()) {
+            return $attributes;
+        }
+
+        unset($attributes['shop_id']);
+
+        return $attributes;
+    }
+
+    protected static function hasShopIdColumn(): bool
+    {
+        if (static::$shopIdColumnExists !== null) {
+            return static::$shopIdColumnExists;
+        }
+
+        static::$shopIdColumnExists =
+            Schema::hasTable(static::TABLE_NAME) &&
+            Schema::hasColumn(static::TABLE_NAME, 'shop_id');
+
+        return static::$shopIdColumnExists;
+    }
+
+    protected static function hasNotificationsTable(): bool
+    {
+        if (static::$notificationsTableExists !== null) {
+            return static::$notificationsTableExists;
+        }
+
+        static::$notificationsTableExists = Schema::hasTable(static::TABLE_NAME);
+
+        return static::$notificationsTableExists;
     }
 }

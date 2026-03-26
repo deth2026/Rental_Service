@@ -10,6 +10,8 @@ class Shop extends Model
 {
     use HasFactory;
 
+    protected $with = ['owner'];
+
     protected $appends = ['img_url_full'];
 
     protected $fillable = [
@@ -23,16 +25,16 @@ class Shop extends Model
         'img_url',
         'latitude',
         'longitude',
+        'map_url',
         'total_reviews',
         'status'
-    ];
+    ]; 
 
     protected $casts = [
         'latitude' => 'decimal:7',
         'longitude' => 'decimal:7',
         'total_reviews' => 'integer'
     ];
-
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');

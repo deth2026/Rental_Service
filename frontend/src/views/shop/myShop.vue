@@ -1,13 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { shopApi } from "@/services/api";
-import userService from "@/services/userService";
 import "../../css/Myshop.css";
 
 const shop = ref(null);
-const currentUser = ref(null);
 const ownerName = ref("");
-const ownerEmail = ref("");
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
@@ -34,11 +31,60 @@ const createForm = reactive({
   location: "",
   latitude: "",
   longitude: "",
+  map_url: "",
   status: "active",
   instagram: "",
   facebook: "",
   img_url: "",
 });
+
+const getCachedShop = (ownerId) => {
+  if (!ownerId) return null;
+  try {
+    const raw = localStorage.getItem(`myshop_cache_${ownerId}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const setCachedShop = (ownerId, shopData) => {
+  if (!ownerId) return;
+  try {
+    if (!shopData) {
+      localStorage.removeItem(`myshop_cache_${ownerId}`);
+      return;
+    }
+    localStorage.setItem(`myshop_cache_${ownerId}`, JSON.stringify(shopData));
+  } catch {
+    // Ignore cache write errors.
+  }
+};
+
+const getStoredUser = () => {
+  try {
+    const rawUser = localStorage.getItem("user");
+    if (!rawUser) return null;
+    const parsed = JSON.parse(rawUser);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const getUserId = () => {
+  const rawUser = localStorage.getItem("user");
+  if (!rawUser) return 1;
+
+  try {
+    const parsed = JSON.parse(rawUser);
+    return parsed.id || 1;
+  } catch {
+    return 1;
+  }
+};
 
 const asArray = (payload) => payload?.data || payload || [];
 
@@ -47,53 +93,6 @@ const formatDateTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleDateString();
-};
-
-const getStoredUser = () => {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem("user");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const getCachedShop = (userId) => {
-  if (!userId || typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(`settings_shop_${userId}`);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : null;
-  } catch {
-    return null;
-  }
-};
-
-const setCachedShop = (userId, shopData) => {
-  if (!userId || typeof window === "undefined") return;
-  try {
-    if (!shopData) {
-      window.localStorage.removeItem(`settings_shop_${userId}`);
-      return;
-    }
-    window.localStorage.setItem(`settings_shop_${userId}`, JSON.stringify(shopData));
-  } catch {
-    // Ignore cache write failures.
-  }
-};
-
-const ensureCurrentUser = async () => {
-  if (currentUser.value) return currentUser.value;
-  try {
-    currentUser.value = await userService.getAuthUser();
-  } catch (e) {
-    console.error("Unable to fetch authenticated user", e);
-  }
-  return currentUser.value;
 };
 
 const API_BASE_URL =
@@ -123,20 +122,15 @@ const getShopImageUrl = (url) => {
 };
 
 const loadMyShop = async () => {
-  error.value = "";
+  const ownerId = getUserId();
   const storedUser = getStoredUser();
   ownerName.value = storedUser?.name || "N/A";
-  ownerEmail.value = storedUser?.email || "N/A";
 
-  const cachedShop = getCachedShop(storedUser?.id);
-  shop.value = cachedShop || null;
-
-  const user = await ensureCurrentUser();
-  const ownerId = user?.id || storedUser?.id;
-
-  if (!ownerId) {
-    error.value = "Unable to determine your owner account. Please log in.";
-    return;
+  // Clear shop first to ensure we get fresh data
+  shop.value = null;
+  const cachedShop = getCachedShop(ownerId);
+  if (cachedShop) {
+    shop.value = cachedShop;
   }
 
   try {
@@ -149,8 +143,6 @@ const loadMyShop = async () => {
     if (!myShops.length) {
       shop.value = null;
       setCachedShop(ownerId, null);
-      ownerName.value = storedUser?.name || "N/A";
-      ownerEmail.value = storedUser?.email || "N/A";
       return;
     }
 
@@ -168,19 +160,14 @@ const loadMyShop = async () => {
     ownerName.value =
       shop.value?.owner_name ||
       shop.value?.owner?.name ||
-      user?.name ||
       storedUser?.name ||
-      "N/A";
-    ownerEmail.value =
-      shop.value?.owner?.email ||
-      shop.value?.owner_email ||
-      user?.email ||
-      storedUser?.email ||
       "N/A";
   } catch (e) {
     console.error("Failed to load shop", e);
-    shop.value = null;
-    error.value = "Could not load your shop. Please try again later.";
+    if (!cachedShop) {
+      shop.value = null;
+    }
+    ownerName.value = storedUser?.name || "N/A";
   }
 };
 
@@ -192,6 +179,7 @@ const resetForm = () => {
   createForm.location = "";
   createForm.latitude = "";
   createForm.longitude = "";
+  createForm.map_url = "";
   createForm.status = "active";
   createForm.instagram = "";
   createForm.facebook = "";
@@ -205,15 +193,63 @@ const resetForm = () => {
 };
 
 const validateCreateForm = () => {
+  const errors = [];
   const name = createForm.name.trim();
   const address = createForm.address.trim();
   const phone = createForm.phone.trim();
   const description = createForm.description.trim();
 
-  if (!name || !address || !phone || !description) {
+  // Required fields
+  if (!name) errors.push('Name');
+  if (!address) errors.push('Address');
+  if (!phone) errors.push('Phone');
+  if (!description) errors.push('Description');
+
+  // Phone validation
+  if (phone && !/^[0-9+\-\s()]{8,20}$/.test(phone)) {
+    errors.push('Invalid phone format');
+  }
+
+  if (errors.length > 0) {
+    error.value = 'Please fill all required fields: ' + errors.join(', ');
     return false;
   }
-  return /^[0-9+\-\s()]{8,20}$/.test(phone);
+
+  return true;
+};
+
+const extractCoordinatesFromMapUrl = (value) => {
+  const url = String(value || "").trim();
+  if (!url) return null;
+
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (!match) continue;
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
+
+  return null;
+};
+
+const onMapUrlBlur = () => {
+  const coords = extractCoordinatesFromMapUrl(createForm.map_url);
+  if (!coords) return;
+  if (!createForm.latitude) {
+    createForm.latitude = String(coords.lat);
+  }
+  if (!createForm.longitude) {
+    createForm.longitude = String(coords.lng);
+  }
 };
 
 const applyShopImageFile = (file) => {
@@ -245,8 +281,9 @@ const onShopImageDrop = (event) => {
 const openCreateModal = () => {
   resetForm();
   // Pre-fill phone from user if available
-  if (currentUser.value?.phone) {
-    createForm.phone = currentUser.value.phone;
+  const storedUser = getStoredUser();
+  if (storedUser?.phone) {
+    createForm.phone = storedUser.phone;
   }
   showCreateModal.value = true;
 };
@@ -299,6 +336,7 @@ const updateShopImage = async (file) => {
     const updatedShop = data?.data || data || null;
     if (updatedShop && typeof updatedShop === "object") {
       shop.value = updatedShop;
+      setCachedShop(getUserId(), updatedShop);
     }
     await loadMyShop();
     if (changeImagePreview.value) {
@@ -328,10 +366,6 @@ const onShopImageError = () => {
 const shopImageSrc = computed(() => {
   if (changeImagePreview.value) return changeImagePreview.value;
   if (shopImageLoadFailed.value) return "";
-  // First check for img_url_full (provided by backend accessor)
-  if (shop.value?.img_url_full) {
-    return shop.value.img_url_full
-  }
   const raw =
     shop.value?.img_url ||
     shop.value?.image_url ||
@@ -358,6 +392,7 @@ const removeShopImage = async () => {
     const updatedShop = data?.data || data || null;
     if (updatedShop && typeof updatedShop === "object") {
       shop.value = updatedShop;
+      setCachedShop(getUserId(), updatedShop);
     }
     await loadMyShop();
   } catch (e) {
@@ -370,7 +405,7 @@ const removeShopImage = async () => {
 
 const createShop = async () => {
   if (!validateCreateForm()) {
-    error.value = "Please fill all required fields correctly.";
+    // Error message is already set in validateCreateForm
     return;
   }
 
@@ -378,18 +413,11 @@ const createShop = async () => {
   error.value = "";
 
   try {
-    const user = await ensureCurrentUser();
-    const ownerId = user?.id;
-    if (!ownerId) {
-      error.value = "Unable to determine owner account. Please log in again.";
-      return;
-    }
-
     let payload;
     // if an image file has been selected, use FormData to send multipart request
     if (shopImageFile.value) {
       payload = new FormData();
-      payload.append("owner_id", ownerId);
+      payload.append("owner_id", getUserId());
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
@@ -398,19 +426,21 @@ const createShop = async () => {
       if (createForm.latitude) payload.append("latitude", createForm.latitude);
       if (createForm.longitude)
         payload.append("longitude", createForm.longitude);
+      if (createForm.map_url) payload.append("map_url", createForm.map_url.trim());
       payload.append("phone", createForm.phone.trim());
       payload.append("status", createForm.status);
       // the backend expects the field name img_url
       payload.append("img_url", shopImageFile.value);
     } else {
       payload = {
-        owner_id: ownerId,
+        owner_id: getUserId(),
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
         location: createForm.location.trim() || null,
         latitude: createForm.latitude || null,
         longitude: createForm.longitude || null,
+        map_url: createForm.map_url.trim() || null,
         phone: createForm.phone.trim(),
         status: createForm.status,
         img_url: createForm.img_url || null,
@@ -421,6 +451,7 @@ const createShop = async () => {
     const createdShop = created?.data || created || null;
     if (createdShop && typeof createdShop === "object") {
       shop.value = createdShop;
+      setCachedShop(getUserId(), createdShop);
     }
     await loadMyShop();
 
@@ -465,25 +496,58 @@ onBeforeUnmount(() => {
       <p>Click Create Shop and fill in your shop information.</p>
     </div>
 
-    <div v-else class="shop-settings-card">
-      <div class="shop-settings-header">
-        <div class="settings-title">
-          <span class="settings-icon">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
+    <div v-else class="shop-card">
+      <!-- Shop Image - Small profile style -->
+      <div class="shop-header-row">
+        <div class="shop-image-section">
+          <div class="shop-avatar-stack">
+            <img
+              v-if="shopImageSrc"
+              :src="shopImageSrc"
+              alt="Shop Image"
+              class="shop-cover-image"
+              @error="onShopImageError"
+            />
+            <div v-else class="shop-cover-placeholder">
+              <svg
+                viewBox="0 0 24 24"
+                width="32"
+                height="32"
+                fill="none"
+                stroke="#94a3b8"
+                stroke-width="1.5"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+          </div>
+          <input
+            ref="changeImageInputRef"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            class="hidden-file-input"
+            @change="onChangeShopImage"
+          />
+          <div class="shop-image-actions">
+            <button
+              type="button"
+              class="change-image-btn"
+              :disabled="isUpdatingImage"
+              @click="triggerChangeImagePicker"
             >
-              <circle cx="12" cy="12" r="3" />
-              <path
-                d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"
-              />
-            </svg>
-          </span>
-          <div>
-            <h2>Ownership setting</h2>
-            <p>Manage your shop profile details and contact info.</p>
+              {{ isUpdatingImage ? "Updating..." : "Change Image" }}
+            </button>
+            <button
+              v-if="shop.img_url"
+              type="button"
+              class="delete-image-btn"
+              :disabled="isUpdatingImage"
+              @click="removeShopImage"
+            >
+              Delete Image
+            </button>
           </div>
         </div>
         <span
@@ -493,58 +557,6 @@ onBeforeUnmount(() => {
           {{ shop.status || "inactive" }}
         </span>
       </div>
-
-      <div class="shop-settings-profile">
-        <div class="shop-avatar-stack">
-          <img
-            v-if="shopImageSrc"
-            :src="shopImageSrc"
-            alt="Shop Image"
-            class="shop-cover-image"
-            @error="onShopImageError"
-          />
-          <div v-else class="shop-cover-placeholder">
-            <svg
-              viewBox="0 0 24 24"
-              width="32"
-              height="32"
-              fill="none"
-              stroke="#94a3b8"
-              stroke-width="1.5"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-              <circle cx="8.5" cy="8.5" r="1.5"></circle>
-              <polyline points="21 15 16 10 5 21"></polyline>
-            </svg>
-          </div>
-        </div>
-        <input
-          ref="changeImageInputRef"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          class="hidden-file-input"
-          @change="onChangeShopImage"
-        />
-        <div class="profile-actions">
-          <button
-            type="button"
-            class="profile-btn primary"
-            :disabled="isUpdatingImage"
-            @click="triggerChangeImagePicker"
-          >
-            {{ isUpdatingImage ? "Updating..." : "Upload Profile" }}
-          </button>
-          <button
-            type="button"
-            class="profile-btn ghost"
-            :disabled="isUpdatingImage || !shopImageSrc"
-            @click="removeShopImage"
-          >
-            Remove Profile
-          </button>
-        </div>
-      </div>
-
       <p
         v-if="error && !showCreateModal"
         class="error-text"
@@ -553,62 +565,48 @@ onBeforeUnmount(() => {
         {{ error }}
       </p>
 
-      <div class="settings-form-grid">
-        <label class="settings-field">
-          <span>Full name</span>
-          <input type="text" :value="ownerName || 'N/A'" readonly />
-        </label>
-        <label class="settings-field">
-          <span>Email address</span>
-          <div class="input-with-badge">
-            <input type="text" :value="ownerEmail || 'N/A'" readonly />
-            <span class="verified-badge">Verified</span>
-          </div>
-        </label>
-        <label class="settings-field">
-          <span>Shop name</span>
-          <input type="text" :value="shop.name || 'N/A'" readonly />
-        </label>
-        <label class="settings-field">
-          <span>Status</span>
-          <select :value="(shop.status || 'inactive').toLowerCase()" disabled>
-            <option value="active">active</option>
-            <option value="inactive">inactive</option>
-          </select>
-        </label>
-        <label class="settings-field">
-          <span>Phone number</span>
-          <input type="text" :value="shop.phone || 'N/A'" readonly />
-        </label>
-        <label class="settings-field">
-          <span>Password</span>
-          <div class="password-field">
-            <input
-              type="password"
-              placeholder="Enter new password or leave blank"
-              disabled
-            />
-            <button type="button" class="eye-btn" disabled>
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-              >
-                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
-          </div>
-        </label>
-        <label class="settings-field full">
-          <span>Shop Address</span>
-          <textarea
-            rows="3"
-            :value="shop.address || 'N/A'"
-            readonly
-          ></textarea>
-        </label>
+      <div class="shop-grid">
+        <div class="field">
+          <b>Shop Name</b><span>{{ shop.name || "N/A" }}</span>
+        </div>
+        <div class="field">
+          <b>Status</b>
+          <span
+            :class="['status-text', (shop.status || 'inactive').toLowerCase()]"
+          >
+            {{ shop.status || "N/A" }}
+          </span>
+        </div>
+        <div class="field">
+          <b>Owner Name</b><span>{{ ownerName }}</span>
+        </div>
+        <div class="field">
+          <b>created_at</b><span>{{ formatDateTime(shop.created_at) }}</span>
+        </div>
+        <div class="field field-wide">
+          <b>Phone</b><span>{{ shop.phone || "N/A" }}</span>
+        </div>
+        <div class="field field-wide">
+          <b>Address</b><span>{{ shop.address || "N/A" }}</span>
+        </div>
+        <div class="field field-wide">
+          <b>Description</b><span>{{ shop.description || "N/A" }}</span>
+        </div>
+        <div class="field">
+          <b>Latitude</b><span>{{ shop.latitude || "N/A" }}</span>
+        </div>
+        <div class="field">
+          <b>Longitude</b><span>{{ shop.longitude || "N/A" }}</span>
+        </div>
+        <div class="field field-wide">
+          <b>Map URL</b>
+          <span>
+            <a v-if="shop.map_url" :href="shop.map_url" target="_blank" rel="noopener noreferrer">
+              Open map link
+            </a>
+            <template v-else>N/A</template>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -726,6 +724,33 @@ onBeforeUnmount(() => {
                     v-model="createForm.location"
                     type="text"
                     placeholder="City, Country"
+                  />
+                </label>
+                <label class="form-field">
+                  <span>Latitude</span>
+                  <input
+                    v-model="createForm.latitude"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 11.5564"
+                  />
+                </label>
+                <label class="form-field">
+                  <span>Longitude</span>
+                  <input
+                    v-model="createForm.longitude"
+                    type="number"
+                    step="any"
+                    placeholder="e.g. 104.9282"
+                  />
+                </label>
+                <label class="form-field full">
+                  <span>Google Map URL</span>
+                  <input
+                    v-model="createForm.map_url"
+                    type="url"
+                    placeholder="https://maps.google.com/..."
+                    @blur="onMapUrlBlur"
                   />
                 </label>
                 <label class="form-field">

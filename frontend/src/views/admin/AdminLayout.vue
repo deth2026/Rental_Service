@@ -18,7 +18,7 @@ const adminStore = useAdminStore()
 const { t } = useI18n()
 
 // Professional Logo path from public folder
-const logoUrl = '/images/logo-removebg.png'
+const logoUrl = '/Images/logo-removebg.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)

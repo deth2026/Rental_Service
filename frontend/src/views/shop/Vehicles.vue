@@ -93,7 +93,10 @@ const fetchVehicles = async () => {
                 updatedAt: source.updated_at,
                 previewUrl: resolvedPreview,
                 photos: parsedPhotos,
-                base64Photos: parsedPhotos
+                base64Photos: parsedPhotos,
+                riderDetails: source.rider_details ?? '',
+                insuranceFee: source.insurance_fee ?? '',
+                taxesFee: source.taxes_fee ?? ''
             }
         })
     } catch (error) {
@@ -111,7 +114,16 @@ onMounted(async () => {
 
 const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
 const photoPreview = ref(sampleThumb)
-const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
+const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [], riderDetails: '', insuranceFee: '', taxesFee: '' })
+
+const normalizeOptionalNumber = (value) => {
+    if (value === '' || value === null || value === undefined) {
+        return null
+    }
+
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+}
 
 // Fetch user's shop
 const fetchUserShop = async () => {
@@ -214,7 +226,8 @@ const openCreate = async () => {
         shop: currentShop.value?.name || '',
         plate: '', description: '', fuel: '', transmission: '',
         price: '', status: 'Available', updatedAt: khTime(),
-        photos: [], base64Photos: []
+        photos: [], base64Photos: [],
+        riderDetails: '', insuranceFee: '', taxesFee: ''
     })
     photoPreview.value = sampleThumb
     modal.value = true
@@ -249,7 +262,10 @@ const openEdit = (v) => {
         status: v.status || 'Available',
         updatedAt: khTime(),
         photos: Array.isArray(photosData) ? photosData.map((_, i) => `Photo ${i + 1}`) : [],
-        base64Photos: photosData || []
+        base64Photos: photosData || [],
+        riderDetails: v.riderDetails || '',
+        insuranceFee: v.insuranceFee ?? '',
+        taxesFee: v.taxesFee ?? ''
     })
     // Use the stored full URL or fall back to sampleThumb
     photoPreview.value = imageUrl || sampleThumb
@@ -294,8 +310,13 @@ const saveVehicle = async () => {
         fuel: form.fuel,
         transmission: form.transmission,
         photos: form.base64Photos || [],
-        previewUrl: photoPreview.value
+        previewUrl: photoPreview.value,
+        rider_details: form.riderDetails,
+        insurance_fee: normalizeOptionalNumber(form.insuranceFee),
+        taxes_fee: normalizeOptionalNumber(form.taxesFee)
     }
+    console.log('=== Form Data ===', form)
+    console.log('=== Payload ===', payload)
 
     try {
         if (editId.value) {
@@ -322,6 +343,9 @@ const saveVehicle = async () => {
                     image_url_full: updatedData.image_url_full,
                     photos: form.base64Photos || [],
                     base64Photos: form.base64Photos || [],
+                    riderDetails: updatedData.rider_details ?? '',
+                    insuranceFee: updatedData.insurance_fee ?? '',
+                    taxesFee: updatedData.taxes_fee ?? '',
                     updatedAt: khTime()
                 }
             }
@@ -350,6 +374,9 @@ const saveVehicle = async () => {
                 image_url_full: newData.image_url_full,
                 photos: form.base64Photos || [],
                 base64Photos: form.base64Photos || [],
+                riderDetails: newData.rider_details ?? '',
+                insuranceFee: newData.insurance_fee ?? '',
+                taxesFee: newData.taxes_fee ?? '',
                 createdAt: khTime(),
                 updatedAt: khTime()
             }
@@ -618,6 +645,7 @@ const onPhotoDrop = async (e) => {
             <th>Vehicle</th>
             <th>Brand / Model</th>
             <th>Plate Number</th>
+            <th>Stock</th>
             <th>Price/Day</th>
             <th>Status</th>
             <th>Created At</th>
@@ -647,6 +675,7 @@ const onPhotoDrop = async (e) => {
             </td>
             <td>{{ v.brand }} / {{ v.model }}</td>
             <td>{{ v.plate }}</td>
+            <td>{{ v.total_vehicles ?? 1 }}</td>
             <td>${{ v.price }}</td>
             <td>
               <span :class="['status-badge', getStatusClass(v.status)]">
@@ -743,6 +772,7 @@ const onPhotoDrop = async (e) => {
                   placeholder="e.g. 2023 Luxury Sedan White"
                 />
               </div>
+              
               <div class="form-row">
                 <div class="form-group">
                   <label>Category</label>
@@ -821,6 +851,36 @@ const onPhotoDrop = async (e) => {
                     <option>Rented</option>
                     <option>Maintenance</option>
                   </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Rider Details</label>
+                  <select v-model="form.riderDetails">
+                    <option value="" disabled>Select Rider Details</option>
+                    <option>1 Rider</option>
+                    <option>2 Riders</option>
+                    <option>3 Riders</option>
+                    <option>4+ Riders</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Insurance Fee ($)</label>
+                  <input
+                    v-model="form.insuranceFee"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Taxes & Fees ($)</label>
+                  <input
+                    v-model="form.taxesFee"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
                 </div>
               </div>
             </div>

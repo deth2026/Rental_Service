@@ -14,5 +14,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    $frontendUrl = rtrim((string) env('FRONTEND_URL', 'http://localhost:5173'), '/');
+    return redirect()->away($frontendUrl);
 });

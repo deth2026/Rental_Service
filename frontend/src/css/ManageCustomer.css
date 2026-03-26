@@ -268,17 +268,17 @@
   text-transform: capitalize;
 }
 
-.type-new {
-  background: #e0e7ff;
-  color: #4338ca;
+.status-pill.status-new {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.type-active {
-  background: #d1fae5;
-  color: #047857;
+.status-pill.status-active {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-.type-returning {
+.status-pill.status-complete {
   background: #d1fae5;
   color: #047857;
 }

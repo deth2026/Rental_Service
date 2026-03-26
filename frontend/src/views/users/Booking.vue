@@ -1,11 +1,34 @@
 <template>
   <div class="booking-checkout-page">
-    <UserNavbar
-      :nav-items="navItems"
-      :active-label="activeNavLabel"
-      :show-fallback-message="true"
-      @logout-request="handleLogout"
-    />
+    <header class="topbar">
+  <button class="btn-back-top" type="button" @click="goHome">
+    <span class="back-arrow" aria-hidden="true">←</span>
+    Back to Home
+  </button>
+  <div class="brand">
+    <div class="brand-icon">
+      <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+    </div>
+    <span>Chong Choul</span>
+  </div>
+
+  <nav class="nav-links">
+    <button
+      v-for="item in navItems"
+      :key="item"
+      class="btn-reset nav-link"
+      :class="{ active: activeNav === item }"
+      @click="setActiveNav(item)"
+    >
+      {{ item }}
+    </button>
+  </nav>
+
+  <div class="top-actions">
+    <span class="user-display-name">{{ userDisplayName }}</span>
+    <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
+  </div>
+</header>
 
     <div class="page-container">
 
@@ -13,12 +36,6 @@
         <div class="title-block">
           <h1>Checkout</h1>
           <span class="step-pill">Step 2 of 3</span>
-        </div>
-        <div class="top-actions">
-          <button class="btn-back-top" type="button" @click="goHome">
-            <span class="back-arrow" aria-hidden="true">←</span>
-            Back to Home
-          </button>
         </div>
       </div>
 
@@ -93,6 +110,7 @@
               <button class="btn-secondary" type="button">Apply</button>
             </div>
           </div>
+
 
           <div class="card encryption-card">
             <h4>Secure Transaction</h4>
@@ -218,6 +236,7 @@
                 </div>
               </div>
 
+
               <div class="secure-info-box">
                 <p>
                   Your payment is processed securely via 256-bit SSL encryption.
@@ -326,6 +345,7 @@
 
                     <p class="payment-reference">Reference: {{ paymentId }}</p>
 
+
                     <div class="timer-pill">Code expires in 14:59</div>
 
                     <div class="steps-grid" style="margin-bottom: 20px;">
@@ -426,6 +446,7 @@
       </div>
     </footer>
 
+
     <div
       v-if="showConfirmModal"
       class="confirm-modal-overlay"
@@ -518,21 +539,17 @@ import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
-import UserNavbar from '@/components/UserNavbar.vue';
+import UserProfileMenu from '@/components/UserProfileMenu.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
 const router = useRouter();
 const route = useRoute();
-const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', fallbackMessage: 'View Details is not available yet.' },
-  { label: 'Bookings', route: '/bookings' }
-];
-const activeNavLabel = computed(() => {
-  const matched = navItems.find((item) => item.route && route.path.startsWith(item.route));
-  return matched?.label || 'Home';
-});
+
+// Header data from VehiclesByShop.vue
+const navItems = ['Home', 'View Details', 'Bookings'];
+const activeNav = ref('Home');
+const actionMessage = ref('');
 const avatarLoadFailed = ref(false);
 const currentUser = computed(() => userService.getCurrentUser());
 const userDisplayName = computed(() => currentUser.value?.name || 'customer');
@@ -551,6 +568,7 @@ const userAvatarUrl = computed(() => {
   return normalizeAvatarUrl(src);
 });
 
+
 const userInitials = computed(() => {
   const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return 'CU';
@@ -559,6 +577,15 @@ const userInitials = computed(() => {
 });
 
 // Header functions
+const setActiveNav = (item) => {
+  activeNav.value = item;
+  if (item === 'Home') {
+    router.replace('/view_shop');
+    return;
+  }
+  actionMessage.value = `${item} is not available yet.`;
+};
+
 const openProfile = () => {
   router.push('/user/profile');
 };
@@ -669,6 +696,7 @@ const loadVehicleDetail = async () => {
       loadAllPages("vehicles"),
       loadAllPages("shops"),
     ]);
+
 
     shopsById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
@@ -1080,6 +1108,7 @@ BANK DETAILS:
   document.body.removeChild(a);
   window.URL.revokeObjectURL(url);
 
+
   showSuccessModal.value = true;
 };
 
@@ -1166,3 +1195,4 @@ watch(
 );
 initDates();
 </script>
+

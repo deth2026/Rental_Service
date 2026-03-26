@@ -8,7 +8,7 @@ import { useNotifications } from '@/composables/useNotifications'
 
 const defaultNavItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'View Details', route: '#', fallbackMessage: 'My Bookings page is not available yet.' },
+  { label: 'My Booking', route: '/my-bookings'},
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -108,7 +108,7 @@ const handleNavClick = (item) => {
   if (hasRoute) {
     router.push(item.route)
   } else if (props.showFallbackMessage) {
-    notify(item.fallbackMessage || 'My Bookings page is not available yet.')
+    notify(item.fallbackMessage || 'My Booking page is not available yet.')
   }
 
   emit('nav-click', item)
@@ -124,9 +124,11 @@ const requestLogout = () => {
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar user-navbar">
     <div class="brand">
-      <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
+      <div class="brand-icon">
+        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+      </div>
       <span>Chong Choul</span>
     </div>
 
@@ -143,7 +145,6 @@ const requestLogout = () => {
     </nav>
 
     <div class="top-actions">
-      <span class="user-display-name">{{ userDisplayName }}</span>
       <div class="notification-wrapper" ref="notificationRoot">
         <button
           type="button"
@@ -166,119 +167,151 @@ const requestLogout = () => {
 </template>
 
 <style scoped>
-.topbar {
+.topbar.user-navbar {
+  width: auto;
+  height: 74px;
+  margin-inline: calc(50% - 50vw);
+  padding-inline: calc(32px + (50vw - 50%));
+  padding-block: 14px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 32px;
+  background: #ffffff;
+  border-bottom: 1px solid #d8dee7;
   position: sticky;
   top: 0;
-  z-index: 30;
-  width: 110%;
-  height: 80px;
+  z-index: 220;
+  box-sizing: border-box;
+}
+
+.topbar.user-navbar .brand {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-  backdrop-filter: blur(14px);
+  gap: 16px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1d4ed8;
+  white-space: nowrap;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 1.2rem;
-  font-weight: 800;
-  margin-left: -30px;
-}
-
-.brand-icon {
-  display: flex;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
-  color: #fff;
-  background: #dbeafe;
-}
-
-.brand-icon i {
+.topbar.user-navbar .brand span {
   color: #2563eb;
 }
 
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.topbar.user-navbar .brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #dbeafe;
+  display: grid;
+  place-items: center;
 }
 
-.nav-link {
-  padding: 10px 16px;
-  border-radius: 999px;
-  color: #4b5563;
-  font-size: 0.98rem;
-  font-weight: 600;
+.topbar.user-navbar .brand-icon-image {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.topbar.user-navbar .nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  justify-self: center;
+}
+
+.topbar.user-navbar .nav-link {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 700;
+  background: transparent;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.nav-link:hover,
-.nav-link.active {
-  background: #e8f0ff;
-  color: #165df5;
+.topbar.user-navbar .nav-link:hover {
+  background: #eef7ff;
+  color: #2563eb;
 }
 
-.top-actions {
+.topbar.user-navbar .nav-link.active {
+  background: #eef7ff;
+  color: #2563eb;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.topbar.user-navbar .top-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  justify-self: end;
+  white-space: nowrap;
 }
 
-.notification-wrapper {
+.topbar.user-navbar .notification-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.notification-btn {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  border: none;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  color: #fff;
+.topbar.user-navbar .notification-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid #d8dee7;
+  background: #f4f8fc;
+  color: #2563eb;
+  font-size: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
   cursor: pointer;
-  position: relative;
-  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.notification-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 30px rgba(99, 102, 241, 0.45);
+.topbar.user-navbar .notification-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
 }
 
-.notification-count {
+.topbar.user-navbar .notification-count {
   position: absolute;
   top: -4px;
   right: -4px;
-  min-width: 20px;
-  padding: 2px 4px;
+  min-width: 18px;
+  padding: 1px 5px;
   border-radius: 999px;
   background: #ef4444;
   color: #fff;
   font-size: 0.65rem;
   font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
-.notification-popup {
+.topbar.user-navbar .notification-popup {
   position: absolute;
+  top: calc(100% + 12px);
   right: 0;
-  top: calc(100% + 10px);
-  z-index: 40;
+  z-index: 260;
+}
+
+.topbar.user-navbar .notification-popup::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 18px;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  transform: rotate(45deg);
 }
 
 .notification-fade-enter-active,
@@ -289,43 +322,57 @@ const requestLogout = () => {
 .notification-fade-enter-from,
 .notification-fade-leave-to {
   opacity: 0;
-  transform: translateY(6px);
+  transform: translateY(-8px);
 }
 
-.user-display-name {
-  font-weight: 600;
-  color: #334155;
-}
-
-@media (max-width: 1100px) {
-  .topbar {
-    padding: 16px 20px;
+@media (max-width: 1080px) {
+  .topbar.user-navbar {
+    grid-template-columns: 1fr;
+    padding-inline: calc(20px + (50vw - 50%));
+    gap: 10px;
   }
 
-  .nav-links {
+  .topbar.user-navbar .nav-links {
+    justify-self: start;
+  }
+
+  .topbar.user-navbar .top-actions {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .topbar.user-navbar {
+    height: auto;
+    padding-block: 12px;
+    padding-inline: calc(12px + (50vw - 50%));
+  }
+
+  .topbar.user-navbar .nav-links {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .topbar.user-navbar .top-actions {
     gap: 8px;
   }
 
-  .brand {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 820px) {
-  .topbar {
-    flex-wrap: wrap;
-    justify-content: center;
+  .topbar.user-navbar .brand {
+    font-size: 16px;
   }
 
-  .nav-links {
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
+  .topbar.user-navbar .brand-icon {
+    width: 30px;
+    height: 30px;
   }
 
-  .top-actions {
-    order: 2;
+  .topbar.user-navbar .notification-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .topbar.user-navbar .notification-popup {
+    right: -6px;
   }
 }
 </style>

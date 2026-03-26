@@ -2,8 +2,8 @@
 import { RouterLink } from 'vue-router'
 
 const quickLinks = [
-  { label: 'Home', to: '/' },
-  { label: 'My Booking', to: '/bookings' },
+  { label: 'Home', to: '/view_shop' },
+  { label: 'My Booking', to: '/my-bookings' },
   { label: 'Promotions', to: '/promotions' }
 ]
 const paymentMethods = ['Visa', 'Mastercard', 'Bank Transfer']
@@ -66,7 +66,7 @@ const currentYear = new Date().getFullYear()
       <span>
         &copy; {{ currentYear }} Chong Choul Rides. Made with
         <span class="common-footer__heart" aria-hidden="true">&hearts;</span>
-        in Siem Reap.
+        in Cambodia.
       </span>
       <div class="common-footer__legal">
         <a href="#" class="common-footer__legal-link">Privacy Policy</a>
@@ -78,42 +78,55 @@ const currentYear = new Date().getFullYear()
 
 <style scoped>
 .common-footer {
-  background: #f4f7fb;
+  background: #f6f8fc;
   color: #1a2235;
-  padding: 38px 24px 26px;
+  padding: 34px 24px 24px;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 22px;
 }
 
 .common-footer__content {
-  max-width: 1200px;
+  max-width: 1080px;
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 32px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 36px;
   align-items: flex-start;
+}
+
+.common-footer__brand {
+  flex: 1 1 240px;
+  max-width: 280px;
+}
+
+.common-footer__col {
+  flex: 0 1 170px;
 }
 
 .common-footer__brand h4 {
   margin: 0 0 6px;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #0083ff;
+  color: #1380ff;
 }
 
 .common-footer__brand p {
   margin: 0;
-  color: #4e5c79;
+  max-width: 250px;
+  color: #66748d;
   line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 .common-footer__col h5 {
   margin: 0 0 10px;
-  font-size: 0.95rem;
-  letter-spacing: 0.08em;
-  color: #2a324d;
+  font-size: 0.96rem;
+  letter-spacing: 0.03em;
+  color: #2b3447;
 }
 
 .common-footer__link {
@@ -142,21 +155,21 @@ const currentYear = new Date().getFullYear()
 
 .common-footer__divider {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1080px;
   margin: 0 auto;
   border-top: 1px solid #cdd3e1;
 }
 
 .common-footer__bottom {
-  max-width: 1200px;
+  max-width: 1080px;
   margin: 0 auto;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   color: #5b6378;
-  padding-top: 12px;
+  padding-top: 10px;
 }
 
 .common-footer__legal {
@@ -177,7 +190,7 @@ const currentYear = new Date().getFullYear()
 
 @media (max-width: 1024px) {
   .common-footer__content {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 28px;
   }
 
   .common-footer__bottom {
@@ -193,7 +206,13 @@ const currentYear = new Date().getFullYear()
   }
 
   .common-footer__content {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .common-footer__brand,
+  .common-footer__col {
+    max-width: none;
   }
 }
 </style>

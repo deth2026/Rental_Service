@@ -4,7 +4,6 @@ import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
 import ManageCustomer from "./ManageCustomer.vue";
 import Payments from "./Payments.vue";
-import DamageReports from "./Demage_reports.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
 import MyShop from "./myShop.vue";
@@ -19,7 +18,9 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
+const logoUrl = "/Images/logo-removebg.png";
 const route = useRoute();
+const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
 const showToast = (message, type = "success") => {
   toast.value = { show: true, message, type };
@@ -29,6 +30,11 @@ const showToast = (message, type = "success") => {
 const { unreadCount } = useNotifications();
 const showNotifications = ref(false);
 const notificationRoot = ref(null);
+const isDarkMode = ref(false);
+
+const themeModeLabel = computed(() =>
+  isDarkMode.value ? "Dark mode" : "Light mode",
+);
 
 const badgeLabel = computed(() => {
   if (!unreadCount.value) return "";
@@ -41,6 +47,24 @@ const toggleNotifications = () => {
 
 const closeNotifications = () => {
   showNotifications.value = false;
+};
+
+const loadStoredTheme = () => {
+  try {
+    const storedTheme = window.localStorage.getItem(SHOP_DASHBOARD_THEME_KEY);
+    if (storedTheme === "dark" || storedTheme === "light") {
+      isDarkMode.value = storedTheme === "dark";
+      return;
+    }
+    isDarkMode.value =
+      window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+  } catch {
+    isDarkMode.value = false;
+  }
+};
+
+const toggleThemeMode = () => {
+  isDarkMode.value = !isDarkMode.value;
 };
 
 const goToOwnerNotifications = () => {
@@ -58,13 +82,12 @@ const handleDocumentClick = (event) => {
 };
 
 const sections = [
-  { id: "dashboard", label: "Dashboard", icon: "grid" },
-  { id: "my-shop", label: "My Shop", icon: "shop" },
-  { id: "vehicles", label: "Vehicles", icon: "car" },
-  { id: "bookings", label: "Bookings", icon: "calendar" },
-  { id: "payments", label: "Payments", icon: "dollar" },
-  { id: "damage", label: "Damage Reports", icon: "warning" },
-  { id: "reviews", label: "Reviews & Feedback", icon: "star" },
+  { id: "dashboard", label: "Dashboard", icon: "dashboard" },
+  { id: "my-shop", label: "My Shop", icon: "building" },
+  { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
+  { id: "bookings", label: "Bookings", icon: "calendar-check" },
+  { id: "payments", label: "Payments", icon: "wallet" },
+  { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
   { id: "manage-customer", label: "Manage Customer", icon: "users" },
@@ -75,7 +98,7 @@ const sections = [
 
 const active = ref("dashboard");
 const isSidebarCollapsed = ref(false);
-const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 240));
+const sidebarWidth = computed(() => (isSidebarCollapsed.value ? 84 : 272));
 const sessionUser = ref(getSessionUser() || {});
 const avatarLoadFailed = ref(false);
 const showUserMenu = ref(false);
@@ -116,19 +139,6 @@ const normalizeVehicleImageUrl = (url) => {
   if (normalized.startsWith("vehicles/")) return `/storage/${normalized}`;
   return `/${normalized}`;
 };
-
-const normalizeShopImageUrl = (url) => {
-  if (!url) return ''
-  if (/^https?:\/\//.test(url) || /^data:image\//.test(url)) return url
-  const normalized = String(url).replace(/^\/+/, '')
-  const origin = apiOrigin.value || ''
-  if (normalized.startsWith('storage/')) return `${origin}/${normalized}`
-  if (normalized.startsWith('shops/')) return `${origin}/storage/${normalized}`
-  return `${origin}/${normalized}`
-}
-
-const shopAvatarFallback =
-  'https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=900&q=80'
 
 const displayAvatarUrl = computed(() => {
   if (avatarLoadFailed.value) return "";
@@ -177,6 +187,17 @@ watch(
   }
 );
 
+watch(isDarkMode, (enabled) => {
+  try {
+    window.localStorage.setItem(
+      SHOP_DASHBOARD_THEME_KEY,
+      enabled ? "dark" : "light",
+    );
+  } catch {
+    // Ignore storage failures and keep the theme in memory for this session.
+  }
+});
+
 watch(
   () => route.meta.defaultSection,
   (section) => {
@@ -202,6 +223,7 @@ const onAvatarError = () => {
 };
 
 onMounted(() => {
+  loadStoredTheme();
   window.addEventListener("storage", refreshSessionUser);
   window.addEventListener("user-updated", refreshSessionUser);
   document.addEventListener("mousedown", handleDocumentClick);
@@ -291,6 +313,7 @@ const dashboardError = ref(null);
 
 // Shop data
 const shop = ref(null);
+const shopRating = ref({ average_rating: 0, total_ratings: 0 });
 const shopModal = ref(false);
 const shopForm = reactive({
   name: "",
@@ -451,6 +474,7 @@ const saveShop = async () => {
   isLoadingShop.value = true;
   try {
     const ownerId = Number(sessionUser.value?.id || getUserId());
+    let savedShop = null;
 
     // If an image file has been selected, use FormData to send multipart request
     if (shopImageFile.value) {
@@ -471,15 +495,17 @@ const saveShop = async () => {
 
       if (shop.value?.id) {
         // Update existing shop
-        await api.post(`/shops/${shop.value.id}?_method=PUT`, formData, {
+        const response = await api.post(`/shops/${shop.value.id}?_method=PUT`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
+        savedShop = response.data;
         showToast("Shop updated successfully!", "success");
       } else {
         // Create new shop
         const response = await api.post("/shops", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
+        savedShop = response.data;
         shop.value = response.data;
         showToast("Shop created successfully!", "success");
       }
@@ -500,11 +526,13 @@ const saveShop = async () => {
 
       if (shop.value?.id) {
         // Update existing shop
-        await api.put(`/shops/${shop.value.id}`, payload);
+        const response = await api.put(`/shops/${shop.value.id}`, payload);
+        savedShop = response.data;
         showToast("Shop updated successfully!", "success");
       } else {
         // Create new shop
         const response = await api.post("/shops", payload);
+        savedShop = response.data;
         shop.value = response.data;
         showToast("Shop created successfully!", "success");
       }
@@ -515,9 +543,18 @@ const saveShop = async () => {
     shopImageFile.value = null;
     shopImagePreview.value = "";
     await fetchShop();
+    await loadOwnerShopName();
+    form.shop = savedShop?.name || shop.value?.name || currentShopName.value;
   } catch (error) {
     console.error("Error saving shop:", error);
-    showToast("Failed to save shop. Please try again.", "error");
+    const validationErrors = error.response?.data?.errors;
+    const firstValidationError = validationErrors
+      ? Object.values(validationErrors)[0]
+      : null;
+    const errorMessage = Array.isArray(firstValidationError)
+      ? firstValidationError[0]
+      : firstValidationError || error.response?.data?.message || "Failed to save shop. Please try again.";
+    showToast(errorMessage, "error");
   } finally {
     isLoadingShop.value = false;
   }
@@ -527,6 +564,58 @@ const saveShop = async () => {
 fetchCities();
 
 // Fetch shop owner bookings for dashboard stats
+const normalizePaymentStatusKey = (value) => {
+  const raw = (value || "").toString().trim().toLowerCase();
+  if (!raw) return "pending";
+  const cleaned = raw.replace(/[\s-]+/g, "_");
+  const aliases = {
+    canceled: "cancelled",
+    cancel: "cancelled",
+    cencel: "cancelled",
+    comfirmed: "confirmed",
+    process: "processing",
+    processing: "processing",
+    in_process: "processing",
+    in_progress: "processing",
+    success: "paid",
+    successful: "paid",
+    succeeded: "paid",
+    complete: "completed",
+    completed: "completed",
+    confirm: "confirmed",
+    confirmed: "confirmed",
+    paid: "paid",
+    pending_payment: "pending",
+  };
+  return aliases[cleaned] || cleaned;
+};
+
+const isPaidPayment = (payment) => {
+  const statusKey = normalizePaymentStatusKey(payment?.status || payment?.payment_status);
+  return ["paid", "confirmed", "completed"].includes(statusKey);
+};
+
+const getPaymentDate = (payment) => {
+  return payment?.paid_at || payment?.created_at || payment?.date || "";
+};
+
+const getDateKey = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const shopMatchesEntry = (entry) => {
+  const shopId = Number(shop.value?.id);
+  if (!shopId) return true;
+  const bookingShopId = entry.shop_id || entry.booking?.shop_id || entry.vehicle?.shop_id;
+  return Number(bookingShopId) === shopId;
+};
+
 const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
   dashboardError.value = null;
@@ -543,41 +632,104 @@ const fetchShopBookings = async () => {
   }
 };
 
+const fetchFeedback = async () => {
+  try {
+    const response = await api.get("/feedback");
+    const raw = response.data?.data || response.data || [];
+    const data = Array.isArray(raw) ? raw : [];
+    const filtered = data.filter(shopMatchesEntry);
+    feedback.value = filtered.map((entry) => ({
+      ...entry,
+      rating: Number(entry.rating || entry.score || 0),
+    }));
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    feedback.value = [];
+  }
+};
+
+const fetchShopRating = async () => {
+  const shopId = shop.value?.id;
+  if (!shopId) {
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
+    return;
+  }
+  try {
+    const response = await api.get(`/shop-rating?shop_id=${shopId}`);
+    shopRating.value = response.data || { average_rating: 0, total_ratings: 0 };
+  } catch (error) {
+    console.error("Error fetching shop rating:", error);
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
+  }
+};
+
+const fetchShopPayments = async () => {
+  try {
+    const response = await api.get("/shop-payments");
+    const data = response.data || [];
+    payments.value = Array.isArray(data) ? data : data.data || [];
+    console.log("Dashboard payments loaded:", payments.value.length);
+  } catch (error) {
+    console.error("Error fetching shop payments:", error);
+    payments.value = [];
+  }
+};
+
 fetchShopBookings();
+fetchShopPayments();
 
 // Fetch vehicles from database
 const fetchVehicles = async () => {
   try {
+    // First get the shop to filter vehicles by shop_id
+    await fetchShop();
+    const shopId = shop.value?.id;
+    
+    // If no shop exists, don't fetch vehicles
+    if (!shopId) {
+      vehicles.value = [];
+      return;
+    }
+    
     const response = await vehicleApi.getAll();
-    vehicles.value = (response.data.data || response.data || []).map((v) => {
-      const normalizedStatus =
-        typeof v.status === "string" ? v.status.trim() : v.status;
-      const createdAtValue = v.created_at || v.create_at || v.createdAt || "";
-      return {
-        ...v,
-        name: v.name,
-        type: v.type,
-        category: v.type || v.category,
-        brand: v.brand,
-        model: v.model,
-        plate: v.plate_number,
-        plate_number: v.plate_number,
-        price: v.price_per_day,
-        price_per_day: v.price_per_day,
-        status: normalizedStatus || "Available",
-        description: v.description,
-        fuel: v.fuel_type,
-        fuel_type: v.fuel_type,
-        transmission: v.transmission,
-        createdAt: createdAtValue,
-        updatedAt: v.updated_at,
-        image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
-        image_url:
-          v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
-      };
-    });
+    const allVehicles = response.data.data || response.data || [];
+    
+    vehicles.value = allVehicles
+      .filter((v) => Number(v.shop_id) === Number(shopId))
+      .map((v) => {
+        const normalizedStatus =
+          typeof v.status === "string" ? v.status.trim() : v.status;
+        const createdAtValue = v.created_at || v.create_at || v.createdAt || "";
+        return {
+          ...v,
+          name: v.name,
+          type: v.type,
+          category: v.type || v.category,
+          brand: v.brand,
+          model: v.model,
+          plate: v.plate_number,
+          plate_number: v.plate_number,
+          price: v.price_per_day,
+          price_per_day: v.price_per_day,
+          status: normalizedStatus || "Available",
+          description: v.description,
+          fuel: v.fuel_type,
+          fuel_type: v.fuel_type,
+          transmission: v.transmission,
+          totalVehiclesInput: v.total_vehicles ?? 1,
+          riderDetails: v.rider_details ?? "",
+          insuranceFee: v.insurance_fee ?? "",
+          taxesFee: v.taxes_fee ?? "",
+          createdAt: createdAtValue,
+          updatedAt: v.updated_at,
+          image: v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
+          image_url:
+            v.image_url_full || normalizeVehicleImageUrl(v.image_url || ""),
+        };
+      });
   } catch (error) {
     console.error("Error fetching vehicles:", error);
+    vehicles.value = [];
   }
 };
 
@@ -603,6 +755,10 @@ const form = reactive({
   price: "",
   fuel: "",
   transmission: "",
+  totalVehiclesInput: 1,
+  riderDetails: "",
+  insuranceFee: "",
+  taxesFee: "",
   status: "Available",
   description: "",
   shop: "",
@@ -610,6 +766,15 @@ const form = reactive({
   createdAt: "",
   updatedAt: "",
 });
+
+const normalizeOptionalNumber = (value) => {
+  if (value === "" || value === null || value === undefined) {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 const currentShopName = ref("No Shop Found");
 
@@ -626,11 +791,6 @@ const getUserId = () => {
     return 1;
   }
 };
-
-const shopImageUrl = computed(() => {
-  if (!shop.value?.img_url) return ''
-  return normalizeShopImageUrl(shop.value.img_url)
-})
 
 const loadOwnerShopName = async () => {
   try {
@@ -696,6 +856,20 @@ initializeShopData = async () => {
 };
 
 initializeShopData().catch(() => {});
+
+watch(
+  shop,
+  (current) => {
+    if (current?.id) {
+      fetchFeedback().catch(() => {});
+      fetchShopRating().catch(() => {});
+      return;
+    }
+    feedback.value = [];
+    shopRating.value = { average_rating: 0, total_ratings: 0 };
+  },
+  { immediate: true },
+);
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -776,12 +950,17 @@ const filteredVehicles = computed(() => {
 
 const totalBookings = computed(() => bookings.value.length);
 const totalEarnings = computed(() =>
-  payments.value
-    .filter((p) => p.status === "Paid")
-    .reduce((a, b) => a + b.amount, 0),
+  payments.value.reduce((sum, payment) => {
+    if (!isPaidPayment(payment)) return sum;
+    return sum + Number(payment.amount || payment.total_price || 0);
+  }, 0),
 );
 const todayBookings = computed(
-  () => bookings.value.filter((b) => b.date === today.value).length,
+  () =>
+    bookings.value.filter((b) => {
+      const key = getDateKey(b.start_date || b.created_at || b.startDate);
+      return key && key === today.value;
+    }).length,
 );
 const totalVehicles = computed(() => vehicles.value.length);
 const availableVehicles = computed(
@@ -790,17 +969,33 @@ const availableVehicles = computed(
 const maintenanceVehicles = computed(
   () => vehicles.value.filter((v) => v.status === "Maintenance").length,
 );
-const monthlyIncome = computed(() => totalEarnings.value);
+const monthlyIncome = computed(() => {
+  const now = new Date();
+  return payments.value.reduce((sum, payment) => {
+    if (!isPaidPayment(payment)) return sum;
+    const dateStr = getPaymentDate(payment);
+    if (!dateStr) return sum;
+    const date = new Date(dateStr);
+    if (
+      !Number.isNaN(date.getTime()) &&
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth()
+    ) {
+      return sum + Number(payment.amount || payment.total_price || 0);
+    }
+    return sum;
+  }, 0);
+});
 const newCustomers = computed(
   () => new Set(bookings.value.map((b) => b.customer)).size,
 );
-const averageRating = computed(() =>
-  feedback.value.length
-    ? (
-        feedback.value.reduce((a, b) => a + b.rating, 0) / feedback.value.length
-      ).toFixed(1)
-    : "0",
-);
+const averageRating = computed(() => {
+  // Only show rating if shop has ratings
+  if (!shopRating.value.total_ratings || shopRating.value.total_ratings === 0) {
+    return "- ";
+  }
+  return String(shopRating.value.average_rating || "0");
+});
 const potentialPerDay = computed(() =>
   vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0),
 );
@@ -829,6 +1024,10 @@ const openCreate = async () => {
     price: "",
     fuel: "",
     transmission: "",
+    totalVehiclesInput: 1,
+    riderDetails: "",
+    insuranceFee: "",
+    taxesFee: "",
     status: "Available",
     description: "",
     shop: currentShopName.value,
@@ -849,6 +1048,10 @@ const openEdit = (v) => {
     price: v.price || "",
     fuel: v.fuel || "",
     transmission: v.transmission || "",
+    totalVehiclesInput: v.totalVehiclesInput ?? 1,
+    riderDetails: v.riderDetails || "",
+    insuranceFee: v.insuranceFee ?? "",
+    taxesFee: v.taxesFee ?? "",
     status: v.status || "Available",
     description: v.description || "",
     shop: v.shop || currentShopName.value,
@@ -907,6 +1110,10 @@ const saveVehicle = async () => {
     shop_id: shopId,
     fuel: form.fuel,
     transmission: form.transmission,
+    total_vehicles: normalizeOptionalNumber(form.totalVehiclesInput) ?? 1,
+    rider_details: form.riderDetails,
+    insurance_fee: normalizeOptionalNumber(form.insuranceFee),
+    taxes_fee: normalizeOptionalNumber(form.taxesFee),
     photos: form.image ? [form.image] : [],
     previewUrl: form.image,
   };
@@ -914,13 +1121,31 @@ const saveVehicle = async () => {
   try {
     if (editId.value) {
       // Update existing vehicle
-      await vehicleApi.update(editId.value, payload);
+      const response = await vehicleApi.update(editId.value, payload);
+      const updatedData = response.data;
       const index = vehicles.value.findIndex((v) => v.id === editId.value);
       if (index >= 0) {
         vehicles.value[index] = {
           ...vehicles.value[index],
           ...payload,
-          image: form.image,
+          name: updatedData.name,
+          type: updatedData.type,
+          category: updatedData.type,
+          brand: updatedData.brand,
+          plate: updatedData.plate_number,
+          price: updatedData.price_per_day,
+          status: updatedData.status,
+          description: updatedData.description,
+          fuel: updatedData.fuel_type,
+          transmission: updatedData.transmission,
+          totalVehiclesInput: updatedData.total_vehicles ?? form.totalVehiclesInput ?? 1,
+          riderDetails: updatedData.rider_details ?? "",
+          insuranceFee: updatedData.insurance_fee ?? "",
+          taxesFee: updatedData.taxes_fee ?? "",
+          image:
+            updatedData.image_url_full ||
+            normalizeVehicleImageUrl(updatedData.image_url || "") ||
+            form.image,
           updatedAt: khTime(),
         };
       }
@@ -929,12 +1154,30 @@ const saveVehicle = async () => {
     } else {
       // Create new vehicle - wait for API response
       const response = await vehicleApi.create(payload);
+      const newData = response.data;
 
       // Add vehicle to list with real ID from server
       vehicles.value.unshift({
-        id: response.data.id,
+        id: newData.id,
         ...payload,
-        image: form.image,
+        name: newData.name,
+        type: newData.type,
+        category: newData.type,
+        brand: newData.brand,
+        plate: newData.plate_number,
+        price: newData.price_per_day,
+        status: newData.status,
+        description: newData.description,
+        fuel: newData.fuel_type,
+        transmission: newData.transmission,
+        totalVehiclesInput: newData.total_vehicles ?? form.totalVehiclesInput ?? 1,
+        riderDetails: newData.rider_details ?? "",
+        insuranceFee: newData.insurance_fee ?? "",
+        taxesFee: newData.taxes_fee ?? "",
+        image:
+          newData.image_url_full ||
+          normalizeVehicleImageUrl(newData.image_url || "") ||
+          form.image,
         createdAt: khTime(),
         updatedAt: khTime(),
       });
@@ -1020,6 +1263,25 @@ const onPhotoDrop = (e) => {
 
 const iconSvg = (name) => {
   const icons = {
+    dashboard:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+    building:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/><path d="M11 21v-3h2v3"/></svg>',
+    motorcycle:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17.5" r="3.5"/><circle cx="17.5" cy="17.5" r="3.5"/><path d="M7 17.5h4.5l2.5-4.5h3.5"/><path d="M14 13h2.8l1.8 3.2"/><path d="M11.5 17.5l1.6-2.8"/><path d="M9.2 10.5H13l1.2 2.5"/><path d="M9.2 10.5 8 7.8H5.8"/></svg>',
+    "calendar-check":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="m9.5 15 2 2 4-4"/></svg>',
+    wallet:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M16 14h3"/><circle cx="15" cy="14" r=".8" fill="currentColor" stroke="none"/></svg>',
+    "shield-alert":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3 5 6v6c0 4.8 3 7.8 7 9 4-1.2 7-4.2 7-9V6z"/><path d="M12 9v4"/><circle cx="12" cy="16.5" r=".9" fill="currentColor" stroke="none"/></svg>',
+    "message-star":
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20 14a3 3 0 0 1-3 3H9l-4 4v-4H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z"/><path d="m12 7 1 2 2.2.3-1.6 1.6.4 2.2-2-1.1-2 1.1.4-2.2-1.6-1.6L11 9z"/></svg>',
+    badge:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/><path d="m9.5 12.5-1.3 8 3.8-2 3.8 2-1.3-8"/></svg>',
+    chart:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h16"/><path d="M7 16v-5M12 16V8M17 16v-3"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z"/></svg>',
     grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
     shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9l1.5-5h13L20 9"/><path d="M5 10h14v9H5z"/><path d="M9 14h6"/></svg>',
     car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
@@ -1048,17 +1310,36 @@ const iconSvg = (name) => {
     brand:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h1l2.5-3h11L18 7h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/><path d="M1 9h22"/></svg>',
     bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M10 17a2 2 0 0 0 4 0"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M4.93 4.93l1.77 1.77M17.3 17.3l1.77 1.77M2 12h2.5M19.5 12H22M4.93 19.07l1.77-1.77M17.3 6.7l1.77-1.77"/></svg>',
   };
   return icons[name] || "";
 };
 </script>
 
 <template>
-  <div class="page" :class="{ 'sidebar-collapsed': isSidebarCollapsed }">
+  <div
+    class="page"
+    :class="{
+      'sidebar-collapsed': isSidebarCollapsed,
+      'dark-theme': isDarkMode,
+    }"
+  >
     <aside
       class="sidebar"
       :style="{ width: `${sidebarWidth}px`, flexBasis: `${sidebarWidth}px` }"
     >
+      <div class="brand">
+        <div class="brand-badge">
+          <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
+        </div>
+        <div class="brand-text">
+          <h2>
+            Chong <span class="brand-cyan">Choul</span>
+          </h2>
+          <p>Shop Owner</p>
+        </div>
+      </div>
       <button
         class="sidebar-toggle"
         @click="isSidebarCollapsed = !isSidebarCollapsed"
@@ -1076,11 +1357,6 @@ const iconSvg = (name) => {
         </span>
       </button>
       <div class="menu-area">
-        <div class="menu-title">
-          <span class="menu-title-icon" v-html="iconSvg('grid')"></span>
-          <span class="menu-title-text">Menu</span>
-          <span class="menu-title-line"></span>
-        </div>
         <button
           v-for="item in sections"
           :key="item.id"
@@ -1112,6 +1388,18 @@ const iconSvg = (name) => {
           <h1>{{ sections.find((s) => s.id === active)?.label }}</h1>
         </div>
         <div class="topbar-right">
+          <button
+            type="button"
+            class="theme-toggle"
+            :title="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+            @click="toggleThemeMode"
+          >
+            <span
+              class="theme-toggle-icon"
+              v-html="iconSvg(isDarkMode ? 'sun' : 'moon')"
+            ></span>
+            <span class="theme-toggle-label">{{ themeModeLabel }}</span>
+          </button>
           <div class="notification-wrapper" ref="notificationRoot">
             <button
               type="button"
@@ -1251,7 +1539,7 @@ const iconSvg = (name) => {
             <h3>{{ newCustomers }}</h3>
             <b class="stat-icon icon-teal" v-html="iconSvg('users')"></b>
           </article>
-          <article class="card">
+          <article class="card" v-if="shopRating.total_ratings > 0">
             <span>Average Rating</span>
             <h3>{{ averageRating }}</h3>
             <b class="stat-icon icon-yellow" v-html="iconSvg('star')"></b>
@@ -1267,6 +1555,7 @@ const iconSvg = (name) => {
                   <th>Vehicle</th>
                   <th>Category</th>
                   <th>Plate Number</th>
+                  <th>Stock</th>
                   <th>Price/Day</th>
                   <th>Status</th>
                 </tr>
@@ -1276,11 +1565,12 @@ const iconSvg = (name) => {
                   <td>{{ vehicle.name }}</td>
                   <td>{{ vehicle.category }}</td>
                   <td>{{ vehicle.plate }}</td>
+                  <td>{{ vehicle.total_vehicles ?? 1 }}</td>
                   <td>${{ vehicle.price }}</td>
                   <td>{{ vehicle.status }}</td>
                 </tr>
                 <tr v-if="latestVehicles.length === 0">
-                  <td colspan="5" class="empty">No vehicles yet.</td>
+                  <td colspan="6" class="empty">No vehicles yet.</td>
                 </tr>
               </tbody>
             </table>
@@ -1309,11 +1599,7 @@ const iconSvg = (name) => {
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
-        <ReviewsFeedback />
-      </section>
-
-      <section v-else-if="active === 'damage'" class="damage-view">
-        <DamageReports />
+        <ReviewsFeedback :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'payments'" class="payments-view">
@@ -1374,6 +1660,7 @@ const iconSvg = (name) => {
                 <th>Vehicle</th>
                 <th>Category</th>
                 <th>Plate Number</th>
+                <th>Stock</th>
                 <th>Price/Day</th>
                 <th>Status</th>
                 <th>Created At</th>
@@ -1405,6 +1692,7 @@ const iconSvg = (name) => {
                 </td>
                 <td>{{ v.category }}</td>
                 <td>{{ v.plate }}</td>
+                <td>{{ v.total_vehicles ?? 1 }}</td>
                 <td>${{ v.price }}</td>
                 <td>
                   <span :class="['status-badge', getStatusClass(v.status)]">
@@ -1504,6 +1792,15 @@ const iconSvg = (name) => {
                   placeholder="e.g. 2023 Luxury Sedan White"
                 />
               </div>
+              <div class="form-group">
+                  <label>Total Vehicles</label>
+                  <input
+                    v-model="form.totalVehiclesInput"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                  />
+                </div>
               <div class="form-row">
                 <div class="form-group">
                   <label>Category</label>
@@ -1519,6 +1816,39 @@ const iconSvg = (name) => {
                   <input
                     v-model="form.brand"
                     placeholder="e.g. Toyota, Honda"
+                  />
+                </div>
+              </div>
+            </div>
+            <!-- Vehicle Information -->
+            <div class="form-card">
+              <h3 class="card-title">Booking</h3>
+              <div class="form-group">
+
+                  <label>Rider Details</label>
+                  <select v-model="form.riderDetails">
+                    <option value="" disabled>Select Rider Details</option>
+                    <option>1 Rider</option>
+                    <option>2 Riders</option>
+                    <option>3 Riders</option>
+                    <option>4+ Riders</option>
+                  </select>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Insurance Fee ($)</label>
+                  <input
+                    v-model="form.insuranceFee"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Taxes & Fees ($)</label>
+                  <input
+                    v-model="form.taxesFee"
+                    type="number"
+                    placeholder="$ 0.00"
                   />
                 </div>
               </div>
@@ -2129,21 +2459,44 @@ const iconSvg = (name) => {
 }
 
 .sidebar {
-  width: 240px;
-  flex: 0 0 240px;
+  width: 272px;
+  flex: 0 0 272px;
   min-width: 0;
-  background: #091633;
-  color: #c3d0f0;
-  border-right: 1px solid #1b2a52;
-  padding: 14px 10px;
-  position: relative;
-  overflow: visible;
+  background:
+    radial-gradient(1200px 600px at -200px -200px, rgba(34, 211, 238, 0.12), transparent 55%),
+    linear-gradient(180deg, #0b1220, #070a12);
+  color: #d2ddf2;
+  border-right: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 18px 12px 14px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition:
     width 0.2s ease,
     flex-basis 0.2s ease;
   z-index: 20;
   display: flex;
   flex-direction: column;
+}
+
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
 }
 
 .page.sidebar-collapsed .sidebar {
@@ -2153,9 +2506,9 @@ const iconSvg = (name) => {
 
 .sidebar-toggle {
   position: absolute;
-  right: 0;
-  transform: translateX(50%);
-  top: 72px;
+  right: 10px;
+  transform: none;
+  top: 86px;
   width: 32px !important;
   height: 32px !important;
   min-width: 32px;
@@ -2196,84 +2549,59 @@ const iconSvg = (name) => {
 .brand {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 10px;
-  padding: 2px 8px 16px;
-  border-bottom: 1px solid #1a2a52;
-  margin-bottom: 14px;
+  /* margin-right: 30px; */
+  padding: 4px 0 1px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  margin-bottom: 10px;
 }
 
-.brand-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+.brand-badge {
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
   background: #ffffff;
-  color: #0891b2;
-  font-weight: 700;
   display: grid;
   place-items: center;
-  flex: 0 0 48px;
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.24);
+  overflow: hidden;
+  flex: 0 0 62px;
 }
 
-.brand-icon :deep(svg) {
-  width: 48px;
-  height: 48px;
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+.brand-logo {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .brand h2 {
   margin: 0;
   color: #fff;
-  font-size: 18px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
   line-height: 1.1;
 }
 
-.brand p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: #8ca4df;
+.brand-cyan {
+  color: #22d3ee;
 }
 
-.menu-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  margin: 6px 6px 10px;
-  border-radius: 12px;
+.brand p {
+  margin: 4px 0 0;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #a8bce8;
-  background: linear-gradient(90deg, rgba(15, 33, 72, 0.8), rgba(15, 33, 72, 0.2));
-  border: 1px solid rgba(53, 78, 128, 0.6);
-}
-
-.menu-title-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #67e8f9;
-  background: rgba(34, 211, 238, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(34, 211, 238, 0.28);
-  flex: 0 0 22px;
-}
-
-.menu-title-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
-}
-
-.menu-title-text {
-  line-height: 1;
-}
-
-.menu-title-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(148, 163, 184, 0.55), rgba(148, 163, 184, 0));
+  color: #8ca4df;
 }
 
 .menu-item {
@@ -2283,46 +2611,49 @@ const iconSvg = (name) => {
   width: 100%;
   border: 0;
   background: transparent;
-  color: #c5d3f2;
-  border-radius: 10px;
+  color: rgba(226, 232, 240, 0.82);
+  border-radius: 12px;
   text-align: left;
-  padding: 10px 12px;
+  padding: 12px 12px;
   margin-bottom: 6px;
-  font-size: 15px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
 }
 
 .menu-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: #102551;
-  color: #9ab1e6;
+  width: 18px;
+  height: 18px;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.76);
   display: inline-grid;
   place-items: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex: 0 0 22px;
+  flex: 0 0 18px;
 }
 
 .menu-icon :deep(svg) {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 
 .menu-item:hover {
-  background: #0f2148;
+  background: rgba(148, 163, 184, 0.08);
+  color: #ffffff;
 }
 
 .menu-item.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.32);
   color: #fff;
-  border-left: 3px solid #22d3ee;
-  padding-left: 9px;
 }
 
 .menu-item.active .menu-icon {
-  background: rgba(34, 211, 238, 0.18);
   color: #22d3ee;
 }
 
@@ -2390,6 +2721,53 @@ const iconSvg = (name) => {
   margin-left: auto;
   margin-right: 80px;
   flex-shrink: 0;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #dbe1ea;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(59, 130, 246, 0.12);
+}
+
+.theme-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  line-height: 0;
+}
+
+.theme-toggle-icon :deep(svg) {
+  width: 16px;
+  height: 16px;
+}
+
+.theme-toggle-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .bell-btn {
@@ -3098,8 +3476,8 @@ textarea {
 
 @media (max-width: 1200px) {
   .sidebar {
-    width: 200px;
-    flex-basis: 200px;
+    width: 236px;
+    flex-basis: 236px;
   }
 
   .stats {
@@ -3107,11 +3485,11 @@ textarea {
   }
 
   .brand h2 {
-    font-size: 24px;
+    font-size: 19px;
   }
 
   .brand p {
-    font-size: 14px;
+    font-size: 11px;
   }
 
   .dashboard-view h2 {
@@ -3148,8 +3526,8 @@ textarea {
   }
 
   .sidebar-toggle {
-    right: 0;
-    transform: translateX(50%);
+    right: 8px;
+    transform: none;
     top: 10px;
   }
 
@@ -3229,7 +3607,7 @@ textarea {
   }
 
   .brand h2 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .brand p {
@@ -4243,7 +4621,8 @@ textarea {
 /* Sidebar layout helpers */
 .menu-area {
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
+  padding-right: 2px;
 }
 
 /* Sidebar Profile Section */
@@ -4335,24 +4714,23 @@ textarea {
 }
 
 .sidebar-footer {
-  border-top: 1px solid #1a2a52;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
   padding: 8px 0 0;
   flex-shrink: 0;
 }
 
 .logout-item {
-  color: #fca5a5 !important;
+  color: #fb7185 !important;
   margin-top: auto;
   flex-shrink: 0;
 }
 
 .logout-icon {
-  background: rgba(239, 68, 68, 0.18) !important;
-  color: #f87171 !important;
+  color: #fb7185 !important;
 }
 
 .logout-item:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
+  background: rgba(251, 113, 133, 0.08) !important;
 }
 
 /* Vehicle name cell with car icon */
@@ -4792,5 +5170,266 @@ textarea {
 .notification-fade-enter-from,
 .notification-fade-leave-to {
   opacity: 0;
+}
+
+.page.dark-theme {
+  background: #060f1d;
+  color: #e2e8f0;
+}
+
+.page.dark-theme .main {
+  background: linear-gradient(180deg, #081120 0%, #0f172a 100%);
+}
+
+.page.dark-theme .sidebar {
+  background: #071121;
+  color: #bfd0ee;
+  border-right-color: #182742;
+}
+
+.page.dark-theme .sidebar-toggle {
+  background: #121d31;
+  border-color: #24344f;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+}
+
+.page.dark-theme .toggle-icon,
+.page.dark-theme .menu-title,
+.page.dark-theme .menu-label,
+.page.dark-theme .sidebar-profile-btn,
+.page.dark-theme .sidebar-user-info p {
+  color: #9fb2d4;
+}
+
+.page.dark-theme .sidebar-user-info strong,
+.page.dark-theme .brand-text,
+.page.dark-theme .menu-item.active,
+.page.dark-theme .logout-item {
+  color: #e2e8f0;
+}
+
+.page.dark-theme .menu-item:hover {
+  background: #102142;
+  color: #f8fafc;
+}
+
+.page.dark-theme .menu-item.active {
+  background: #12264c;
+}
+
+.page.dark-theme .topbar {
+  background: rgba(10, 18, 32, 0.95);
+  border-bottom-color: #20314b;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.28);
+}
+
+.page.dark-theme .topbar h1,
+.page.dark-theme .topbar-icon,
+.page.dark-theme .user-info strong,
+.page.dark-theme .dropdown-user-info strong,
+.page.dark-theme .dashboard-view h2,
+.page.dark-theme .card h3,
+.page.dark-theme .panel h3,
+.page.dark-theme .activity-card h3,
+.page.dark-theme .card-title,
+.page.dark-theme .shop-modal-header h2,
+.page.dark-theme .form-card__header h3,
+.page.dark-theme th,
+.page.dark-theme td strong {
+  color: #f8fafc;
+}
+
+.page.dark-theme .sub,
+.page.dark-theme .card span,
+.page.dark-theme .card small,
+.page.dark-theme .panel p,
+.page.dark-theme .user-info p,
+.page.dark-theme .dropdown-user-info p,
+.page.dark-theme .shop-modal-sub,
+.page.dark-theme .form-card__header p,
+.page.dark-theme td,
+.page.dark-theme .delete-message,
+.page.dark-theme .delete-warning {
+  color: #94a3b8;
+}
+
+.page.dark-theme .theme-toggle {
+  background: #111b2f;
+  border-color: #24344f;
+  color: #dbeafe;
+}
+
+.page.dark-theme .theme-toggle:hover {
+  background: #18253d;
+  border-color: #36527d;
+  color: #ffffff;
+}
+
+.page.dark-theme .bell-btn {
+  background: #111b2f;
+  border-color: #24344f;
+  color: #cbd5e1;
+}
+
+.page.dark-theme .bell-btn:hover,
+.page.dark-theme .user-dropdown:hover {
+  background: #162235;
+  border-color: #31445f;
+  color: #f8fafc;
+}
+
+.page.dark-theme .user-dropdown {
+  border-color: transparent;
+}
+
+.page.dark-theme .dropdown-arrow {
+  color: #94a3b8;
+}
+
+.page.dark-theme .user-dropdown-menu,
+.page.dark-theme .dashboard-cards .card,
+.page.dark-theme .card,
+.page.dark-theme .activity-card,
+.page.dark-theme .panel,
+.page.dark-theme .table-wrap,
+.page.dark-theme .modal-like-page,
+.page.dark-theme .add-vehicle-modal,
+.page.dark-theme .delete-modal,
+.page.dark-theme .shop-modal,
+.page.dark-theme .form-card {
+  background: #111a2d;
+  border-color: #22314a;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.page.dark-theme .dropdown-header,
+.page.dark-theme .shop-modal-header,
+.page.dark-theme .shop-modal-footer,
+.page.dark-theme .add-vehicle-header,
+.page.dark-theme .add-vehicle-footer {
+  background: #0d1627;
+  border-color: #22314a;
+}
+
+.page.dark-theme .dropdown-divider {
+  background: #22314a;
+}
+
+.page.dark-theme table {
+  background: transparent;
+}
+
+.page.dark-theme thead {
+  background: #0f172a;
+}
+
+.page.dark-theme tbody tr {
+  border-bottom-color: #1f2b40;
+}
+
+.page.dark-theme tbody tr:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.page.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+.page.dark-theme select,
+.page.dark-theme textarea,
+.page.dark-theme .rounded-input,
+.page.dark-theme .shop-name-input[readonly] {
+  background: #0b1322;
+  color: #e2e8f0;
+  border-color: #22314a;
+}
+
+.page.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"])::placeholder,
+.page.dark-theme textarea::placeholder {
+  color: #64748b;
+}
+
+.page.dark-theme input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+.page.dark-theme select:focus,
+.page.dark-theme textarea:focus,
+.page.dark-theme .rounded-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
+}
+
+.page.dark-theme .delete-icon-wrapper {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.page.dark-theme .delete-title,
+.page.dark-theme .delete-cancel-btn {
+  color: #f8fafc;
+}
+
+.page.dark-theme .delete-cancel-btn {
+  background: #111a2d;
+  border-color: #2a3953;
+}
+
+.page.dark-theme .delete-cancel-btn:hover {
+  background: #172236;
+  border-color: #3b4d69;
+  color: #ffffff;
+}
+
+.page.dark-theme .delete-vehicle-name {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fda4af;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel) {
+  background: #111a2d;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+  border: 1px solid #22314a;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel__header h3),
+.page.dark-theme .notification-popup :deep(.notification-item__title) {
+  color: #f8fafc;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel__subtitle),
+.page.dark-theme .notification-popup :deep(.notification-item__description),
+.page.dark-theme .notification-popup :deep(.notification-item__time),
+.page.dark-theme .notification-popup :deep(.notification-panel__empty),
+.page.dark-theme .notification-popup :deep(.notification-panel__state) {
+  color: #94a3b8;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-panel__state) {
+  background: #0b1322;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-tab),
+.page.dark-theme .notification-popup :deep(.mark-read) {
+  background: #0b1322;
+  color: #cbd5e1;
+  border-color: #22314a;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-tab.active),
+.page.dark-theme .notification-popup :deep(.view-all) {
+  background: #1d4ed8;
+  color: #ffffff;
+}
+
+.page.dark-theme .notification-popup :deep(.notification-item) {
+  background: #0d1627;
+  border-color: #22314a;
+  box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .theme-toggle {
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .theme-toggle-label {
+    display: none;
+  }
 }
 </style>

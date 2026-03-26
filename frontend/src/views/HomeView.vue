@@ -23,7 +23,7 @@
             Rent motorbikes, cars, and bicycles from trusted local shops—fast booking, fair prices, and flexible plans.
           </p>
           <div class="hero-actions">
-            <RouterLink class="hero-btn primary" to="/view_shop">Explore Vehicles</RouterLink>
+            <RouterLink class="hero-btn primary" to="/register">Explore Vehicles</RouterLink>
             <RouterLink class="hero-btn ghost" to="/register">List Your Shop</RouterLink>
           </div>
         </div>
@@ -113,7 +113,7 @@
       <div class="footer-main">
         <div class="footer-brand">
           <div class="footer-brand-head">
-            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/Images/logo.png" />
+            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/Images/logo.png" brandName="CHONG CHOUL" />
           </div>
           <p class="footer-desc">The premier vehicle rental marketplace in Cambodia.</p>
           <div class="footer-social" aria-label="Social media">

@@ -103,7 +103,7 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ],
         ];
->>>>>>> 35f1dcfbac65e45eb17ec38bee0ad08097768b82
+>>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
 
         foreach ($categories as $category) {
             \App\Models\Category::updateOrCreate(['name' => $category['name']], $category);
@@ -156,16 +156,6 @@ class DatabaseSeeder extends Seeder
 <<<<<<< HEAD
         \App\Models\City::create([
             'name' => 'Sihanoukville'
-        ]);
-
-        // Create shops
-        $shop1 = \App\Models\Shop::create([
-            'owner_id' => $shopOwner->id,
-            'name' => 'Phnom Penh City Rides',
-            'address' => 'Street 178, Daun Penh, Phnom Penh',
-            'phone' => '+855 12 345 678',
-            'status' => 'active',
-            'img_url' => 'https://images.unsplash.com/photo-1590674899484-d5640e854abe?auto=format&fit=crop&w=600&q=80',
         ]);
 =======
         $vehicleDefinitions = [
@@ -235,7 +225,6 @@ class DatabaseSeeder extends Seeder
                 'image_url' => 'https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=1000&q=80',
             ],
         ];
->>>>>>> 35f1dcfbac65e45eb17ec38bee0ad08097768b82
 
         foreach ($vehicleDefinitions as $vehicleDefinition) {
             $shopName = $vehicleDefinition['shop'];
@@ -253,6 +242,9 @@ class DatabaseSeeder extends Seeder
                 $data + ['shop_id' => $shop->id]
             );
         }
+<<<<<<< HEAD
+>>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
+=======
 
         $testUser = \App\Models\User::where('email', 'test@example.com')->first();
         $vehicle = \App\Models\Vehicle::where('status', 'available')->first();
@@ -280,13 +272,6 @@ class DatabaseSeeder extends Seeder
                 ['changed_at' => now()]
             );
 
-<<<<<<< HEAD
-        // Create cities
-        \App\Models\City::create(['name' => 'Phnom Penh', 'status' => 'active']);
-        \App\Models\City::create(['name' => 'Siem Reap', 'status' => 'active']);
-        \App\Models\City::create(['name' => 'Battambang', 'status' => 'active']);
-        \App\Models\City::create(['name' => 'Sihanoukville', 'status' => 'active']);
-=======
             if (!NotificationRecord::where('related_type', Booking::class)
                 ->where('related_id', $booking->id)
                 ->where('title', 'Booking received')
@@ -310,6 +295,6 @@ class DatabaseSeeder extends Seeder
                 NotificationService::messageReceived($message);
             }
         }
->>>>>>> 35f1dcfbac65e45eb17ec38bee0ad08097768b82
+>>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
     }
 }

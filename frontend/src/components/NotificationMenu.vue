@@ -113,7 +113,7 @@ const formatNotificationTitle = (item) => {
     </div>
 
     <div class="notification-panel__list">
-      <div v-if="isLoading" class="notification-panel__state">Loading notifications…</div>
+      <div v-if="isLoading" class="notification-panel__state">Loading notifications...</div>
       <div v-else-if="error" class="notification-panel__state notification-panel__state--error">
         {{ error }}
       </div>
@@ -151,7 +151,7 @@ const formatNotificationTitle = (item) => {
 
 <style scoped>
 .notification-panel {
-  width: 420px;
+  width: min(420px, calc(100vw - 24px));
   padding: 22px;
   border-radius: 28px;
   background: #ffffff;
@@ -162,7 +162,7 @@ const formatNotificationTitle = (item) => {
 }
 
 .panel-slim {
-  min-width: 360px;
+  min-width: min(360px, calc(100vw - 24px));
 }
 
 .notification-panel__header {
