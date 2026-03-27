@@ -1,7 +1,14 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { couponApi } from '@/services/api'
 import '../../css/Coupons.css'
+
+const props = defineProps({
+  shopId: {
+    type: [String, Number],
+    default: null
+  }
+})
 
 const loading = ref(true)
 const error = ref(null)
@@ -24,7 +31,7 @@ const showToast = (message, type = 'success') => {
 const fetchCoupons = async () => {
   try {
     loading.value = true
-    const response = await couponApi.getAll()
+    const response = await couponApi.getAll(props.shopId ? { shop_id: props.shopId } : {})
     const data = response.data.data || response.data || []
     coupons.value = data.map((c) => ({
       id: c.id,
@@ -44,6 +51,13 @@ const fetchCoupons = async () => {
 }
 
 onMounted(fetchCoupons)
+
+watch(
+  () => props.shopId,
+  () => {
+    fetchCoupons()
+  }
+)
 
 // Create / Edit modal
 const showModal = ref(false)

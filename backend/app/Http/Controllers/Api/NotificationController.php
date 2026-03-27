@@ -31,13 +31,15 @@ class NotificationController extends Controller
             ->orderByDesc('created_at');
 
         $includeAllForAdmin = filter_var($request->query('include_all'), FILTER_VALIDATE_BOOLEAN);
-        if (!$includeAllForAdmin || strtolower((string) ($user->role ?? '')) !== 'admin') {
+        if ($this->isAdmin($user) && $includeAllForAdmin) {
+            // Admin overview intentionally sees all records when requested.
+        } elseif ($this->isAdmin($user)) {
             $query->where(function ($builder) use ($user) {
-                $builder->where('user_id', $user->id);
-                if ($user->role) {
-                    $builder->orWhere('role', $user->role);
-                }
+                $builder->where('user_id', $user->id)
+                    ->orWhere('role', 'admin');
             });
+        } else {
+            $query->where('user_id', $user->id);
         }
 
         $shopId = $request->query('shop_id');
@@ -72,12 +74,15 @@ class NotificationController extends Controller
         }
 
         $user = $request->user();
-        $query = NotificationRecord::where(function ($builder) use ($user) {
-            $builder->where('user_id', $user->id);
-            if ($user->role) {
-                $builder->orWhere('role', $user->role);
-            }
-        });
+        $query = NotificationRecord::query();
+        if ($this->isAdmin($user)) {
+            $query->where(function ($builder) use ($user) {
+                $builder->where('user_id', $user->id)
+                    ->orWhere('role', 'admin');
+            });
+        } else {
+            $query->where('user_id', $user->id);
+        }
         $shopId = $request->input('shop_id');
         if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
             $query->where('shop_id', $shopId);
@@ -148,7 +153,7 @@ class NotificationController extends Controller
         if ($notification->user_id === $user->id) {
             return true;
         }
-        if ($notification->role && $notification->role === $user->role) {
+        if ($this->isAdmin($user) && $notification->role === 'admin') {
             return true;
         }
         abort(403);

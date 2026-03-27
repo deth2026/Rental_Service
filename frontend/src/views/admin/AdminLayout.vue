@@ -18,7 +18,7 @@ const adminStore = useAdminStore()
 const { t } = useI18n()
 
 // Admin logo from public/images
-const logoUrl = '/images/logo-removebg.png'
+const logoUrl = '/Images/logo-removebg.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)
@@ -102,10 +102,19 @@ const toggleNotificationsPopup = () => {
 const formatPopupTime = (timestamp) => {
   const value = Number(new Date(timestamp))
   if (!Number.isFinite(value)) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    dateStyle: 'short',
-    timeStyle: 'short'
-  }).format(value)
+  const diff = Date.now() - value
+  if (diff < 60000) return 'Just now'
+  if (diff < 3600000) return `${Math.max(1, Math.round(diff / 60000))}m ago`
+  if (diff < 86400000) return `${Math.max(1, Math.round(diff / 3600000))}h ago`
+  return `${Math.max(1, Math.round(diff / 86400000))}d ago`
+}
+
+const popupAvatarFallback = (name) => {
+  const source = String(name || 'N').trim()
+  const parts = source.split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'N'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
 }
 
 const canManageReadState = (item) => item?.role === 'admin'
@@ -377,21 +386,29 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
                     :key="item.id"
                     class="notifications-popup__item"
                   >
-                    <div>
-                      <p class="notifications-popup__title">{{ item.action }}</p>
-                      <p class="notifications-popup__message">{{ item.message }}</p>
-                      <span class="notifications-popup__time">
-                        {{ formatPopupTime(item.timestamp) }}
-                      </span>
+                    <div class="notifications-popup__profile">
+                      <div class="notifications-popup__avatar-wrap">
+                        <img
+                          v-if="item.user?.avatar"
+                          :src="item.user.avatar"
+                          :alt="item.user?.name || 'User avatar'"
+                          class="notifications-popup__avatar"
+                        />
+                        <div v-else class="notifications-popup__avatar notifications-popup__avatar--fallback">
+                          {{ popupAvatarFallback(item.user?.name) }}
+                        </div>
+                        <span v-if="item.status === 'unread'" class="notifications-popup__unread-dot"></span>
+                      </div>
+                      <div class="notifications-popup__content-block">
+                        <p class="notifications-popup__title">
+                          Notification from {{ item.user?.name || 'System' }}
+                        </p>
+                        <p class="notifications-popup__message">{{ item.message || item.action }}</p>
+                        <span class="notifications-popup__time">
+                          {{ formatPopupTime(item.timestamp) }}
+                        </span>
+                      </div>
                     </div>
-                    <button
-                      v-if="canManageReadState(item)"
-                      type="button"
-                      class="ghost-pill ghost-pill--mini"
-                      @click="handleToggleNotificationRead(item)"
-                    >
-                      {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
-                    </button>
                   </li>
                 </ul>
               </section>
@@ -464,7 +481,8 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 340px;
+  width: 460px;
+  max-width: min(460px, calc(100vw - 24px));
   background: #ffffff;
   border-radius: 18px;
   padding: 0.85rem;
@@ -504,25 +522,93 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
   gap: 0.75rem;
 }
 .notifications-popup__item {
+  padding: 1rem 1.1rem;
+  border-radius: 24px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+.notifications-popup__profile {
   display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: flex-start;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+.notifications-popup__avatar-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  flex: 0 0 64px;
+}
+.notifications-popup__avatar {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  display: block;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.24);
+}
+.notifications-popup__avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  min-height: 64px;
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 800;
+  border-radius: 50%;
+  flex: 0 0 64px;
+}
+.notifications-popup__unread-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #ef4444;
+  border: 3px solid #fff;
+}
+.notifications-popup__content-block {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 .notifications-popup__title {
   margin: 0;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 800;
   color: #111827;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .notifications-popup__message {
-  margin: 0.2rem 0;
-  font-size: 0.85rem;
+  margin: 0.2rem 0 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.35;
   color: #4b5563;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .notifications-popup__time {
-  font-size: 0.75rem;
-  color: #6b7280;
+  display: inline-block;
+  font-size: 0.8rem;
+  color: #9ca3af;
 }
 .notifications-popup__empty {
   text-align: center;
@@ -561,6 +647,26 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
     right: -10px;
     left: auto;
     width: 90vw;
+  }
+
+  .notifications-popup__item {
+    padding: 0.9rem 1rem;
+  }
+
+  .notifications-popup__avatar {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+  }
+
+  .notifications-popup__avatar-wrap,
+  .notifications-popup__avatar--fallback {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    flex-basis: 56px;
   }
 }
 </style>

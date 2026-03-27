@@ -3,9 +3,13 @@
 namespace App\Services;
 
 use App\Models\Booking;
+use App\Models\Coupon;
 use App\Models\DamageReport;
+use App\Models\Feedback;
 use App\Models\Message;
 use App\Models\NotificationRecord;
+use App\Models\Payment;
+use App\Models\Rating;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
@@ -42,6 +46,7 @@ class NotificationService
 
     public static function bookingCreated(Booking $booking): ?NotificationRecord
     {
+        $booking->loadMissing(['user', 'vehicle', 'shop.owner']);
         $user = self::resolveUser($booking);
         if (!$user) {
             return null;
@@ -75,6 +80,19 @@ class NotificationService
             ]
         );
 
+        self::notifyAdmins(
+            'New booking placed',
+            "{$user->name} created booking {$code}" . ($shop ? " for {$shop}" : '') . '.',
+            [
+                'type' => 'booking',
+                'related_type' => Booking::class,
+                'related_id' => $booking->id,
+                'attributes' => [
+                    'shop_id' => self::shopIdFromBooking($booking),
+                ],
+            ]
+        );
+
         return self::sendToUser($user, 'Booking received', $message, [
             'type' => 'booking',
             'related_type' => Booking::class,
@@ -84,6 +102,7 @@ class NotificationService
 
     public static function bookingStatusChanged(Booking $booking, string $status): ?NotificationRecord
     {
+        $booking->loadMissing(['user', 'vehicle', 'shop.owner']);
         $user = self::resolveUser($booking);
         if (!$user) {
             return null;
@@ -118,7 +137,193 @@ class NotificationService
             );
         }
 
+        self::notifyAdmins(
+            $template['title'],
+            "Booking {$code} for {$user->name} is now {$statusKey}.",
+            [
+                'type' => 'booking',
+                'related_type' => Booking::class,
+                'related_id' => $booking->id,
+                'attributes' => [
+                    'shop_id' => self::shopIdFromBooking($booking),
+                ],
+            ]
+        );
+
         return $result;
+    }
+
+    public static function couponCreated(Coupon $coupon): ?NotificationRecord
+    {
+        $coupon->loadMissing('shop.owner');
+        $shop = $coupon->shop;
+        if (!$shop) {
+            return null;
+        }
+
+        $owner = $shop->owner;
+        $title = 'New coupon created';
+        $code = strtoupper(trim((string) $coupon->code));
+        $shopName = $shop->name ?? 'your shop';
+        $message = "Coupon {$code} was created for {$shopName}.";
+
+        if ($owner) {
+            self::sendToUser($owner, $title, $message, [
+                'type' => 'coupon',
+                'related_type' => Coupon::class,
+                'related_id' => $coupon->id,
+                'attributes' => [
+                    'role' => 'shop_owner',
+                    'shop_id' => $shop->id,
+                ],
+            ]);
+        }
+
+        return self::notifyAdmins($title, "{$shopName} created coupon {$code}.", [
+            'type' => 'coupon',
+            'related_type' => Coupon::class,
+            'related_id' => $coupon->id,
+            'attributes' => [
+                'shop_id' => $shop->id,
+            ],
+        ]);
+    }
+
+    public static function paymentPaid(Payment $payment): ?NotificationRecord
+    {
+        $payment->loadMissing(['booking.user', 'booking.vehicle', 'booking.shop.owner']);
+        $booking = $payment->booking;
+        if (!$booking) {
+            return null;
+        }
+
+        $code = self::formatBookingCode($booking);
+        $shopId = self::shopIdFromBooking($booking);
+        $user = self::resolveUser($booking);
+        $amount = number_format((float) ($payment->amount ?? 0), 2);
+        $method = trim((string) ($payment->payment_method ?? 'payment'));
+        $shopName = optional($booking->shop)->name;
+        $vehicle = self::vehicleLabel($booking);
+
+        if ($user) {
+            self::sendToUser($user, 'Payment received', "We received your {$method} payment of \${$amount} for booking {$code}.", [
+                'type' => 'payment',
+                'related_type' => Payment::class,
+                'related_id' => $payment->id,
+                'attributes' => [
+                    'shop_id' => $shopId,
+                ],
+            ]);
+        }
+
+        self::notifyShopOwner(
+            $booking,
+            'Customer payment received',
+            ($user?->name ?? 'A customer') . " paid \${$amount} for {$vehicle} on booking {$code}.",
+            [
+                'type' => 'payment',
+                'related_type' => Payment::class,
+                'related_id' => $payment->id,
+            ]
+        );
+
+        return self::notifyAdmins(
+            'Payment completed',
+            ($user?->name ?? 'A customer') . " paid \${$amount} for booking {$code}" . ($shopName ? " at {$shopName}" : '') . '.',
+            [
+                'type' => 'payment',
+                'related_type' => Payment::class,
+                'related_id' => $payment->id,
+                'attributes' => [
+                    'shop_id' => $shopId,
+                ],
+            ]
+        );
+    }
+
+    public static function ratingSubmitted(Rating $rating): ?NotificationRecord
+    {
+        $rating->loadMissing(['booking.user', 'booking.vehicle', 'shop.owner']);
+        $booking = $rating->booking;
+        $shop = $rating->shop ?? $booking?->shop;
+        $user = $rating->user ?? $booking?->user;
+        $title = 'New customer rating';
+        $message = ($user?->name ?? 'A customer') . " rated " . self::vehicleLabel($booking ?? new Booking()) . " {$rating->rating}/5.";
+
+        if ($shop?->owner) {
+            self::sendToUser($shop->owner, $title, $message, [
+                'type' => 'rating',
+                'related_type' => Rating::class,
+                'related_id' => $rating->id,
+                'attributes' => [
+                    'role' => 'shop_owner',
+                    'shop_id' => $shop->id,
+                ],
+            ]);
+        }
+
+        if ($user) {
+            self::sendToUser($user, 'Rating submitted', 'Thanks for rating your completed booking.', [
+                'type' => 'rating',
+                'related_type' => Rating::class,
+                'related_id' => $rating->id,
+                'attributes' => [
+                    'shop_id' => $shop?->id,
+                ],
+            ]);
+        }
+
+        return self::notifyAdmins($title, $message, [
+            'type' => 'rating',
+            'related_type' => Rating::class,
+            'related_id' => $rating->id,
+            'attributes' => [
+                'shop_id' => $shop?->id,
+            ],
+        ]);
+    }
+
+    public static function feedbackSubmitted(Feedback $feedback): ?NotificationRecord
+    {
+        $feedback->loadMissing(['user', 'booking.vehicle', 'booking.shop.owner']);
+        $booking = $feedback->booking;
+        $shop = $booking?->shop ?? ($feedback->shop_id ? Shop::with('owner')->find($feedback->shop_id) : null);
+        $user = $feedback->user;
+        $title = 'New customer feedback';
+        $subject = trim((string) ($feedback->subject ?? 'Feedback'));
+        $message = ($user?->name ?? 'A customer') . " sent feedback" . ($subject !== '' ? " about {$subject}" : '') . '.';
+
+        if ($shop?->owner) {
+            self::sendToUser($shop->owner, $title, $message, [
+                'type' => 'feedback',
+                'related_type' => Feedback::class,
+                'related_id' => $feedback->id,
+                'attributes' => [
+                    'role' => 'shop_owner',
+                    'shop_id' => $shop->id,
+                ],
+            ]);
+        }
+
+        if ($user) {
+            self::sendToUser($user, 'Feedback sent', 'Your feedback was sent successfully.', [
+                'type' => 'feedback',
+                'related_type' => Feedback::class,
+                'related_id' => $feedback->id,
+                'attributes' => [
+                    'shop_id' => $shop?->id,
+                ],
+            ]);
+        }
+
+        return self::notifyAdmins($title, $message, [
+            'type' => 'feedback',
+            'related_type' => Feedback::class,
+            'related_id' => $feedback->id,
+            'attributes' => [
+                'shop_id' => $shop?->id,
+            ],
+        ]);
     }
 
     public static function messageReceived(Message $message): ?NotificationRecord

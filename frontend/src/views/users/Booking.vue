@@ -68,6 +68,10 @@
                 <span>Taxes & Fees</span>
                 <span>${{ taxesAmount.toFixed(2) }}</span>
               </div>
+              <div v-if="appliedCoupon && couponDiscount > 0" class="row">
+                <span>Coupon ({{ appliedCoupon.code }})</span>
+                <span>-${{ couponDiscount.toFixed(2) }}</span>
+              </div>
               <hr class="dashed-divider" />
               <div class="row total-row">
                 <span>Total Amount</span>
@@ -84,8 +88,16 @@
                 placeholder="Enter code"
                 v-model="promoCode"
               />
-              <button class="btn-secondary" type="button">Apply</button>
+              <button class="btn-secondary" type="button" @click="applyPromoCode">
+                {{ appliedCoupon && promoCode === appliedCoupon.code ? 'Applied' : 'Apply' }}
+              </button>
             </div>
+            <p v-if="appliedCoupon" class="promo-applied-note">
+              {{ appliedCoupon.code }} is applied to this payment.
+            </p>
+            <p v-if="promoFeedback" :class="['promo-feedback', `promo-feedback--${promoFeedbackType}`]">
+              {{ promoFeedback }}
+            </p>
           </div>
 
 
@@ -360,70 +372,6 @@
       </div>
     </div>
 
-    <footer class="site-footer">
-      <div class="footer-wrap">
-        <div class="footer-top">
-          <div class="footer-brand">
-            <div class="footer-brand-title">CHONG CHOUL</div>
-            <div class="footer-brand-slogan">Secure rides, fast bookings.</div>
-
-            <div class="footer-social">
-              <button class="btn-reset social-btn" type="button">F</button>
-              <button class="btn-reset social-btn" type="button">T</button>
-              <button class="btn-reset social-btn" type="button">L</button>
-              <button class="btn-reset social-btn" type="button">W</button>
-              <button class="btn-reset social-btn" type="button">I</button>
-            </div>
-            <div class="footer-social-label">Follow Us</div>
-          </div>
-
-          <div class="footer-nav">
-            <div class="footer-nav-links">
-              <button class="btn-reset footer-nav-link" type="button">About</button>
-              <button class="btn-reset footer-nav-link" type="button">Blog</button>
-              <button class="btn-reset footer-nav-link" type="button">Menu</button>
-              <button class="btn-reset footer-nav-link" type="button">Services</button>
-              <button class="btn-reset footer-nav-link" type="button">FAQ</button>
-              <button class="btn-reset footer-nav-link" type="button">Support</button>
-            </div>
-
-            <div class="footer-about">
-              <div class="footer-section-title">About Us</div>
-              <p>
-                Secure, fast, and transparent bookings across Cambodia with verified partners.
-              </p>
-            </div>
-          </div>
-
-          <div class="footer-contact">
-            <div class="footer-contact-row">
-              <div class="footer-contact-label">Call :</div>
-              <div class="footer-contact-value">+0123 456 789 00</div>
-            </div>
-            <div class="footer-contact-row">
-              <div class="footer-contact-label">Email:</div>
-              <div class="footer-contact-value">user@example.com</div>
-            </div>
-
-            <div class="footer-newsletter">
-              <input class="footer-input" type="text" placeholder="Write Email" />
-              <button class="btn-reset footer-send" type="button">➤</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="footer-bottom">
-          <span>© 2026 Chong Choul. All rights reserved.</span>
-          <div class="footer-bottom-links">
-            <span>Security</span>
-            <span>Accessibility</span>
-            <span>Legal</span>
-          </div>
-        </div>
-      </div>
-    </footer>
-
-
     <div
       v-if="showConfirmModal"
       class="confirm-modal-overlay"
@@ -453,8 +401,8 @@
           <button class="btn-cancel" type="button" @click="closeConfirmModal">
             Cancel
           </button>
-          <button class="btn-confirm" type="button" @click="confirmPayment">
-            Confirm
+          <button class="btn-confirm" type="button" :disabled="isSubmittingPayment" @click="confirmPayment">
+            {{ isSubmittingPayment ? 'Processing...' : 'Confirm' }}
           </button>
         </div>
       </div>
@@ -504,16 +452,16 @@
             Close
           </button>
         </div>
+        </div>
       </div>
+      <CommonFooter />
     </div>
-    <CommonFooter />
-  </div>
-</template>
+  </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import api from "@/services/api";
+import api, { couponApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
 import UserNavbar from '@/components/UserNavbar.vue';
@@ -660,10 +608,14 @@ const loadVehicleDetail = async () => {
 
 const method = ref("card");
 const promoCode = ref("");
+const appliedCoupon = ref(null);
+const promoFeedback = ref("");
+const promoFeedbackType = ref("success");
 const showQR = ref(false);
 const showSuccessModal = ref(false);
 const showConfirmModal = ref(false);
 const pendingPaymentAction = ref(null);
+const isSubmittingPayment = ref(false);
 const dateError = ref("");
 let successRedirectTimer = null;
 const bookingId = ref("");
@@ -742,6 +694,109 @@ const applyRouteDefaults = () => {
   if (riderFromQuery) {
     rental.value.riders = riderFromQuery;
   }
+
+  const couponCodeFromQuery = Array.isArray(route.query.coupon_code)
+    ? route.query.coupon_code[0]
+    : route.query.coupon_code;
+  if (couponCodeFromQuery) {
+    promoCode.value = String(couponCodeFromQuery);
+  }
+};
+
+const loadCouponFromRoute = async () => {
+  const rawCouponId = Array.isArray(route.query.coupon_id) ? route.query.coupon_id[0] : route.query.coupon_id;
+  const couponId = Number(rawCouponId);
+
+  if (!couponId) {
+    appliedCoupon.value = null;
+    return;
+  }
+
+  try {
+    const response = await api.get(`/coupons/${couponId}`);
+    appliedCoupon.value = response?.data || null;
+
+    if (appliedCoupon.value?.code) {
+      promoCode.value = appliedCoupon.value.code;
+    }
+    promoFeedback.value = appliedCoupon.value?.code ? `${appliedCoupon.value.code} applied successfully.` : "";
+    promoFeedbackType.value = "success";
+  } catch (error) {
+    console.error("Failed to load coupon:", error);
+    appliedCoupon.value = null;
+    promoFeedback.value = "";
+  }
+};
+
+const showPromoFeedback = (message, type = "success") => {
+  promoFeedback.value = message;
+  promoFeedbackType.value = type;
+};
+
+const applyPromoCode = async () => {
+  const code = String(promoCode.value || "").trim().toUpperCase();
+
+  if (!code) {
+    appliedCoupon.value = null;
+    showPromoFeedback("Please enter a coupon code.", "error");
+    return;
+  }
+
+  try {
+    const response = await couponApi.getAll({ code });
+    const payload = response?.data?.data || response?.data || [];
+    const records = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+    const coupon = records[0] || null;
+
+    if (!coupon) {
+      appliedCoupon.value = null;
+      showPromoFeedback("Coupon code not found.", "error");
+      return;
+    }
+
+    if (vehicle.value?.shop_id && Number(coupon.shop_id) !== Number(vehicle.value.shop_id)) {
+      appliedCoupon.value = null;
+      showPromoFeedback("This coupon is only valid for a different shop.", "error");
+      return;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const validFrom = coupon.valid_from ? new Date(coupon.valid_from) : null;
+    const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
+
+    if (validFrom && !Number.isNaN(validFrom.getTime())) {
+      validFrom.setHours(0, 0, 0, 0);
+      if (validFrom > today) {
+        appliedCoupon.value = null;
+        showPromoFeedback("This coupon is not active yet.", "error");
+        return;
+      }
+    }
+
+    if (validUntil && !Number.isNaN(validUntil.getTime())) {
+      validUntil.setHours(0, 0, 0, 0);
+      if (validUntil < today) {
+        appliedCoupon.value = null;
+        showPromoFeedback("This coupon has expired.", "error");
+        return;
+      }
+    }
+
+    if (coupon.is_active === false || coupon.is_active === 0 || coupon.is_active === '0') {
+      appliedCoupon.value = null;
+      showPromoFeedback("This coupon is inactive.", "error");
+      return;
+    }
+
+    appliedCoupon.value = coupon;
+    promoCode.value = coupon.code || code;
+    showPromoFeedback(`${promoCode.value} applied successfully.`, "success");
+  } catch (error) {
+    console.error("Failed to apply coupon:", error);
+    appliedCoupon.value = null;
+    showPromoFeedback("Failed to apply coupon. Please try again.", "error");
+  }
 };
 
 const methodTitle = computed(() => {
@@ -799,13 +854,35 @@ const taxesAmount = computed(() => {
   return includeTaxes.value ? base : 0;
 });
 
+const couponDiscount = computed(() => {
+  const coupon = appliedCoupon.value;
+  if (!coupon) return 0;
+
+  const subtotal = Number(rental.value.subtotal || 0);
+  const minimumAmount = Number(coupon.minimum_amount || 0);
+
+  if (minimumAmount > 0 && subtotal < minimumAmount) {
+    return 0;
+  }
+
+  if (coupon.discount_percent !== null && coupon.discount_percent !== undefined) {
+    return subtotal * (Number(coupon.discount_percent) / 100);
+  }
+
+  if (coupon.discount_amount !== null && coupon.discount_amount !== undefined) {
+    return Number(coupon.discount_amount);
+  }
+
+  return 0;
+});
+
 const totalAmount = computed(() => {
   const days = calculateDays();
   const riders = riderCount.value;
   const subtotal = days * rental.value.dailyRate * riders;
   rental.value.subtotal = subtotal;
   rental.value.taxes = subtotal * 0.1;
-  return rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
+  return Math.max(0, rental.value.subtotal + insuranceAmount.value + taxesAmount.value - couponDiscount.value);
 });
 
 const isFormValid = computed(() => {
@@ -893,7 +970,7 @@ const saveBookingToDatabase = async (bookingData) => {
   const payload = {
     user_id: currentUser.id,
     vehicle_id: vehicleId.value,
-    coupon_id: null,
+      coupon_id: appliedCoupon.value?.id || null,
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
@@ -972,6 +1049,7 @@ const closeConfirmModal = () => {
 };
 
 const confirmPayment = async () => {
+  if (isSubmittingPayment.value) return;
   const action = pendingPaymentAction.value;
   closeConfirmModal();
 
@@ -984,39 +1062,54 @@ const confirmPayment = async () => {
 };
 
 const handlePayment = async () => {
+  if (isSubmittingPayment.value) return;
+  isSubmittingPayment.value = true;
   await validateDates();
-  if (dateError.value) return;
+  if (dateError.value) {
+    isSubmittingPayment.value = false;
+    return;
+  }
 
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
 
-  if (result.success) {
-    bookingId.value = result.bookingId;
-    showSuccessModal.value = true;
-    successRedirectTimer = window.setTimeout(() => {
-      returnToShopViewAfterSuccess();
-    }, 1800);
-  } else {
-    alert(result.message || "Payment failed. Please try again.");
+    if (result.success) {
+      bookingId.value = result.bookingId;
+      showSuccessModal.value = true;
+      successRedirectTimer = window.setTimeout(() => {
+        returnToShopViewAfterSuccess();
+      }, 1800);
+    } else {
+      alert(result.message || "Payment failed. Please try again.");
+    }
+  } finally {
+    isSubmittingPayment.value = false;
   }
 };
 
 const handleBankTransfer = async () => {
+  if (isSubmittingPayment.value) return;
+  isSubmittingPayment.value = true;
   await validateDates();
-  if (dateError.value) return;
-
-  const result = await saveBookingToDatabase(
-    buildBookingData("bank_transfer", "pending_payment")
-  );
-
-  if (!result.success) {
-    alert(result.message || "Failed to create bank transfer instructions.");
+  if (dateError.value) {
+    isSubmittingPayment.value = false;
     return;
   }
 
-  bookingId.value = result.bookingId;
+  try {
+    const result = await saveBookingToDatabase(
+      buildBookingData("bank_transfer", "pending_payment")
+    );
 
-  const instructions = `
+    if (!result.success) {
+      alert(result.message || "Failed to create bank transfer instructions.");
+      return;
+    }
+
+    bookingId.value = result.bookingId;
+
+    const instructions = `
 BANK TRANSFER INSTRUCTIONS
 ============================
 Payment ID: ${paymentId.value}
@@ -1031,21 +1124,24 @@ BANK DETAILS:
 - Reference: ${paymentId.value}
   `.trim();
 
-  const blob = new Blob([instructions], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `bank_transfer_${paymentId.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+    const blob = new Blob([instructions], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bank_transfer_${paymentId.value}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 
 
-  showSuccessModal.value = true;
-  successRedirectTimer = window.setTimeout(() => {
-    returnToShopViewAfterSuccess();
-  }, 1800);
+    showSuccessModal.value = true;
+    successRedirectTimer = window.setTimeout(() => {
+      returnToShopViewAfterSuccess();
+    }, 1800);
+  } finally {
+    isSubmittingPayment.value = false;
+  }
 };
 
 const generateABAQRData = () => {
@@ -1125,12 +1221,14 @@ const initDates = () => {
 
 onMounted(() => {
   loadVehicleDetail();
+  loadCouponFromRoute();
 });
 
 watch(
-  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails],
+  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails, route.query.coupon_id, route.query.coupon_code],
   () => {
     applyRouteDefaults();
+    loadCouponFromRoute();
   },
   { immediate: true }
 );

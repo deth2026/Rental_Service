@@ -1,11 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import UserDashboard from '../views/users/Dashboard.vue';
 
 const ChooseRole = () => import('../views/ChooseRole.vue');
 const Login = () => import('../views/auth/Login.vue');
 const Register = () => import('../views/auth/Register.vue');
 const HomeView = () => import('../views/HomeView.vue');
 const ShopDashboard = () => import('../views/shop/DashboardLayout.vue');
-const UserDashboard = () => import('../views/users/Dashboard.vue');
 const UserBookings = () => import('../views/users/MyBookings.vue');
 const PromotionView = () => import('../views/users/Promotion.vue');
 const SettingUser = () => import('../views/users/Setting_user.vue');

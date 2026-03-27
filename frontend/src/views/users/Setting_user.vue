@@ -27,6 +27,19 @@ const mapUserToProfile = (user = {}) => {
 
 const storedUser = userService.getCurrentUser() || {}
 
+const persistCurrentUser = (nextFields = {}) => {
+    try {
+        const rawUser = localStorage.getItem('user')
+        const localUser = rawUser ? JSON.parse(rawUser) : {}
+        const nextUser = { ...localUser, ...nextFields }
+        localStorage.setItem('user', JSON.stringify(nextUser))
+        window.dispatchEvent(new Event('user-updated'))
+        return nextUser
+    } catch {
+        return null
+    }
+}
+
 // Get current logged-in user's ID
 const getUserId = () => userService.getCurrentUserId()
 
@@ -216,6 +229,11 @@ async function fetchProfile() {
         const data = await userService.getAuthUser()
         const mappedProfile = mapUserToProfile(data)
         Object.assign(profile.value, mappedProfile)
+        persistCurrentUser({
+            ...data,
+            profile_picture: data.avatar_url || data.profile_picture || data.img_url || null,
+            avatar_url: data.avatar_url || userService.getAvatarUrl(data.profile_picture || data.img_url),
+        })
 
         // Store original values for comparison
         originalProfile.value = {
@@ -315,15 +333,11 @@ async function saveProfile() {
             Object.assign(profile.value, mappedProfile, { profile_picture: avatar })
 
             // Keep local user snapshot in sync so header/profile components refresh immediately.
-            try {
-                const rawUser = localStorage.getItem('user')
-                const localUser = rawUser ? JSON.parse(rawUser) : {}
-                const nextUser = { ...localUser, ...res.user }
-                localStorage.setItem('user', JSON.stringify(nextUser))
-                window.dispatchEvent(new Event('user-updated'))
-            } catch {
-                // Ignore localStorage parse/write issues.
-            }
+            persistCurrentUser({
+                ...res.user,
+                profile_picture: res.user.avatar_url || res.user.profile_picture || res.user.img_url || null,
+                avatar_url: res.user.avatar_url || userService.getAvatarUrl(res.user.profile_picture || res.user.img_url),
+            })
         }
         
         profileFile.value = null
@@ -872,12 +886,12 @@ onMounted(fetchProfile)
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    padding: 18px 32px 18px;
+    padding: 12px 24px 70px;
 }
 
 .hero-avatar {
-    width: 180px;
-    height: 180px;
+    width: 145px;
+    height: 145px;
     border-radius: 50%;
     background: #eef1f7;
     display: grid;

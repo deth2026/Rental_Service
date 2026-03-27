@@ -21,8 +21,14 @@ const profileMenuRef = ref(null)
 const isProfileMenuOpen = ref(false)
 const avatarLoadFailed = ref(false)
 const showLogoutConfirm = ref(false)
+const currentUserState = ref(userService.getCurrentUser())
 
-const currentUser = computed(() => userService.getCurrentUser())
+const refreshCurrentUser = () => {
+  currentUserState.value = userService.getCurrentUser()
+  avatarLoadFailed.value = false
+}
+
+const currentUser = computed(() => currentUserState.value)
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
 const userEmail = computed(() => currentUser.value?.email || '')
 const userRoleLabel = computed(() => {
@@ -109,10 +115,15 @@ const onAvatarError = () => {
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  window.addEventListener('user-updated', refreshCurrentUser)
+  window.addEventListener('storage', refreshCurrentUser)
+  refreshCurrentUser()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
+  window.removeEventListener('user-updated', refreshCurrentUser)
+  window.removeEventListener('storage', refreshCurrentUser)
 })
 </script>
 

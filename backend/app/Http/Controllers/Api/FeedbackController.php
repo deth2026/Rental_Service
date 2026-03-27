@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Feedback;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class FeedbackController extends Controller
 {
@@ -38,6 +40,16 @@ class FeedbackController extends Controller
     public function store(Request $_request)
     {
         $record = Feedback::create($_request->all());
+        $record->loadMissing(['user', 'booking.vehicle', 'booking.shop.owner']);
+
+        try {
+            NotificationService::feedbackSubmitted($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send feedback notifications.', [
+                'feedback_id' => $record->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json($record, 201);
     }

@@ -164,7 +164,7 @@ const getFallbackRoute = () => {
 
 const goBack = () => {
   if (isAuthEntryPage.value) {
-    router.push('/view_shop')
+    router.push('/')
     return
   }
 

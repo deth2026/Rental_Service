@@ -67,7 +67,7 @@ export const vehicleApi = {
 
 // Shop API calls
 export const shopApi = {
-  getAll: () => api.get('/shops'),
+  getAll: (params = {}) => api.get('/shops', { params }),
   getById: (id) => api.get(`/shops/${id}`),
   create: (data) => api.post('/shops', data),
   update: (id, data) => {
@@ -116,7 +116,7 @@ export const userApi = {
 
 // Coupon API calls
 export const couponApi = {
-  getAll: () => api.get('/coupons'),
+  getAll: (params = {}) => api.get('/coupons', { params }),
   getById: (id) => api.get(`/coupons/${id}`),
   create: (data) => api.post('/coupons', data),
   update: (id, data) => api.put(`/coupons/${id}`, data),
