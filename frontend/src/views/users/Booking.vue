@@ -1,42 +1,11 @@
 ﻿<template>
   <div class="booking-checkout-page">
-    <header class="topbar">
-<<<<<<< HEAD
-      <div class="brand">
-        <div class="brand-icon">
-          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-        </div>
-        <span>Chong Choul</span>
-      </div>
-=======
-  <button class="btn-back-top" type="button" @click="goHome">
-    <span class="back-arrow" aria-hidden="true">←</span>
-    Back to Home
-  </button>
-  <div class="brand">
-    <div class="brand-icon">
-      <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-    </div>
-    <span>Chong Choul</span>
-  </div>
->>>>>>> 70910213ee8f8b5bf336d981d9d555bd121e2611
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="userNavItems"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <div class="page-container">
 
@@ -438,13 +407,13 @@
 
             <div class="footer-newsletter">
               <input class="footer-input" type="text" placeholder="Write Email" />
-              <button class="btn-reset footer-send" type="button">âž¤</button>
+              <button class="btn-reset footer-send" type="button">➤</button>
             </div>
           </div>
         </div>
 
         <div class="footer-bottom">
-          <span>Â© 2026 Chong Choul. All rights reserved.</span>
+          <span>© 2026 Chong Choul. All rights reserved.</span>
           <div class="footer-bottom-links">
             <span>Security</span>
             <span>Accessibility</span>
@@ -547,31 +516,16 @@ import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
-import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import UserNavbar from '@/components/UserNavbar.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
 const router = useRouter();
 const route = useRoute();
-
-// Header data from VehiclesByShop.vue
-const navItems = ['Home', 'View Details', 'Bookings'];
-const activeNav = ref('Home');
-const actionMessage = ref('');
-
-// Header functions
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.replace('/view_shop');
-    return;
-  }
-  actionMessage.value = `${item} is not available yet.`;
-};
-
-const openProfile = () => {
-  router.push('/user/profile');
-};
+const userNavItems = [
+  { label: "My Bookings", route: "/my-bookings" },
+  { label: "Profile", route: "/user/profile" },
+];
 
 const handleLogout = async () => {
   await userService.logout();
@@ -1189,5 +1143,6 @@ onBeforeUnmount(() => {
   }
 });
 </script>
+
 
 

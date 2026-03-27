@@ -10,14 +10,13 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
-  return matchedItem?.label || 'My Booking'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const handleLogout = async () => {

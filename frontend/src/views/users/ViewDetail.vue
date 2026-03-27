@@ -504,16 +504,15 @@ const router = useRouter();
 const route = useRoute();
 
 const navItems = [
-  { label: "Home", route: "/view_shop" },
-  { label: "My Booking", route: "/my-bookings" },
-  { label: "Promotions", route: "/promotions" },
+  { label: "My Bookings", route: "/my-bookings" },
+  { label: "Profile", route: "/user/profile" },
 ];
 const actionMessage = ref("");
 const avatarLoadFailed = ref(false);
 const currentUser = computed(() => userService.getCurrentUser());
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route));
-  return matchedItem?.label || "Home";
+  return matchedItem?.label || "My Bookings";
 });
 
 // Booking confirmation modal

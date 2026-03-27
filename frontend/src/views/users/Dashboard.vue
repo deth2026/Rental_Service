@@ -159,7 +159,7 @@ const normalizeShop = (shop) => {
     map_url: shop.map_url || shop.location || '',
     vehiclesCount: Number(shop.vehicles_count || 0),
     status: String(shop.status || 'active').toLowerCase(),
-    img_url: shop.img_url_full || shop.img_url || '/Images/default-avatar.svg'
+    img_url: shop.img_url_full || shop.img_url || '/images/default-avatar.svg'
   }
 }
 
@@ -354,34 +354,12 @@ onMounted(async () => {
 
 <template>
   <div class="customer-page">
-<<<<<<< HEAD
     <UserNavbar
       :nav-items="dashboardNavItems"
       :show-back-button="false"
       :show-fallback-message="false"
       @logout-request="onLogout"
     />
-=======
-    <header class="customer-topbar">
-      <div class="brand-left">
-        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="brand-logo">
-          <circle cx="20" cy="20" r="18" fill="#4CAF50"/>
-          <path d="M12 20C12 15.5817 15.5817 12 20 12V12C24.4183 12 28 15.5817 28 20V28H12V20Z" fill="white"/>
-          <circle cx="20" cy="18" r="4" fill="#4CAF50"/>
-        </svg>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="top-links">
-        <button class="link-btn" @click="openBookings">My Bookings</button>
-        <button class="link-btn" @click="openProfile">Profile</button>
-      </nav>
-
-      <div class="top-actions">
-        <UserProfileMenu @settings="openProfile" @logout="onLogout" />
-      </div>
-    </header>
->>>>>>> 70910213ee8f8b5bf336d981d9d555bd121e2611
 
     <main class="customer-main">
       <!-- Hero Banner -->
@@ -513,3 +491,4 @@ onMounted(async () => {
     <CommonFooter />
   </div>
 </template>
+

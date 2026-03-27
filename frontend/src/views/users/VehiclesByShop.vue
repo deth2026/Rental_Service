@@ -1,39 +1,12 @@
 <template>
   <div>
   <div class="vehicles-page">
-<<<<<<< HEAD
     <UserNavbar
+      :nav-items="userNavItems"
       :show-back-button="false"
       :show-fallback-message="false"
       @logout-request="handleLogout"
     />
-=======
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon">
-          <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-        </div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
->>>>>>> 70910213ee8f8b5bf336d981d9d555bd121e2611
 
     <main class="content">
       <section class="deals-section">
@@ -149,7 +122,7 @@ import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -164,9 +137,11 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const navItems = ['Home', 'View Details', 'Bookings'];
 const router = useRouter();
-const activeNav = ref('Home');
+const userNavItems = [
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
+];
 const actionMessage = ref('');
 const activeFilter = ref('all');
 const filterItems = [
@@ -459,23 +434,6 @@ const loadVehiclesAndShops = async () => {
 };
 
 
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.push('/view_shop');
-    return;
-  }
-  if (item === 'My Bookings') {
-    router.push('/my-bookings');
-    return;
-  }
-  if (item === 'Promotion') {
-    router.push('/promotions');
-    return;
-  }
-  actionMessage.value = `${item} opened.`;
-};
-
 const handleSearch = () => {
   actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
 };
@@ -506,10 +464,6 @@ const openCustomLocation = () => {
 
 const notify = (message) => {
   actionMessage.value = message;
-};
-
-const openProfile = () => {
-  router.push('/user/profile');
 };
 
 const handleLogout = async () => {
@@ -1050,3 +1004,4 @@ onUnmounted(() => {
 }
 
 </style>
+

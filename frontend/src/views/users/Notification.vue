@@ -115,9 +115,8 @@ import { useNotifications } from '@/composables/useNotifications'
 const router = useRouter()
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const handleLogout = async () => {

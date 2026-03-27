@@ -4,9 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 
 const defaultNavItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings'},
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const props = defineProps({
@@ -17,7 +16,7 @@ const props = defineProps({
   },
   showBackButton: {
     type: Boolean,
-    default: true
+    default: false
   },
   backTo: {
     type: String,
@@ -51,7 +50,7 @@ const activeNav = computed(() => {
   const matchedItem = resolvedNavItems.value.find(
     (item) => item.route && item.route !== '#' && currentPath.startsWith(item.route)
   )
-  return matchedItem?.label || resolvedNavItems.value[0]?.label || 'Home'
+  return matchedItem?.label || resolvedNavItems.value[0]?.label || 'My Bookings'
 })
 
 const shouldShowBackButton = computed(() => {
@@ -68,7 +67,7 @@ const handleNavClick = (item) => {
   if (hasRoute) {
     router.push(item.route)
   } else if (props.showFallbackMessage) {
-    notify(item.fallbackMessage || 'My Booking page is not available yet.')
+    notify(item.fallbackMessage || 'This page is not available yet.')
   }
 
   emit('nav-click', item)
@@ -92,7 +91,6 @@ const goBack = () => {
 </script>
 
 <template>
-<<<<<<< HEAD
   <header class="user-navbar-shell">
     <div class="topbar user-navbar">
       <div class="brand">
@@ -116,12 +114,6 @@ const goBack = () => {
 
       <div class="top-actions">
         <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
-=======
-  <header class="topbar user-navbar">
-    <div class="brand">
-      <div class="brand-icon">
-        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
->>>>>>> 70910213ee8f8b5bf336d981d9d555bd121e2611
       </div>
     </div>
 

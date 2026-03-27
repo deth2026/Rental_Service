@@ -4,7 +4,7 @@
     <div class="left">
       <div class="overlay">
         <div class="logo">
-          <Logo src="/Images/logo-removebg.png" size="lg" :showTagline="false" />
+          <Logo src="/images/logo-removebg.png" size="lg" :showTagline="false" />
         </div>
 
         <div class="left-content">
@@ -534,3 +534,4 @@ onBeforeUnmount(() => {
 <style>
 @import "../../css/register.css";
 </style>
+

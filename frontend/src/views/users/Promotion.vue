@@ -16,9 +16,8 @@ const activeFilter = ref('all')
 const dealsSection = ref(null)
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const filterItems = [
@@ -91,7 +90,7 @@ const fallbackCoupons = [
 const activeNavLabel = computed(() => {
   const currentPath = route.path
   const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-  return matchedItem?.label || 'Promotions'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const handleLogout = async () => {
