@@ -43,9 +43,9 @@ class DatabaseSeeder extends Seeder
             ]
         );
         
-        // Create admin@chongchoul.com user
+        // Create admin@choul.com user
         \App\Models\User::updateOrCreate(
-            ['email' => 'admin@chongchoul.com'],
+            ['email' => 'admin@choul.com'],
             [
                 'name' => 'Admin User',
                 'phone' => '+855 12 345 678',
@@ -66,7 +66,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Create a test user if not exists (from feature/setting.user)
+        // Create a test user if not exists
         \App\Models\User::updateOrCreate(
             ['email' => 'test2@example.com'],
             [
@@ -78,14 +78,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-<<<<<<< HEAD
         // Create sample categories
-        \App\Models\Category::create([
-            'name' => 'Cars',
-            'description' => 'Passenger vehicles for personal use',
-            'status' => 'active'
-        ]);
-=======
         $categories = [
             [
                 'name' => 'Cars',
@@ -103,7 +96,6 @@ class DatabaseSeeder extends Seeder
                 'status' => 'active',
             ],
         ];
->>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
 
         foreach ($categories as $category) {
             \App\Models\Category::updateOrCreate(['name' => $category['name']], $category);
@@ -153,11 +145,6 @@ class DatabaseSeeder extends Seeder
             $shopMap[$definition['name']] = $shop;
         }
 
-<<<<<<< HEAD
-        \App\Models\City::create([
-            'name' => 'Sihanoukville'
-        ]);
-=======
         $vehicleDefinitions = [
             [
                 'shop' => 'Phnom Penh City Rides',
@@ -242,9 +229,6 @@ class DatabaseSeeder extends Seeder
                 $data + ['shop_id' => $shop->id]
             );
         }
-<<<<<<< HEAD
->>>>>>> e284bb084929d3720b9b75fc95ec25fb849a472e
-=======
 
         $testUser = \App\Models\User::where('email', 'test@example.com')->first();
         $vehicle = \App\Models\Vehicle::where('status', 'available')->first();
@@ -295,6 +279,5 @@ class DatabaseSeeder extends Seeder
                 NotificationService::messageReceived($message);
             }
         }
->>>>>>> 977fe497ebbb0ac91f6116dcec5058fc6943c01c
     }
 }
