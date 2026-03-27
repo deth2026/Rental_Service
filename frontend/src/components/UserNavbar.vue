@@ -95,7 +95,7 @@ const goBack = () => {
     <div class="topbar user-navbar">
       <div class="brand">
         <div class="brand-icon">
-          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+          <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
         </div>
         <span>Chong Choul</span>
       </div>
