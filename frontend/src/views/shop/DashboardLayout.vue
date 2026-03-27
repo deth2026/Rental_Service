@@ -665,7 +665,9 @@ const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
   dashboardError.value = null;
   try {
-    const response = await api.get("/shop-bookings");
+    const response = await api.get("/shop-bookings", {
+      params: shop.value?.id ? { shop_id: shop.value.id } : {},
+    });
     bookings.value = response.data || [];
     console.log("Dashboard bookings loaded:", bookings.value.length);
   } catch (error) {
@@ -710,7 +712,9 @@ const fetchShopRating = async () => {
 
 const fetchShopPayments = async () => {
   try {
-    const response = await api.get("/shop-payments");
+    const response = await api.get("/shop-payments", {
+      params: shop.value?.id ? { shop_id: shop.value.id } : {},
+    });
     const data = response.data || [];
     payments.value = Array.isArray(data) ? data : data.data || [];
     console.log("Dashboard payments loaded:", payments.value.length);
@@ -906,6 +910,8 @@ watch(
   shop,
   (current) => {
     if (current?.id) {
+      fetchShopBookings().catch(() => {});
+      fetchShopPayments().catch(() => {});
       loadNotifications(current.id).catch(() => {});
       fetchFeedback().catch(() => {});
       fetchShopRating().catch(() => {});
@@ -2564,7 +2570,7 @@ const iconSvg = (name) => {
   background: #f8fafc;
   border: 1px solid #dbe1ea;
   padding: 0 !important;
-  margin: 0;
+  margin: 0 0 0 40px;
   display: grid;
   place-items: center;
   z-index: 50;

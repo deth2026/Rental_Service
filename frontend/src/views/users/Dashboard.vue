@@ -119,6 +119,34 @@ const normalizeProvinceName = (value) => {
 const extractProvinceFromText = (value) => {
   const normalized = String(value || '').toLowerCase()
   if (!normalized) return ''
+  if (normalized.includes('phnom') && normalized.includes('penh')) return 'Phnom Penh'
+  if (normalized.includes('preah') && normalized.includes('sihanouk')) return 'Preah Sihanouk'
+  if (normalized.includes('sihanoukville')) return 'Preah Sihanouk'
+
+  const flexibleMatches = [
+    { province: 'Phnom Penh', patterns: [/phnom[\s\S]{0,160}penh/] },
+    { province: 'Preah Sihanouk', patterns: [/preah[\s\S]{0,160}sihanouk/, /sihanoukville/] },
+    { province: 'Banteay Meanchey', patterns: [/banteay[\s,/-]*meanchey/] },
+    { province: 'Kampong Cham', patterns: [/kampong[\s,/-]*cham/] },
+    { province: 'Kampong Chhnang', patterns: [/kampong[\s,/-]*chhnang/] },
+    { province: 'Kampong Speu', patterns: [/kampong[\s,/-]*speu/] },
+    { province: 'Kampong Thom', patterns: [/kampong[\s,/-]*thom/] },
+    { province: 'Koh Kong', patterns: [/koh[\s,/-]*kong/] },
+    { province: 'Oddar Meanchey', patterns: [/oddar[\s,/-]*meanchey/] },
+    { province: 'Preah Vihear', patterns: [/preah[\s,/-]*vihear/] },
+    { province: 'Prey Veng', patterns: [/prey[\s,/-]*veng/] },
+    { province: 'Siem Reap', patterns: [/siem[\s,/-]*reap/] },
+    { province: 'Stung Treng', patterns: [/stung[\s,/-]*treng/] },
+    { province: 'Svay Rieng', patterns: [/svay[\s,/-]*rieng/] },
+    { province: 'Tboung Khmum', patterns: [/tboung[\s,/-]*khmum/, /tbong[\s,/-]*khmum/] },
+  ]
+
+  for (const entry of flexibleMatches) {
+    if (entry.patterns.some((pattern) => pattern.test(normalized))) {
+      return entry.province
+    }
+  }
+
   return CAMBODIA_PROVINCES.find((province) => normalized.includes(province.toLowerCase())) || ''
 }
 
@@ -146,7 +174,11 @@ const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
 
 const normalizeShop = (shop) => {
   const province = normalizeProvinceName(
-    shop?.province || shop?.city?.name || extractProvinceFromText(shop?.location) || extractProvinceFromText(shop?.address)
+    shop?.province ||
+      shop?.city?.name ||
+      extractProvinceFromText(shop?.location) ||
+      extractProvinceFromText(shop?.address) ||
+      extractProvinceFromText(shop?.map_url)
   )
 
   return {
@@ -252,7 +284,7 @@ const loadShops = async () => {
     const response = await shopApi.getAll({ active_only: true })
     shops.value = parseArrayPayload(response.data)
       .map((shop) => normalizeShop(shop))
-      .filter((shop) => shop.status === 'active' && shop.province)
+      .filter((shop) => shop.status === 'active')
 
     if (!shops.value.some((shop) => normalizeProvinceName(shop.province) === normalizeProvinceName(selectedProvince.value))) {
       selectedProvince.value = shops.value[0]?.province || 'Phnom Penh'

@@ -12,11 +12,18 @@ use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $shops = Shop::with(['owner:id,name,email,phone'])
-            ->orderByDesc('id')
-            ->paginate(25);
+        $shopsQuery = Shop::with([
+            'owner:id,name,email,phone',
+            'city:id,name',
+        ])->orderByDesc('id');
+
+        if ($request->boolean('active_only')) {
+            $shopsQuery->where('status', 'active');
+        }
+
+        $shops = $shopsQuery->paginate(25);
 
         // Transform paginated collection
         $shopsWithImages = $shops->getCollection()->map(function ($shop) {
@@ -39,7 +46,8 @@ class ShopController extends Controller
                 'status' => $shop->status,
                 'created_at' => $shop->created_at,
                 'updated_at' => $shop->updated_at,
-                'owner' => $shop->owner
+                'owner' => $shop->owner,
+                'city' => $shop->city,
             ];
         });
 
@@ -60,8 +68,8 @@ class ShopController extends Controller
             'address' => 'required|string|max:255',
             'location' => 'nullable|string|max:2048',
             'phone' => 'nullable|string|max:20',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
@@ -74,6 +82,8 @@ class ShopController extends Controller
         if (!$this->shopColumnExists('map_url')) {
             unset($payload['map_url']);
         }
+
+        $payload = $this->sanitizeCoordinatePayload($payload);
 
         $mapUrlValue = trim((string) ($request->input('map_url') ?? ($payload['map_url'] ?? '')));
         $locationValue = trim((string) ($payload['location'] ?? ''));
@@ -187,12 +197,14 @@ class ShopController extends Controller
             'address' => 'sometimes|string|max:255',
             'location' => 'nullable|string|max:2048',
             'phone' => 'nullable|string|max:20',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        $payload = $this->sanitizeCoordinatePayload($payload);
 
         if (!$this->shopColumnExists('location')) {
             unset($payload['location']);
@@ -463,5 +475,47 @@ class ShopController extends Controller
         }
 
         return [null, null];
+    }
+
+    private function sanitizeCoordinatePayload(array $payload): array
+    {
+        $lat = $this->normalizeCoordinateValue($payload['latitude'] ?? null, -90, 90);
+        $lng = $this->normalizeCoordinateValue($payload['longitude'] ?? null, -180, 180);
+
+        if ($lat === null) {
+            unset($payload['latitude']);
+        } else {
+            $payload['latitude'] = $lat;
+        }
+
+        if ($lng === null) {
+            unset($payload['longitude']);
+        } else {
+            $payload['longitude'] = $lng;
+        }
+
+        return $payload;
+    }
+
+    private function normalizeCoordinateValue($value, float $min, float $max): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $normalized = (float) $value;
+        if (!is_finite($normalized)) {
+            return null;
+        }
+
+        if ($normalized < $min || $normalized > $max) {
+            return null;
+        }
+
+        return $normalized;
     }
 }

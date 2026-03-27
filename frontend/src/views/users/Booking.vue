@@ -401,8 +401,8 @@
           <button class="btn-cancel" type="button" @click="closeConfirmModal">
             Cancel
           </button>
-          <button class="btn-confirm" type="button" @click="confirmPayment">
-            Confirm
+          <button class="btn-confirm" type="button" :disabled="isSubmittingPayment" @click="confirmPayment">
+            {{ isSubmittingPayment ? 'Processing...' : 'Confirm' }}
           </button>
         </div>
       </div>
@@ -615,6 +615,7 @@ const showQR = ref(false);
 const showSuccessModal = ref(false);
 const showConfirmModal = ref(false);
 const pendingPaymentAction = ref(null);
+const isSubmittingPayment = ref(false);
 const dateError = ref("");
 let successRedirectTimer = null;
 const bookingId = ref("");
@@ -1048,6 +1049,7 @@ const closeConfirmModal = () => {
 };
 
 const confirmPayment = async () => {
+  if (isSubmittingPayment.value) return;
   const action = pendingPaymentAction.value;
   closeConfirmModal();
 
@@ -1060,39 +1062,54 @@ const confirmPayment = async () => {
 };
 
 const handlePayment = async () => {
+  if (isSubmittingPayment.value) return;
+  isSubmittingPayment.value = true;
   await validateDates();
-  if (dateError.value) return;
+  if (dateError.value) {
+    isSubmittingPayment.value = false;
+    return;
+  }
 
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
 
-  if (result.success) {
-    bookingId.value = result.bookingId;
-    showSuccessModal.value = true;
-    successRedirectTimer = window.setTimeout(() => {
-      returnToShopViewAfterSuccess();
-    }, 1800);
-  } else {
-    alert(result.message || "Payment failed. Please try again.");
+    if (result.success) {
+      bookingId.value = result.bookingId;
+      showSuccessModal.value = true;
+      successRedirectTimer = window.setTimeout(() => {
+        returnToShopViewAfterSuccess();
+      }, 1800);
+    } else {
+      alert(result.message || "Payment failed. Please try again.");
+    }
+  } finally {
+    isSubmittingPayment.value = false;
   }
 };
 
 const handleBankTransfer = async () => {
+  if (isSubmittingPayment.value) return;
+  isSubmittingPayment.value = true;
   await validateDates();
-  if (dateError.value) return;
-
-  const result = await saveBookingToDatabase(
-    buildBookingData("bank_transfer", "pending_payment")
-  );
-
-  if (!result.success) {
-    alert(result.message || "Failed to create bank transfer instructions.");
+  if (dateError.value) {
+    isSubmittingPayment.value = false;
     return;
   }
 
-  bookingId.value = result.bookingId;
+  try {
+    const result = await saveBookingToDatabase(
+      buildBookingData("bank_transfer", "pending_payment")
+    );
 
-  const instructions = `
+    if (!result.success) {
+      alert(result.message || "Failed to create bank transfer instructions.");
+      return;
+    }
+
+    bookingId.value = result.bookingId;
+
+    const instructions = `
 BANK TRANSFER INSTRUCTIONS
 ============================
 Payment ID: ${paymentId.value}
@@ -1107,21 +1124,24 @@ BANK DETAILS:
 - Reference: ${paymentId.value}
   `.trim();
 
-  const blob = new Blob([instructions], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `bank_transfer_${paymentId.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+    const blob = new Blob([instructions], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bank_transfer_${paymentId.value}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 
 
-  showSuccessModal.value = true;
-  successRedirectTimer = window.setTimeout(() => {
-    returnToShopViewAfterSuccess();
-  }, 1800);
+    showSuccessModal.value = true;
+    successRedirectTimer = window.setTimeout(() => {
+      returnToShopViewAfterSuccess();
+    }, 1800);
+  } finally {
+    isSubmittingPayment.value = false;
+  }
 };
 
 const generateABAQRData = () => {

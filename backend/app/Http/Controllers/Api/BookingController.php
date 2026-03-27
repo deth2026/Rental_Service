@@ -187,6 +187,42 @@ class BookingController extends Controller
                 'start_date' => "Only {$remainingQuantity} vehicle(s) are available for the selected dates.",
             ]);
         }
+
+        $userId = (int) ($validated['user_id'] ?? 0);
+        if ($userId > 0) {
+            $hasDuplicateBooking = Booking::query()
+                ->where('user_id', $userId)
+                ->where('vehicle_id', $vehicleId)
+                ->when($ignoredBooking?->id, function ($query, $ignoredId) {
+                    $query->where('id', '!=', $ignoredId);
+                })
+                ->get()
+                ->contains(function (Booking $booking) use ($requestedStart, $requestedEnd) {
+                    if (!$this->isBlockingBookingStatus($booking->status)) {
+                        return false;
+                    }
+
+                    $existingStart = $booking->start_date
+                        ? Carbon::parse($booking->start_date)->startOfDay()
+                        : null;
+                    $existingEnd = $this->getBookingEndDate(
+                        $booking->start_date?->toDateString() ?? null,
+                        $booking->total_days
+                    );
+
+                    if (!$existingStart || !$existingEnd) {
+                        return false;
+                    }
+
+                    return $requestedStart->lt($existingEnd) && $requestedEnd->gt($existingStart);
+                });
+
+            if ($hasDuplicateBooking) {
+                throw ValidationException::withMessages([
+                    'vehicle_id' => ['You already have this vehicle booked for the selected date range.'],
+                ]);
+            }
+        }
     }
 
     private function validateBookingPayload(Request $request, ?Booking $booking = null): array
@@ -377,7 +413,7 @@ class BookingController extends Controller
     /**
      * Get bookings for shop owner (bookings made at their shop)
      */
-    public function shopOwnerBookings()
+    public function shopOwnerBookings(Request $request)
     {
         try {
             $user = Auth::user();
@@ -394,6 +430,15 @@ class BookingController extends Controller
             // Get all shops owned by this user
             $shops = \App\Models\Shop::where('owner_id', $user->id)->pluck('id');
             
+            if ($shops->isEmpty()) {
+                return response()->json([]);
+            }
+
+            $requestedShopId = $request->integer('shop_id');
+            if ($requestedShopId) {
+                $shops = $shops->filter(fn ($id) => (int) $id === $requestedShopId)->values();
+            }
+
             if ($shops->isEmpty()) {
                 return response()->json([]);
             }
