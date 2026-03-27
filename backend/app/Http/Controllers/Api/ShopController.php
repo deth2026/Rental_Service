@@ -14,7 +14,7 @@ class ShopController extends Controller
 {
     public function index()
     {
-        $shops = Shop::with(['owner:id,name,email,phone'])
+        $shops = Shop::with(['owner:id,name,email,phone', 'city:id,name'])
             ->orderByDesc('id')
             ->paginate(25);
 
@@ -39,7 +39,8 @@ class ShopController extends Controller
                 'status' => $shop->status,
                 'created_at' => $shop->created_at,
                 'updated_at' => $shop->updated_at,
-                'owner' => $shop->owner
+                'owner' => $shop->owner,
+                'city' => $shop->city
             ];
         });
 

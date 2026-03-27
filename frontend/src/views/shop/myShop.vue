@@ -1,10 +1,12 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
-import { shopApi } from "@/services/api";
+import { shopApi, cityApi } from "@/services/api";
 import "../../css/Myshop.css";
 
 const shop = ref(null);
 const ownerName = ref("");
+const cities = ref([]);
+const loadingCities = ref(false);
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
@@ -31,6 +33,7 @@ const isUpdatingImage = ref(false);
 
 const createForm = reactive({
   name: "",
+  city_id: "",
   phone: "",
   description: "",
   address: "",
@@ -432,6 +435,7 @@ const createShop = async () => {
     if (shopImageFile.value) {
       payload = new FormData();
       payload.append("owner_id", getUserId());
+      if (createForm.city_id) payload.append("city_id", createForm.city_id);
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
@@ -447,6 +451,7 @@ const createShop = async () => {
     } else {
       payload = {
         owner_id: getUserId(),
+        city_id: createForm.city_id || null,
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
@@ -483,8 +488,21 @@ const createShop = async () => {
   }
 };
 
+const loadCities = async () => {
+  loadingCities.value = true;
+  try {
+    const { data } = await cityApi.getAll();
+    cities.value = asArray(data);
+  } catch (e) {
+    console.error("Failed to load cities", e);
+  } finally {
+    loadingCities.value = false;
+  }
+};
+
 onMounted(async () => {
   await loadMyShop();
+  await loadCities();
 });
 
 onBeforeUnmount(() => {
@@ -715,6 +733,15 @@ onBeforeUnmount(() => {
               </label>
 
               <div class="field-grid">
+                <label class="form-field">
+                  <span>Province/City</span>
+                  <select v-model="createForm.city_id" class="form-select">
+                    <option value="" disabled>Select Province</option>
+                    <option v-for="city in cities" :key="city.id" :value="city.id">
+                      {{ city.name }}
+                    </option>
+                  </select>
+                </label>
                 <label class="form-field">
                   <span>Shop Name</span>
                   <input

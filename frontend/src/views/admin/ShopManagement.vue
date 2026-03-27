@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { useToast } from '../../composables/useToast.js'
+import { cityApi } from '../../services/api.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 
 const admin = useAdminStore()
@@ -16,13 +17,16 @@ const showSortMenu = ref(false)
 const page = ref(1)
 const perPage = 6
 
+const cities = ref([])
+const loadingCities = ref(false)
+
 const showCreate = ref(false)
-const createForm = ref({ name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const createForm = ref({ name: '', city_id: '', address: '', location: '', phone: '', description: '', img_url: '' })
 const createImageFile = ref(null)
 const createImagePreview = ref('')
 
 const showEdit = ref(false)
-const editForm = ref({ id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const editForm = ref({ id: null, name: '', city_id: '', address: '', location: '', phone: '', description: '', img_url: '' })
 const editImageFile = ref(null)
 const editImagePreview = ref('')
 
@@ -327,6 +331,7 @@ const submitCreate = async () => {
     let payload = {
       name,
       address,
+      city_id: createForm.value.city_id || null,
       location: createForm.value.location || null,
       phone: createForm.value.phone || null,
       description: createForm.value.description || null,
@@ -339,6 +344,7 @@ const submitCreate = async () => {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (createForm.value.city_id) formData.append('city_id', createForm.value.city_id)
       if (createForm.value.location) formData.append('location', createForm.value.location)
       if (createForm.value.phone) formData.append('phone', createForm.value.phone)
       if (createForm.value.description) formData.append('description', createForm.value.description)
@@ -364,6 +370,7 @@ const openEdit = (shop) => {
   editForm.value = {
     id,
     name: shop?.name || '',
+    city_id: shop?.city_id || '',
     address: shop?.address || '',
     location: shop?.location || '',
     phone: shop?.phone || '',
@@ -377,7 +384,7 @@ const openEdit = (shop) => {
 
 const closeEdit = () => {
   showEdit.value = false
-  editForm.value = { id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' }
+  editForm.value = { id: null, city_id: '', name: '', address: '', location: '', phone: '', description: '', img_url: '' }
   editImageFile.value = null
   editImagePreview.value = ''
 }
@@ -398,6 +405,7 @@ const submitEdit = async () => {
     let payload = {
       name,
       address,
+      city_id: editForm.value.city_id || null,
       location: editForm.value.location || null,
       phone: editForm.value.phone || null,
       description: editForm.value.description || null,
@@ -408,6 +416,7 @@ const submitEdit = async () => {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (editForm.value.city_id) formData.append('city_id', editForm.value.city_id)
       if (editForm.value.location) formData.append('location', editForm.value.location)
       if (editForm.value.phone) formData.append('phone', editForm.value.phone)
       if (editForm.value.description) formData.append('description', editForm.value.description)
@@ -422,6 +431,18 @@ const submitEdit = async () => {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to update shop.')
   } finally {
     isUpdating.value = false
+  }
+}
+
+const loadCities = async () => {
+  loadingCities.value = true
+  try {
+    const { data } = await cityApi.getAll()
+    cities.value = data?.data || data || []
+  } catch (e) {
+    console.error('Failed to load cities', e)
+  } finally {
+    loadingCities.value = false
   }
 }
 
@@ -495,6 +516,7 @@ watch(
 )
 
 onMounted(() => {
+  loadCities()
   // Use cached data first, then force-refresh if empty so Admin page always tries to recover.
   admin.load()
     .then(() => {
@@ -725,16 +747,21 @@ onMounted(() => {
             </label>
             <div class="field-grid two-column">
               <label class="field">
+                <span class="field-label">Province/City</span>
+                <select v-model="createForm.city_id" class="form-select" style="width: 100%; border-radius: 12px; border: 1px solid #d6dbec; padding: 10px 12px;">
+                  <option value="" disabled>Select Province</option>
+                  <option v-for="city in cities" :key="city.id" :value="city.id">
+                    {{ city.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="field">
                 <span class="field-label">Shop Name</span>
                 <input
                   v-model="createForm.name"
                   type="text"
                   placeholder="e.g. Berlin Elite Rentals"
                 />
-              </label>
-              <label class="field">
-                <span class="field-label">Address</span>
-                <input v-model="createForm.address" type="text" placeholder="Street, City, Country" />
               </label>
             </div>
             <div class="field-grid two-column">
@@ -778,6 +805,15 @@ onMounted(() => {
         </div>
 
         <div class="modal-body form-grid">
+          <label class="field">
+            <span class="field-label">Province/City</span>
+            <select v-model="editForm.city_id" class="form-select" style="width: 100%; border-radius: 12px; border: 1px solid #d6dbec; padding: 10px 12px;">
+              <option value="" disabled>Select Province</option>
+              <option v-for="city in cities" :key="city.id" :value="city.id">
+                {{ city.name }}
+              </option>
+            </select>
+          </label>
           <label class="field">
             <span class="field-label">Shop Name</span>
             <input v-model="editForm.name" type="text" />
