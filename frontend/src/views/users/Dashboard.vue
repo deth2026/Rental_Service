@@ -309,7 +309,7 @@ const loadShops = async () => {
   dataError.value = ''
 
   try {
-    const response = await shopApi.getAll({ active_only: true })
+    const response = await shopApi.getAll({ active_only: true, has_payment: true })
     shops.value = parseArrayPayload(response.data)
       .map((shop) => normalizeShop(shop))
       .filter((shop) => shop.status === 'active' && shop.province)

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
+use App\Models\Payment;
 use App\Models\Rating;
 use App\Models\Shop;
 use App\Services\NotificationService;
@@ -13,11 +15,18 @@ use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $shops = Shop::with(['owner:id,name,email,phone'])
-            ->orderByDesc('id')
-            ->paginate(25);
+        $shops = Shop::with(['owner:id,name,email,phone']);
+        
+        // Filter to only show shops that have at least one payment
+        if ($request->boolean('has_payment', false)) {
+            $shops->whereHas('bookings', function ($query) {
+                $query->whereHas('payment');
+            });
+        }
+        
+        $shops = $shops->orderByDesc('id')->paginate(25);
 
         // Manually add img_url_full to ensure it's included
         $shopsWithImages = $shops->map(function ($shop) {
