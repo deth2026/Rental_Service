@@ -1,9 +1,17 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import NotificationMenu from '@/components/NotificationMenu.vue'
+import { useNotifications } from '@/composables/useNotifications'
+
+const baseNavItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'Promotion', route: '/promotions' }
+]
 
 const defaultNavItems = [
+  ...baseNavItems,
   { label: 'My Bookings', route: '/my-bookings' },
   { label: 'Profile', route: '/user/profile' }
 ]
@@ -35,22 +43,31 @@ const props = defineProps({
 const emit = defineEmits(['logout-request', 'nav-click'])
 const router = useRouter()
 const route = useRoute()
+const { unreadCount, loadNotifications } = useNotifications()
+const notificationMenuOpen = ref(false)
+const notificationMenuRef = ref(null)
 
 const resolvedNavItems = computed(() => {
   if (Array.isArray(props.navItems) && props.navItems.length) {
-    return props.navItems
+    const seen = new Set()
+    return [...baseNavItems, ...props.navItems].filter((item) => {
+      const key = `${item.label}|${item.route || ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   }
   return defaultNavItems
 })
 
 const activeNav = computed(() => {
-  if (props.activeLabel) return props.activeLabel
-
   const currentPath = route.path
   const matchedItem = resolvedNavItems.value.find(
     (item) => item.route && item.route !== '#' && currentPath.startsWith(item.route)
   )
-  return matchedItem?.label || resolvedNavItems.value[0]?.label || 'My Bookings'
+  if (matchedItem?.label) return matchedItem.label
+  if (props.activeLabel) return props.activeLabel
+  return resolvedNavItems.value[0]?.label || 'My Bookings'
 })
 
 const shouldShowBackButton = computed(() => {
@@ -81,6 +98,26 @@ const requestLogout = () => {
   emit('logout-request')
 }
 
+const toggleNotifications = () => {
+  notificationMenuOpen.value = !notificationMenuOpen.value
+}
+
+const closeNotifications = () => {
+  notificationMenuOpen.value = false
+}
+
+const handleDocumentClick = (event) => {
+  if (!notificationMenuOpen.value) return
+  if (notificationMenuRef.value && !notificationMenuRef.value.contains(event.target)) {
+    closeNotifications()
+  }
+}
+
+const goToNotificationsPage = () => {
+  closeNotifications()
+  router.push('/notifications')
+}
+
 const goBack = () => {
   if (props.backTo) {
     router.push(props.backTo)
@@ -88,6 +125,15 @@ const goBack = () => {
   }
   router.push('/view_shop')
 }
+
+onMounted(() => {
+  loadNotifications().catch(() => {})
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
 </script>
 
 <template>
@@ -113,6 +159,24 @@ const goBack = () => {
       </nav>
 
       <div class="top-actions">
+        <div ref="notificationMenuRef" class="notification-bell-wrap">
+          <button
+            type="button"
+            class="btn-reset notification-bell"
+            :class="{ active: notificationMenuOpen || route.path.startsWith('/notifications') }"
+            aria-label="Notifications"
+            @click.stop="toggleNotifications"
+          >
+            <i class="fa-solid fa-bell" aria-hidden="true"></i>
+            <span v-if="unreadCount > 0" class="notification-bell__badge">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
+          </button>
+
+          <div v-if="notificationMenuOpen" class="notification-bell-popover">
+            <NotificationMenu />
+          </div>
+        </div>
         <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
       </div>
     </div>
@@ -214,6 +278,66 @@ const goBack = () => {
   gap: 10px;
   justify-self: end;
   white-space: nowrap;
+  position: relative;
+}
+
+.notification-bell-wrap {
+  position: relative;
+}
+
+.notification-bell {
+  position: relative;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fbff;
+  border: 1px solid #dbe7f5;
+  color: #1f3657;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.notification-bell:hover {
+  background: #eaf2ff;
+  border-color: #bfd4f5;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.notification-bell.active {
+  background: #eaf2ff;
+  border-color: #bfd4f5;
+  color: #2563eb;
+}
+
+.notification-bell i {
+  font-size: 1rem;
+}
+
+.notification-bell__badge {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.32);
+}
+
+.notification-bell-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 260;
 }
 
 .navbar-back-row {
@@ -282,6 +406,13 @@ const goBack = () => {
 
   .topbar.user-navbar .top-actions {
     gap: 8px;
+  }
+
+  .notification-bell-popover {
+    position: fixed;
+    top: 88px;
+    right: 12px;
+    left: 12px;
   }
 
   .topbar.user-navbar .brand {

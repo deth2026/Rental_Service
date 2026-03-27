@@ -27,7 +27,7 @@ const showToast = (message, type = "success") => {
   setTimeout(() => (toast.value.show = false), 100);
 };
 
-const { unreadCount } = useNotifications();
+const { unreadCount, loadNotifications } = useNotifications();
 const showNotifications = ref(false);
 const notificationRoot = ref(null);
 const isDarkMode = ref(false);
@@ -609,12 +609,57 @@ const getDateKey = (value) => {
   return `${year}-${month}-${day}`;
 };
 
+const isRevenueBooking = (booking) => {
+  const statusKey = normalizePaymentStatusKey(booking?.status);
+  return ["paid", "confirmed", "completed"].includes(statusKey);
+};
+
+const paidPaymentBookingIds = computed(
+  () =>
+    new Set(
+      filteredPayments.value
+        .filter((payment) => isPaidPayment(payment))
+        .map((payment) => Number(payment?.booking_id || payment?.booking?.id || 0))
+        .filter((id) => id > 0),
+    ),
+);
+
+const revenueRecords = computed(() => {
+  const paymentRecords = filteredPayments.value
+    .filter((payment) => isPaidPayment(payment))
+    .map((payment) => ({
+      amount: Number(payment.amount || payment.total_price || 0),
+      date: getPaymentDate(payment),
+    }));
+
+  const bookingFallbackRecords = filteredBookings.value
+    .filter((booking) => {
+      const bookingId = Number(booking?.id || 0);
+      if (!isRevenueBooking(booking)) return false;
+      return bookingId <= 0 || !paidPaymentBookingIds.value.has(bookingId);
+    })
+    .map((booking) => ({
+      amount: Number(booking.total_price || 0),
+      date: booking.updated_at || booking.created_at || booking.start_date || "",
+    }));
+
+  return [...paymentRecords, ...bookingFallbackRecords];
+});
+
 const shopMatchesEntry = (entry) => {
   const shopId = Number(shop.value?.id);
   if (!shopId) return true;
   const bookingShopId = entry.shop_id || entry.booking?.shop_id || entry.vehicle?.shop_id;
   return Number(bookingShopId) === shopId;
 };
+
+const filteredBookings = computed(() =>
+  (bookings.value || []).filter((entry) => shopMatchesEntry(entry)),
+);
+
+const filteredPayments = computed(() =>
+  (payments.value || []).filter((entry) => shopMatchesEntry(entry)),
+);
 
 const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
@@ -861,6 +906,7 @@ watch(
   shop,
   (current) => {
     if (current?.id) {
+      loadNotifications(current.id).catch(() => {});
       fetchFeedback().catch(() => {});
       fetchShopRating().catch(() => {});
       return;
@@ -948,16 +994,13 @@ const filteredVehicles = computed(() => {
   });
 });
 
-const totalBookings = computed(() => bookings.value.length);
+const totalBookings = computed(() => filteredBookings.value.length);
 const totalEarnings = computed(() =>
-  payments.value.reduce((sum, payment) => {
-    if (!isPaidPayment(payment)) return sum;
-    return sum + Number(payment.amount || payment.total_price || 0);
-  }, 0),
+  revenueRecords.value.reduce((sum, entry) => sum + Number(entry.amount || 0), 0),
 );
 const todayBookings = computed(
   () =>
-    bookings.value.filter((b) => {
+    filteredBookings.value.filter((b) => {
       const key = getDateKey(b.start_date || b.created_at || b.startDate);
       return key && key === today.value;
     }).length,
@@ -971,9 +1014,8 @@ const maintenanceVehicles = computed(
 );
 const monthlyIncome = computed(() => {
   const now = new Date();
-  return payments.value.reduce((sum, payment) => {
-    if (!isPaidPayment(payment)) return sum;
-    const dateStr = getPaymentDate(payment);
+  return revenueRecords.value.reduce((sum, entry) => {
+    const dateStr = entry.date;
     if (!dateStr) return sum;
     const date = new Date(dateStr);
     if (
@@ -981,13 +1023,18 @@ const monthlyIncome = computed(() => {
       date.getFullYear() === now.getFullYear() &&
       date.getMonth() === now.getMonth()
     ) {
-      return sum + Number(payment.amount || payment.total_price || 0);
+      return sum + Number(entry.amount || 0);
     }
     return sum;
   }, 0);
 });
 const newCustomers = computed(
-  () => new Set(bookings.value.map((b) => b.customer)).size,
+  () =>
+    new Set(
+      filteredBookings.value.map(
+        (b) => b.customer_email || b.customer_name || b.customer || b.user_id || b.id,
+      ),
+    ).size,
 );
 const averageRating = computed(() => {
   // Only show rating if shop has ratings
@@ -1579,7 +1626,7 @@ const iconSvg = (name) => {
       </section>
 
       <section v-else-if="active === 'coupons'" class="coupons-view">
-        <Coupons />
+        <Coupons :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'notifications'" class="notifications-view">
@@ -3586,7 +3633,7 @@ textarea {
 
   .topbar-right {
     order: 2;
-    margin-right: 0;
+    margin-right: -40px;
   }
 
   .user-box {

@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Models\Coupon;
 use App\Models\Vehicle;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
@@ -99,6 +102,14 @@ class BookingController extends Controller
             ]), $request->all())
             : $request->all();
         $data['user_id'] = $booking?->user_id ?? Auth::id();
+
+        $vehicleId = (int) ($data['vehicle_id'] ?? 0);
+        if ($vehicleId > 0 && empty($data['shop_id'])) {
+            $vehicle = Vehicle::find($vehicleId);
+            if ($vehicle?->shop_id) {
+                $data['shop_id'] = (int) $vehicle->shop_id;
+            }
+        }
 
         if (array_key_exists('rider_details', $data)) {
             $data['rider_details'] = $this->normalizeNullableString($data['rider_details']);
@@ -200,8 +211,52 @@ class BookingController extends Controller
         ]);
 
         $this->validateVehicleAvailability($validated, $booking);
+        $this->validateCouponOwnership($validated);
 
         return $validated;
+    }
+
+    private function validateCouponOwnership(array $validated): void
+    {
+        $couponId = (int) ($validated['coupon_id'] ?? 0);
+        if ($couponId <= 0) {
+            return;
+        }
+
+        $vehicle = Vehicle::find((int) ($validated['vehicle_id'] ?? 0));
+        $coupon = Coupon::find($couponId);
+
+        if (!$vehicle || !$coupon) {
+            throw ValidationException::withMessages([
+                'coupon_id' => ['Selected coupon is invalid.'],
+            ]);
+        }
+
+        if (!$coupon->shop_id || (int) $coupon->shop_id !== (int) $vehicle->shop_id) {
+            throw ValidationException::withMessages([
+                'coupon_id' => ['This coupon can only be used for vehicles from its own shop.'],
+            ]);
+        }
+
+        if ($coupon->is_active === false) {
+            throw ValidationException::withMessages([
+                'coupon_id' => ['This coupon is inactive.'],
+            ]);
+        }
+
+        $today = Carbon::now()->startOfDay();
+
+        if ($coupon->valid_from && Carbon::parse($coupon->valid_from)->startOfDay()->greaterThan($today)) {
+            throw ValidationException::withMessages([
+                'coupon_id' => ['This coupon is not active yet.'],
+            ]);
+        }
+
+        if ($coupon->valid_until && Carbon::parse($coupon->valid_until)->startOfDay()->lessThan($today)) {
+            throw ValidationException::withMessages([
+                'coupon_id' => ['This coupon has expired.'],
+            ]);
+        }
     }
 
     public function index(Request $request)
@@ -478,6 +533,16 @@ $bookings = Booking::whereIn('shop_id', $shops)
         $validated = $this->validateBookingPayload($request);
 
         $record = Booking::create($validated);
+        $record->loadMissing(['user', 'vehicle', 'shop.owner']);
+
+        try {
+            NotificationService::bookingCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send booking created notifications.', [
+                'booking_id' => $record->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json($record, 201);
     }
@@ -489,10 +554,25 @@ $bookings = Booking::whereIn('shop_id', $shops)
 
     public function update(Request $request, Booking $booking)
     {
+        $previousStatus = strtolower(trim((string) ($booking->status ?? '')));
         $validated = $this->validateBookingPayload($request, $booking);
         $booking->update($validated);
 
-        return response()->json($booking->fresh());
+        $freshBooking = $booking->fresh(['user', 'vehicle', 'shop.owner']);
+        $newStatus = strtolower(trim((string) ($freshBooking->status ?? '')));
+        if ($newStatus !== '' && $newStatus !== $previousStatus) {
+            try {
+                NotificationService::bookingStatusChanged($freshBooking, $newStatus);
+            } catch (\Throwable $exception) {
+                Log::warning('Failed to send booking status notifications.', [
+                    'booking_id' => $freshBooking->id,
+                    'status' => $newStatus,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json($freshBooking);
     }
 
     public function destroy(Booking $booking)

@@ -339,6 +339,7 @@ const formatFullDate = (timestamp) => {
   background: #eef2ff;
   align-items: center;
   position: relative;
+  min-width: 0;
 }
 
 .notification-row.unread {
@@ -358,10 +359,15 @@ const formatFullDate = (timestamp) => {
   background: #fff;
   border-radius: 22px;
   padding: 16px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.notification-row__heading {
+  min-width: 0;
 }
 
 .notification-row__title {
@@ -370,7 +376,11 @@ const formatFullDate = (timestamp) => {
   font-weight: 700;
   color: #111827;
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notification-row__name {
@@ -381,11 +391,16 @@ const formatFullDate = (timestamp) => {
   margin: 0;
   color: #475569;
   font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notification-row__footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 8px;
   font-size: 0.8rem;
   color: #94a3b8;
   align-items: center;
@@ -545,6 +560,14 @@ const formatFullDate = (timestamp) => {
 
   .notification-shell__footer {
     flex-direction: column;
+  }
+
+  .notification-row {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-row__dot {
+    display: none;
   }
 }
 </style>

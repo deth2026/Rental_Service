@@ -254,26 +254,35 @@ const formatNotificationTitle = (item) => {
   border: 1px solid #e5e7eb;
   background: #ffffff;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  min-width: 0;
 }
 
 .notification-item__avatar {
   position: relative;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  flex: 0 0 40px;
+  border-radius: 50%;
   background: #eef2ff;
   display: grid;
   place-items: center;
   font-weight: 700;
   color: #1d4ed8;
   font-size: 1rem;
+  overflow: hidden;
 }
 
 .notification-item__avatar img {
   width: 100%;
   height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  display: block;
   object-fit: cover;
-  border-radius: 16px;
+  object-position: center;
+  border-radius: 50%;
 }
 
 .badge-dot {
@@ -289,6 +298,7 @@ const formatNotificationTitle = (item) => {
 
 .notification-item__body {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -298,12 +308,22 @@ const formatNotificationTitle = (item) => {
   margin: 0;
   font-weight: 700;
   color: #111827;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notification-item__description {
   margin: 0;
   color: #475569;
   font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .notification-item__time {
@@ -358,6 +378,10 @@ const formatNotificationTitle = (item) => {
   .notification-item {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .notification-item__body {
+    width: 100%;
   }
 
   .notification-panel__footer {
