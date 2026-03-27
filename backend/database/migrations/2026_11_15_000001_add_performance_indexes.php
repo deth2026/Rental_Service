@@ -22,23 +22,14 @@ return new class extends Migration
             $table->index('status');
         });
 
-        // Payments/Feedback for dashboard
-// Skip payments - missing status column
-        Schema::table('feedback', function (Blueprint $table) {
-            $table->index('shop_id');
-            $table->index('created_at');
-        });
-
+        // Feedback for dashboard
         Schema::table('feedback', function (Blueprint $table) {
             $table->index('shop_id');
             $table->index('created_at');
         });
 
         // Vehicle ratings summary
-// Skip ratings if needed - focus on core tables
-    }
-};
-
+        // Skip ratings if needed - focus on core tables
     }
 
     public function down()
@@ -55,7 +46,9 @@ return new class extends Migration
             $table->dropIndex('status');
         });
 
-        // Reverse other indexes...
+        Schema::table('feedback', function (Blueprint $table) {
+            $table->dropIndex('shop_id');
+            $table->dropIndex('created_at');
+        });
     }
 };
-
