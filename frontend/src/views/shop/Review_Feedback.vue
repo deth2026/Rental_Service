@@ -623,6 +623,7 @@ const getRatingDistribution = (ratings) => {
   background: #fff;
   border: 1px solid #e2e8f0;
   padding: 8px 12px;
+  border-radius: 14px;
   text-align: center;
   transition: all 0.3s ease;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
