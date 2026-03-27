@@ -13,9 +13,28 @@ const showLocationPrompt = ref(false)
 const locationGranted = ref(false)
 const requestingLocation = ref(false)
 const locationError = ref('')
+const LOCATION_PROMPT_DISMISSED_KEY = 'chong_choul_location_prompt_dismissed'
+
+const hasDismissedLocationPrompt = () => {
+  try {
+    return sessionStorage.getItem(LOCATION_PROMPT_DISMISSED_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+const setLocationPromptDismissed = (dismissed) => {
+  try {
+    if (dismissed) sessionStorage.setItem(LOCATION_PROMPT_DISMISSED_KEY, '1')
+    else sessionStorage.removeItem(LOCATION_PROMPT_DISMISSED_KEY)
+  } catch {
+    // Ignore storage write errors.
+  }
+}
 
 const syncLocationFromStorage = () => {
   locationGranted.value = hasLocationAccess()
+  if (locationGranted.value) setLocationPromptDismissed(false)
 }
 
 onMounted(() => {
@@ -24,7 +43,7 @@ onMounted(() => {
 
   setTimeout(() => {
     showSplash.value = false
-    if (!locationGranted.value) {
+    if (!locationGranted.value && !hasDismissedLocationPrompt()) {
       setTimeout(() => openLocationPrompt(), 300)
     }
   }, 2500)
@@ -61,6 +80,7 @@ const handleAllowLocation = () => {
       locationGranted.value = true
       showLocationPrompt.value = false
       requestingLocation.value = false
+      setLocationPromptDismissed(false)
 
       window.dispatchEvent(
         new CustomEvent('location-access-updated', {
@@ -82,10 +102,12 @@ const handleAllowLocation = () => {
 
 const handleCloseLocation = () => {
   showLocationPrompt.value = false
+  if (!locationGranted.value) setLocationPromptDismissed(true)
 }
 
 const openLocationPrompt = () => {
   locationError.value = ''
+  setLocationPromptDismissed(false)
   showLocationPrompt.value = true
 }
 
@@ -99,8 +121,28 @@ const topLevelRoutes = new Set([
 
 const showGlobalBackButton = computed(() => {
   if (showSplash.value) return false
+  if (route.path.startsWith('/admin')) return false
+  if (route.path.startsWith('/shop/notifications')) return false
   if (route.path.startsWith('/booking')) return false
+  if (usesUserNavbar.value) return false
   return !topLevelRoutes.has(route.path)
+})
+
+const isAuthEntryPage = computed(() => {
+  return route.path === '/login' || route.path === '/register'
+})
+
+const usesUserNavbar = computed(() => {
+  const path = route.path
+  return (
+    path.startsWith('/my-bookings') ||
+    path.startsWith('/promotions') ||
+    path.startsWith('/notifications') ||
+    path.startsWith('/settings') ||
+    path.startsWith('/user/profile') ||
+    path.startsWith('/vehicles') ||
+    /^\/shop\/[^/]+\/vehicles\/?$/.test(path)
+  )
 })
 
 const getFallbackRoute = () => {
@@ -117,10 +159,15 @@ const getFallbackRoute = () => {
     // Keep default fallback route.
   }
 
-  return '/'
+  return '/view_shop'
 }
 
 const goBack = () => {
+  if (isAuthEntryPage.value) {
+    router.push('/view_shop')
+    return
+  }
+
   if (window.history.length > 1) {
     router.back()
     return
@@ -152,13 +199,13 @@ const goBack = () => {
       type="button"
       class="global-back-btn"
       @click="goBack"
-      aria-label="Go back"
-      title="Go back"
+      :aria-label="isAuthEntryPage ? 'Go to Home View' : 'Go back'"
+      :title="isAuthEntryPage ? 'Go to Home View' : 'Go back'"
     >
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
-      <span>Back</span>
+      <span>{{ isAuthEntryPage ? 'Home View' : 'Back' }}</span>
     </button>
   </div>
 </template>

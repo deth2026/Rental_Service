@@ -126,15 +126,14 @@ const overviewMetrics = computed(() => [
 ])
 
 const navItems = [
-    { label: 'Home', route: '/view_shop' },
-    { label: 'My Booking', route: '/my-bookings' },
-    { label: 'Promotions', route: '/promotions' },
+    { label: 'My Bookings', route: '/my-bookings' },
+    { label: 'Profile', route: '/user/profile' },
 ]
 
 const activeNavLabel = computed(() => {
     const currentPath = route.path
     const matched = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-    return matched?.label || 'Home'
+    return matched?.label || 'Profile'
 })
 
 const timelineEvents = [

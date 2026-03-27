@@ -19,20 +19,21 @@ class RoleMiddleware
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $userRole = (string) $request->user()->role;
+        $userRole = strtolower((string) ($request->user()->role ?? $request->user()->user_type ?? ''));
         $allowedRoles = [];
 
         foreach ($roles as $role) {
-            $allowedRoles[] = $role;
+            $normalizedRole = strtolower((string) $role);
+            $allowedRoles[] = $normalizedRole;
             // Backward-compatible alias: "shop" middleware should allow "shop_owner" users.
-            if ($role === 'shop') {
+            if ($normalizedRole === 'shop') {
                 $allowedRoles[] = 'shop_owner';
             }
             // Backward-compatible aliases between owner and shop_owner.
-            if ($role === 'shop_owner') {
+            if ($normalizedRole === 'shop_owner') {
                 $allowedRoles[] = 'owner';
             }
-            if ($role === 'owner') {
+            if ($normalizedRole === 'owner') {
                 $allowedRoles[] = 'shop_owner';
             }
         }

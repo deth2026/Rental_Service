@@ -79,3 +79,38 @@ body {
 button { font-family: inherit; cursor: pointer; }
 input, textarea { font-family: inherit; }
 a { text-decoration: none; color: inherit; }
+
+/* Transparent logo containers and logo images across the app */
+.brand-badge,
+.brand-icon,
+.logo-icon-wrap,
+.logo-wrapper,
+.app-logo__image-wrap,
+.header-brand .brand-icon {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.brand-badge:hover,
+.brand-icon:hover,
+.logo-icon-wrap:hover,
+.logo-wrapper:hover,
+.app-logo__image-wrap:hover,
+.header-brand .brand-icon:hover {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.brand-logo,
+.brand-icon-image,
+.logo-img,
+.app-logo__image,
+.logo-pic,
+img[src*='logo-removebg'] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}

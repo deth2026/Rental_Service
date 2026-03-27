@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useAdminStore } from '../../stores/adminStore.js'
 import CountUp from '../../components/CountUp.vue'
 
@@ -7,17 +7,86 @@ const admin = useAdminStore()
 
 const STORAGE_KEY = 'chong_choul_payouts_v1'
 const LAST_PAYOUT_KEY = 'chong_choul_last_payout_date'
+const CATEGORY_ALL = 'all'
+const CATEGORY_ORDER = ['MOTORBIKE', 'CAR', 'BICYCLE', 'OTHER']
+const CATEGORY_META = {
+  MOTORBIKE: { label: 'Motorbike Rental', color: '#1f7bff' },
+  CAR: { label: 'Car Rental', color: '#1da1f2' },
+  BICYCLE: { label: 'Bicycle', color: '#2bc96b' },
+  OTHER: { label: 'Other', color: '#94a3b8' },
+}
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+const money2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-const state = ref({ processed_shop_ids: [] })
+const state = ref({ processed_keys: [] })
 const isProcessingAll = ref(false)
+const page = ref(1)
+const perPage = 8
+const periodMode = ref('day')
+const selectedCategory = ref(CATEGORY_ALL)
+const chartReady = ref(false)
+const hoveredDonutCategory = ref('')
+const hoveredTrendIndex = ref(null)
+const hoveredBarIndex = ref(null)
+
+const toAmount = (booking) => Number(
+  booking?.total_amount ??
+  booking?.total_price ??
+  booking?.gross_amount ??
+  booking?.price ??
+  booking?.amount ??
+  0
+) || 0
+
+const toDate = (value) => {
+  if (!value) return null
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+const toDateKey = (date) => {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+const toMonthKey = (date) => {
+  if (!date || Number.isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+const normalizeCategory = (type) => {
+  const value = String(type || '').toLowerCase()
+  if (value.includes('bicycle') || value.includes('cycle')) return 'BICYCLE'
+  if (value.includes('car')) return 'CAR'
+  if (value.includes('motor') || value.includes('bike')) return 'MOTORBIKE'
+  return 'OTHER'
+}
+
+const categoryLabel = (key) => {
+  if (key === CATEGORY_ALL) return 'All Categories'
+  return CATEGORY_META[key]?.label || 'Other'
+}
+
+const categoryColor = (key) => CATEGORY_META[key]?.color || '#94a3b8'
 
 const loadLocal = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) state.value = JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      state.value = {
+        processed_keys: Array.isArray(parsed?.processed_keys) ? parsed.processed_keys : [],
+      }
+      return
+    }
   } catch {
-    state.value = { processed_shop_ids: [] }
+    // Ignore bad local data.
   }
+  state.value = { processed_keys: [] }
 }
 
 const persistLocal = () => {
@@ -30,65 +99,320 @@ const lastPayoutDate = computed(() => {
   return 'Oct 15, 2024'
 })
 
-const processedSet = computed(() => new Set(state.value.processed_shop_ids || []))
+const periodKey = computed(() => {
+  const now = new Date()
+  return periodMode.value === 'month' ? toMonthKey(now) : toDateKey(now)
+})
 
-const periodLabel = computed(() => 'Current Period (Oct 16 - Oct 31)')
+const processedSet = computed(() => new Set(state.value.processed_keys || []))
+const processedScopeKey = (shopId) => `${periodMode.value}:${periodKey.value}:${shopId}`
 
-const payoutRows = computed(() => {
-  const commissionRate = admin.state.commission_rate || 0.15
+const shopsById = computed(() => {
+  const map = new Map()
+  ;(admin.state.shops || []).forEach((shop) => map.set(String(shop.id), shop))
+  return map
+})
+
+const isBookingInSelectedPeriod = (booking) => {
+  const d = toDate(booking?.start_date || booking?.created_at || booking?.booking_date || booking?.date)
+  if (!d) return false
+  return periodMode.value === 'month'
+    ? toMonthKey(d) === periodKey.value
+    : toDateKey(d) === periodKey.value
+}
+
+const allPayoutRows = computed(() => {
+  const commissionRate = Number(admin.state.commission_rate || 0.15)
   const byShop = new Map()
-  admin.state.bookings.forEach((b) => {
-    const shopId = String(b.shop_id || '')
-    const gross = Number(
-      b.total_amount ??
-      b.total_price ??
-      b.gross_amount ??
-      b.price ??
-      0
-    ) || 0
-    byShop.set(shopId, (byShop.get(shopId) || 0) + gross)
+  const bookingsCount = new Map()
+
+  ;(admin.state.bookings || []).forEach((booking) => {
+    if (!isBookingInSelectedPeriod(booking)) return
+    const shopId = String(booking.shop_id || booking.shop?.id || '')
+    if (!shopId) return
+    byShop.set(shopId, (byShop.get(shopId) || 0) + toAmount(booking))
+    bookingsCount.set(shopId, (bookingsCount.get(shopId) || 0) + 1)
   })
 
-  const shops = admin.state.shops.map((s) => ({
-    id: s.id,
-    name: s.name,
-    vehicle_type: s.vehicle_type,
-    gross: byShop.get(String(s.id)) || 0,
-  }))
-
-  const pending = shops
-    .filter((s) => s.gross > 150 && !processedSet.value.has(String(s.id)))
-    .sort((a, b) => b.gross - a.gross)
-    .slice(0, 18)
-    .map((s) => {
-      const commission = s.gross * commissionRate
+  return (admin.state.shops || [])
+    .map((shop) => {
+      const gross = Number(byShop.get(String(shop.id)) || 0)
+      const commission = gross * commissionRate
+      const category = normalizeCategory(shop?.vehicle_type || shop?.category)
       return {
-        ...s,
+        id: shop.id,
+        name: shop.name,
+        category,
+        gross,
         commission,
-        payout: s.gross - commission,
+        payout: Math.max(0, gross - commission),
+        bookingsCount: bookingsCount.get(String(shop.id)) || 0,
+        processed: processedSet.value.has(processedScopeKey(shop.id)),
       }
     })
-
-  return pending
+    .sort((a, b) => (b.gross - a.gross) || String(a.name || '').localeCompare(String(b.name || '')))
 })
 
-const summary = computed(() => {
-  const pendingAmount = payoutRows.value.reduce((sum, row) => sum + row.payout, 0)
-  return {
-    pendingAmount,
-    shopsToPay: payoutRows.value.length,
+const categoryOptions = computed(() => {
+  const set = new Set()
+  allPayoutRows.value.forEach((row) => set.add(row.category))
+  return [CATEGORY_ALL, ...CATEGORY_ORDER.filter((key) => set.has(key))]
+})
+
+const payoutRows = computed(() => (
+  selectedCategory.value === CATEGORY_ALL
+    ? allPayoutRows.value
+    : allPayoutRows.value.filter((row) => row.category === selectedCategory.value)
+))
+
+const payableRows = computed(() => payoutRows.value.filter((row) => row.gross > 0 && !row.processed))
+
+const summary = computed(() => ({
+  pendingAmount: payableRows.value.reduce((sum, row) => sum + row.payout, 0),
+  shopsToPay: payableRows.value.length,
+}))
+
+const totalPages = computed(() => Math.max(1, Math.ceil(payoutRows.value.length / perPage)))
+const pagedRows = computed(() => {
+  const start = (page.value - 1) * perPage
+  return payoutRows.value.slice(start, start + perPage)
+})
+
+const pageNumbers = computed(() => {
+  if (totalPages.value <= 5) return Array.from({ length: totalPages.value }, (_, i) => i + 1)
+  const start = Math.max(1, page.value - 2)
+  const end = Math.min(totalPages.value, start + 4)
+  const adjustedStart = Math.max(1, end - 4)
+  return Array.from({ length: end - adjustedStart + 1 }, (_, i) => adjustedStart + i)
+})
+
+const distributionItems = computed(() => {
+  const map = new Map(CATEGORY_ORDER.map((key) => [key, 0]))
+  allPayoutRows.value
+    .filter((row) => row.gross > 0 && !row.processed)
+    .forEach((row) => map.set(row.category, (map.get(row.category) || 0) + row.payout))
+
+  return CATEGORY_ORDER
+    .map((key) => ({ key, amount: Number(map.get(key) || 0), color: categoryColor(key), label: categoryLabel(key) }))
+    .filter((item) => item.amount > 0 || categoryOptions.value.includes(item.key))
+})
+
+const distributionTotal = computed(() => distributionItems.value.reduce((sum, item) => sum + item.amount, 0))
+const distributionChips = computed(() => [
+  { key: CATEGORY_ALL, label: categoryLabel(CATEGORY_ALL), amount: distributionTotal.value, color: '#2563eb' },
+  ...distributionItems.value,
+])
+
+const categorySummaryCards = computed(() => {
+  const rows = allPayoutRows.value
+  const makeCard = (key) => {
+    const scoped = key === CATEGORY_ALL ? rows : rows.filter((row) => row.category === key)
+    const pending = scoped.filter((row) => row.gross > 0 && !row.processed)
+    return {
+      key,
+      label: categoryLabel(key),
+      color: key === CATEGORY_ALL ? '#2563eb' : categoryColor(key),
+      shopsToPay: pending.length,
+      amount: pending.reduce((sum, row) => sum + row.payout, 0),
+      active: selectedCategory.value === key,
+    }
   }
+  return [makeCard(CATEGORY_ALL), ...CATEGORY_ORDER.filter((key) => categoryOptions.value.includes(key)).map(makeCard)]
 })
 
-const fmtMoney = (value) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(Number(value || 0))
+const bookingFacts = computed(() => {
+  const commissionRate = Number(admin.state.commission_rate || 0.15)
+  return (admin.state.bookings || [])
+    .map((booking) => {
+      const shop = shopsById.value.get(String(booking.shop_id || booking.shop?.id || ''))
+      const date = toDate(booking?.start_date || booking?.created_at || booking?.booking_date || booking?.date)
+      if (!date) return null
+      const gross = toAmount(booking)
+      const commission = gross * commissionRate
+      return {
+        date,
+        category: normalizeCategory(shop?.vehicle_type || shop?.category || booking?.vehicle_type),
+        gross,
+        commission,
+        net: Math.max(0, gross - commission),
+      }
+    })
+    .filter(Boolean)
+})
 
-const vehicleLabel = (type) => {
-  const v = String(type || '').toLowerCase()
-  if (v.includes('car')) return 'CAR'
-  if (v.includes('bicycle')) return 'BICYCLE'
-  return 'MOTORBIKE'
+const filteredChartBookings = computed(() => (
+  selectedCategory.value === CATEGORY_ALL
+    ? bookingFacts.value
+    : bookingFacts.value.filter((row) => row.category === selectedCategory.value)
+))
+
+const bucketMode = computed(() => (periodMode.value === 'month' ? 'month' : 'day'))
+const bucketKey = (date, mode) => (mode === 'month' ? toMonthKey(date) : toDateKey(date))
+const bucketLabel = (date, mode) => (mode === 'month' ? `${monthNames[date.getMonth()]} ${String(date.getFullYear()).slice(-2)}` : `${monthNames[date.getMonth()]} ${date.getDate()}`)
+
+const buildBuckets = (count, mode) => {
+  const now = new Date()
+  const buckets = []
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const d = new Date(now)
+    if (mode === 'month') {
+      d.setDate(1)
+      d.setMonth(d.getMonth() - i)
+    } else {
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - i)
+    }
+    buckets.push({ key: bucketKey(d, mode), label: bucketLabel(d, mode) })
+  }
+  return buckets
 }
+
+const buildSeries = (count) => {
+  const mode = bucketMode.value
+  const buckets = buildBuckets(count, mode)
+  const map = new Map(buckets.map((bucket) => [bucket.key, { ...bucket, earnings: 0, commission: 0, net: 0 }]))
+  filteredChartBookings.value.forEach((row) => {
+    const key = bucketKey(row.date, mode)
+    if (!map.has(key)) return
+    const item = map.get(key)
+    item.earnings += row.gross
+    item.commission += row.commission
+    item.net += row.net
+  })
+  return buckets.map((bucket) => map.get(bucket.key))
+}
+
+const barSeries = computed(() => buildSeries(6))
+const trendSeries = computed(() => buildSeries(8).map((row) => ({ ...row, pending: row.net })))
+
+const niceMax = (value, floor = 1000) => (value > 0 ? Math.ceil(value / 250) * 250 : floor)
+const barMax = computed(() => niceMax(Math.max(...barSeries.value.flatMap((row) => [row.earnings, row.commission, row.net]), 0), 500))
+const trendMax = computed(() => niceMax(Math.max(...trendSeries.value.map((row) => row.pending), 0), 500))
+
+const barChart = computed(() => {
+  const xStart = 58
+  const xEnd = 742
+  const yTop = 18
+  const yBottom = 268
+  const chartHeight = yBottom - yTop
+  const count = Math.max(1, barSeries.value.length)
+  const step = (xEnd - xStart) / count
+  const barWidth = Math.min(16, Math.max(10, step * 0.16))
+  const points = barSeries.value.map((row, idx) => {
+    const center = xStart + (step * idx) + (step / 2)
+    const toY = (value) => yBottom - ((Number(value || 0) / (barMax.value || 1)) * chartHeight)
+    const earningsY = toY(row.earnings)
+    const commissionY = toY(row.commission)
+    const netY = toY(row.net)
+    return {
+      idx,
+      row,
+      center,
+      earningsX: center - (barWidth * 1.8),
+      commissionX: center - (barWidth / 2),
+      netX: center + (barWidth * 0.8),
+      barWidth,
+      earningsY,
+      commissionY,
+      netY,
+      earningsH: yBottom - earningsY,
+      commissionH: yBottom - commissionY,
+      netH: yBottom - netY,
+      peakY: Math.min(earningsY, commissionY, netY),
+      labelY: 292,
+      hitX: center - (step * 0.45),
+      hitWidth: step * 0.9,
+    }
+  })
+  return { points }
+})
+
+const trendChart = computed(() => {
+  const xStart = 56
+  const xEnd = 740
+  const yBottom = 252
+  const chartHeight = 234
+  const count = Math.max(1, trendSeries.value.length - 1)
+  const step = (xEnd - xStart) / count
+  const points = trendSeries.value.map((row, idx) => ({
+    idx,
+    row,
+    x: xStart + (idx * step),
+    y: yBottom - ((Number(row.pending || 0) / (trendMax.value || 1)) * chartHeight),
+  }))
+  const linePath = points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
+  const areaPath = points.length
+    ? `${linePath} L ${points[points.length - 1].x} ${yBottom} L ${points[0].x} ${yBottom} Z`
+    : ''
+  return { points, linePath, areaPath }
+})
+
+const buildDonutSegments = (items, radius, field = 'amount') => {
+  const circumference = 2 * Math.PI * radius
+  const total = items.reduce((sum, item) => sum + Number(item[field] || 0), 0)
+  let offset = 0
+  return items.map((item, idx) => {
+    const value = Number(item[field] || 0)
+    const length = total > 0 ? (value / total) * circumference : 0
+    const segment = { ...item, circumference, length, offset, delay: `${idx * 100}ms` }
+    offset += length
+    return segment
+  })
+}
+
+const distributionSegments = computed(() => buildDonutSegments(distributionItems.value, 72, 'amount'))
+
+const statusItems = computed(() => {
+  const rows = payoutRows.value
+  const ready = rows.filter((row) => row.gross > 0 && !row.processed).length
+  const review = rows.filter((row) => row.processed).length
+  const hold = rows.filter((row) => row.gross <= 0).length
+  const total = Math.max(1, ready + review + hold)
+  return [
+    { key: 'ready', label: 'Ready', count: ready, percentage: Math.round((ready / total) * 100), color: '#22c55e' },
+    { key: 'review', label: 'Processed', count: review, percentage: Math.round((review / total) * 100), color: '#f97316' },
+    { key: 'hold', label: 'No Earnings', count: hold, percentage: Math.max(0, 100 - Math.round((ready / total) * 100) - Math.round((review / total) * 100)), color: '#ef4444' },
+  ]
+})
+
+const statusSegments = computed(() => buildDonutSegments(statusItems.value, 56, 'count'))
+const selectedCategoryLabel = computed(() => categoryLabel(selectedCategory.value))
+
+const selectedShare = computed(() => {
+  if (selectedCategory.value === CATEGORY_ALL) return 100
+  const target = distributionItems.value.find((item) => item.key === selectedCategory.value)
+  if (!target || distributionTotal.value <= 0) return 0
+  return Math.round((target.amount / distributionTotal.value) * 100)
+})
+
+const donutTooltip = computed(() => {
+  if (!hoveredDonutCategory.value) return null
+  return distributionChips.value.find((item) => item.key === hoveredDonutCategory.value) || null
+})
+
+const barTooltip = computed(() => {
+  const idx = hoveredBarIndex.value
+  if (idx == null || idx < 0 || idx >= barChart.value.points.length) return null
+  const point = barChart.value.points[idx]
+  const width = 188
+  const height = 92
+  const x = Math.max(48, Math.min(point.center - (width / 2), 760 - width))
+  const y = Math.max(8, point.peakY - height - 10)
+  return { x, y, width, height, row: point.row }
+})
+
+const trendTooltip = computed(() => {
+  const idx = hoveredTrendIndex.value
+  if (idx == null || idx < 0 || idx >= trendChart.value.points.length) return null
+  const point = trendChart.value.points[idx]
+  const width = 124
+  const height = 72
+  const x = Math.max(20, Math.min(point.x - (width / 2), 760 - width - 8))
+  const y = Math.max(12, point.y - height - 14)
+  return { x, y, width, height, row: point.row }
+})
+
+const fmtMoney = (value) => money2.format(Number(value || 0))
 
 const initials = (name) => {
   const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
@@ -98,48 +422,111 @@ const initials = (name) => {
 }
 
 const processShop = (shopId) => {
-  const set = new Set(state.value.processed_shop_ids || [])
-  set.add(String(shopId))
-  state.value.processed_shop_ids = [...set]
+  const key = processedScopeKey(shopId)
+  const set = new Set(state.value.processed_keys || [])
+  set.add(key)
+  state.value.processed_keys = [...set]
   persistLocal()
-  localStorage.setItem(LAST_PAYOUT_KEY, new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }))
+  localStorage.setItem(
+    LAST_PAYOUT_KEY,
+    new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  )
 }
 
 const processAll = async () => {
   if (isProcessingAll.value) return
   isProcessingAll.value = true
   try {
-    payoutRows.value.forEach((row) => processShop(row.id))
+    payableRows.value.forEach((row) => processShop(row.id))
   } finally {
     isProcessingAll.value = false
   }
 }
 
+const triggerChartAnimation = async () => {
+  chartReady.value = false
+  await nextTick()
+  requestAnimationFrame(() => { chartReady.value = true })
+}
+
+const setCategoryFilter = (category) => {
+  selectedCategory.value = category
+  page.value = 1
+}
+
+watch(
+  categoryOptions,
+  (options) => {
+    if (!options.includes(selectedCategory.value)) selectedCategory.value = CATEGORY_ALL
+  },
+  { immediate: true }
+)
+
+watch([periodMode, selectedCategory], async () => {
+  page.value = 1
+  hoveredDonutCategory.value = ''
+  hoveredTrendIndex.value = null
+  hoveredBarIndex.value = null
+  await triggerChartAnimation()
+})
+
+watch(
+  () => payoutRows.value.length,
+  (next) => {
+    const max = Math.max(1, Math.ceil(next / perPage))
+    if (page.value > max) page.value = max
+  }
+)
+
 onMounted(async () => {
   loadLocal()
   await admin.load().catch(() => {})
+  await triggerChartAnimation()
 })
 </script>
 
 <template>
-  <section class="admin-page">
-    <header class="page-head">
-      <div>
-        <div class="breadcrumb muted">FINANCIALS <span class="dot">•</span> PROCESS PAYOUTS</div>
-        <h1 class="page-title">Admin Process Payouts Management</h1>
-        <p class="page-subtitle">Review and approve pending earnings distribution to rental partners.</p>
-      </div>
-
+  <section class="admin-page financial-page">
+    <header class="page-head clean-head">
+      <h1 class="page-title">Admin Process Payouts</h1>
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="isProcessingAll || !payableRows.length"
+        @click="processAll"
+      >
+        {{ isProcessingAll ? 'Processing...' : 'Process All Pending Payouts' }}
+      </button>
     </header>
 
+    <section class="card category-overview">
+      <div class="category-metric-grid">
+        <button
+          v-for="card in categorySummaryCards"
+          :key="card.key"
+          type="button"
+          class="metric-card"
+          :class="{ active: card.active }"
+          @click="setCategoryFilter(card.key)"
+        >
+          <span class="metric-title">
+            <span class="metric-dot" :style="{ backgroundColor: card.color }"></span>
+            {{ card.label }}
+          </span>
+          <span class="metric-main">{{ card.shopsToPay }}</span>
+          <span class="metric-sub">
+            <strong>{{ money0.format(card.amount) }}</strong>
+          </span>
+        </button>
+      </div>
+    </section>
 
-    <div class="split-stats three">
+    <div class="split-stats three compact-stats">
       <section class="card stat-wide">
         <div class="wide-stat">
           <div>
             <div class="stat-label">PENDING PAYOUT AMOUNT</div>
             <div class="wide-value"><CountUp :value="Number(summary.pendingAmount || 0)" :formatter="fmtMoney" /></div>
-            <div class="muted small"><i class="fa-regular fa-bell" aria-hidden="true"></i> Next batch scheduled for Oct 31</div>
           </div>
           <div class="stat-icon tint-red" aria-hidden="true"><i class="fa-solid fa-dollar-sign"></i></div>
         </div>
@@ -148,9 +535,8 @@ onMounted(async () => {
       <section class="card stat-wide">
         <div class="wide-stat">
           <div>
-            <div class="stat-label">NUMBER OF SHOPS TO PAY</div>
+            <div class="stat-label">SHOPS TO PAY</div>
             <div class="wide-value"><CountUp :value="Number(summary.shopsToPay || 0)" /></div>
-            <div class="muted small">Out of {{ admin.state.shops.length }} active registered shops</div>
           </div>
           <div class="stat-icon tint-slate" aria-hidden="true"><i class="fa-regular fa-building"></i></div>
         </div>
@@ -161,22 +547,278 @@ onMounted(async () => {
           <div>
             <div class="stat-label">LAST PAYOUT DATE</div>
             <div class="wide-value">{{ lastPayoutDate }}</div>
-            <div class="muted small"><i class="fa-regular fa-circle-check" aria-hidden="true"></i> All transactions were successful</div>
           </div>
           <div class="stat-icon tint-green" aria-hidden="true"><i class="fa-regular fa-calendar"></i></div>
         </div>
       </section>
     </div>
 
+    <div class="financial-grid">
+      <section class="card chart-card span-2">
+        <div class="card-head chart-head">
+          <h2 class="card-title">Total Earnings & Net Payouts</h2>
+          <div class="card-chip">{{ selectedCategoryLabel }}</div>
+        </div>
+
+        <svg class="chart-svg earnings-svg" viewBox="0 0 760 320" @mouseleave="hoveredBarIndex = null">
+          <line
+            v-for="n in 5"
+            :key="`bar-grid-${n}`"
+            x1="58"
+            :y1="18 + (n - 1) * 62.5"
+            x2="742"
+            :y2="18 + (n - 1) * 62.5"
+            stroke="#e5ecf6"
+            stroke-dasharray="4 4"
+          />
+
+          <text
+            v-for="n in 5"
+            :key="`bar-label-${n}`"
+            x="48"
+            :y="24 + (5 - n) * 62.5"
+            class="axis-label"
+            text-anchor="end"
+          >
+            {{ money0.format((barMax / 4) * (n - 1)) }}
+          </text>
+
+          <g v-for="point in barChart.points" :key="`bars-${point.idx}`">
+            <rect
+              class="bar-shape bar-earnings"
+              :x="point.earningsX"
+              :y="point.earningsY"
+              :width="point.barWidth"
+              :height="point.earningsH"
+              rx="4"
+              :style="{ animationDelay: `${chartReady ? point.idx * 70 : 0}ms`, transformOrigin: `${point.earningsX + (point.barWidth / 2)}px 268px` }"
+            />
+            <rect
+              class="bar-shape bar-commission"
+              :x="point.commissionX"
+              :y="point.commissionY"
+              :width="point.barWidth"
+              :height="point.commissionH"
+              rx="4"
+              :style="{ animationDelay: `${chartReady ? point.idx * 70 : 0}ms`, transformOrigin: `${point.commissionX + (point.barWidth / 2)}px 268px` }"
+            />
+            <rect
+              class="bar-shape bar-net"
+              :x="point.netX"
+              :y="point.netY"
+              :width="point.barWidth"
+              :height="point.netH"
+              rx="4"
+              :style="{ animationDelay: `${chartReady ? point.idx * 70 : 0}ms`, transformOrigin: `${point.netX + (point.barWidth / 2)}px 268px` }"
+            />
+
+            <rect
+              class="bar-hover-hit"
+              :x="point.hitX"
+              y="18"
+              :width="point.hitWidth"
+              height="250"
+              fill="transparent"
+              @mouseenter="hoveredBarIndex = point.idx"
+            />
+
+            <text :x="point.center" :y="point.labelY" class="axis-label x" text-anchor="middle">{{ point.row.label }}</text>
+          </g>
+
+          <g v-if="barTooltip" class="bar-tooltip">
+            <rect :x="barTooltip.x" :y="barTooltip.y" :width="barTooltip.width" :height="barTooltip.height" rx="12" />
+            <text :x="barTooltip.x + 12" :y="barTooltip.y + 22" class="tooltip-title">{{ barTooltip.row.label }}</text>
+            <text :x="barTooltip.x + 12" :y="barTooltip.y + 44" class="tooltip-earnings">Total : {{ money0.format(barTooltip.row.earnings) }}</text>
+            <text :x="barTooltip.x + 12" :y="barTooltip.y + 62" class="tooltip-commission">Commission : {{ money0.format(barTooltip.row.commission) }}</text>
+            <text :x="barTooltip.x + 12" :y="barTooltip.y + 80" class="tooltip-net">Net : {{ money0.format(barTooltip.row.net) }}</text>
+          </g>
+        </svg>
+
+        <div class="legend-row">
+          <span class="legend-chip"><span class="dot earnings"></span>Total Earnings</span>
+          <span class="legend-chip"><span class="dot commission"></span>Platform Commission</span>
+          <span class="legend-chip"><span class="dot net"></span>Net Payout</span>
+        </div>
+      </section>
+      <section class="card chart-card">
+        <div class="card-head chart-head">
+          <h2 class="card-title">Payout Distribution</h2>
+        </div>
+
+        <div class="donut-wrap" @mouseleave="hoveredDonutCategory = ''">
+          <svg class="chart-svg" viewBox="0 0 220 220">
+            <circle cx="110" cy="110" r="72" fill="none" stroke="#e5e7eb" stroke-width="16" />
+            <g transform="rotate(-90 110 110)">
+              <circle
+                v-for="segment in distributionSegments"
+                :key="segment.key"
+                cx="110"
+                cy="110"
+                r="72"
+                fill="none"
+                :stroke="segment.color"
+                stroke-width="16"
+                stroke-linecap="round"
+                class="donut-segment"
+                :class="{ active: selectedCategory === segment.key }"
+                :style="{ strokeDasharray: `${chartReady ? segment.length : 0} ${segment.circumference}`, strokeDashoffset: -segment.offset, transitionDelay: segment.delay }"
+                @mouseenter="hoveredDonutCategory = segment.key"
+                @click="setCategoryFilter(segment.key)"
+              />
+            </g>
+          </svg>
+
+          <div v-if="donutTooltip" class="donut-tooltip" :style="{ color: donutTooltip.color }">
+            {{ donutTooltip.label }} : {{ money0.format(donutTooltip.amount) }}
+          </div>
+
+          <div class="donut-center">
+            <div class="donut-value">{{ selectedShare }}%</div>
+            <div class="donut-label">{{ selectedCategoryLabel }}</div>
+          </div>
+        </div>
+
+        <div class="category-list">
+          <button
+            v-for="chip in distributionChips"
+            :key="chip.key"
+            type="button"
+            class="category-chip muted"
+            :class="{ active: selectedCategory === chip.key, all: chip.key === CATEGORY_ALL }"
+            @mouseenter="hoveredDonutCategory = chip.key"
+            @click="setCategoryFilter(chip.key)"
+          >
+            <span class="dot" :style="{ backgroundColor: chip.color }"></span>
+            {{ chip.key === CATEGORY_ALL ? chip.label : `${chip.label} (${Math.round(chip.amount)})` }}
+          </button>
+        </div>
+      </section>
+
+      <section class="card chart-card span-2">
+        <div class="card-head chart-head">
+          <h2 class="card-title">Pending Payout Trend</h2>
+          <div class="card-chip">{{ selectedCategoryLabel }}</div>
+        </div>
+
+        <svg class="chart-svg trend-svg" viewBox="0 0 760 300" @mouseleave="hoveredTrendIndex = null">
+          <line
+            v-for="n in 5"
+            :key="`trend-grid-${n}`"
+            x1="56"
+            :y1="18 + (n - 1) * 58.5"
+            x2="740"
+            :y2="18 + (n - 1) * 58.5"
+            stroke="#e5ecf6"
+            stroke-dasharray="4 4"
+          />
+
+          <text
+            v-for="n in 5"
+            :key="`trend-label-${n}`"
+            x="48"
+            :y="24 + (5 - n) * 58.5"
+            class="axis-label"
+            text-anchor="end"
+          >
+            {{ money0.format((trendMax / 4) * (n - 1)) }}
+          </text>
+
+          <path
+            v-if="trendChart.linePath"
+            :d="trendChart.linePath"
+            fill="none"
+            stroke="#1f7bff"
+            stroke-width="3"
+            stroke-linecap="round"
+            class="line-main"
+            :style="{ strokeDasharray: 1800, strokeDashoffset: chartReady ? 0 : 1800 }"
+          />
+
+          <path
+            v-if="trendChart.areaPath"
+            :d="trendChart.areaPath"
+            fill="rgba(31, 123, 255, 0.14)"
+            class="line-area"
+          />
+
+          <g v-for="point in trendChart.points" :key="`trend-${point.idx}`">
+            <circle
+              :cx="point.x"
+              :cy="point.y"
+              r="5"
+              class="line-point"
+              :style="{ animationDelay: `${point.idx * 90}ms` }"
+              @mouseenter="hoveredTrendIndex = point.idx"
+            />
+            <text :x="point.x" y="284" class="axis-label x" text-anchor="middle">{{ point.row.label }}</text>
+          </g>
+
+          <g v-if="trendTooltip" class="trend-tooltip">
+            <rect :x="trendTooltip.x" :y="trendTooltip.y" :width="trendTooltip.width" :height="trendTooltip.height" rx="12" />
+            <text :x="trendTooltip.x + 12" :y="trendTooltip.y + 28" class="tooltip-title">{{ trendTooltip.row.label }}</text>
+            <text :x="trendTooltip.x + 12" :y="trendTooltip.y + 54" class="tooltip-earnings">Pending : {{ money0.format(trendTooltip.row.pending) }}</text>
+          </g>
+        </svg>
+      </section>
+
+      <section class="card chart-card">
+        <div class="card-head chart-head">
+          <h2 class="card-title">Payout Status</h2>
+        </div>
+
+        <div class="status-wrap">
+          <svg class="chart-svg" viewBox="0 0 190 190">
+            <circle cx="95" cy="95" r="56" fill="none" stroke="#e5e7eb" stroke-width="16" />
+            <g transform="rotate(-90 95 95)">
+              <circle
+                v-for="segment in statusSegments"
+                :key="segment.key"
+                cx="95"
+                cy="95"
+                r="56"
+                fill="none"
+                :stroke="segment.color"
+                stroke-width="16"
+                stroke-linecap="round"
+                class="status-segment"
+                :style="{ strokeDasharray: `${chartReady ? segment.length : 0} ${segment.circumference}`, strokeDashoffset: -segment.offset, transitionDelay: segment.delay }"
+              />
+            </g>
+          </svg>
+        </div>
+
+        <div class="status-list">
+          <div v-for="item in statusItems" :key="item.key" class="status-item">
+            <span class="dot" :style="{ backgroundColor: item.color }"></span>
+            <span class="status-name">{{ item.label }}</span>
+            <span class="status-value">{{ item.percentage }}%</span>
+          </div>
+        </div>
+      </section>
+    </div>
+
     <section class="card">
-      <div class="card-head">
+      <div class="card-head table-head-clean">
         <h2 class="card-title">Pending Payouts List</h2>
         <div class="filters">
-          <button type="button" class="btn btn-chip">
-            <i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ periodLabel }}
+          <label class="chip-select" title="Choose day or month">
+            <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+            <select v-model="periodMode" aria-label="Choose period mode">
+              <option value="day">Per Day (Today)</option>
+              <option value="month">Per Month (This Month)</option>
+            </select>
             <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-          </button>
-          <button type="button" class="btn btn-chip">All Shop Categories <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
+          </label>
+
+          <label class="chip-select" title="Choose shop category">
+            <i class="fa-solid fa-layer-group" aria-hidden="true"></i>
+            <select v-model="selectedCategory" aria-label="Choose shop category">
+              <option v-for="category in categoryOptions" :key="category" :value="category">
+                {{ categoryLabel(category) }}
+              </option>
+            </select>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </label>
         </div>
       </div>
 
@@ -185,58 +827,444 @@ onMounted(async () => {
           <thead>
             <tr>
               <th>SHOP NAME</th>
-              <th class="num">TOTAL EARNINGS (CURRENT PERIOD)</th>
+              <th class="num">TOTAL EARNINGS</th>
               <th class="num">PLATFORM COMMISSION</th>
-              <th class="num">NET PAYOUT AMOUNT</th>
+              <th class="num">NET PAYOUT</th>
               <th class="actions">ACTION</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in payoutRows.slice(0, 4)" :key="row.id">
+            <tr v-for="row in pagedRows" :key="row.id">
               <td class="shop-cell">
                 <span class="user-bubble" aria-hidden="true">{{ initials(row.name) }}</span>
                 <div class="shop-meta">
                   <div class="shop-name">{{ row.name }}</div>
-                  <div class="shop-id">{{ vehicleLabel(row.vehicle_type) }} • ID: {{ row.id }}</div>
+                  <div class="shop-id">{{ categoryLabel(row.category) }} - ID: {{ row.id }}</div>
                 </div>
               </td>
               <td class="num">
                 <strong>{{ fmtMoney(row.gross) }}</strong>
-                <div class="muted small">{{ Math.max(1, Math.round(row.gross / 200)) }} Bookings</div>
+                <div class="muted small">{{ row.bookingsCount }} booking(s)</div>
               </td>
-              <td class="num">
-                <span class="money-neg">-{{ fmtMoney(row.commission) }}</span>
-                <div class="muted small">{{ Math.round((admin.state.commission_rate || 0.15) * 100) }}% Standard</div>
-              </td>
+              <td class="num"><span class="money-neg">-{{ fmtMoney(row.commission) }}</span></td>
               <td class="num"><span class="money-pos">{{ fmtMoney(row.payout) }}</span></td>
               <td class="actions">
-                <button type="button" class="btn btn-soft" @click="processShop(row.id)">Process Payment</button>
+                <button
+                  type="button"
+                  class="btn btn-soft"
+                  :disabled="row.processed || row.gross <= 0"
+                  @click="processShop(row.id)"
+                >
+                  {{ row.processed ? 'Processed' : row.gross > 0 ? 'Process Payment' : 'No Earnings' }}
+                </button>
               </td>
+            </tr>
+            <tr v-if="!pagedRows.length">
+              <td colspan="5" class="table-empty">No shops found for this filter.</td>
             </tr>
           </tbody>
         </table>
       </div>
-
-
       <div class="table-footer">
-        <div class="muted">SHOWING 0 TO {{ Math.min(4, payoutRows.length) }} OF {{ payoutRows.length }} PENDING SHOPS</div>
-        <div class="pager">
-          <button type="button" class="pager-btn is-active">1</button>
-          <button type="button" class="pager-btn">2</button>
-          <button type="button" class="pager-btn">3</button>
+        <div class="muted">
+          SHOWING {{ payoutRows.length ? ((page - 1) * perPage + 1) : 0 }}
+          TO {{ Math.min(page * perPage, payoutRows.length) }}
+          OF {{ payoutRows.length }} SHOPS
         </div>
-      </div>
-    </section>
-
-    <section class="card note">
-      <div class="note-icon" aria-hidden="true"><i class="fa-solid fa-circle-exclamation"></i></div>
-      <div>
-        <div class="note-title">Important Note on Payouts</div>
-        <div class="note-text">
-          Processing payouts will automatically generate bank transfer receipts and notify shop owners via email and platform notification.
-          Ensure all dispute claims for the current period are settled before finalizing bulk payments.
+        <div class="pager">
+          <button type="button" class="pager-btn" :disabled="page === 1" @click="page -= 1">&lt;</button>
+          <button
+            v-for="p in pageNumbers"
+            :key="p"
+            type="button"
+            class="pager-btn"
+            :class="{ 'is-active': p === page }"
+            @click="page = p"
+          >
+            {{ p }}
+          </button>
+          <button type="button" class="pager-btn" :disabled="page === totalPages" @click="page += 1">&gt;</button>
         </div>
       </div>
     </section>
   </section>
 </template>
+
+<style scoped>
+.financial-page {
+  --report-bg: #f6f9ff;
+  --report-card: #ffffff;
+  --report-stroke: #e6ebf3;
+  --report-text: #153252;
+  --report-muted: #5f7189;
+  --report-primary: #1f7bff;
+  background: radial-gradient(circle at 18% -25%, #dbeafe 0%, transparent 42%), var(--report-bg);
+  border-radius: 18px;
+  padding: 2px;
+  color: var(--report-text);
+}
+
+.clean-head {
+  align-items: center;
+}
+
+.clean-head .page-title {
+  font-size: 2rem;
+}
+
+.category-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.metric-card {
+  border: 1px solid #d8e1ef;
+  background: #f8fbff;
+  border-radius: 14px;
+  text-align: left;
+  padding: 0.72rem 0.8rem;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+}
+
+.metric-card.active {
+  background: linear-gradient(135deg, #1f7bff, #0f6be8);
+  border-color: #1f7bff;
+  color: #fff;
+  box-shadow: 0 14px 26px rgba(31, 123, 255, 0.24);
+}
+
+.metric-title {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #56708f;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.metric-card.active .metric-title {
+  color: #dbeafe;
+}
+
+.metric-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.metric-main {
+  margin-top: 0.72rem;
+  font-weight: 800;
+  font-size: 1.85rem;
+  line-height: 1;
+}
+
+.metric-sub {
+  margin-top: 0.4rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.metric-sub strong {
+  color: #1f3657;
+}
+
+.metric-card.active .metric-sub,
+.metric-card.active .metric-sub strong {
+  color: #fff;
+}
+
+.financial-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+  gap: 1rem;
+}
+
+.chart-card {
+  border: 1px solid var(--report-stroke);
+  box-shadow: 0 14px 30px rgba(15, 36, 64, 0.06);
+}
+
+.span-2 {
+  grid-column: 1;
+}
+
+.chart-head {
+  padding-bottom: 0.7rem;
+  margin-bottom: 0.7rem;
+}
+
+.chart-svg {
+  width: 100%;
+  display: block;
+}
+
+.axis-label {
+  font-size: 12px;
+  fill: #6b7f98;
+  font-weight: 600;
+}
+
+.axis-label.x {
+  font-size: 11px;
+}
+.bar-shape {
+  cursor: pointer;
+  animation: bar-grow 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.bar-earnings { fill: #1f7bff; }
+.bar-commission { fill: #f97316; }
+.bar-net { fill: #2bc96b; }
+
+.bar-tooltip,
+.trend-tooltip {
+  pointer-events: none;
+}
+
+.bar-tooltip rect,
+.trend-tooltip rect {
+  fill: rgba(15, 23, 42, 0.92);
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 1;
+}
+
+.tooltip-title { fill: #e2e8f0; font-size: 12.5px; font-weight: 700; }
+.tooltip-net { fill: #22c55e; font-size: 12px; font-weight: 700; }
+.tooltip-commission { fill: #f97316; font-size: 12px; font-weight: 700; }
+.tooltip-earnings { fill: #3b82f6; font-size: 12px; font-weight: 700; }
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  padding-bottom: 0.4rem;
+}
+
+.legend-chip {
+  border: none;
+  background: #eef4ff;
+  color: #2f4460;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  padding: 0.32rem 0.66rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.dot.earnings { background: #1f7bff; }
+.dot.commission { background: #f97316; }
+.dot.net { background: #2bc96b; }
+
+.donut-wrap {
+  position: relative;
+  width: min(240px, 100%);
+  margin: 0 auto 0.65rem;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.donut-value { font-weight: 800; font-size: 1.1rem; }
+.donut-label { color: var(--report-muted); font-size: 0.78rem; }
+
+.donut-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 14px 26px rgba(2, 8, 23, 0.3);
+}
+
+.donut-segment {
+  cursor: pointer;
+  transition: stroke-dasharray 0.72s ease, stroke-width 0.18s ease;
+}
+
+.donut-segment.active {
+  stroke-width: 19;
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.category-chip {
+  border: 1px solid transparent;
+  background: var(--report-primary);
+  color: #fff;
+  padding: 0.5rem 0.66rem;
+  border-radius: 999px;
+  font-size: 0.83rem;
+  font-weight: 700;
+  display: inline-flex;
+  gap: 0.42rem;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.category-chip.muted {
+  color: #47617f;
+  background: #eef2f7;
+}
+
+.category-chip.active {
+  box-shadow: 0 8px 18px rgba(31, 123, 255, 0.24);
+  transform: translateY(-1px);
+  border-color: rgba(31, 123, 255, 0.35);
+}
+
+.line-main {
+  transition: stroke-dashoffset 0.85s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.line-area {
+  opacity: 0;
+  animation: area-in 0.68s ease forwards;
+  animation-delay: 220ms;
+}
+
+.line-point {
+  fill: #1f7bff;
+  stroke: #fff;
+  stroke-width: 2;
+  cursor: pointer;
+  opacity: 0;
+  animation: point-pop 0.42s ease forwards;
+}
+
+.status-wrap {
+  width: min(200px, 100%);
+  margin: 0 auto 0.35rem;
+}
+
+.status-list {
+  margin-top: 0.4rem;
+}
+
+.status-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 0.6rem;
+  padding: 0.34rem 0.2rem;
+  color: #2f4768;
+  font-weight: 600;
+}
+
+.table-head-clean {
+  align-items: center;
+}
+
+.chip-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--mp-border);
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--mp-text);
+  padding: 0 12px;
+}
+
+.chip-select select {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  min-width: 180px;
+  outline: none;
+  cursor: pointer;
+}
+
+.chip-select i:last-child {
+  color: var(--mp-muted);
+  font-size: 12px;
+}
+
+.table-empty {
+  text-align: center;
+  padding: 30px;
+  color: var(--mp-muted);
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0.06); opacity: 0.5; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes point-pop {
+  from { opacity: 0; transform: scale(0.35); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes area-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1200px) {
+  .category-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1100px) {
+  .financial-grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: auto; }
+}
+
+@media (max-width: 900px) {
+  .clean-head { flex-direction: column; align-items: flex-start; }
+  .category-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card-head { flex-wrap: wrap; }
+  .filters { width: 100%; flex-wrap: wrap; }
+}
+
+@media (max-width: 680px) {
+  .category-metric-grid { grid-template-columns: 1fr; }
+  .category-list { grid-template-columns: 1fr; }
+  .chip-select { width: 100%; justify-content: space-between; }
+  .chip-select select { min-width: 0; width: 100%; }
+}
+</style>

@@ -1,10 +1,12 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { useToast } from '../../composables/useToast.js'
 
 const admin = useAdminStore()
 const toast = useToast()
+const route = useRoute()
 
 const ALL_CATEGORIES = 'All categories'
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -19,6 +21,9 @@ const detailSubtitle = ref('')
 const detailRows = ref([])
 const hoveredBarIndex = ref(null)
 const hoveredDonutName = ref('')
+
+const isFinancialRoute = computed(() => route.path.startsWith('/admin/financials'))
+const pageTitle = computed(() => (isFinancialRoute.value ? 'Financials Management' : 'Report Management'))
 
 const money0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const money2 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -375,23 +380,11 @@ const activeCategoryMetric = computed(() => {
 
 const kpiPendingAmount = computed(() => activeCategoryMetric.value.amount || 0)
 const kpiShopsToPay = computed(() => activeCategoryMetric.value.shopsCount || 0)
-const kpiTotalShops = computed(() => {
-  const all = categoryMetrics.value.find((item) => item.name === ALL_CATEGORIES)
-  return all?.shopsCount || 0
-})
 const kpiLastPayout = computed(() => {
   const dates = bookings.value.map((row) => row._date).filter(Boolean).sort((a, b) => b.getTime() - a.getTime())
   const date = dates[0]
   if (!date) return 'Oct 15, 2024'
   return `${monthNames[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
-})
-const kpiMomentum = computed(() => {
-  const list = earningsSeries.value
-  if (list.length < 2) return 0
-  const previous = Number(list[list.length - 2]?.earnings || 0)
-  const current = Number(list[list.length - 1]?.earnings || 0)
-  if (previous <= 0) return current > 0 ? 100 : 0
-  return Math.round(((current - previous) / previous) * 100)
 })
 
 const donutTooltipData = computed(() => {
@@ -474,15 +467,13 @@ onMounted(async () => {
 <template>
   <section class="report-page">
     <header class="report-head">
-      <h1>Report Management</h1>
-      <p>Interactive payout analytics with drill-down details.</p>
+      <h1>{{ pageTitle }}</h1>
     </header>
 
     <section class="report-card category-overview">
       <div class="category-overview-head">
         <div>
           <h2>Payout categories</h2>
-          <p>Click a category with pending payouts to filter the full dashboard.</p>
         </div>
         <div class="active-filter">Active filter: <strong>{{ selectedCategoryTitle }}</strong></div>
       </div>
@@ -499,7 +490,6 @@ onMounted(async () => {
           <div class="metric-title"><span class="metric-dot" :style="{ backgroundColor: item.color }"></span>{{ item.name }}</div>
           <div class="metric-main">{{ item.shopsCount }}</div>
           <div class="metric-sub">
-            <span>shops ready for payout</span>
             <strong>{{ money0.format(item.amount) }}</strong>
           </div>
         </button>
@@ -513,7 +503,6 @@ onMounted(async () => {
           <span class="kpi-icon">$</span>
         </div>
         <div class="kpi-value">{{ money2.format(kpiPendingAmount) }}</div>
-        <div class="kpi-note">Next batch scheduled for Oct 31</div>
       </article>
 
       <article class="report-card kpi-card">
@@ -522,7 +511,6 @@ onMounted(async () => {
           <span class="kpi-icon">#</span>
         </div>
         <div class="kpi-value">{{ kpiShopsToPay }} <small>- Live</small></div>
-        <div class="kpi-note">Out of {{ kpiTotalShops }} active registered shops</div>
       </article>
 
       <article class="report-card kpi-card">
@@ -531,7 +519,6 @@ onMounted(async () => {
           <span class="kpi-icon">*</span>
         </div>
         <div class="kpi-value">{{ kpiLastPayout }} <small>- Live</small></div>
-        <div class="kpi-note">{{ kpiMomentum >= 0 ? '+' : '' }}{{ kpiMomentum }}% vs previous period</div>
       </article>
     </section>
 
@@ -539,7 +526,6 @@ onMounted(async () => {
       <article class="report-card span-2">
         <div class="card-head">
           <h2>Total Earnings & Net Payouts (Last 6 Periods)</h2>
-          <p>Showing payout history for <strong>{{ selectedCategoryTitle }}</strong></p>
         </div>
         <svg class="chart-svg earnings-svg" viewBox="0 0 760 320" @mouseleave="hideBarTooltip">
           <line v-for="n in 5" :key="`by-${n}`" x1="56" :y1="18 + (n - 1) * 62.5" x2="740" :y2="18 + (n - 1) * 62.5"
@@ -580,7 +566,6 @@ onMounted(async () => {
       <article class="report-card">
         <div class="card-head">
           <h2>Payout Distribution by Shop Category</h2>
-          <p>{{ monthContext.label }} earnings. Hover to preview, click ring to open details.</p>
         </div>
         <div class="donut-wrap" @mouseleave="hideDonutTooltip">
           <svg class="chart-svg" viewBox="0 0 220 220">
@@ -637,8 +622,6 @@ onMounted(async () => {
       <article class="report-card span-2">
         <div class="card-head">
           <h2>Pending Payout Trend Over Time</h2>
-          <p>Animated trend for <strong>{{ selectedCategory === ALL_CATEGORIES ? 'All Categories' : selectedCategory
-              }}</strong></p>
         </div>
         <svg class="chart-svg" viewBox="0 0 760 300">
           <line v-for="n in 5" :key="`ly-${n}`" x1="56" :y1="18 + (n - 1) * 58.5" x2="740" :y2="18 + (n - 1) * 58.5"
@@ -663,7 +646,6 @@ onMounted(async () => {
       <article class="report-card">
         <div class="card-head">
           <h2>Payout Status</h2>
-          <p>Current pending payout status mix</p>
         </div>
         <div class="status-wrap">
           <svg class="chart-svg" viewBox="0 0 190 190">
@@ -756,12 +738,6 @@ onMounted(async () => {
   font-size: 1.45rem
 }
 
-.report-head p {
-  margin: .25rem 0 0;
-  color: var(--muted);
-  font-size: .95rem
-}
-
 .category-overview {
   margin-bottom: 1rem;
 }
@@ -778,12 +754,6 @@ onMounted(async () => {
   margin: 0;
   font-size: 1.2rem;
   color: #1f3657;
-}
-
-.category-overview-head p {
-  margin: .22rem 0 0;
-  color: var(--muted);
-  font-size: .9rem;
 }
 
 .active-filter {
@@ -853,7 +823,7 @@ onMounted(async () => {
 .metric-sub {
   margin-top: .35rem;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: .5rem;
   color: #64748b;
@@ -923,12 +893,6 @@ onMounted(async () => {
   margin-left: .2rem;
 }
 
-.kpi-note {
-  margin-top: .45rem;
-  color: #6b7f98;
-  font-size: 1rem;
-}
-
 .report-grid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
@@ -964,12 +928,6 @@ onMounted(async () => {
   margin: 0;
   font-size: 1.1rem;
   color: #1f3657
-}
-
-.card-head p {
-  margin: .3rem 0 .7rem;
-  color: var(--muted);
-  font-size: .92rem
 }
 
 .chart-svg {
@@ -1463,10 +1421,6 @@ onMounted(async () => {
 
   .card-head h2 {
     font-size: 1rem
-  }
-
-  .card-head p {
-    font-size: .84rem
   }
 
   .category-list {

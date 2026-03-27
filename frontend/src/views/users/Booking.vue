@@ -1,34 +1,11 @@
-<template>
+﻿<template>
   <div class="booking-checkout-page">
-    <header class="topbar">
-  <button class="btn-back-top" type="button" @click="goHome">
-    <span class="back-arrow" aria-hidden="true">←</span>
-    Back to Home
-  </button>
-  <div class="brand">
-    <div class="brand-icon">
-      <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-    </div>
-    <span>Chong Choul</span>
-  </div>
-
-  <nav class="nav-links">
-    <button
-      v-for="item in navItems"
-      :key="item"
-      class="btn-reset nav-link"
-      :class="{ active: activeNav === item }"
-      @click="setActiveNav(item)"
-    >
-      {{ item }}
-    </button>
-  </nav>
-
-  <div class="top-actions">
-    <span class="user-display-name">{{ userDisplayName }}</span>
-    <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-  </div>
-</header>
+    <UserNavbar
+      :nav-items="userNavItems"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <div class="page-container">
 
@@ -486,7 +463,7 @@
     <div
       v-if="showSuccessModal"
       class="success-modal-overlay"
-      @click="closeSuccessModal"
+      @click="returnToShopViewAfterSuccess"
     >
       <div class="success-modal" @click.stop>
         <div class="success-icon" aria-hidden="true">
@@ -523,7 +500,7 @@
           <button class="btn-download" type="button" @click="downloadReceipt">
             Download
           </button>
-          <button class="btn-close" type="button" @click="closeSuccessModal">
+          <button class="btn-close" type="button" @click="returnToShopViewAfterSuccess">
             Close
           </button>
         </div>
@@ -534,73 +511,25 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api from "@/services/api";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
-import UserProfileMenu from '@/components/UserProfileMenu.vue';
+import UserNavbar from '@/components/UserNavbar.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
 const router = useRouter();
 const route = useRoute();
-
-// Header data from VehiclesByShop.vue
-const navItems = ['Home', 'View Details', 'Bookings'];
-const activeNav = ref('Home');
-const actionMessage = ref('');
-const avatarLoadFailed = ref(false);
-const currentUser = computed(() => userService.getCurrentUser());
-const userDisplayName = computed(() => currentUser.value?.name || 'customer');
-
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
-
-// Header functions
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.replace('/view_shop');
-    return;
-  }
-  actionMessage.value = `${item} is not available yet.`;
-};
-
-const openProfile = () => {
-  router.push('/user/profile');
-};
+const userNavItems = [
+  { label: "My Bookings", route: "/my-bookings" },
+  { label: "Profile", route: "/user/profile" },
+];
 
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
-};
-
-const goHome = () => {
-  router.push('/');
-};
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -736,6 +665,7 @@ const showSuccessModal = ref(false);
 const showConfirmModal = ref(false);
 const pendingPaymentAction = ref(null);
 const dateError = ref("");
+let successRedirectTimer = null;
 const bookingId = ref("");
 const paymentId = ref(
   "PAY" + Math.random().toString(36).slice(2, 11).toUpperCase()
@@ -1063,6 +993,9 @@ const handlePayment = async () => {
   if (result.success) {
     bookingId.value = result.bookingId;
     showSuccessModal.value = true;
+    successRedirectTimer = window.setTimeout(() => {
+      returnToShopViewAfterSuccess();
+    }, 1800);
   } else {
     alert(result.message || "Payment failed. Please try again.");
   }
@@ -1110,6 +1043,9 @@ BANK DETAILS:
 
 
   showSuccessModal.value = true;
+  successRedirectTimer = window.setTimeout(() => {
+    returnToShopViewAfterSuccess();
+  }, 1800);
 };
 
 const generateABAQRData = () => {
@@ -1142,8 +1078,13 @@ const generateQRCode = async () => {
   showQR.value = true;
 };
 
-const closeSuccessModal = () => {
+const returnToShopViewAfterSuccess = () => {
+  if (successRedirectTimer) {
+    window.clearTimeout(successRedirectTimer);
+    successRedirectTimer = null;
+  }
   showSuccessModal.value = false;
+  router.replace('/view_shop');
 };
 
 const downloadReceipt = () => {
@@ -1194,5 +1135,14 @@ watch(
   { immediate: true }
 );
 initDates();
+
+onBeforeUnmount(() => {
+  if (successRedirectTimer) {
+    window.clearTimeout(successRedirectTimer);
+    successRedirectTimer = null;
+  }
+});
 </script>
+
+
 

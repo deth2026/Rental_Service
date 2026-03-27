@@ -10,14 +10,13 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
-  return matchedItem?.label || 'My Booking'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const handleLogout = async () => {
@@ -633,7 +632,7 @@ const skipRating = () => {
     <section class="booking-list-wrap">
       <div class="booking-list-header">
         <span class="booking-list-title">Bookings</span>
-        <button class="back-home-btn" type="button" @click="goHome">
+        <button class="bookings-home-btn" type="button" @click="goHome">
           Back to Home
         </button>
       </div>

@@ -39,6 +39,14 @@ export const useAdminStore = defineStore('admin', () => {
     return Number.isNaN(d.getTime()) ? null : d
   }
 
+  const toLocalDateKey = (date) => {
+    if (!date || Number.isNaN(date.getTime())) return ''
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+
   const percentageTrend = (current, previous) => {
     const prev = Number(previous || 0)
     const curr = Number(current || 0)
@@ -139,13 +147,17 @@ export const useAdminStore = defineStore('admin', () => {
       const grossByDayMap = new Map()
       for (let i = 0; i < 7; i++) {
         const d = new Date(today); d.setDate(d.getDate() - i)
-        grossByDayMap.set(d.toISOString().split('T')[0], { val: 0, label: d.toLocaleDateString('en-US', { weekday: 'short' }) })
+        grossByDayMap.set(
+          toLocalDateKey(d),
+          { val: 0, label: d.toLocaleDateString('en-US', { weekday: 'short' }) }
+        )
       }
 
       nextState.bookings.forEach(b => {
-        const bDate = String(b.start_date || b.created_at || '').split(' ')[0]
-        if (grossByDayMap.has(bDate)) {
-          const entry = grossByDayMap.get(bDate)
+        const bookingDate = toDate(b.start_date || b.created_at || b.booking_date || b.date)
+        const bookingDayKey = toLocalDateKey(bookingDate)
+        if (bookingDayKey && grossByDayMap.has(bookingDayKey)) {
+          const entry = grossByDayMap.get(bookingDayKey)
           entry.val += toAmount(b)
         }
       })

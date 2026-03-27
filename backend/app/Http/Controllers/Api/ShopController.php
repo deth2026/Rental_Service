@@ -53,11 +53,12 @@ class ShopController extends Controller
         // Validate most fields first; img_url is handled separately because it
         // can be either a file upload (multipart) or a plain string URL.
         $payload = $request->validate([
+            'owner_id' => 'nullable|integer|exists:users,id',
             'city_id' => 'nullable|integer',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'address' => 'required|string|max:255',
-            'location' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:2048',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -73,6 +74,16 @@ class ShopController extends Controller
         if (!$this->shopColumnExists('map_url')) {
             unset($payload['map_url']);
         }
+
+        $mapUrlValue = trim((string) ($request->input('map_url') ?? ($payload['map_url'] ?? '')));
+        $locationValue = trim((string) ($payload['location'] ?? ''));
+        if ($this->shopColumnExists('location')) {
+            $payload['location'] = $this->buildLocationValue(
+                $locationValue,
+                $mapUrlValue,
+                $payload['address'] ?? null
+            );
+        }
         
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
@@ -84,8 +95,13 @@ class ShopController extends Controller
             $request->validate(['img_url' => 'string']);
         }
 
-        // The creator becomes the owner by default.
-        $payload['owner_id'] = $request->user()?->id;
+        // Admin may assign shop ownership explicitly; others default to self.
+        $role = strtolower((string) ($request->user()?->role ?? $request->user()?->user_type ?? ''));
+        if ($role === 'admin' && isset($payload['owner_id']) && (int) $payload['owner_id'] > 0) {
+            $payload['owner_id'] = (int) $payload['owner_id'];
+        } else {
+            $payload['owner_id'] = $request->user()?->id;
+        }
 
         // Handle image upload or URL
         if ($request->hasFile('img_url')) {
@@ -169,7 +185,7 @@ class ShopController extends Controller
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'address' => 'sometimes|string|max:255',
-            'location' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:2048',
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
@@ -183,6 +199,16 @@ class ShopController extends Controller
         }
         if (!$this->shopColumnExists('map_url')) {
             unset($payload['map_url']);
+        }
+
+        $mapUrlValue = trim((string) ($request->input('map_url') ?? ($payload['map_url'] ?? $shop->map_url ?? '')));
+        $locationValue = trim((string) ($payload['location'] ?? $shop->location ?? ''));
+        if ($this->shopColumnExists('location')) {
+            $payload['location'] = $this->buildLocationValue(
+                $locationValue,
+                $mapUrlValue,
+                $payload['address'] ?? $shop->address ?? null
+            );
         }
 
         // validate img_url value type depending on upload or text
@@ -311,6 +337,63 @@ class ShopController extends Controller
             $cache[$column] = Schema::hasColumn('shops', $column);
         }
         return $cache[$column];
+    }
+
+    /**
+     * Build a location value that is short enough for the DB column and usable for navigation.
+     * Priority: map URL -> explicit location -> address.
+     */
+    private function buildLocationValue($locationValue, $mapUrlValue, $addressValue): ?string
+    {
+        $location = trim((string) $locationValue);
+        $mapUrl = trim((string) $mapUrlValue);
+        $address = trim((string) $addressValue);
+
+        if ($mapUrl !== '') {
+            return $this->compactLocationLink($mapUrl, $address);
+        }
+        if ($location !== '') {
+            return $this->compactLocationLink($location, $address);
+        }
+        if ($address !== '') {
+            return mb_substr($address, 0, 255);
+        }
+
+        return null;
+    }
+
+    private function compactLocationLink(string $value, string $fallbackAddress = ''): string
+    {
+        $input = trim($value);
+        [$lat, $lng] = $this->extractCoordinatesFromMapUrl($input);
+        if ($lat !== null && $lng !== null) {
+            return 'https://www.google.com/maps?q='
+                . $this->formatCoordinate($lat)
+                . ','
+                . $this->formatCoordinate($lng);
+        }
+
+        if (mb_strlen($input) <= 255) {
+            return $input;
+        }
+
+        $address = trim($fallbackAddress);
+        if ($address !== '') {
+            $searchLink = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($address);
+            if (mb_strlen($searchLink) <= 255) {
+                return $searchLink;
+            }
+            return mb_substr($searchLink, 0, 255);
+        }
+
+        return mb_substr($input, 0, 255);
+    }
+
+    private function formatCoordinate(float $value): string
+    {
+        $formatted = number_format($value, 7, '.', '');
+        $trimmed = rtrim(rtrim($formatted, '0'), '.');
+        return $trimmed === '-0' ? '0' : $trimmed;
     }
 
     /**

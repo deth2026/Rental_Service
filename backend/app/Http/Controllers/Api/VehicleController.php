@@ -189,6 +189,11 @@ class VehicleController extends Controller
         return $data;
     }
 
+    private function currentRole(Request $request): string
+    {
+        return strtolower((string) ($request->user()?->role ?? $request->user()?->user_type ?? ''));
+    }
+
     public function index(Request $request)
     {
         // Check if shop_id is provided in the query parameters
@@ -201,7 +206,7 @@ class VehicleController extends Controller
 
         $user = $request->user();
 
-        if ($user && $user->role === 'shop_owner') {
+        if ($user && $this->currentRole($request) === 'shop_owner') {
             $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
 
             if (empty($shopIds)) {
@@ -328,7 +333,7 @@ class VehicleController extends Controller
     {
         // Check if user is authorized to update this vehicle
         $user = $request->user();
-        if ($user && $user->role !== 'admin') {
+        if ($user && $this->currentRole($request) !== 'admin') {
             // Get user's shop IDs
             $userShopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
             
@@ -425,7 +430,7 @@ class VehicleController extends Controller
     {
         // Check if user is authorized to delete this vehicle
         $user = $request->user();
-        if ($user && $user->role !== 'admin') {
+        if ($user && $this->currentRole($request) !== 'admin') {
             // Get user's shop IDs
             $userShopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
             
