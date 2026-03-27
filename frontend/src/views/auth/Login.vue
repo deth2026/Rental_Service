@@ -4,26 +4,9 @@
     <!-- LEFT SIDE -->
     <div class="left">
         <div class="overlay">
-        <div class="logo">
-            <div class="logo-icon-wrap">
-              <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Location Pin -->
-                <path d="M30 2C23.37 2 17 7.37 17 14C17 21.5 30 30 30 30C30 30 43 21.5 43 14C43 7.37 36.63 2 30 2Z" fill="white"/>
-                <circle cx="30" cy="14" r="5" fill="rgba(25,100,210,0.6)"/>
-                <!-- Car Cabin -->
-                <path d="M18 42L21 33Q23 30 27 30H33Q37 30 39 33L42 42Z" fill="white"/>
-                <!-- Car Body -->
-                <rect x="6" y="42" width="48" height="15" rx="4" fill="white"/>
-                <!-- Windshield -->
-                <path d="M23 41L25 32H35L37 41Z" fill="rgba(25,100,210,0.45)"/>
-                <!-- Left Wheel -->
-                <circle cx="16" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-                <!-- Right Wheel -->
-                <circle cx="44" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-              </svg>
+            <div class="logo">
+              <Logo src="/Images/logo-removebg.png" size="lg" :showTagline="false" />
             </div>
-            <span>GoRent</span>
-          </div>
 
           <div class="left-content">
             <div class="hero-badge">
@@ -52,14 +35,7 @@
     </div>
 
     <!-- RIGHT SIDE -->
-    <div class="right">
-      <!-- Back to Home -->
-      <router-link to="/" class="back-home-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Back to Home
-      </router-link>
+  <div class="right">
 
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
@@ -78,6 +54,31 @@
         </div>
 
         <form @submit.prevent="handleLogin" novalidate>
+          <div class="location-guard-card" :class="{ granted: locationGranted }">
+            <div class="guard-icon">
+              <i :class="locationGranted ? 'fa-solid fa-circle-check' : 'fa-solid fa-location-crosshairs'"></i>
+            </div>
+            <div class="guard-copy">
+              <strong>{{ locationGranted ? 'Location access granted' : 'Location access is required' }}</strong>
+              <p>
+                {{
+                  locationGranted
+                    ? 'You can now sign in and use live route distance to shops.'
+                    : 'Please allow location access before Login and Register.'
+                }}
+              </p>
+              <button
+                v-if="!locationGranted"
+                type="button"
+                class="location-enable-btn"
+                @click="requestLocationAccess"
+                :disabled="isRequestingLocation"
+              >
+                {{ isRequestingLocation ? 'Detecting location...' : 'Allow Location Access' }}
+              </button>
+            </div>
+          </div>
+
           <!-- Error Alert -->
           <div v-if="generalError" class="error-alert">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -170,16 +171,20 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../../services/auth";
+import { hasLocationAccess, saveLocationAccess } from "../../utils/locationAccess";
 import "../../css/login.css";
+import Logo from '@/components/Logo.vue'
 
 const router = useRouter();
 const isLoading = ref(false);
 const errors = ref({});
 const showPassword = ref(false);
 const generalError = ref("");
+const locationGranted = ref(hasLocationAccess());
+const isRequestingLocation = ref(false);
 
 const form = reactive({
   email: "",
@@ -187,10 +192,14 @@ const form = reactive({
   remember: false,
 });
 
+const syncLocationState = () => {
+  locationGranted.value = hasLocationAccess();
+};
+
 const handleLogin = async () => {
   errors.value = {};
   generalError.value = "";
-  
+
   if (!form.email) {
     errors.value.email = "Email is required";
     return;
@@ -242,4 +251,51 @@ const handleLogin = async () => {
     isLoading.value = false;
   }
 };
+
+const requestLocationAccess = () => {
+  if (isRequestingLocation.value) return;
+  if (!navigator?.geolocation) {
+    generalError.value = "Your browser does not support geolocation.";
+    return;
+  }
+
+  isRequestingLocation.value = true;
+  generalError.value = "";
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const location = saveLocationAccess({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      locationGranted.value = Boolean(location);
+      isRequestingLocation.value = false;
+      if (!location) {
+        generalError.value = "Could not save location. Please try again.";
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent("location-access-updated", {
+          detail: { granted: true, location },
+        })
+      );
+    },
+    (error) => {
+      isRequestingLocation.value = false;
+      generalError.value =
+        error?.code === 1
+          ? "Location permission was denied. Please allow it to continue."
+          : "Unable to get your location. Please try again.";
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  );
+};
+
+onMounted(() => {
+  window.addEventListener("location-access-updated", syncLocationState);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("location-access-updated", syncLocationState);
+});
 </script>

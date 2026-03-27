@@ -9,6 +9,8 @@ class Booking extends Model
 {
     use HasFactory;
 
+    protected $with = ['vehicle.shop', 'user', 'bookingStatusLogs'];
+
     protected $fillable = [
         'user_id',
         'vehicle_id',
@@ -16,6 +18,10 @@ class Booking extends Model
         'coupon_id',
         'start_date',
         'total_days',
+        'rider_details',
+        'daily_rate',
+        'insurance_fee',
+        'taxes_fee',
         'total_price',
         'status',
         'deposit_amount',
@@ -48,6 +54,24 @@ class Booking extends Model
     {
         return $this->belongsTo(Coupon::class);
     }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
+    }
+
+    public function latestStatusLog()
+    {
+        return $this->hasOne(BookingStatusLog::class)->latestOfMany('changed_at');
+    }
+
+    public function bookingStatusLogs()
+    {
+        return $this->hasMany(BookingStatusLog::class)->orderBy('changed_at', 'desc');
+    }
+
+    public function rating()
+    {
+        return $this->hasOne(Rating::class);
+    }
 }
-
-

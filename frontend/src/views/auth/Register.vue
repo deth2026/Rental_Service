@@ -4,24 +4,7 @@
     <div class="left">
       <div class="overlay">
         <div class="logo">
-          <div class="logo-icon-wrap">
-            <svg width="34" height="34" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- Location Pin -->
-              <path d="M30 2C23.37 2 17 7.37 17 14C17 21.5 30 30 30 30C30 30 43 21.5 43 14C43 7.37 36.63 2 30 2Z" fill="white"/>
-              <circle cx="30" cy="14" r="5" fill="rgba(25,100,210,0.6)"/>
-              <!-- Car Cabin -->
-              <path d="M18 42L21 33Q23 30 27 30H33Q37 30 39 33L42 42Z" fill="white"/>
-              <!-- Car Body -->
-              <rect x="6" y="42" width="48" height="15" rx="4" fill="white"/>
-              <!-- Windshield -->
-              <path d="M23 41L25 32H35L37 41Z" fill="rgba(25,100,210,0.45)"/>
-              <!-- Left Wheel -->
-              <circle cx="16" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-              <!-- Right Wheel -->
-              <circle cx="44" cy="53" r="5" fill="rgba(25,100,210,0.55)"/>
-            </svg>
-          </div>
-          <span>GoRent</span>
+          <Logo src="/Images/logo-removebg.png" size="lg" :showTagline="false" />
         </div>
 
         <div class="left-content">
@@ -50,15 +33,8 @@
       </div>
     </div>
 
-    <!-- RIGHT SIDE -->
-    <div class="right">
-      <!-- Back to Home -->
-      <router-link to="/" class="back-home-btn">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 12H5M12 5l-7 7 7 7"/>
-        </svg>
-        Back to Home
-      </router-link>
+    <!-- RIGHT SIDE --> 
+  <div class="right">
 
       <!-- Floating decorative elements for right side -->
       <div class="right-decor">
@@ -107,6 +83,31 @@
         </div>
 
         <form @submit.prevent="handleRegister" novalidate>
+          <div class="location-guard-card" :class="{ granted: locationGranted }">
+            <div class="guard-icon">
+              <i :class="locationGranted ? 'fa-solid fa-circle-check' : 'fa-solid fa-location-crosshairs'"></i>
+            </div>
+            <div class="guard-copy">
+              <strong>{{ locationGranted ? 'Location access granted' : 'Location access is required' }}</strong>
+              <p>
+                {{
+                  locationGranted
+                    ? 'You can now register and view route distance to shops.'
+                    : 'Please allow location access before creating an account.'
+                }}
+              </p>
+              <button
+                v-if="!locationGranted"
+                type="button"
+                class="location-enable-btn"
+                @click="requestLocationAccess"
+                :disabled="isRequestingLocation"
+              >
+                {{ isRequestingLocation ? 'Detecting location...' : 'Allow Location Access' }}
+              </button>
+            </div>
+          </div>
+
           <div class="form-group">
             <label><span class="required-star">*</span> Full Name</label>
             <input
@@ -308,10 +309,12 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { registerUser } from "../../services/auth";
+import { hasLocationAccess, saveLocationAccess } from "../../utils/locationAccess";
 import "../../css/login.css";
+import Logo from '@/components/Logo.vue'
 
 const router = useRouter();
 const route = useRoute();
@@ -320,9 +323,16 @@ const errors = ref({});
 const successMessage = ref("");
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
+const locationGranted = ref(hasLocationAccess());
+const isRequestingLocation = ref(false);
 
 // Get role from query parameter or default to customer
 const selectedRole = ref(route.query.role || "customer");
+
+// Redirect admin to login page - admin cannot register
+if (selectedRole.value === 'admin') {
+  router.push("/login");
+}
 
 const form = reactive({
   fullName: "",
@@ -332,6 +342,10 @@ const form = reactive({
   confirmPassword: "",
   role: selectedRole.value, // Set role from query parameter
 });
+
+const syncLocationState = () => {
+  locationGranted.value = hasLocationAccess();
+};
 
 const validateForm = () => {
   const newErrors = {};
@@ -371,6 +385,11 @@ const validateForm = () => {
 };
 
 const handleRegister = async () => {
+  if (!locationGranted.value) {
+    errors.value = { email: "Please allow location access before registering." };
+    return;
+  }
+
   if (!validateForm()) {
     return;
   }
@@ -449,6 +468,47 @@ const handleRegister = async () => {
   }
 };
 
+const requestLocationAccess = () => {
+  if (isRequestingLocation.value) return;
+  if (!navigator?.geolocation) {
+    errors.value = { email: "Your browser does not support geolocation." };
+    return;
+  }
+
+  isRequestingLocation.value = true;
+  errors.value = {};
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const location = saveLocationAccess({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+      locationGranted.value = Boolean(location);
+      isRequestingLocation.value = false;
+      if (!location) {
+        errors.value = { email: "Could not save location. Please try again." };
+        return;
+      }
+      window.dispatchEvent(
+        new CustomEvent("location-access-updated", {
+          detail: { granted: true, location },
+        })
+      );
+    },
+    (error) => {
+      isRequestingLocation.value = false;
+      errors.value = {
+        email:
+          error?.code === 1
+            ? "Location permission was denied. Please allow it to continue."
+            : "Unable to get your location. Please try again.",
+      };
+    },
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+  );
+};
+
 const clearError = (field) => {
   if (errors.value[field]) {
     delete errors.value[field];
@@ -466,6 +526,14 @@ const toggleConfirmPassword = () => {
 const changeRole = () => {
   router.push("/chooserole");
 };
+
+onMounted(() => {
+  window.addEventListener("location-access-updated", syncLocationState);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("location-access-updated", syncLocationState);
+});
 </script>
 
 <style>

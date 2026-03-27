@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('vehicles', function (Blueprint $table) {
-            $table->string('name', 255)->nullable()->after('shop_id');
-            $table->string('plate_number', 50)->nullable()->after('brand');
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('job_title')->nullable()->after('role');
+            $table->text('bio')->nullable()->after('job_title');
         });
     }
 
@@ -22,8 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('vehicles', function (Blueprint $table) {
-            $table->dropColumn(['name', 'plate_number']);
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn(['job_title', 'bio']);
         });
     }
 };

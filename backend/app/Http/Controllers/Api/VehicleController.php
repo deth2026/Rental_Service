@@ -4,12 +4,25 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\VehicleResource;
+use App\Models\Booking;
 use App\Models\Vehicle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class VehicleController extends Controller
 {
+    private function ratingAwareVehicleQuery()
+    {
+        $query = Vehicle::with('shop');
+
+        if (Schema::hasTable('ratings')) {
+            $query->withAvg('ratings', 'rating')->withCount('ratings');
+        }
+
+        return $query;
+    }
+
     private function filterVehicleDataBySchema(array $data): array
     {
         $allowed = Schema::getColumnListing('vehicles');
@@ -135,50 +148,74 @@ class VehicleController extends Controller
         return (string) ($fallback ?? '');
     }
 
+    private function normalizeNullableString($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim((string) $value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function normalizeNullableNumber($value)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+        }
+
+        return is_numeric($value) ? $value + 0 : $value;
+    }
+
+    private function normalizeVehicleRequestData(array $data): array
+    {
+        if (array_key_exists('rider_details', $data)) {
+            $data['rider_details'] = $this->normalizeNullableString($data['rider_details']);
+        }
+
+        foreach (['price', 'insurance_fee', 'taxes_fee', 'total_vehicles'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = $this->normalizeNullableNumber($data[$field]);
+            }
+        }
+
+        return $data;
+    }
+
     public function index(Request $request)
     {
-        // Check if shop_id is provided in the query parameters
+        // Debug logging
         $shopId = $request->query('shop_id');
-        
-        // If shop_id is provided, filter vehicles by that shop
+        \Illuminate\Support\Facades\Log::info('Vehicle index request - shop_id param: ' . ($shopId ?? 'null'));
+
+        $query = null;
         if ($shopId) {
-            $vehicles = Vehicle::where('shop_id', $shopId)->paginate(15);
-            return VehicleResource::collection($vehicles);
+            $query = $this->ratingAwareVehicleQuery()->where('shop_id', $shopId);
+            \Illuminate\Support\Facades\Log::info('Filtering vehicles by shop_id: ' . $shopId);
+        } else {
+            // Return all vehicles for all users (including shop owners)
+            $query = $this->ratingAwareVehicleQuery();
+            \Illuminate\Support\Facades\Log::info('No shop_id provided, returning all vehicles');
         }
-        
-        // If user is authenticated, filter vehicles by their shop
-        $user = $request->user();
-        
-        if ($user && $user->role === 'shop_owner') {
-            // Get all shops owned by this user
-            $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
-            
-            // If user has no shops, return empty result
-            if (empty($shopIds)) {
-                return response()->json([
-                    'data' => [],
-                    'current_page' => 1,
-                    'last_page' => 1,
-                    'per_page' => 15,
-                    'total' => 0
-                ]);
-            }
-            
-            // Return only vehicles from user's shops
-            $vehicles = Vehicle::whereIn('shop_id', $shopIds)->paginate(15);
-            return VehicleResource::collection($vehicles);
-        }
-        
-        // For admin or unauthenticated users, return all vehicles
-        $vehicles = Vehicle::paginate(15);
-        return VehicleResource::collection($vehicles);
+
+        return VehicleResource::collection($query->paginate(15));
     }
 
     public function store(Request $request)
     {
         // Log all request data for debugging
-        \Log::info('=== Vehicle Store Request ===');
-        \Log::info('Request all data:', $request->all());
+        Log::info('=== Vehicle Store Request ===');
+        Log::info('Request all data:', $request->all());
+
+        $request->merge($this->normalizeVehicleRequestData($request->all()));
         
         $request->validate([
             'name' => 'required|string|max:255',
@@ -188,6 +225,10 @@ class VehicleController extends Controller
             'price' => 'nullable|numeric|min:0',
             'status' => 'nullable|string|in:Available,Rented,Maintenance',
             'shop_id' => 'nullable|integer',
+            'total_vehicles' => 'nullable|integer|min:0',
+            'rider_details' => 'nullable|string|max:255',
+            'insurance_fee' => 'nullable|numeric|min:0',
+            'taxes_fee' => 'nullable|numeric|min:0',
         ]);
 
         $data = $request->all();
@@ -224,6 +265,10 @@ class VehicleController extends Controller
             'status' => $data['status'] ?? 'Available',
             'fuel_type' => $data['fuel'] ?? '',
             'transmission' => $data['transmission'] ?? '',
+            'total_vehicles' => $data['total_vehicles'] ?? 1,
+            'rider_details' => $data['rider_details'] ?? null,
+            'insurance_fee' => $data['insurance_fee'] ?? null,
+            'taxes_fee' => $data['taxes_fee'] ?? null,
             'description' => $data['description'] ?? '',
             'image_url' => $this->resolveSingleImageUrl($data, $photosData, '')
         ];
@@ -246,22 +291,23 @@ class VehicleController extends Controller
             $vehicleData['photos'] = json_encode(array_values($photosData));
         }
 
-        \Log::info('Vehicle data to create:', $vehicleData);
+        Log::info('Vehicle data to create:', $vehicleData);
 
         $vehicleData = $this->filterVehicleDataBySchema($vehicleData);
 
         try {
             $record = Vehicle::create($vehicleData);
-            \Log::info('Vehicle created successfully with ID:', ['id' => $record->id]);
+            Log::info('Vehicle created successfully with ID:', ['id' => $record->id]);
             return response()->json(new VehicleResource($record), 201);
         } catch (\Exception $e) {
-            \Log::error('Error creating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Error creating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to create vehicle. Please try again.'], 500);
         }
     }
 
     public function show(Vehicle $vehicle)
     {
+        $vehicle->load('shop')->loadAvg('ratings', 'rating')->loadCount('ratings');
         return response()->json(new VehicleResource($vehicle));
     }
 
@@ -280,6 +326,8 @@ class VehicleController extends Controller
                 ], 403);
             }
         }
+
+        $request->merge($this->normalizeVehicleRequestData($request->all()));
         
         $request->validate([
             'name' => 'nullable|string|max:255',
@@ -289,6 +337,10 @@ class VehicleController extends Controller
             'price' => 'nullable|numeric|min:0',
             'status' => 'nullable|string|in:Available,Rented,Maintenance',
             'shop_id' => 'nullable|integer',
+            'total_vehicles' => 'nullable|integer|min:0',
+            'rider_details' => 'nullable|string|max:255',
+            'insurance_fee' => 'nullable|numeric|min:0',
+            'taxes_fee' => 'nullable|numeric|min:0',
         ]);
         
         $data = $request->all();
@@ -319,6 +371,10 @@ class VehicleController extends Controller
             'status' => $data['status'] ?? $vehicle->status,
             'fuel_type' => $data['fuel'] ?? $vehicle->fuel_type,
             'transmission' => $data['transmission'] ?? $vehicle->transmission,
+            'total_vehicles' => $data['total_vehicles'] ?? $vehicle->total_vehicles ?? 1,
+            'rider_details' => $data['rider_details'] ?? $vehicle->rider_details,
+            'insurance_fee' => $data['insurance_fee'] ?? $vehicle->insurance_fee,
+            'taxes_fee' => $data['taxes_fee'] ?? $vehicle->taxes_fee,
             'description' => $data['description'] ?? $vehicle->description,
             'image_url' => $this->resolveSingleImageUrl($data, $photosData, $vehicle->image_url)
         ];
@@ -347,7 +403,7 @@ class VehicleController extends Controller
             $vehicle->update($vehicleData);
             return response()->json(new VehicleResource($vehicle->fresh()));
         } catch (\Exception $e) {
-            \Log::error('Error updating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            Log::error('Error updating vehicle:', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['message' => 'Failed to update vehicle. Please try again.'], 500);
         }
     }

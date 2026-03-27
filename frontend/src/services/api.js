@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosRetry from 'axios-retry';
 
 const api = axios.create({
   baseURL: '/api',
@@ -12,19 +13,22 @@ const getStoredToken = () => {
   return localStorage.getItem('auth_token') || localStorage.getItem('token') || '';
 };
 
-const token = getStoredToken();
-if (token) {
-  api.defaults.headers.common.Authorization = `Bearer ${token}`;
-}
-
 api.interceptors.request.use((config) => {
   const nextConfig = { ...config };
   const authToken = getStoredToken();
 
+  console.log('API Interceptor: Token from localStorage:', authToken ? 'present' : 'missing');
+
   if (authToken) {
     nextConfig.headers = nextConfig.headers || {};
     nextConfig.headers.Authorization = `Bearer ${authToken}`;
+    console.log('API Interceptor: Authorization header set');
+  } else {
+    console.log('API Interceptor: No token found, skipping Authorization header');
   }
+
+  // Add timeout for performance
+  nextConfig.timeout = 10000; // 10s
 
   // Let browser set correct multipart boundary automatically.
   if (typeof FormData !== 'undefined' && nextConfig.data instanceof FormData && nextConfig.headers) {
@@ -32,6 +36,20 @@ api.interceptors.request.use((config) => {
   }
 
   return nextConfig;
+});
+
+// Add automatic retry for network errors
+axiosRetry(api, {
+  retries: 3,
+  retryDelay: axiosRetry.exponentialDelay,
+  retryCondition: (error) => {
+    return error.code === 'ECONNABORTED' || 
+           error.message === 'Network Error' || 
+           error.response?.status >= 500;
+  },
+  onRetry: (retryCount, error) => {
+    console.log(`Retrying API call (${retryCount}/3):`, error.message);
+  }
 });
 
 // Vehicle API calls
@@ -67,6 +85,15 @@ export const cityApi = {
   getAll: () => api.get('/cities')
 };
 
+// Category API calls
+export const categoryApi = {
+  getAll: () => api.get('/categories'),
+  getById: (id) => api.get(`/categories/${id}`),
+  create: (data) => api.post('/categories', data),
+  update: (id, data) => api.put(`/categories/${id}`, data),
+  delete: (id) => api.delete(`/categories/${id}`)
+};
+
 // Payment API calls
 export const paymentApi = {
   getAll: () => api.get('/payments'),
@@ -76,13 +103,21 @@ export const paymentApi = {
   delete: (id) => api.delete(`/payments/${id}`)
 };
 
+export const userApi = {
+  getAll: (params = {}) => api.get('/users', { params }),
+  create: (payload) => api.post('/users', payload),
+  update: (id, payload) => api.put(`/users/${id}`, payload),
+  delete: (id) => api.delete(`/users/${id}`)
+};
+
 // Coupon API calls
 export const couponApi = {
   getAll: () => api.get('/coupons'),
   getById: (id) => api.get(`/coupons/${id}`),
   create: (data) => api.post('/coupons', data),
   update: (id, data) => api.put(`/coupons/${id}`, data),
-  delete: (id) => api.delete(`/coupons/${id}`)
+  delete: (id) => api.delete(`/coupons/${id}`),
+  validate: (code, totalAmount) => api.get('/coupons/check', { params: { code, total_amount: totalAmount } })
 };
 
 // Feedback API calls
@@ -110,6 +145,23 @@ export const loyaltyPointApi = {
   create: (data) => api.post('/loyalty-points', data),
   update: (id, data) => api.put(`/loyalty-points/${id}`, data),
   delete: (id) => api.delete(`/loyalty-points/${id}`)
+};
+
+// Bookings API calls
+export const bookingApi = {
+  getAll: () => api.get('/bookings'),
+  getById: (id) => api.get(`/bookings/${id}`),
+  create: (data) => api.post('/bookings', data),
+  update: (id, data) => api.put(`/bookings/${id}`, data),
+  delete: (id) => api.delete(`/bookings/${id}`),
+  getMyBookings: () => api.get('/my-bookings')
+};
+
+// Rating API calls
+export const ratingApi = {
+  getVehicleRatings: (params) => api.get('/vehicle-ratings', { params }),
+  getVehicleRatingsSummary: (params) => api.get('/vehicle-ratings-summary', { params }),
+  create: (bookingId, data) => api.post(`/bookings/${bookingId}/rating`, data)
 };
 
 export default api;

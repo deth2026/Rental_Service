@@ -4,15 +4,19 @@
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem 4rem;
-  background: white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 30;
+  width: 110%;
+  height: 80px;
+  display: flex; 
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  /* padding: 0 30px 0 40px; */
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(14px);
 }
 
 .brand {
@@ -141,7 +145,7 @@
 
 .vehicles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
@@ -160,7 +164,7 @@
 
 .vehicle-card-image {
   position: relative;
-  height: 200px;
+  height: 220px;
   background: #f8f9fa;
 }
 
@@ -273,6 +277,12 @@
 
 .view-details-btn:hover {
   opacity: 0.9;
+}
+
+@media (max-width: 1024px) {
+  .vehicles-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {

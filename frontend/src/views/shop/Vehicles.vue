@@ -1,8 +1,8 @@
 ﻿<script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { vehicleApi, shopApi, api } from '@/services/api'
 import { getSessionUser } from '@/services/auth'
-import '../../css/Vehicles/css'
+import '../../css/Vehicles.css'
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
@@ -20,6 +20,44 @@ const currentShopId = ref(null)
 
 // Get current user
 const sessionUser = ref(getSessionUser() || {})
+
+console.log('=== Vehicles.vue Init ===')
+console.log('User from session:', sessionUser.value)
+console.log('User ID:', sessionUser.value?.id)
+
+// Shop cache utilities (same as DashboardLayout)
+const SHOP_CACHE_PREFIX = "settings_shop_"
+
+const shopCacheKey = (ownerId) => `${SHOP_CACHE_PREFIX}${ownerId}`
+
+const getCachedShop = (ownerId) => {
+  if (!ownerId) return null
+  try {
+    const raw = localStorage.getItem(shopCacheKey(ownerId))
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+const setCachedShop = (ownerId, shopData) => {
+  if (!ownerId) return
+  console.log('=== setCachedShop ===')
+  console.log('ownerId:', ownerId)
+  console.log('shopData:', shopData)
+  try {
+    if (!shopData) {
+      localStorage.removeItem(shopCacheKey(ownerId))
+      return
+    }
+    localStorage.setItem(shopCacheKey(ownerId), JSON.stringify(shopData))
+    console.log('Shop cached successfully')
+  } catch (e) {
+    console.log('Error caching shop:', e)
+  }
+}
 
 // Delete confirmation modal
 const showDeleteModal = ref(false)
@@ -54,9 +92,37 @@ const vehicles = ref([])
 
 // Fetch vehicles from database
 const fetchVehicles = async () => {
+    // Wait for shop ID to be available
+    if (!currentShopId.value) {
+        console.log('Waiting for shop ID before fetching vehicles. currentShopId:', currentShopId.value)
+        return
+    }
+    
     try {
         loading.value = true
-        const response = await vehicleApi.getAll()
+        // Pass shop_id to filter vehicles by current shop
+        const params = { shop_id: currentShopId.value }
+        console.log('Fetching vehicles with shop_id:', currentShopId.value, 'params:', params)
+        const response = await vehicleApi.getAll(params)
+        console.log('Vehicles API response:', response.data)
+        // Handle paginated response
+        let vehiclesData = response.data.data || response.data || []
+        
+        // If no vehicles found with shop_id filter, try without filter (fallback)
+        if (vehiclesData.length === 0) {
+            console.log('No vehicles found with shop_id, trying without filter...')
+            const fallbackResponse = await vehicleApi.getAll()
+            vehiclesData = fallbackResponse.data.data || fallbackResponse.data || []
+            // Filter client-side by shop_id
+            vehiclesData = vehiclesData.filter(v => {
+                const vShopId = v.shop_id || v.data?.attributes?.shop_id
+                return Number(vShopId) === Number(currentShopId.value)
+            })
+            console.log('Fallback vehicles after client-side filter:', vehiclesData.length)
+        }
+        
+        console.log('Vehicles data:', vehiclesData.length, 'vehicles')
+        vehicles.value = vehiclesData
         // Handle paginated response
         vehicles.value = response.data.data || response.data || []
         // Map database fields to frontend fields
@@ -76,12 +142,19 @@ const fetchVehicles = async () => {
 
             const source = v?.data?.attributes ? v.data.attributes : v
             const imageUrl = source.image_url_full || source.image_url || ''
-            const baseUrl = api.defaults.baseURL?.replace(/\\/api\\/?$/, '') || ''
-            const resolvedPreview = imageUrl ? `${baseUrl}/${imageUrl}`.replace(/\\/\\/+/g, '/') : (parsedPhotos[0] || sampleThumb)
+            const baseUrl = api.defaults.baseURL?.replace(/\/api\/?$/, '') || ''
+            const resolvedPreview = imageUrl
+                ? (/^(https?:\/\/|data:|blob:)/i.test(imageUrl)
+                    ? imageUrl
+                    : `${baseUrl}/${imageUrl}`.replace(/\/+/g, '/'))
+                : (parsedPhotos[0] || sampleThumb)
 
             return {
                 ...source,
+                shop_id: source.shop_id,
+                type: source.type,
                 category: source.category || source.type,
+                stock: Number(source.total_vehicles ?? source.totalVehiclesInput ?? 1),
                 plate: source.plate_number || source.plate,
                 price: Number(source.price_per_day ?? source.price) || 0,
                 status: (source.status || 'Available').trim(),
@@ -89,7 +162,10 @@ const fetchVehicles = async () => {
                 updatedAt: source.updated_at,
                 previewUrl: resolvedPreview,
                 photos: parsedPhotos,
-                base64Photos: parsedPhotos
+                base64Photos: parsedPhotos,
+                riderDetails: source.rider_details ?? '',
+                insuranceFee: source.insurance_fee ?? '',
+                taxesFee: source.taxes_fee ?? ''
             }
         })
     } catch (error) {
@@ -101,24 +177,67 @@ const fetchVehicles = async () => {
 
 // Load vehicles and shop on mount
 onMounted(async () => {
+    console.log('=== onMounted ===')
+    // Re-read session user on mount to ensure we have the latest data
+    sessionUser.value = getSessionUser() || {}
+    console.log('Session user after init:', sessionUser.value)
     await fetchUserShop()
-    fetchVehicles()
+    await fetchVehicles()
+})
+
+// Watch for shop ID changes and refetch vehicles when shop is loaded
+watch(currentShopId, async (newShopId, oldShopId) => {
+    if (newShopId && newShopId !== oldShopId) {
+        console.log('Shop ID changed, refetching vehicles:', newShopId)
+        await fetchVehicles()
+    }
 })
 
 const sampleThumb = 'https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=900&q=80'
 const photoPreview = ref(sampleThumb)
-const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [] })
+const form = reactive({ name: '', brand: '', model: '', category: '', shop: '', plate: '', description: '', fuel: '', transmission: '', price: '', status: 'Available', updatedAt: '', photos: [], base64Photos: [], riderDetails: '', insuranceFee: '', taxesFee: '', totalVehiclesInput: 1 })
+
+const normalizeOptionalNumber = (value) => {
+    if (value === '' || value === null || value === undefined) {
+        return null
+    }
+
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+}
 
 // Fetch user's shop
 const fetchUserShop = async () => {
     try {
         const ownerId = Number(sessionUser.value?.id || 0)
-        if (!ownerId) return
-        
+        console.log('=== fetchUserShop ===')
+        console.log('ownerId:', ownerId)
+        if (!ownerId) {
+            console.log('No ownerId, returning early')
+            return
+        }
+
+        // First try to get from cache
+        let cachedShop = getCachedShop(ownerId)
+        console.log('Cached shop:', cachedShop)
+        if (cachedShop) {
+            console.log('Using cached shop:', cachedShop.id)
+            currentShop.value = cachedShop
+            currentShopId.value = cachedShop.id
+            form.shop = cachedShop.name
+            // Trigger vehicle fetch immediately since we have shop
+            await fetchVehicles()
+            return
+        }
+
+        // Fetch from API if not in cache
+        console.log('Fetching shop from API...')
         const response = await api.get('/shops')
         const shops = response.data.data || response.data || []
+        console.log('All shops:', shops.length)
         const myShops = shops.filter((s) => Number(s.owner_id) === ownerId)
-        
+        console.log('My shops:', myShops.length)
+
         if (myShops.length > 0) {
             // Sort by creation date, newest first
             myShops.sort((a, b) => {
@@ -126,9 +245,14 @@ const fetchUserShop = async () => {
                 const bTime = b.created_at ? new Date(b.created_at).getTime() : 0
                 return bTime - aTime
             })
+            console.log('Selected shop:', myShops[0].id, myShops[0].name)
             currentShop.value = myShops[0]
             currentShopId.value = myShops[0].id
             form.shop = myShops[0].name
+            // Cache the shop for future use
+            setCachedShop(ownerId, myShops[0])
+        } else {
+            console.log('No shop found for this user!')
         }
     } catch (error) {
         console.error('Error fetching shop:', error)
@@ -184,8 +308,8 @@ const getStatusClass = (status) => {
 const filteredVehicles = computed(() => {
     const s = search.value.trim().toLowerCase()
     return vehicles.value.filter(v => {
-        const sOk = !s || 
-            (v.name && v.name.toLowerCase().includes(s)) || 
+        const sOk = !s ||
+            (v.name && v.name.toLowerCase().includes(s)) ||
             (v.category && v.category.toLowerCase().includes(s)) ||
             (v.brand && v.brand.toLowerCase().includes(s)) ||
             (v.model && v.model.toLowerCase().includes(s)) ||
@@ -205,12 +329,14 @@ const openCreate = async () => {
     editId.value = null
     // Ensure we have the latest shop data
     await fetchUserShop()
-    Object.assign(form, { 
-        name: '', brand: '', model: '', category: '', 
-        shop: currentShop.value?.name || '', 
-        plate: '', description: '', fuel: '', transmission: '', 
-        price: '', status: 'Available', updatedAt: khTime(), 
-        photos: [], base64Photos: [] 
+    Object.assign(form, {
+        name: '', brand: '', model: '', category: categories[0] || '',
+        shop: currentShop.value?.name || '',
+        plate: '', description: '', fuel: '', transmission: '',
+        price: '', status: 'Available', updatedAt: khTime(),
+        photos: [], base64Photos: [],
+        riderDetails: '', insuranceFee: '', taxesFee: '',
+        totalVehiclesInput: 1
     })
     photoPreview.value = sampleThumb
     modal.value = true
@@ -227,15 +353,15 @@ const openEdit = (v) => {
             photosData = []
         }
     }
-    
+
     // Use image_url_full if available, otherwise fall back to previewUrl
     const imageUrl = v.image_url_full || v.previewUrl || ''
-    
+
     Object.assign(form, {
         name: v.name || '',
         brand: v.brand || '',
         model: v.model || '',
-        category: v.category || '',
+        category: v.category || v.type || categories[0] || '',
         shop: v.shop || currentShop.value?.name || '',
         plate: v.plate || '',
         description: v.description || '',
@@ -245,7 +371,11 @@ const openEdit = (v) => {
         status: v.status || 'Available',
         updatedAt: khTime(),
         photos: Array.isArray(photosData) ? photosData.map((_, i) => `Photo ${i + 1}`) : [],
-        base64Photos: photosData || []
+        base64Photos: photosData || [],
+        riderDetails: v.riderDetails || '',
+        insuranceFee: v.insuranceFee ?? '',
+        taxesFee: v.taxesFee ?? '',
+        totalVehiclesInput: v.stock ?? 1
     })
     // Use the stored full URL or fall back to sampleThumb
     photoPreview.value = imageUrl || sampleThumb
@@ -253,7 +383,9 @@ const openEdit = (v) => {
 }
 
 const saveVehicle = async () => {
-    if (!form.name || !form.category || !form.price) {
+    const nameValue = String(form.name || '').trim()
+    const categoryValue = String(form.category || form.type || categories[0] || '').trim()
+    if (!nameValue || !categoryValue || form.price === '' || form.price === null || form.price === undefined) {
         showToast('Please fill in all required fields: Name, Category, and Price', 'error')
         return
     }
@@ -265,6 +397,9 @@ const saveVehicle = async () => {
         return
     }
 
+    // Ensure form has a category value for the backend and UI
+    form.category = categoryValue
+
     // Ensure we have shop data
     if (!currentShopId.value) {
         showToast('Please create a shop first before adding vehicles', 'error')
@@ -272,10 +407,10 @@ const saveVehicle = async () => {
     }
 
     const payload = {
-        name: form.name,
+        name: nameValue,
         brand: form.brand,
         model: form.model,
-        category: form.category,
+        category: categoryValue,
         plate: form.plate || `AUTO-${Date.now().toString().slice(-5)}`,
         price: priceValue,
         status: form.status,
@@ -285,8 +420,14 @@ const saveVehicle = async () => {
         fuel: form.fuel,
         transmission: form.transmission,
         photos: form.base64Photos || [],
-        previewUrl: photoPreview.value
+        previewUrl: photoPreview.value,
+        rider_details: form.riderDetails,
+        insurance_fee: normalizeOptionalNumber(form.insuranceFee),
+        taxes_fee: normalizeOptionalNumber(form.taxesFee),
+        total_vehicles: normalizeOptionalNumber(form.totalVehiclesInput) ?? 1
     }
+    console.log('=== Form Data ===', form)
+    console.log('=== Payload ===', payload)
 
     try {
         if (editId.value) {
@@ -303,57 +444,44 @@ const saveVehicle = async () => {
                     brand: updatedData.brand,
                     model: updatedData.model,
                     category: updatedData.type,
+                    type: updatedData.type,
                     plate: updatedData.plate_number,
                     price: updatedData.price_per_day,
                     status: updatedData.status,
                     description: updatedData.description,
                     fuel: updatedData.fuel_type,
                     transmission: updatedData.transmission,
+                    shop_id: updatedData.shop_id,
                     previewUrl: imageUrl || (form.base64Photos && form.base64Photos[0]) || sampleThumb,
                     image_url_full: updatedData.image_url_full,
                     photos: form.base64Photos || [],
                     base64Photos: form.base64Photos || [],
+                    riderDetails: updatedData.rider_details ?? '',
+                    insuranceFee: updatedData.insurance_fee ?? '',
+                    taxesFee: updatedData.taxes_fee ?? '',
                     updatedAt: khTime()
                 }
             }
             modal.value = false
             showToast('Vehicle updated successfully!', 'success')
+            // Re-fetch vehicles to ensure the list stays in sync with the database
+            await fetchVehicles()
         } else {
             // Create new vehicle - wait for API response first
             const response = await vehicleApi.create(payload)
             const newData = response.data
-            
-            // Add vehicle to list with real data from server
-            const newVehicle = {
-                id: newData.id,
-                name: newData.name,
-                brand: newData.brand,
-                model: newData.model,
-                category: newData.type,
-                plate: newData.plate_number,
-                price: newData.price_per_day,
-                status: newData.status,
-                description: newData.description,
-                fuel: newData.fuel_type,
-                transmission: newData.transmission,
-                // Use full image URL from API response
-                previewUrl: newData.image_url_full || newData.image_url || photoPreview.value,
-                image_url_full: newData.image_url_full,
-                photos: form.base64Photos || [],
-                base64Photos: form.base64Photos || [],
-                createdAt: khTime(),
-                updatedAt: khTime()
-            }
-            vehicles.value.unshift(newVehicle)
+
             modal.value = false
             showToast('Vehicle created successfully!', 'success')
+            // Re-fetch vehicles to ensure the list stays in sync with the database
+            await fetchVehicles()
         }
     } catch (error) {
         console.error('Error saving vehicle:', error)
         console.error('Error response:', error.response)
-        
+
         let errorMessage = 'Failed to save vehicle. Please try again.'
-        
+
         if (error.response) {
             if (error.response.status === 401) {
                 errorMessage = 'You are not authenticated. Please login again.'
@@ -373,7 +501,7 @@ const saveVehicle = async () => {
         } else if (error.request) {
             errorMessage = 'No response from server. Please check your connection.'
         }
-        
+
         showToast(errorMessage, 'error')
     }
 }
@@ -457,310 +585,524 @@ const onPhotoDrop = async (e) => {
 </script>
 
 <template>
-    <div class="panel vehicles-page">
-        <div class="line top-line">
-            <div>
-                <h3>Manage Vehicles</h3>
-                <p class="muted">Add, edit, and manage your rental fleet</p>
-            </div>
-            <div class="controls">
-                <div class="search">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#64748b" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="7"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input v-model="search" placeholder="Search vehicle name, model, or plate" />
-                </div>
-                <div class="select-wrap">
-                    <select v-model="categoryFilter" class="select">
-                        <option>All Categories</option>
-                        <option v-for="c in categories" :key="c">{{ c }}</option>
-                    </select>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"></path>
-                    </svg>
-                </div>
-                <div class="select-wrap">
-                    <select v-model="statusFilter" class="select">
-                        <option>All Status</option>
-                        <option v-for="s in statuses" :key="s">{{ s }}</option>
-                    </select>
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2">
-                        <path d="M6 9l6 6 6-6"></path>
-                    </svg>
-                </div>
-                <button class="primary add-btn" @click="openCreate"><svg viewBox="0 0 24 24" width="16" height="16"
-                        fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg> Add New Vehicle</button>
-            </div>
+  <div class="panel vehicles-page">
+    <div class="line top-line">
+      <div>
+        <h3>Manage Vehicles</h3>
+        <p class="muted">Add, edit, and manage your rental fleet</p>
+      </div>
+      <div class="controls">
+        <div class="search">
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="#64748b"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            v-model="search"
+            placeholder="Search vehicle name, model, or plate"
+          />
         </div>
-
-        <div class="cards">
-            <article>
-                <div class="icon-box blue"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"
-                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M3 13v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2"></path>
-                        <circle cx="7.5" cy="17.5" r="1.5"></circle>
-                        <circle cx="16.5" cy="17.5" r="1.5"></circle>
-                    </svg></div>
-                <div>
-                    <h3>{{ totalVehicles }}</h3>
-                    <span>Total Vehicles</span>
-                </div>
-            </article>
-            <article>
-                <div class="icon-box green"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"
-                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="9"></circle>
-                        <path d="M8 12.5l2.4 2.4L16 9.3"></path>
-                    </svg></div>
-                <div>
-                    <h3>{{ availableVehicles }}</h3>
-                    <span>Available</span>
-                </div>
-            </article>
-            <article>
-                <div class="icon-box yellow"><svg viewBox="0 0 24 24" width="20" height="20" fill="none"
-                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.7 6.3l3 3"></path>
-                        <path d="M3 21l3.8-.7L19 8a2.1 2.1 0 0 0-3-3L3.8 17.3z"></path>
-                    </svg></div>
-                <div>
-                    <h3>{{ maintenanceVehicles }}</h3>
-                    <span>Maintenance</span>
-                </div>
-            </article>
+        <div class="select-wrap">
+          <select v-model="categoryFilter" class="select">
+            <option>All Categories</option>
+            <option v-for="c in categories" :key="c">{{ c }}</option>
+          </select>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="#94a3b8"
+            stroke-width="2"
+          >
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
         </div>
-
-        <div class="table">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Image</th>
-                        <th>Vehicle</th>
-                        <th>Brand / Model</th>
-                        <th>Plate Number</th>
-                        <th>Price/Day</th>
-                        <th>Status</th>
-                        <th>Created At</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr v-for="v in filteredVehicles" :key="v.id">
-                        <td>
-                            <img :src="v.previewUrl || sampleThumb" alt="Vehicle" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;" />
-                        </td>
-                        <td class="vehicle-name-cell">
-                            <i :class="['vehicle-category-icon', getCategoryIcon(v.category)]" aria-hidden="true"></i>
-                            <span>{{ v.name }}</span>
-                        </td>
-                        <td>{{ v.brand }} / {{ v.model }}</td>
-                        <td>{{ v.plate }}</td>
-                        <td>${{ v.price }}</td>
-                        <td>
-                            <span :class="['status-badge', getStatusClass(v.status)]">
-                                <span v-html="getStatusIcon(v.status)"></span> {{ v.status }}
-                            </span>
-                        </td>
-                        <td>{{ formatDate(v.createdAt) }}</td>
-                        <td class="actions">
-                            <button class="icon-btn" @click="openEdit(v)">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 20h9"></path>
-                                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path>
-                                </svg>
-                            </button>
-                            <button class="danger icon-btn" @click="confirmDelete(v)">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M3 6h18"></path>
-                                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
-                                </svg>
-                            </button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <div v-if="filteredVehicles.length === 0" class="empty">
-                <div class="empty-card">
-                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#94a3b8" stroke-width="1.8">
-                        <path d="M3 13v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2"></path>
-                        <circle cx="7.5" cy="17.5" r="1.5"></circle>
-                        <circle cx="16.5" cy="17.5" r="1.5"></circle>
-                    </svg>
-                    <p>No vehicles found. Click "Add New Vehicle" to get started.</p>
-                </div>
-            </div>
+        <div class="select-wrap">
+          <select v-model="statusFilter" class="select">
+            <option>All Status</option>
+            <option v-for="s in statuses" :key="s">{{ s }}</option>
+          </select>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="#94a3b8"
+            stroke-width="2"
+          >
+            <path d="M6 9l6 6 6-6"></path>
+          </svg>
         </div>
-
-        <div v-if="modal" class="add-vehicle-overlay" @click.self="modal = false">
-            <div class="add-vehicle-modal">
-                <!-- Header -->
-                <div class="add-vehicle-header">
-                    <h2>{{ editId ? 'Edit Vehicle' : 'Add New Vehicle' }}</h2>
-                    <button class="close-btn" @click="modal = false">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Content -->
-                <div class="add-vehicle-content">
-                    <!-- Left Column -->
-                    <div class="add-vehicle-left">
-                        <!-- Vehicle Identification -->
-                        <div class="form-card">
-                            <h3 class="card-title">Vehicle Identification</h3>
-                            <div class="form-group">
-                                <label>Vehicle Name</label>
-                                <input v-model="form.name" placeholder="e.g. 2023 Luxury Sedan White" />
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Category</label>
-                                    <select v-model="form.category">
-                                        <option value="" disabled>Select Category</option>
-                                        <option v-for="c in categories" :key="c">{{ c }}</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Shop Location</label>
-                                    <select v-model="form.shop">
-<option value="" disabled>Select Shop</option>
-                                        <option v-if="currentShop" :value="currentShop.name">{{ currentShop.name }}</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Description -->
-                        <div class="form-card">
-                            <h3 class="card-title">Description</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Plate Number</label>
-                                    <input v-model="form.plate" placeholder="e.g. ABC-1234" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Fuel Type</label>
-                                    <select v-model="form.fuel">
-                                        <option value="" disabled>Select Fuel</option>
-                                        <option>Petrol</option>
-                                        <option>Diesel</option>
-                                        <option>Electric</option>
-                                        <option>Hybrid</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Transmission</label>
-                                    <select v-model="form.transmission">
-                                        <option value="" disabled>Select Transmission</option>
-                                        <option>Automatic</option>
-                                        <option>Manual</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group mt-12">
-                                <label>Description</label>
-                                <textarea v-model="form.description" placeholder="Provide a detailed description of the vehicle features..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column -->
-                    <div class="add-vehicle-right">
-                        <!-- Pricing & Status -->
-                        <div class="form-card">
-                            <h3 class="card-title">Pricing & Status</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label>Price per Day ($)</label>
-                                    <input v-model="form.price" type="number" placeholder="$ 0.00" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Status</label>
-                                    <select v-model="form.status">
-                                        <option>Available</option>
-                                        <option>Rented</option>
-                                        <option>Maintenance</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Vehicle Photos -->
-                        <div class="form-card">
-                            <h3 class="card-title">Vehicle Photos</h3>
-                            <div class="photo-upload-area" @click="$refs.photos && $refs.photos.click()" @dragover.prevent @drop.prevent="onPhotoDrop">
-                                <input ref="photos" type="file" multiple accept="image/png, image/jpeg" @change="onPhotos" style="display:none" />
-                                <div v-if="!photoPreview || photoPreview === sampleThumb" class="upload-placeholder">
-                                    <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#94a3b8" stroke-width="1.5">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="7 10 12 5 17 10"></polyline>
-                                        <line x1="12" y1="5" x2="12" y2="16"></line>
-                                    </svg>
-                                    <p>Click to upload or drag and drop</p>
-                                    <span>PNG, JPG up to 10MB</span>
-                                </div>
-                                <div v-else class="photo-preview">
-                                    <img :src="photoPreview" alt="Vehicle preview" />
-                                    <div class="photo-overlay">
-                                        <span>Click to change</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Footer -->
-                <div class="add-vehicle-footer">
-                    <button class="discard-btn" @click="modal = false">Discard Draft</button>
-                    <button class="store-btn" @click="saveVehicle">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                            <polyline points="7 3 7 8 15 8"></polyline>
-                        </svg>
-                        {{ editId ? 'Update Vehicle' : 'Store Product' }}
-                    </button>
-                </div>
-            </div>
-        </div>
+        <button class="primary add-btn" @click="openCreate">
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add New Vehicle
+        </button>
+      </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
-        <div class="delete-modal">
-            <div class="delete-icon-wrapper">
-                <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#e74c3c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    <line x1="10" y1="11" x2="10" y2="17"></line>
-                    <line x1="14" y1="11" x2="14" y2="17"></line>
+    <div class="cards">
+      <article>
+        <div class="icon-box blue">
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 13v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2"></path>
+            <circle cx="7.5" cy="17.5" r="1.5"></circle>
+            <circle cx="16.5" cy="17.5" r="1.5"></circle>
+          </svg>
+        </div>
+        <div>
+          <h3>{{ totalVehicles }}</h3>
+          <span>Total Vehicles</span>
+        </div>
+      </article>
+      <article>
+        <div class="icon-box green">
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M8 12.5l2.4 2.4L16 9.3"></path>
+          </svg>
+        </div>
+        <div>
+          <h3>{{ availableVehicles }}</h3>
+          <span>Available</span>
+        </div>
+      </article>
+      <article>
+        <div class="icon-box yellow">
+          <svg
+            viewBox="0 0 24 24"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M14.7 6.3l3 3"></path>
+            <path d="M3 21l3.8-.7L19 8a2.1 2.1 0 0 0-3-3L3.8 17.3z"></path>
+          </svg>
+        </div>
+        <div>
+          <h3>{{ maintenanceVehicles }}</h3>
+          <span>Maintenance</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="table">
+      <table>
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Vehicle</th>
+            <th>Stock</th>
+            <th>Category</th>
+            <th>Plate Number</th>
+            <th>Stock</th>
+            <th>Price/Day</th>
+            <th>Status</th>
+            <th>Created At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="v in filteredVehicles" :key="v.id">
+            <td>
+              <img
+                :src="v.previewUrl || sampleThumb"
+                alt="Vehicle"
+                style="
+                  width: 60px;
+                  height: 40px;
+                  object-fit: cover;
+                  border-radius: 4px;
+                "
+              />
+            </td>
+            <td class="vehicle-name-cell">
+              <i
+                :class="['vehicle-category-icon', getCategoryIcon(v.category)]"
+                aria-hidden="true"
+              ></i>
+              <span>{{ v.name }}</span>
+            </td>
+            <td>{{ v.stock }}</td>
+            <td>{{ v.category }}</td>
+            <td>{{ v.plate }}</td>
+            <td>{{ v.total_vehicles ?? 1 }}</td>
+            <td>${{ v.price }}</td>
+            <td>
+              <span :class="['status-badge', getStatusClass(v.status)]">
+                <span v-html="getStatusIcon(v.status)"></span> {{ v.status }}
+              </span>
+            </td>
+            <td>{{ formatDate(v.createdAt) }}</td>
+            <td class="actions">
+              <button class="icon-btn" @click="openEdit(v)">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="#000000"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path>
                 </svg>
-            </div>
-            <h3 class="delete-title">Delete Vehicle</h3>
-            <p class="delete-message">Are you sure you want to delete this vehicle?</p>
-            <p class="delete-vehicle-name">{{ deleteVehicleName }}</p>
-            <p class="delete-warning">This action cannot be undone. All associated data (maintenance history, documents, photos, assignments) will be permanently removed.</p>
-            <div class="delete-actions">
-                <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
-                <button class="delete-confirm-btn" @click="removeVehicle">Delete</button>
-            </div>
+              </button>
+              <button class="danger icon-btn" @click="confirmDelete(v)">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="#000000"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div v-if="filteredVehicles.length === 0" class="empty">
+        <div class="empty-card">
+          <svg
+            viewBox="0 0 24 24"
+            width="28"
+            height="28"
+            fill="none"
+            stroke="#94a3b8"
+            stroke-width="1.8"
+          >
+            <path d="M3 13v-2a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v2"></path>
+            <circle cx="7.5" cy="17.5" r="1.5"></circle>
+            <circle cx="16.5" cy="17.5" r="1.5"></circle>
+          </svg>
+          <p>No vehicles found. Click "Add New Vehicle" to get started.</p>
         </div>
+      </div>
     </div>
-</template>
 
-<!-- Toast Notification -->
-<div v-if="toast.show" :class="['toast', toast.type]">
+    <div v-if="modal" class="add-vehicle-overlay" @click.self="modal = false">
+      <div class="add-vehicle-modal">
+        <!-- Header -->
+        <div class="add-vehicle-header">
+          <h2>{{ editId ? "Edit Vehicle" : "Add New Vehicle" }}</h2>
+          <button class="close-btn" @click="modal = false">
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="add-vehicle-content">
+          <!-- Left Column -->
+          <div class="add-vehicle-left">
+            <!-- Vehicle Identification -->
+            <div class="form-card">
+              <h3 class="card-title">Vehicle Identification</h3>
+              <div class="form-group">
+                <label>Vehicle Name</label>
+                <input
+                  v-model="form.name"
+                  placeholder="e.g. 2023 Luxury Sedan White"
+                />
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Category</label>
+                  <select v-model="form.category">
+                    <option value="" disabled>Select Category</option>
+                    <option v-for="c in categories" :key="c">{{ c }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Shop Location</label>
+                  <select v-model="form.shop">
+                    <option value="" disabled>Select Shop</option>
+                    <option v-if="currentShop" :value="currentShop.name">
+                      {{ currentShop.name }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="form-card">
+              <h3 class="card-title">Description</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Plate Number</label>
+                  <input v-model="form.plate" placeholder="e.g. ABC-1234" />
+                </div>
+                <div class="form-group">
+                  <label>Fuel Type</label>
+                  <select v-model="form.fuel">
+                    <option value="" disabled>Select Fuel</option>
+                    <option>Petrol</option>
+                    <option>Diesel</option>
+                    <option>Electric</option>
+                    <option>Hybrid</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Transmission</label>
+                  <select v-model="form.transmission">
+                    <option value="" disabled>Select Transmission</option>
+                    <option>Automatic</option>
+                    <option>Manual</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group mt-12">
+                <label>Description</label>
+                <textarea
+                  v-model="form.description"
+                  placeholder="Provide a detailed description of the vehicle features..."
+                ></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div class="add-vehicle-right">
+            <!-- Pricing & Status -->
+            <div class="form-card">
+              <h3 class="card-title">Pricing & Status</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Price per Day ($)</label>
+                  <input
+                    v-model="form.price"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Status</label>
+                  <select v-model="form.status">
+                    <option>Available</option>
+                    <option>Rented</option>
+                    <option>Maintenance</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Rider Details</label>
+                  <select v-model="form.riderDetails">
+                    <option value="" disabled>Select Rider Details</option>
+                    <option>1 Rider</option>
+                    <option>2 Riders</option>
+                    <option>3 Riders</option>
+                    <option>4+ Riders</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Total Vehicles</label>
+                  <input
+                    v-model="form.totalVehiclesInput"
+                    type="number"
+                    min="1"
+                    placeholder="1"
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Insurance Fee ($)</label>
+                  <input
+                    v-model="form.insuranceFee"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
+                </div>
+                <div class="form-group">
+                  <label>Taxes & Fees ($)</label>
+                  <input
+                    v-model="form.taxesFee"
+                    type="number"
+                    placeholder="$ 0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Vehicle Photos -->
+            <div class="form-card">
+              <h3 class="card-title">Vehicle Photos</h3>
+              <div
+                class="photo-upload-area"
+                @click="$refs.photos && $refs.photos.click()"
+                @dragover.prevent
+                @drop.prevent="onPhotoDrop"
+              >
+                <input
+                  ref="photos"
+                  type="file"
+                  multiple
+                  accept="image/png, image/jpeg"
+                  @change="onPhotos"
+                  style="display: none"
+                />
+                <div
+                  v-if="!photoPreview || photoPreview === sampleThumb"
+                  class="upload-placeholder"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="40"
+                    height="40"
+                    fill="none"
+                    stroke="#94a3b8"
+                    stroke-width="1.5"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 5 17 10"></polyline>
+                    <line x1="12" y1="5" x2="12" y2="16"></line>
+                  </svg>
+                  <p>Click to upload or drag and drop</p>
+                  <span>PNG, JPG up to 10MB</span>
+                </div>
+                <div v-else class="photo-preview">
+                  <img :src="photoPreview" alt="Vehicle preview" />
+                  <div class="photo-overlay">
+                    <span>Click to change</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="add-vehicle-footer">
+          <button class="discard-btn" @click="modal = false">
+            Discard Draft
+          </button>
+          <button class="store-btn" @click="saveVehicle">
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+              ></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            {{ editId ? "Update Vehicle" : "Store Product" }}
+          </button>
+        </div>
+      </div>
+    </div>
+  <!-- Delete Confirmation Modal -->
+  <div v-if="showDeleteModal" class="delete-overlay" @click.self="cancelDelete">
+    <div class="delete-modal">
+      <div class="delete-icon-wrapper">
+        <svg
+          viewBox="0 0 24 24"
+          width="48"
+          height="48"
+          fill="none"
+          stroke="#e74c3c"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path
+            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+          ></path>
+          <line x1="10" y1="11" x2="10" y2="17"></line>
+          <line x1="14" y1="11" x2="14" y2="17"></line>
+        </svg>
+      </div>
+      <h3 class="delete-title">Delete Vehicle</h3>
+      <p class="delete-message">
+        Are you sure you want to delete this vehicle?
+      </p>
+      <p class="delete-vehicle-name">{{ deleteVehicleName }}</p>
+      <p class="delete-warning">
+        This action cannot be undone. All associated data (maintenance history,
+        documents, photos, assignments) will be permanently removed.
+      </p>
+      <div class="delete-actions">
+        <button class="delete-cancel-btn" @click="cancelDelete">Cancel</button>
+        <button class="delete-confirm-btn" @click="removeVehicle">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div v-if="toast.show" :class="['toast', toast.type]">
     {{ toast.message }}
+  </div>
 </div>
-
-
+</template>

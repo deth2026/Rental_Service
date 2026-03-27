@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -17,7 +19,7 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255',
             'phone' => 'required|string|max:20',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'nullable|in:customer,shop_owner,admin'
+            'role' => 'nullable|in:customer,shop_owner'
         ]);
 
         $normalizedEmail = strtolower(trim((string) $payload['email']));
@@ -38,6 +40,15 @@ class AuthController extends Controller
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
+
+        try {
+            NotificationService::userRegistered($user);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin registration notification', [
+                'error' => $exception->getMessage(),
+                'user_id' => $user->id,
+            ]);
+        }
 
         return response()->json([
             'message' => 'Registration successful! Please check your email to verify your account.',
@@ -101,9 +112,15 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
+        if (User::hasLastLoginColumn()) {
+            $user->last_login = now();
+            $user->save();
+        }
+
         return response()->json([
             'user' => $user,
             'token' => $token,
+            'last_login' => User::hasLastLoginColumn() ? $user->last_login : null,
         ]);
     }
 
@@ -112,8 +129,31 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Unauthenticated',
+                'user' => null,
+            ], 401);
+        }
+        
         return response()->json([
-            'user' => $request->user(),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'job_title' => $user->job_title,
+                'bio' => $user->bio,
+                'is_verified' => $user->is_verified,
+                'profile_picture' => $user->profile_picture,
+                'avatar_url' => $user->avatar_url,
+                'last_login' => User::hasLastLoginColumn() ? $user->last_login : null,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+            ],
         ]);
     }
 

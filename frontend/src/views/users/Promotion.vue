@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { couponApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -17,7 +17,7 @@ const dealsSection = ref(null)
 
 const navItems = [
   { label: 'Home', route: '/view_shop' },
-  { label: 'My Bookings', route: '/bookings' },
+  { label: 'My Booking', route: '/my-bookings' },
   { label: 'Promotions', route: '/promotions' }
 ]
 
@@ -88,22 +88,11 @@ const fallbackCoupons = [
   }
 ]
 
-const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-
-const activeNav = computed(() => {
+const activeNavLabel = computed(() => {
   const currentPath = route.path
   const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
   return matchedItem?.label || 'Promotions'
 })
-
-const notify = (message) => {
-  window.alert(message)
-}
-
-const openProfile = () => {
-  router.push('/user/profile')
-}
 
 const handleLogout = async () => {
   await userService.logout()
@@ -111,15 +100,6 @@ const handleLogout = async () => {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
   router.push('/login')
-}
-
-const setActiveNav = (item) => {
-  if (item.route) {
-    router.push(item.route)
-    return
-  }
-
-  notify('My Bookings page is not available yet.')
 }
 
 const inferCategory = (coupon, index) => {
@@ -271,29 +251,12 @@ onMounted(fetchPromotions)
 
 <template>
   <div class="promotion-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item.label"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item.label }"
-          @click="setActiveNav(item)"
-        >
-          {{ item.label }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="navItems"
+      :active-label="activeNavLabel"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main>
       <section class="hero-section">
@@ -325,25 +288,29 @@ onMounted(fetchPromotions)
 
       <section ref="dealsSection" class="deals-section">
         <div class="section-header">
-          <div class="section-badge">
-            <i class="fa-solid fa-sparkles"></i>
-            <span>HOT DEALS</span>
+          <div class="section-title-col">
+            <div class="section-badge">
+              <i class="fa-solid fa-sparkles"></i>
+              <span>HOT DEALS</span>
+            </div>
+
+            <h2>Current Promotions</h2>
+            <p>Browse our latest offers across all vehicle categories and save on your next rental.</p>
           </div>
 
-          <h2>Current Promotions</h2>
-          <p>Browse our latest offers across all vehicle categories and save on your next rental.</p>
-
-          <div class="filter-row">
-            <button
-              v-for="item in filterItems"
-              :key="item.id"
-              class="filter-pill"
-              :class="{ active: activeFilter === item.id }"
-              @click="activeFilter = item.id"
-            >
-              <i :class="item.icon"></i>
-              <span>{{ item.label }}</span>
-            </button>
+          <div class="filter-col">
+            <div class="filter-row">
+              <button
+                v-for="item in filterItems"
+                :key="item.id"
+                class="filter-pill"
+                :class="{ active: activeFilter === item.id }"
+                @click="activeFilter = item.id"
+              >
+                <i :class="item.icon"></i>
+                <span>{{ item.label }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -383,10 +350,10 @@ onMounted(fetchPromotions)
         </div>
       </section>
     </main>
-  </div>
 
-  <!-- Common Footer -->
-  <CommonFooter />
+    <!-- Common Footer -->
+    <CommonFooter />
+  </div>
 </template>
 
 <style scoped>
@@ -596,11 +563,21 @@ onMounted(fetchPromotions)
 }
 
 .section-header {
-  text-align: center;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  text-align: left;
   padding: 40px 0 22px;
+  max-width: 1340px;
+  margin: 0 auto;
 }
 
-.section-badge {
+.section-title-col {
+  flex: 1;
+}
+
+.section-title-col .section-badge {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -609,21 +586,24 @@ onMounted(fetchPromotions)
   margin-bottom: 12px;
 }
 
-.section-header h2 {
+.section-title-col h2 {
   margin: 0 0 10px;
   font-size: clamp(2rem, 4vw, 2.65rem);
   color: #18253b;
 }
 
-.section-header p {
+.section-title-col p {
   max-width: 620px;
-  margin: 0 auto 24px;
+  margin: 0;
   color: #64748b;
+}
+
+.filter-col {
+  flex-shrink: 0;
 }
 
 .filter-row {
   display: flex;
-  justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -787,6 +767,16 @@ onMounted(fetchPromotions)
 
   .promo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .section-title-col p {
+    margin: 0 auto 24px;
   }
 }
 
