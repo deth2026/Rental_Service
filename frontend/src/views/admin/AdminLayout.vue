@@ -17,7 +17,7 @@ const { isDark, toggleTheme } = useTheme()
 const adminStore = useAdminStore()
 const { t } = useI18n()
 
-// Admin logo from public/Images
+// Admin logo from public/images
 const logoUrl = '/Images/logo-removebg.png'
 
 const searchQuery = ref('')

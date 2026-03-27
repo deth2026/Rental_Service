@@ -5,7 +5,7 @@
     <div class="left">
         <div class="overlay">
             <div class="logo">
-              <Logo src="/images/logo-removebg.png" size="lg" :showTagline="false" />
+              <Logo src="/Images/logo-removebg.png" size="lg" :showTagline="false" />
             </div>
 
           <div class="left-content">

@@ -6,7 +6,7 @@ import userService from '@/services/userService'
 const route = useRoute()
 const router = useRouter()
 
-const DEFAULT_AVATAR = '/images/default-avatar.svg'
+const DEFAULT_AVATAR = '/Images/default-avatar.svg'
 
 const currentUser = computed(() => userService.getCurrentUser())
 

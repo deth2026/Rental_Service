@@ -191,7 +191,7 @@ const normalizeShop = (shop) => {
     map_url: shop.map_url || shop.location || '',
     vehiclesCount: Number(shop.vehicles_count || 0),
     status: String(shop.status || 'active').toLowerCase(),
-    img_url: shop.img_url_full || shop.img_url || '/images/default-avatar.svg'
+    img_url: shop.img_url_full || shop.img_url || '/Images/default-avatar.svg'
   }
 }
 
