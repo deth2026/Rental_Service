@@ -419,7 +419,7 @@ const loadVehiclesAndShops = async () => {
 
     vehicles.value = vehicleList.map((vehicle) => ({
       ...vehicle,
-      rating: vehicle.rating ?? 4.8
+      rating: Number(vehicle.rating ?? vehicle.average_rating ?? 0),
     }));
     shopNamesById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
@@ -549,6 +549,7 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
+  padding-right: 60px;
 }
 
 .book-btn {
@@ -1004,4 +1005,3 @@ onUnmounted(() => {
 }
 
 </style>
-

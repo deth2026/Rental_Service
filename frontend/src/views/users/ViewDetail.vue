@@ -495,10 +495,7 @@ import api, { vehicleApi, shopApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import UserNavbar from '@/components/UserNavbar.vue';
 import UserFooter from '@/components/UserFooter.vue';
-import {
-  parseDateInputValue,
-  parseQuantityValue,
-} from "@/utils/bookingAvailability";
+import { parseDateInputValue } from "@/utils/bookingAvailability";
 
 const router = useRouter();
 const route = useRoute();
@@ -780,9 +777,10 @@ const getVehicleImage = (item) => {
 
 const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
 const vehicleShopName = computed(() => getVehicleShop(vehicle.value));
-const vehicleRating = computed(
-  () => vehicle.value?.rating ?? vehicle.value?.average_rating ?? 4.8,
-);
+const vehicleRating = computed(() => {
+  const raw = Number(vehicle.value?.rating ?? vehicle.value?.average_rating ?? 0);
+  return Number.isFinite(raw) ? raw.toFixed(1) : "0.0";
+});
 const vehicleTransmission = computed(
   () => vehicle.value?.transmission || "N/A",
 );
@@ -833,10 +831,7 @@ const bookingDateRangeLabel = computed(() => {
 const bookingQuantityLabel = computed(() => "1 Vehicle");
 
 const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
-const riderCount = computed(() => {
-  return parseQuantityValue(riderDetails.value, 1);
-});
-const baseAmount = computed(() => dailyRate.value * riderCount.value * bookingDuration.value);
+const baseAmount = computed(() => dailyRate.value * bookingDuration.value);
 
 const insuranceAmount = computed(() =>
   includeInsurance.value ? Number(insuranceFee.value || 0) : 0,
@@ -901,7 +896,7 @@ const loadVehicleDetail = async () => {
 
     vehicle.value = {
       ...found,
-      rating: found.rating ?? found.average_rating ?? 4.8,
+      rating: Number(found.rating ?? found.average_rating ?? 0),
     };
   } catch (error) {
     const status = error?.response?.status;
@@ -957,6 +952,13 @@ const goToBooking = () => {
   }
   if (riderDetails.value) {
     query.riderDetails = riderDetails.value;
+  }
+
+  if (route.query.coupon_code) {
+    query.coupon_code = route.query.coupon_code;
+  }
+  if (route.query.coupon_id) {
+    query.coupon_id = route.query.coupon_id;
   }
 
   if (vehicleId) {

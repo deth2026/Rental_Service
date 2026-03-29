@@ -157,6 +157,8 @@ export const bookingApi = {
   create: (data) => api.post('/bookings', data),
   update: (id, data) => api.put(`/bookings/${id}`, data),
   delete: (id) => api.delete(`/bookings/${id}`),
+  getShopBookings: (params = {}) => api.get('/shop-bookings', { params }),
+  getShopPayments: (params = {}) => api.get('/shop-payments', { params }),
   getMyBookings: () => api.get('/my-bookings')
 };
 

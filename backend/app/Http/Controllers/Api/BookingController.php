@@ -42,6 +42,18 @@ class BookingController extends Controller
         return is_numeric($value) ? (float) $value : null;
     }
 
+    private function calculateTotalPrice(array $data): float
+    {
+        $dailyRate = $this->normalizeNullableNumber($data['daily_rate'] ?? 0) ?? 0;
+        $totalDays = isset($data['total_days']) ? max(1, (int) $data['total_days']) : 1;
+        $insurance = $this->normalizeNullableNumber($data['insurance_fee'] ?? 0) ?? 0;
+        $taxes = $this->normalizeNullableNumber($data['taxes_fee'] ?? 0) ?? 0;
+
+        $base = $dailyRate * $totalDays;
+        $total = $base + max(0, $insurance) + max(0, $taxes);
+        return round(max(0, $total), 2);
+    }
+
     private function normalizePositiveInteger(mixed $value, int $fallback = 1): int
     {
         if (is_numeric($value)) {
@@ -120,6 +132,8 @@ class BookingController extends Controller
                 $data[$field] = $this->normalizeNullableNumber($data[$field]);
             }
         }
+
+        $data['total_price'] = $this->calculateTotalPrice($data);
 
         $request->replace($data);
     }
@@ -385,8 +399,9 @@ class BookingController extends Controller
                     'vehicle_brand' => $vehicle->brand ?? '',
                     'vehicle_model' => $vehicle->model ?? '',
                     'booking_code' => 'BK-' . date('Ymd', strtotime($booking->created_at)) . '-' . str_pad($booking->id, 4, '0', STR_PAD_LEFT),
-                    'shop_name' => $shop ? $shop->name : 'N/A',
-                    'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
+                'shop_id' => $shop ? $shop->id : null,
+                'shop_name' => $shop ? $shop->name : 'N/A',
+                'shop_image' => $shop ? ($shop->img_url_full ?? $shop->img_url ?? '') : '',
                     'start_date' => $booking->start_date,
                     'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
                     'total_price' => $booking->total_price,

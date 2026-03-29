@@ -47,6 +47,7 @@
           :key="item.id"
           class="notification-card"
           :class="{ unread: item.status === 'unread' }"
+          @click="openReportForNotification(item)"
         >
           <header class="notification-card__top">
             <div class="notification-card__user">
@@ -63,7 +64,7 @@
                 <p class="notification-card__subtitle">{{ item.message || 'No additional details' }}</p>
               </div>
             </div>
-            <button class="toggle-read" type="button" @click="toggleReadStatus(item.id)">
+            <button class="toggle-read" type="button" @click.stop="toggleReadStatus(item.id)">
               {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
             </button>
           </header>
@@ -80,7 +81,7 @@
               type="button"
               class="action-btn"
               :class="action.variant"
-              @click="action.handler"
+              @click.stop="action.handler"
             >
               {{ action.label }}
             </button>
@@ -290,6 +291,17 @@ const openDashboard = () => {
 
 const openNotificationCenter = () => {
   router.push({ name: 'shop-notifications' })
+}
+
+const openReportForNotification = (item) => {
+  if (!props.shopId) return
+  const focus = String(item?.type || 'general').trim().toLowerCase()
+  router.push({
+    name: 'shop-report',
+    query: {
+      reportType: focus
+    }
+  })
 }
 
 const getActionButtons = (item) => {

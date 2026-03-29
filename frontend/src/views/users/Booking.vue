@@ -57,8 +57,12 @@
 
           <div class="pricing-list">
             <div class="row">
-              <span>Daily Rate x {{ calculateDays() }} day(s) x {{ riderCount }} rider(s)</span>
+              <span>Daily Rate x {{ calculateDays() }} day(s)</span>
               <span>${{ rental.subtotal.toFixed(2) }}</span>
+            </div>
+            <div class="row">
+              <span>Rider(s)</span>
+              <span>{{ riderCount }} rider(s)</span>
             </div>
               <div class="row">
                 <span>Insurance</span>
@@ -310,6 +314,27 @@
                 </div>
 
                 <div class="qr-code-section">
+                  <div v-if="shopQrOptions.length" class="qr-shop-selection">
+                    <label for="qr-shop-select">Select shop QR code</label>
+                    <select
+                      id="qr-shop-select"
+                      v-model="selectedShopQrId"
+                    >
+                      <option
+                        v-for="option in shopQrOptions"
+                        :key="option.id"
+                        :value="option.id"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                    <p v-if="selectedShopQrOption?.ownerName" class="qr-owner-note">
+                      Owner: {{ selectedShopQrOption.ownerName }}
+                    </p>
+                  </div>
+                  <div v-else class="qr-missing-note">
+                    This shop has not uploaded a QR code yet. You can still generate one below.
+                  </div>
                   <div v-if="!showQR" class="qr-placeholder">
                     <h4>Ready to generate your QR code</h4>
                     <p>Click below and scan it with your mobile banking app.</p>
@@ -533,6 +558,41 @@ const getShopLocation = (shop) => {
   return shop?.name || "Unknown Shop";
 };
 
+const resolveShopQrUrl = (shop) => {
+  const raw = String(shop?.qr_url_full || shop?.qr_url || "").trim();
+  if (!raw) return "";
+  if (/^(https?:\/\/|data:|blob:)/i.test(raw)) return raw;
+  const normalized = raw.replace(/^\/+/, "");
+  if (normalized.startsWith("storage/")) {
+    return `${API_ROOT}/${normalized}`;
+  }
+  return `${API_ROOT}/storage/${normalized.replace(/^storage\//, "")}`;
+};
+
+const shopQrOptions = computed(() =>
+  Object.values(shopsById.value)
+    .map((shop) => {
+      const url = resolveShopQrUrl(shop);
+      if (!url) return null;
+      return {
+        id: shop.id,
+        label: shop.name || `Shop #${shop.id}`,
+        ownerName: shop?.owner?.name || "",
+        qrUrl: url,
+      };
+    })
+    .filter(Boolean)
+);
+
+const selectedShopQrOption = computed(() => {
+  return (
+    shopQrOptions.value.find((option) => option.id === selectedShopQrId.value) ||
+    null
+  );
+});
+
+const selectedShopQrUrl = computed(() => selectedShopQrOption.value?.qrUrl || "");
+
 const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
 const vehicleType = computed(() => vehicle.value?.type || "");
 const vehicleTag = computed(() => (vehicleType.value ? String(vehicleType.value).toUpperCase() : "RENTAL"));
@@ -626,6 +686,7 @@ const transactionId = ref(
   "TXN" + Math.random().toString(36).slice(2, 14).toUpperCase()
 );
 const qrCodeUrl = ref("");
+const selectedShopQrId = ref(null);
 
 const rental = ref({
   title: "Vehicle",
@@ -799,6 +860,20 @@ const applyPromoCode = async () => {
   }
 };
 
+const updateShopQrSelection = () => {
+  const shopId = vehicle.value?.shop_id ?? null;
+  let target =
+    shopQrOptions.value.find((option) => option.id === shopId) || null;
+  if (!target) {
+    target = shopQrOptions.value[0] || null;
+  }
+  selectedShopQrId.value = target?.id ?? null;
+  if (method.value === "qr" && target?.qrUrl) {
+    qrCodeUrl.value = target.qrUrl;
+    showQR.value = true;
+  }
+};
+
 const methodTitle = computed(() => {
   if (method.value === "qr") return "QR Code Payment";
   if (method.value === "bank") return "Bank Transfer";
@@ -877,9 +952,8 @@ const couponDiscount = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  const days = calculateDays();
-  const riders = riderCount.value;
-  const subtotal = days * rental.value.dailyRate * riders;
+  const days = Math.max(1, calculateDays());
+  const subtotal = days * rental.value.dailyRate;
   rental.value.subtotal = subtotal;
   rental.value.taxes = subtotal * 0.1;
   return Math.max(0, rental.value.subtotal + insuranceAmount.value + taxesAmount.value - couponDiscount.value);
@@ -931,7 +1005,10 @@ const isDateAvailable = async (startDate, endDate) => {
 const validateDates = async () => {
   dateError.value = "";
 
-  if (!rental.value.startDate || !rental.value.endDate) return;
+  if (!rental.value.startDate || !rental.value.endDate) {
+    dateError.value = "Please select both pick-up and drop-off dates.";
+    return;
+  }
 
   const start = new Date(rental.value.startDate);
   const end = new Date(rental.value.endDate);
@@ -957,6 +1034,24 @@ const validateDates = async () => {
   formatPeriod();
 };
 
+const formatBackendValidationError = (error) => {
+  const errors = error?.response?.data?.errors
+  if (errors && typeof errors === 'object') {
+    for (const key of Object.keys(errors)) {
+      const entry = errors[key]
+      if (Array.isArray(entry)) {
+        const first = entry.find((item) => typeof item === 'string' && item.trim())
+        if (first) {
+          return first
+        }
+      } else if (typeof entry === 'string' && entry.trim()) {
+        return entry
+      }
+    }
+  }
+  return null
+}
+
 const saveBookingToDatabase = async (bookingData) => {
   const currentUser = userService.getCurrentUser();
   if (!currentUser?.id) {
@@ -967,14 +1062,18 @@ const saveBookingToDatabase = async (bookingData) => {
     return { success: false, message: "Vehicle not found." };
   }
 
+  const resolvedShopId = Number(vehicle.value?.shop_id ?? vehicle.value?.shop?.id);
+  const shopId = Number.isFinite(resolvedShopId) && resolvedShopId > 0 ? resolvedShopId : null;
+
   const payload = {
     user_id: currentUser.id,
     vehicle_id: vehicleId.value,
-      coupon_id: appliedCoupon.value?.id || null,
+    shop_id: shopId,
+    coupon_id: appliedCoupon.value?.id || null,
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
-    status: "pending",
+    status: bookingData?.status || "pending",
     deposit_amount: 0,
     deposit_status: "unpaid",
     rider_details: rental.value.riders,
@@ -1010,6 +1109,7 @@ const saveBookingToDatabase = async (bookingData) => {
   } catch (error) {
     console.error("Booking create error:", error);
     const message =
+      formatBackendValidationError(error) ||
       error?.response?.data?.message ||
       error?.message ||
       "Failed to create booking.";
@@ -1069,6 +1169,11 @@ const handlePayment = async () => {
     isSubmittingPayment.value = false;
     return;
   }
+  if (!isFormValid.value) {
+    isSubmittingPayment.value = false;
+    alert("Please select valid rental dates before paying.");
+    return;
+  }
 
   try {
     await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -1094,6 +1199,11 @@ const handleBankTransfer = async () => {
   await validateDates();
   if (dateError.value) {
     isSubmittingPayment.value = false;
+    return;
+  }
+  if (!isFormValid.value) {
+    isSubmittingPayment.value = false;
+    alert("Please select valid rental dates before creating a bank transfer.");
     return;
   }
 
@@ -1166,10 +1276,14 @@ const generateQRCode = async () => {
   await validateDates();
   if (dateError.value) return;
 
-  const qrPayload = generateABAQRData();
-  qrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    qrPayload
-  )}`;
+  if (selectedShopQrUrl.value) {
+    qrCodeUrl.value = selectedShopQrUrl.value;
+  } else {
+    const qrPayload = generateABAQRData();
+    qrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+      qrPayload
+    )}`;
+  }
 
   showQR.value = true;
 };
@@ -1232,6 +1346,30 @@ watch(
   },
   { immediate: true }
 );
+
+watch(
+  () => [vehicle.value?.shop_id, shopQrOptions.value.length],
+  updateShopQrSelection,
+  { immediate: true }
+);
+
+watch(method, (next) => {
+  if (next !== "qr") {
+    showQR.value = false;
+    return;
+  }
+  if (selectedShopQrUrl.value) {
+    qrCodeUrl.value = selectedShopQrUrl.value;
+    showQR.value = true;
+  }
+});
+
+watch(selectedShopQrUrl, (url) => {
+  if (!url) return;
+  if (method.value === "qr" && showQR.value) {
+    qrCodeUrl.value = url;
+  }
+});
 initDates();
 
 onBeforeUnmount(() => {
@@ -1241,6 +1379,3 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
-
-

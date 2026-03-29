@@ -149,6 +149,16 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['shop_owner'] }
     },
     {
+      path: '/dashboard/report',
+      name: 'shop-report',
+      component: ShopDashboard,
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['shop_owner'],
+        defaultSection: 'activity'
+      }
+    },
+    {
       path: '/shop/notifications',
       name: 'shop-notifications',
       component: ShopDashboard,

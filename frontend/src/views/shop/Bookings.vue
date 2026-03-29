@@ -567,8 +567,8 @@ const getTotalDays = (start, end) => {
                 @click="openCompletionModal(booking)"
                 :disabled="processing"
               >
-                <i class="fa-solid fa-star"></i>
-                Complete
+                <i class="fa-solid fa-rotate-right"></i>
+                Mark as returned
               </button>
             </template>
             <template v-else-if="booking.status === 'completed'">
@@ -804,19 +804,17 @@ const getTotalDays = (start, end) => {
           </button>
         </div>
         <div class="completion-modal-body">
-          <p>Are you sure you want to mark this booking as completed?</p>
+          <p>This confirms the vehicle has been returned and can be booked again.</p>
         </div>
         <div class="completion-modal-actions">
           <button type="button" class="completion-cancel" @click="closeCompletionModal">
             Cancel
           </button>
           <button type="button" class="completion-primary" @click="submitCompletion" :disabled="processing">
-            {{ processing ? 'Completing...' : 'Complete booking' }}
+            {{ processing ? 'Saving...' : 'Confirm return' }}
           </button>
         </div>
       </div>
     </div>
   </div>
 </template>
-
-

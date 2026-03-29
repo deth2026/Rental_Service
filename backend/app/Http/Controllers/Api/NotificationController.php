@@ -21,6 +21,8 @@ class NotificationController extends Controller
             return response()->json([]);
         }
 
+        NotificationRecord::pruneExpired();
+
         $user = $request->user();
         $query = NotificationRecord::with([
             'user:id,name,email,profile_picture,img_url',
@@ -39,7 +41,13 @@ class NotificationController extends Controller
                     ->orWhere('role', 'admin');
             });
         } else {
-            $query->where('user_id', $user->id);
+            $userRole = $this->getUserRole($user);
+            $query->where(function ($builder) use ($user, $userRole) {
+                $builder->where('user_id', $user->id);
+                if ($userRole) {
+                    $builder->orWhere('role', $userRole);
+                }
+            });
         }
 
         $shopId = $request->query('shop_id');
@@ -153,10 +161,34 @@ class NotificationController extends Controller
         if ($notification->user_id === $user->id) {
             return true;
         }
+
+        $userRole = $this->getUserRole($user);
+        if ($userRole && $notification->role === $userRole) {
+            if ($userRole === 'shop_owner' && $notification->shop_id) {
+                return $this->userOwnsShop($user, $notification->shop_id);
+            }
+            return true;
+        }
+
         if ($this->isAdmin($user) && $notification->role === 'admin') {
             return true;
         }
+
         abort(403);
+    }
+
+    private function getUserRole(?User $user): ?string
+    {
+        if (!$user) {
+            return null;
+        }
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $normalized = match ($role) {
+            'shop' => 'shop_owner',
+            'user' => 'customer',
+            default => $role,
+        };
+        return $normalized !== '' ? $normalized : null;
     }
 
     protected function isAdmin($user): bool
@@ -169,5 +201,17 @@ class NotificationController extends Controller
         }
         $role = strtolower((string) ($user->role ?? ''));
         return $role === 'admin';
+    }
+
+    protected function userOwnsShop($user, $shopId): bool
+    {
+        if (!$user || !$shopId) {
+            return false;
+        }
+
+        return 
+            \App\Models\Shop::where('id', $shopId)
+                ->where('owner_id', $user->id)
+                ->exists();
     }
 }

@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Rating;
 use App\Models\Shop;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 
 class NotificationService
@@ -156,18 +157,33 @@ class NotificationService
     public static function couponCreated(Coupon $coupon): ?NotificationRecord
     {
         $coupon->loadMissing('shop.owner');
-        $shop = $coupon->shop;
-        if (!$shop) {
-            return null;
-        }
+        $hasShopColumn = Schema::hasTable('coupons') && Schema::hasColumn('coupons', 'shop_id');
+        $shop = $hasShopColumn ? $coupon->shop : null;
 
-        $owner = $shop->owner;
+        $owner = $shop?->owner;
         $title = 'New coupon created';
         $code = strtoupper(trim((string) $coupon->code));
-        $shopName = $shop->name ?? 'your shop';
-        $message = "Coupon {$code} was created for {$shopName}.";
+        $shopName = $shop?->name ?: 'your shop';
+        $discountParts = [];
+        if ($coupon->discount_percent !== null) {
+            $percentValue = number_format((float) $coupon->discount_percent, 2, '.', '');
+            $percentValue = strpos($percentValue, '.') !== false ? rtrim(rtrim($percentValue, '0'), '.') : $percentValue;
+            $discountParts[] = "{$percentValue}% off";
+        }
+        if ($coupon->discount_amount !== null) {
+            $amountValue = number_format((float) $coupon->discount_amount, 2);
+            $discountParts[] = "\${$amountValue} off";
+        }
+        $offerLabel = $discountParts ? implode(' or ', $discountParts) : 'a special discount';
+        $expiresAt = $coupon->valid_until ? Carbon::parse($coupon->valid_until)->format('M j, Y') : null;
+        $message = "Coupon {$code} gives {$offerLabel} at {$shopName}";
+        if ($expiresAt) {
+            $message .= " through {$expiresAt}.";
+        } else {
+            $message .= '.';
+        }
 
-        if ($owner) {
+        if ($owner && $shop?->id) {
             self::sendToUser($owner, $title, $message, [
                 'type' => 'coupon',
                 'related_type' => Coupon::class,
@@ -179,12 +195,28 @@ class NotificationService
             ]);
         }
 
+        $attributes = array_filter([
+            'shop_id' => $shop?->id,
+        ]);
+
+        self::sendToRole(
+            'customer',
+            "New discount at {$shopName}",
+            $message,
+            [
+                'type' => 'coupon',
+                'related_type' => Coupon::class,
+                'related_id' => $coupon->id,
+                'attributes' => $attributes,
+            ]
+        );
+
         return self::notifyAdmins($title, "{$shopName} created coupon {$code}.", [
             'type' => 'coupon',
             'related_type' => Coupon::class,
             'related_id' => $coupon->id,
             'attributes' => [
-                'shop_id' => $shop->id,
+                ...$attributes,
             ],
         ]);
     }

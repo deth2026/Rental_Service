@@ -59,11 +59,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Admin only routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::apiResource('users', UserController::class)->except(['create', 'edit', 'update']);
+    Route::apiResource('users', UserController::class)->except(['create', 'edit', 'show', 'update']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('cities', CityController::class)->except(['index']);
     Route::get('admin/stats', [AdminController::class, 'stats']);
 });
+
+Route::middleware('auth:sanctum')->get('/users/{user}', [UserController::class, 'show']);
 
 // Public cities endpoint - needed for dropdowns in shop creation forms
 Route::get('/cities', [CityController::class, 'index']);

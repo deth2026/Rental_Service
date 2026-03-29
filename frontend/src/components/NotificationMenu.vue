@@ -1,11 +1,14 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useNotifications } from '@/composables/useNotifications'
+import { navigateFromNotification } from '@/utils/notificationNavigation'
 
 const tabOptions = [
   { label: 'View All', value: 'all' },
   { label: 'New Order', value: 'booking' },
-  { label: 'Weekly Update', value: 'general' }
+  { label: 'Weekly Update', value: 'general' },
+  { label: 'Promotions', value: 'coupon' }
 ]
 
 const props = defineProps({
@@ -21,8 +24,10 @@ const {
   isLoading,
   error,
   loadNotifications,
-  markAllAsRead
+  markAllAsRead,
+  toggleReadStatus
 } = useNotifications()
+const router = useRouter()
 
 const activeTab = ref('all')
 
@@ -55,8 +60,36 @@ const filteredForTab = computed(() => {
   if (activeTab.value === 'general') {
     return base.filter((item) => item.type === 'general')
   }
+  if (activeTab.value === 'coupon') {
+    return base.filter((item) => item.type === 'coupon')
+  }
   return base
 })
+
+const openReportForNotification = (item) => {
+  if (!props.shopId) return
+  const focus = String(item?.type || 'general').trim().toLowerCase()
+  router.push({
+    name: 'shop-report',
+    query: { reportType: focus }
+  })
+}
+
+const handleNotificationClick = async (item) => {
+  if (!item) return
+  if (item.status === 'unread') {
+    try {
+      await toggleReadStatus(item.id)
+    } catch (e) {
+      console.error('Failed to mark notification as read', e)
+    }
+  }
+
+  const navigated = navigateFromNotification(router, item)
+  if (!navigated) {
+    openReportForNotification(item)
+  }
+}
 
 const hasUnread = computed(() => unreadCount.value > 0)
 
@@ -79,7 +112,8 @@ const formatNotificationTitle = (item) => {
   const verbMap = {
     booking: 'New order for',
     message: 'Message from',
-    general: 'Update from'
+    general: 'Update from',
+    coupon: 'New discount from'
   }
   const verb = verbMap[item.type] || 'Notification from'
   return `${verb} ${item.user?.name || 'Customer'}`
@@ -122,6 +156,7 @@ const formatNotificationTitle = (item) => {
           v-for="item in filteredForTab"
           :key="item.id"
           class="notification-item"
+          @click="handleNotificationClick(item)"
         >
           <div class="notification-item__avatar">
             <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="item.user?.name || 'avatar'" />

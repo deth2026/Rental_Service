@@ -30,7 +30,7 @@
           </button>
         </div>
 
-        <div class="notification-list">
+    <div class="notification-list">
           <div v-if="isLoading" class="notification-list__state">Loading notifications...</div>
           <div v-else-if="error" class="notification-list__state notification-list__state--error">
             {{ error }}
@@ -40,7 +40,7 @@
               v-for="item in displayedNotifications"
               :key="item.id"
               :class="['notification-row', { unread: item.status === 'unread' }]"
-              @click="openNotificationDetail(item)"
+              @click="handleNotificationClick(item)"
             >
               <img :src="item.user.avatar" :alt="item.user.name" class="notification-row__avatar" />
               <div class="notification-row__content">
@@ -111,6 +111,7 @@ import { userService } from '@/services/database.js'
 import UserNavbar from '@/components/UserNavbar.vue'
 import CommonFooter from '@/components/CommonFooter.vue'
 import { useNotifications } from '@/composables/useNotifications'
+import { navigateFromNotification } from '@/utils/notificationNavigation'
 
 const router = useRouter()
 
@@ -170,7 +171,23 @@ const detailNotificationInfo = computed(() => {
   }
 })
 
-const openNotificationDetail = (item) => {
+const handleNotificationClick = async (item) => {
+  if (!item) return
+  if (item.status === 'unread') {
+    try {
+      await toggleReadStatus(item.id)
+    } catch (e) {
+      console.error('Failed to mark notification as read', e)
+    }
+  }
+
+  const navigated = navigateFromNotification(router, item)
+  if (navigated) {
+    detailModalVisible.value = false
+    detailNotification.value = null
+    return
+  }
+
   detailNotification.value = item
   detailModalVisible.value = true
 }

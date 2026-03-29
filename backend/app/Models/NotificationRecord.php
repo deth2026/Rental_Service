@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Carbon;
 
 class NotificationRecord extends Model
 {
@@ -39,5 +40,11 @@ class NotificationRecord extends Model
     public function related(): MorphTo
     {
         return $this->morphTo();
+    }
+
+    public static function pruneExpired(): void
+    {
+        $cutoff = Carbon::now()->subDay();
+        static::where('created_at', '<', $cutoff)->delete();
     }
 }

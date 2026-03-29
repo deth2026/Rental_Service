@@ -5,12 +5,9 @@ import "../../css/Myshop.css";
 
 const shop = ref(null);
 const ownerName = ref("");
-<<<<<<< HEAD
+const ownerEmail = ref("");
 const cities = ref([]);
 const loadingCities = ref(false);
-=======
-const ownerEmail = ref("");
->>>>>>> 2d2a8b930983e188da51cace70b2691710da7b83
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
@@ -34,6 +31,13 @@ const shopImageInputRef = ref(null);
 const isShopImageDragOver = ref(false);
 const changeImageInputRef = ref(null);
 const isUpdatingImage = ref(false);
+const qrUrlFile = ref(null);
+const qrUrlPreview = ref("");
+const isCreateQrUrlDragOver = ref(false);
+const createQrUrlInputRef = ref(null);
+const isQrUrlDragOver = ref(false);
+const qrUrlUpdateInputRef = ref(null);
+const isUpdatingQrUrl = ref(false);
 
 const createForm = reactive({
   name: "",
@@ -49,6 +53,7 @@ const createForm = reactive({
   instagram: "",
   facebook: "",
   img_url: "",
+  qr_url: "",
 });
 
 const getCachedShop = (ownerId) => {
@@ -203,10 +208,16 @@ const resetForm = () => {
   createForm.instagram = "";
   createForm.facebook = "";
   createForm.img_url = "";
+  createForm.qr_url = "";
   shopImageFile.value = null;
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value);
     shopImagePreview.value = "";
+  }
+  qrUrlFile.value = null;
+  if (qrUrlPreview.value) {
+    URL.revokeObjectURL(qrUrlPreview.value);
+    qrUrlPreview.value = "";
   }
   error.value = "";
 };
@@ -289,6 +300,21 @@ const applyShopImageFile = (file) => {
   error.value = "";
 };
 
+const applyQrUrlFile = (file) => {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    error.value = "Please select a valid QR code image.";
+    return;
+  }
+  if (qrUrlPreview.value) {
+    URL.revokeObjectURL(qrUrlPreview.value);
+  }
+  qrUrlFile.value = file;
+  createForm.qr_url = "";
+  qrUrlPreview.value = URL.createObjectURL(file);
+  error.value = "";
+};
+
 const onShopImageChange = (event) => {
   const file = event.target.files?.[0] || null;
   applyShopImageFile(file);
@@ -298,6 +324,17 @@ const onShopImageDrop = (event) => {
   isShopImageDragOver.value = false;
   const file = event.dataTransfer?.files?.[0] || null;
   applyShopImageFile(file);
+};
+
+const onCreateQrUrlChange = (event) => {
+  const file = event.target.files?.[0] || null;
+  applyQrUrlFile(file);
+};
+
+const onCreateQrUrlDrop = (event) => {
+  isCreateQrUrlDragOver.value = false;
+  const file = event.dataTransfer?.files?.[0] || null;
+  applyQrUrlFile(file);
 };
 
 const openCreateModal = () => {
@@ -401,6 +438,12 @@ const normalizedShopStatus = computed(() =>
   String(shop.value?.status || "active").toLowerCase(),
 );
 
+const shopQrUrl = computed(() => {
+  if (qrUrlPreview.value) return qrUrlPreview.value;
+  if (shop.value?.qr_url_full) return shop.value.qr_url_full;
+  return getShopImageUrl(shop.value?.qr_url || "");
+});
+
 const removeShopImage = async () => {
   if (!shop.value?.id) return;
 
@@ -429,6 +472,82 @@ const removeShopImage = async () => {
   }
 };
 
+const triggerUpdateQrUrlPicker = () => {
+  if (qrUrlUpdateInputRef.value) {
+    qrUrlUpdateInputRef.value.value = "";
+    qrUrlUpdateInputRef.value.click();
+  }
+};
+
+const updateShopQr = async (file) => {
+  if (!shop.value?.id) return;
+  if (!file || !file.type.startsWith("image/")) {
+    error.value = "Please select a valid QR code image.";
+    return;
+  }
+
+  isUpdatingQrUrl.value = true;
+  error.value = "";
+
+  try {
+    const payload = new FormData();
+    payload.append("qr_url", file);
+
+    const { data } = await shopApi.update(shop.value.id, payload);
+    const updatedShop = data?.data || data || null;
+    if (updatedShop && typeof updatedShop === "object") {
+      shop.value = updatedShop;
+      setCachedShop(getUserId(), updatedShop);
+    }
+    await loadMyShop();
+  } catch (e) {
+    error.value = e?.response?.data?.message || "Failed to update QR code.";
+    console.error("Update shop QR code error", e);
+  } finally {
+    isUpdatingQrUrl.value = false;
+  }
+};
+
+const onQrUrlUpdateChange = async (event) => {
+  const file = event.target.files?.[0] || null;
+  if (file) {
+    await updateShopQr(file);
+  }
+};
+
+const onQrUrlUpdateDrop = async (event) => {
+  isQrUrlDragOver.value = false;
+  const file = event.dataTransfer?.files?.[0] || null;
+  if (file) {
+    await updateShopQr(file);
+  }
+};
+
+const removeShopQr = async () => {
+  if (!shop.value?.id) return;
+
+  isUpdatingQrUrl.value = true;
+  error.value = "";
+
+  try {
+    const payload = new FormData();
+    payload.append("remove_qr_url", "1");
+
+    const { data } = await shopApi.update(shop.value.id, payload);
+    const updatedShop = data?.data || data || null;
+    if (updatedShop && typeof updatedShop === "object") {
+      shop.value = updatedShop;
+      setCachedShop(getUserId(), updatedShop);
+    }
+    await loadMyShop();
+  } catch (e) {
+    error.value = e?.response?.data?.message || "Failed to remove QR code.";
+    console.error("Remove shop QR code error", e);
+  } finally {
+    isUpdatingQrUrl.value = false;
+  }
+};
+
 const createShop = async () => {
   if (!validateCreateForm()) {
     // Error message is already set in validateCreateForm
@@ -446,7 +565,7 @@ const createShop = async () => {
   try {
     let payload;
     // if an image file has been selected, use FormData to send multipart request
-    if (shopImageFile.value) {
+    if (shopImageFile.value || qrUrlFile.value) {
       payload = new FormData();
       payload.append("owner_id", getUserId());
       if (createForm.city_id) payload.append("city_id", createForm.city_id);
@@ -461,7 +580,12 @@ const createShop = async () => {
       payload.append("phone", createForm.phone.trim());
       payload.append("status", createForm.status);
       // the backend expects the field name img_url
-      payload.append("img_url", shopImageFile.value);
+      if (shopImageFile.value) {
+        payload.append("img_url", shopImageFile.value);
+      }
+      if (qrUrlFile.value) {
+        payload.append("qr_url", qrUrlFile.value);
+      }
     } else {
       payload = {
         owner_id: getUserId(),
@@ -477,6 +601,9 @@ const createShop = async () => {
         status: createForm.status,
         img_url: createForm.img_url || null,
       };
+        if (createForm.qr_url) {
+          payload.qr_url = createForm.qr_url;
+        }
     }
 
     const { data: created } = await shopApi.create(payload);
@@ -525,6 +652,9 @@ onBeforeUnmount(() => {
   }
   if (changeImagePreview.value) {
     URL.revokeObjectURL(changeImagePreview.value);
+  }
+  if (qrUrlPreview.value) {
+    URL.revokeObjectURL(qrUrlPreview.value);
   }
 });
 </script>
@@ -606,6 +736,55 @@ onBeforeUnmount(() => {
             @click="removeShopImage"
           >
             Remove Profile
+          </button>
+        </div>
+      </div>
+
+      <div
+        class="qr-code-panel"
+        :class="{ 'qr-code-panel--dragover': isQrUrlDragOver }"
+        @dragover.prevent="isQrUrlDragOver = true"
+        @dragleave.prevent="isQrUrlDragOver = false"
+        @drop.prevent="onQrUrlUpdateDrop"
+      >
+        <div class="qr-code-panel__header">
+          <span>Shop QR code</span>
+          <p v-if="!shopQrUrl" class="qr-code-panel__hint">Upload a QR image via the Create Shop modal to show it here.</p>
+        </div>
+        <div class="qr-code-panel__body">
+          <img
+            v-if="shopQrUrl"
+            :src="shopQrUrl"
+            alt="Shop QR code"
+            class="qr-code-image"
+          />
+          <div v-else class="qr-code-empty">
+            No QR code uploaded yet.
+          </div>
+        </div>
+        <input
+          ref="qrUrlUpdateInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="hidden-file-input"
+          @change="onQrUrlUpdateChange"
+        />
+        <div class="qr-code-actions">
+          <button
+            type="button"
+            class="profile-btn primary"
+            :disabled="isUpdatingQrUrl"
+            @click="triggerUpdateQrUrlPicker"
+          >
+            {{ isUpdatingQrUrl ? "Uploading..." : "Change QR" }}
+          </button>
+          <button
+            type="button"
+            class="profile-btn ghost"
+            :disabled="isUpdatingQrUrl || !shop.qr_url"
+            @click="removeShopQr"
+          >
+            Remove QR
           </button>
         </div>
       </div>
@@ -761,6 +940,49 @@ onBeforeUnmount(() => {
                     <p class="upload-title">Upload shop cover</p>
                     <p class="upload-sub">Drop an image or click to browse files</p>
                   </div>
+                </div>
+              </label>
+
+              <label
+                class="upload-card qr-upload"
+                :class="{ active: isCreateQrUrlDragOver }"
+                @dragover.prevent="isCreateQrUrlDragOver = true"
+                @dragleave.prevent="isCreateQrUrlDragOver = false"
+                @drop.prevent="onCreateQrUrlDrop"
+              >
+                <input
+                  ref="createQrUrlInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  class="hidden-file-input"
+                  @change="onCreateQrUrlChange"
+                />
+                <div class="upload-content">
+                  <div class="upload-icon">
+                    <svg
+                      viewBox="0 0 64 64"
+                      fill="none"
+                      stroke="#2563eb"
+                      stroke-width="1.5"
+                    >
+                      <rect x="6" y="6" width="16" height="16" rx="2" />
+                      <rect x="6" y="26" width="16" height="16" rx="2" />
+                      <rect x="26" y="6" width="32" height="32" rx="4" />
+                      <rect x="38" y="38" width="12" height="12" rx="2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="upload-title">Upload QR code</p>
+                    <p class="upload-sub">Drop a PNG/JPG of your shop QR code</p>
+                  </div>
+                </div>
+                <div v-if="qrUrlPreview" class="qr-preview-wrapper">
+                  <img
+                    :src="qrUrlPreview"
+                    alt="QR code preview"
+                    class="qr-preview-image"
+                  />
+                  <span class="qr-preview-label">Preview</span>
                 </div>
               </label>
 
