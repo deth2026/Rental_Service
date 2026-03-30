@@ -47,7 +47,8 @@
           :key="item.id"
           class="notification-card"
           :class="{ unread: item.status === 'unread' }"
-          @click="openReportForNotification(item)"
+          @click="handleOwnerNotificationClick(item)"
+          @dblclick.prevent="openReportForNotification(item)"
         >
           <header class="notification-card__top">
             <div class="notification-card__user">
@@ -291,6 +292,37 @@ const openDashboard = () => {
 
 const openNotificationCenter = () => {
   router.push({ name: 'shop-notifications' })
+}
+
+const normalizeTypeKey = (item) => {
+  const raw = item.related?.type || item.type || ''
+  const segments = raw.split('\\').filter(Boolean)
+  const base = segments.length ? segments.at(-1) : raw
+  return String(base || '').toLowerCase()
+}
+
+const resolveOwnerNotificationRoute = (item) => {
+  const typeKey = normalizeTypeKey(item)
+  const bookingId = item.related?.id
+  if (typeKey === 'booking' && bookingId) {
+    return { name: 'booking', params: { id: bookingId } }
+  }
+  if (typeKey === 'message') {
+    return { name: 'dashboard', query: { section: 'messages' } }
+  }
+  if (typeKey === 'payment') {
+    return { name: 'shop-report', query: { reportType: 'payment' } }
+  }
+  return null
+}
+
+const handleOwnerNotificationClick = (item) => {
+  const target = resolveOwnerNotificationRoute(item)
+  if (target) {
+    router.push(target)
+  } else {
+    openReportForNotification(item)
+  }
 }
 
 const openReportForNotification = (item) => {

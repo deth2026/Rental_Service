@@ -335,30 +335,12 @@ const exportCoupons = () => {
           <p class="muted">Create and manage discount coupons</p>
         </div>
         <div class="controls">
-          <div class="shop-filter" :class="{ loading: shopsLoading }">
-            <label for="shop-filter">Shop</label>
-            <select id="shop-filter" v-model="activeShopId" :disabled="shopsLoading" @change="fetchCoupons">
-              <option value="">All my shops</option>
-              <option v-for="shop in ownerShops" :key="shop.id" :value="String(shop.id)">
-                {{ shop.name || shop.address || `Shop #${shop.id}` }}
-              </option>
-            </select>
-          </div>
           <button class="primary add-btn" @click="openCreate" :disabled="shopsLoading || !hasShops">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             {{ shopsLoading ? 'Loading shops...' : 'Add New Coupon' }}
-          </button>
-          <button type="button" class="export-btn" @click="exportCoupons">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 7h16" stroke-linecap="round"></path>
-              <path d="M4 12h10" stroke-linecap="round"></path>
-              <path d="M4 17h16" stroke-linecap="round"></path>
-              <path d="M17 5l4 4-4 4"></path>
-            </svg>
-            Export list
           </button>
         </div>
         <p v-if="shopLoadError" class="shop-error">{{ shopLoadError }}</p>

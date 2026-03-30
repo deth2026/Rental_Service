@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Shop;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
@@ -211,11 +212,17 @@ class PaymentController extends Controller
             $existingPayment?->id
         );
 
+        $previouslyPaid = $existingPayment && strtolower((string) ($existingPayment->payment_status ?? '')) === 'paid';
         if ($existingPayment) {
             $existingPayment->update($payload);
             $record = $existingPayment->fresh();
         } else {
             $record = Payment::create($payload);
+        }
+
+        $nowPaid = strtolower((string) ($record->payment_status ?? '')) === 'paid';
+        if ($nowPaid && !$previouslyPaid) {
+            NotificationService::paymentReceived($record);
         }
 
         return response()->json($record, 201);
@@ -255,7 +262,12 @@ class PaymentController extends Controller
             );
         }
 
+        $previouslyPaid = strtolower((string) ($payment->payment_status ?? '')) === 'paid';
         $payment->update($payload);
+        $nowPaid = strtolower((string) ($payment->payment_status ?? '')) === 'paid';
+        if ($nowPaid && !$previouslyPaid) {
+            NotificationService::paymentReceived($payment->fresh());
+        }
 
         return response()->json($payment->fresh());
     }

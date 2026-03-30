@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\DamageReport;
 use App\Models\Message;
 use App\Models\NotificationRecord;
+use App\Models\Payment;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Support\Facades\Schema;
@@ -193,6 +194,38 @@ class NotificationService
                 'shop_id' => $booking?->shop_id ?? null,
             ],
         ]);
+    }
+
+    public static function paymentReceived(Payment $payment): ?NotificationRecord
+    {
+        $payment->loadMissing(['booking.shop.owner']);
+        $booking = $payment->booking;
+        $shop = $booking?->shop;
+        $owner = $shop?->owner;
+        $code = $booking ? self::formatBookingCode($booking) : ($payment->booking_id ? "#{$payment->booking_id}" : 'Booking');
+        $amount = number_format($payment->amount ?? 0, 2);
+        $shopLabel = $shop?->name ? " at {$shop->name}" : '';
+        $title = 'Payment received';
+        $message = "Payment of \${$amount} for {$code}{$shopLabel} has been recorded.";
+
+        $payload = [
+            'type' => 'payment',
+            'related_type' => Payment::class,
+            'related_id' => $payment->id,
+            'attributes' => [
+                'booking_id' => $booking?->id,
+                'shop_id' => $shop?->id,
+                'amount' => $payment->amount,
+                'payment_method' => $payment->payment_method,
+            ],
+        ];
+
+        self::notifyAdmins($title, $message, $payload);
+        if ($owner) {
+            return self::sendToUser($owner, $title, $message, $payload);
+        }
+
+        return null;
     }
 
     public static function sendToUser(User $user, string $title, string $message, array $options = []): NotificationRecord

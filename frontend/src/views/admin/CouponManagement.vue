@@ -130,9 +130,9 @@ const parseOptionalNumber = (value) => {
 
 const toDateOnly = (value) => {
   if (!value) return ''
-  if (typeof value !== 'string') return ''
-  const [date] = value.split('T')
-  return date || ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toISOString().split('T')[0]
 }
 
 const couponStatusKey = (coupon) => {
@@ -177,20 +177,40 @@ const selectedUsageText = computed(() => {
 const selectedValidFrom = computed(() => formatDate(selectedCoupon.value?.valid_from))
 const selectedValidUntil = computed(() => formatDate(selectedCoupon.value?.valid_until))
 
+const normalizeDateInput = (value) => {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return String(value).split('T')[0]
+  return parsed.toISOString().split('T')[0]
+}
+
 const buildPayload = () => {
   const code = String(form.value.code || '').trim().toUpperCase()
+  const validFrom = normalizeDateInput(form.value.valid_from)
+  const validUntil = normalizeDateInput(form.value.valid_until)
   return {
     code,
     discount_percent: parseOptionalNumber(form.value.discount_percent),
     discount_amount: parseOptionalNumber(form.value.discount_amount),
     minimum_amount: parseOptionalNumber(form.value.minimum_amount),
     usage_limit: parseOptionalNumber(form.value.usage_limit),
-    valid_from: form.value.valid_from,
-    valid_until: form.value.valid_until,
+    valid_from: validFrom,
+    valid_until: validUntil,
     is_active: form.value.is_active ? 1 : 0,
     shop_id: form.value.shop_id ? Number(form.value.shop_id) : null
   }
 }
+
+const validatePayloadDates = (payload) => {
+  if (!payload.valid_from || !payload.valid_until) return true
+  if (payload.valid_until < payload.valid_from) {
+    toast.error('Valid until must be the same day or after valid from.')
+    return false
+  }
+  return true
+}
+
+const isSubmitting = ref(false)
 
 const filtered = computed(() => {
   const q = query.value
@@ -258,12 +278,16 @@ const submitCreate = async () => {
   if (!form.value.valid_from || !form.value.valid_until) { toast.error('Valid from / until is required.'); return }
   try {
     const payload = buildPayload()
+    if (!validatePayloadDates(payload)) return
+    isSubmitting.value = true
     await couponApi.create(payload)
     toast.success('Coupon created successfully.')
     closeModals()
     await load()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to create coupon.')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -275,12 +299,16 @@ const submitEdit = async () => {
   if (!form.value.valid_from || !form.value.valid_until) { toast.error('Valid from / until is required.'); return }
   try {
     const payload = buildPayload()
+    if (!validatePayloadDates(payload)) return
+    isSubmitting.value = true
     await couponApi.update(id, payload)
     toast.success('Coupon updated successfully.')
     closeModals()
     await load()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to update coupon.')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -444,7 +472,7 @@ onMounted(async () => {
 
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" @click="closeModals">Cancel</button>
-          <button type="button" class="btn btn-primary" @click="showEdit ? submitEdit : submitCreate">
+          <button type="button" class="btn btn-primary" :disabled="isSubmitting" @click="showEdit ? submitEdit : submitCreate">
             {{ showEdit ? 'Update' : 'Create' }}
           </button>
         </div>
