@@ -53,11 +53,8 @@ class ShopController extends Controller
                 'updated_at' => $shop->updated_at,
                 'owner' => $shop->owner,
                 'city' => $shop->city,
-<<<<<<< HEAD
-=======
-                'qr_url' => $shop->qr_url,
-                'qr_url_full' => $shop->qr_url_full,
->>>>>>> e1412b2cb6bce3aada8bdfd4a6f2ac198ac4c0a0
+                 'qr_url' => $shop->qr_url,
+                 'qr_url_full' => $shop->qr_url_full,
             ];
         });
 

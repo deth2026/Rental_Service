@@ -535,6 +535,26 @@ const selectedShopQrOption = computed(() => {
 
 const selectedShopQrUrl = computed(() => selectedShopQrOption.value?.qrUrl || "");
 
+// Update the selected shop QR code when the vehicle's shop_id or shopQrOptions changes
+const updateShopQrSelection = () => {
+  if (!vehicle.value || !vehicle.value?.shop_id) {
+    selectedShopQrId.value = null;
+    return;
+  }
+
+  const shopId = vehicle.value.shop_id;
+  const shopOption = shopQrOptions.value.find(option => option.id === shopId);
+
+  if (shopOption) {
+    selectedShopQrId.value = shopId;
+  } else if (shopQrOptions.value.length > 0) {
+    // Select the first available shop with QR code
+    selectedShopQrId.value = shopQrOptions.value[0].id;
+  } else {
+    selectedShopQrId.value = null;
+  }
+};
+
 const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
 const vehicleType = computed(() => vehicle.value?.type || "");
 const vehicleTag = computed(() => (vehicleType.value ? String(vehicleType.value).toUpperCase() : "RENTAL"));
@@ -810,47 +830,9 @@ const applyPromoCode = async () => {
   }
 };
 
-<<<<<<< HEAD
 const methodTitle = computed(() => (method.value === 'qr' ? 'QR Code Payment' : 'Payment'));
 const methodDescription = computed(() => (method.value === 'qr' ? 'Pay directly using your banking app.' : ''));
 const receiptPaymentLabel = computed(() => (method.value === 'qr' ? 'QR Payment' : 'Pay Later'));
-=======
-const updateShopQrSelection = () => {
-  const shopId = vehicle.value?.shop_id ?? null;
-  let target =
-    shopQrOptions.value.find((option) => option.id === shopId) || null;
-  if (!target) {
-    target = shopQrOptions.value[0] || null;
-  }
-  selectedShopQrId.value = target?.id ?? null;
-  if (method.value === "qr" && target?.qrUrl) {
-    qrCodeUrl.value = target.qrUrl;
-    showQR.value = true;
-  }
-};
-
-const methodTitle = computed(() => {
-  if (method.value === "qr") return "QR Code Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Secure Checkout";
-});
-
-const methodDescription = computed(() => {
-  if (method.value === "qr") {
-    return "Pay directly using your banking app.";
-  }
-  if (method.value === "bank") {
-    return "Complete payment using a direct bank transfer.";
-  }
-  return "Complete your rental booking by choosing a payment method below.";
-});
-
-const receiptPaymentLabel = computed(() => {
-  if (method.value === "qr") return "QR Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Credit Card";
-});
->>>>>>> e1412b2cb6bce3aada8bdfd4a6f2ac198ac4c0a0
 
 const minDate = computed(() => {
   const today = new Date();
@@ -1123,70 +1105,6 @@ const handlePayment = async () => {
   }
 };
 
-<<<<<<< HEAD
-=======
-const handleBankTransfer = async () => {
-  if (isSubmittingPayment.value) return;
-  isSubmittingPayment.value = true;
-  await validateDates();
-  if (dateError.value) {
-    isSubmittingPayment.value = false;
-    return;
-  }
-  if (!isFormValid.value) {
-    isSubmittingPayment.value = false;
-    alert("Please select valid rental dates before creating a bank transfer.");
-    return;
-  }
-
-  try {
-    const result = await saveBookingToDatabase(
-      buildBookingData("bank_transfer", "pending_payment")
-    );
-
-    if (!result.success) {
-      alert(result.message || "Failed to create bank transfer instructions.");
-      return;
-    }
-
-    bookingId.value = result.bookingId;
-
-    const instructions = `
-BANK TRANSFER INSTRUCTIONS
-============================
-Payment ID: ${paymentId.value}
-Amount: $${totalAmount.value.toFixed(2)}
-Booking ID: ${bookingId.value}
-
-BANK DETAILS:
-- Account Name: Moto Rental Pty Ltd
-- Bank: National Australia Bank
-- BSB: 082-123
-- Account: 1234 5678 9012
-- Reference: ${paymentId.value}
-  `.trim();
-
-    const blob = new Blob([instructions], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bank_transfer_${paymentId.value}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-
-    showSuccessModal.value = true;
-    successRedirectTimer = window.setTimeout(() => {
-      returnToShopViewAfterSuccess();
-    }, 1800);
-  } finally {
-    isSubmittingPayment.value = false;
-  }
-};
-
->>>>>>> e1412b2cb6bce3aada8bdfd4a6f2ac198ac4c0a0
 const generateABAQRData = () => {
   const qrData = {
     merchant: "MOTORAL-001",

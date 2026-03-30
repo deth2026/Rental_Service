@@ -277,8 +277,8 @@
 
     <!-- Common Footer -->
     <UserFooter class="detail-page-footer" />
-    <!-- Hidden receipt template used to render PDF (kept offscreen so html2canvas can render it) -->
-    <div id="receipt-root" style="position:absolute;left:-9999px;top:0;">
+    <!-- Hidden receipt template used to render PDF -->
+    <div id="receipt-root" style="display:none">
       <div id="receipt" style="width:768px;padding:28px;font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;">
         <div style="text-align:center;margin-bottom:8px;">
           <div style="font-size:34px;font-weight:800;color:#0b4fd6">CHONG CHOUL</div>
@@ -393,7 +393,10 @@ import api, { vehicleApi, shopApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import UserNavbar from '@/components/UserNavbar.vue';
 import UserFooter from '@/components/UserFooter.vue';
-import { parseDateInputValue } from "@/utils/bookingAvailability";
+import {
+  parseDateInputValue,
+  parseQuantityValue,
+} from "@/utils/bookingAvailability";
 
 const router = useRouter();
 const route = useRoute();
@@ -768,10 +771,9 @@ const getVehicleImage = (item) => {
 
 const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
 const vehicleShopName = computed(() => getVehicleShop(vehicle.value));
-const vehicleRating = computed(() => {
-  const raw = Number(vehicle.value?.rating ?? vehicle.value?.average_rating ?? 0);
-  return Number.isFinite(raw) ? raw.toFixed(1) : "0.0";
-});
+const vehicleRating = computed(
+  () => vehicle.value?.rating ?? vehicle.value?.average_rating ?? 4.8,
+);
 const vehicleTransmission = computed(
   () => vehicle.value?.transmission || "N/A",
 );
@@ -822,14 +824,10 @@ const bookingDateRangeLabel = computed(() => {
 
 const bookingQuantityLabel = computed(() => "1 Vehicle");
 
-<<<<<<< HEAD
 const dailyRate = computed(() => Number(vehicle.value?.price_per_day ?? vehicle.value?.price ?? 0));
 const riderCount = computed(() => {
   return parseQuantityValue(riderDetails.value, 1);
 });
-=======
-const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
->>>>>>> e1412b2cb6bce3aada8bdfd4a6f2ac198ac4c0a0
 const baseAmount = computed(() => dailyRate.value * bookingDuration.value);
 
 
@@ -900,7 +898,7 @@ const loadVehicleDetail = async () => {
 
     vehicle.value = {
       ...found,
-      rating: Number(found.rating ?? found.average_rating ?? 0),
+      rating: found.rating ?? found.average_rating ?? 4.8,
     };
   } catch (error) {
     const status = error?.response?.status;
@@ -959,22 +957,6 @@ const goToBooking = () => {
    }
  };
 
-<<<<<<< HEAD
-=======
-  if (route.query.coupon_code) {
-    query.coupon_code = route.query.coupon_code;
-  }
-  if (route.query.coupon_id) {
-    query.coupon_id = route.query.coupon_id;
-  }
-
-  if (vehicleId) {
-    router.push({ name: "booking", params: { id: vehicleId }, query });
-  } else {
-    router.push({ name: "booking", params: { id: 1 }, query }); // Fallback ID
-  }
-};
->>>>>>> e1412b2cb6bce3aada8bdfd4a6f2ac198ac4c0a0
 
 // New UX enhancement functions
 const getNavIcon = (item) => {
