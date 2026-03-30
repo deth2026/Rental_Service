@@ -3,17 +3,56 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Rating;
 use App\Models\Shop;
+use App\Services\NotificationService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
     public function index()
     {
-        $shops = Shop::with('owner')
+        $shops = Shop::with(['owner:id,name,email,phone'])
             ->orderByDesc('id')
-            ->get();
+            ->paginate(25);
+
+        // Manually add img_url_full to ensure it's included
+        $shopsWithImages = $shops->map(function ($shop) {
+            // Calculate rating from Rating table based on shop_id
+            $shopRatings = Rating::where('shop_id', $shop->id)->get();
+            
+            // Only include rating and total_reviews if there are ratings for this shop
+            $hasRatings = $shopRatings->isNotEmpty();
+            $rating = $hasRatings ? round($shopRatings->avg('rating'), 1) : null;
+            $totalReviews = $hasRatings ? $shopRatings->count() : null;
+
+            return [
+                'id' => $shop->id,
+                'owner_id' => $shop->owner_id,
+                'city_id' => $shop->city_id,
+                'name' => $shop->name,
+                'description' => $shop->description,
+                'address' => $shop->address,
+                'location' => $shop->location,
+                'phone' => $shop->phone,
+                'img_url' => $shop->img_url,
+                'img_url_full' => $shop->img_url_full,
+                'image' => $shop->img_url_full,
+                'latitude' => $shop->latitude,
+                'longitude' => $shop->longitude,
+                'rating' => $rating,
+                'total_reviews' => $totalReviews,
+                'status' => $shop->status,
+                'created_at' => $shop->created_at,
+                'updated_at' => $shop->updated_at,
+                'owner' => $shop->owner
+            ];
+        });
+
+        $shops->setCollection($shopsWithImages);
 
         return response()->json($shops);
     }
@@ -31,14 +70,19 @@ class ShopController extends Controller
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
+            'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
             // do NOT validate img_url here; see below
         ]);
-        
-        // A shop owner can only create shops for themselves.
-        $payload['owner_id'] = $request->user()?->id;
 
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
+        if (!$this->shopColumnExists('map_url')) {
+            unset($payload['map_url']);
+        }
+        
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
             // file rule ensures it is an image and not too large
@@ -49,7 +93,7 @@ class ShopController extends Controller
             $request->validate(['img_url' => 'string']);
         }
 
-        // A shop owner can only create shops for themselves.
+        // The creator becomes the owner by default.
         $payload['owner_id'] = $request->user()?->id;
 
         // Handle image upload or URL
@@ -82,6 +126,14 @@ class ShopController extends Controller
             }
         }
 
+        [$urlLat, $urlLng] = $this->extractCoordinatesFromMapUrl($payload['map_url'] ?? null);
+        if (!isset($payload['latitude']) && $urlLat !== null) {
+            $payload['latitude'] = $urlLat;
+        }
+        if (!isset($payload['longitude']) && $urlLng !== null) {
+            $payload['longitude'] = $urlLng;
+        }
+
         // If no coordinates provided, attempt to geocode from address
         if (!isset($payload['latitude']) && !isset($payload['longitude'])) {
             [$lat, $lng] = $this->geocodeAddress($payload['address'] ?? null);
@@ -92,6 +144,14 @@ class ShopController extends Controller
         }
 
         $record = Shop::create($payload);
+        try {
+            NotificationService::shopCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send admin notification for new shop', [
+                'error' => $exception->getMessage(),
+                'shop_id' => $record->id,
+            ]);
+        }
 
         return response()->json($record, 201);
     }
@@ -104,7 +164,9 @@ class ShopController extends Controller
     public function update(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if ($user && !$isAdmin && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
                 'message' => 'Unauthorized. You can only update your own shops.',
             ], 403);
@@ -120,9 +182,17 @@ class ShopController extends Controller
             'phone' => 'nullable|string|max:20',
             'latitude' => 'nullable|numeric',
             'longitude' => 'nullable|numeric',
+            'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        if (!$this->shopColumnExists('location')) {
+            unset($payload['location']);
+        }
+        if (!$this->shopColumnExists('map_url')) {
+            unset($payload['map_url']);
+        }
 
         // validate img_url value type depending on upload or text
         if ($request->hasFile('img_url')) {
@@ -190,6 +260,17 @@ class ShopController extends Controller
             unset($payload['img_url']);
         }
 
+        $mapUrlForCoords = array_key_exists('map_url', $payload)
+            ? $payload['map_url']
+            : $shop->map_url;
+        [$urlLat, $urlLng] = $this->extractCoordinatesFromMapUrl($mapUrlForCoords);
+        if (!$request->filled('latitude') && $urlLat !== null) {
+            $payload['latitude'] = $urlLat;
+        }
+        if (!$request->filled('longitude') && $urlLng !== null) {
+            $payload['longitude'] = $urlLng;
+        }
+
         // If latitude/longitude not provided, refresh from the (possibly updated) address
         $addressForGeocode = $payload['address'] ?? $shop->address;
         $coordsMissing = !$request->filled('latitude') && !$request->filled('longitude');
@@ -209,15 +290,36 @@ class ShopController extends Controller
     public function destroy(Request $request, Shop $shop)
     {
         $user = $request->user();
-        if ($user && $user->role !== 'admin' && (int) $shop->owner_id !== (int) $user->id) {
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if ($user && !$isAdmin && (int) $shop->owner_id !== (int) $user->id) {
             return response()->json([
                 'message' => 'Unauthorized. You can only delete your own shops.',
             ], 403);
         }
 
+        if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
+            $oldPath = storage_path('app/public/' . ltrim($shop->img_url, '/'));
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+
         $shop->delete();
 
         return response()->json(['message' => 'Shop deleted successfully']);
+    }
+
+    /**
+     * Check whether the shops table contains the given column.
+     */
+    private function shopColumnExists(string $column): bool
+    {
+        static $cache = [];
+        if (!array_key_exists($column, $cache)) {
+            $cache[$column] = Schema::hasColumn('shops', $column);
+        }
+        return $cache[$column];
     }
 
     /**
@@ -250,5 +352,42 @@ class ShopController extends Controller
         }
 
         return [$result['lat'], $result['lng']];
+    }
+
+    /**
+     * Extract coordinates from common Google Maps URL patterns.
+     * Returns [lat, lng] or [null, null] when no coordinates are found.
+     */
+    private function extractCoordinatesFromMapUrl(?string $value): array
+    {
+        $url = trim((string) $value);
+        if ($url === '') {
+            return [null, null];
+        }
+
+        $patterns = [
+            '/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/',
+            '/[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/',
+            '/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (!preg_match($pattern, $url, $matches)) {
+                continue;
+            }
+
+            $lat = isset($matches[1]) ? (float) $matches[1] : null;
+            $lng = isset($matches[2]) ? (float) $matches[2] : null;
+            if ($lat === null || $lng === null) {
+                continue;
+            }
+            if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+                continue;
+            }
+
+            return [$lat, $lng];
+        }
+
+        return [null, null];
     }
 }

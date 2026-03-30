@@ -4,10 +4,11 @@ export const setSession = ({ token, user }) => {
   if (token) {
     localStorage.setItem('token', token);
     localStorage.setItem('auth_token', token);
-    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    console.log('[auth.js] Session set: token stored in localStorage');
   }
   if (user) {
     localStorage.setItem('user', JSON.stringify(user));
+    console.log('[auth.js] Session set: user stored in localStorage');
   }
 };
 
@@ -45,5 +46,5 @@ export const clearSession = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('auth_token');
   localStorage.removeItem('user');
-  delete api.defaults.headers.common.Authorization;
+  // Note: Authorization header is handled by request interceptor, not set directly on api instance
 };

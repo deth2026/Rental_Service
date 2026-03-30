@@ -123,6 +123,7 @@ onBeforeUnmount(() => {
         <img v-if="userAvatarUrl" :src="userAvatarUrl" alt="Profile photo" class="avatar-image" @error="onAvatarError" />
         <span v-else>{{ userInitials }}</span>
       </span>
+      <span class="profile-trigger-name">{{ userDisplayName }}</span>
       <i class="fa-solid" :class="isProfileMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
     </button>
     <div v-if="isProfileMenuOpen" class="profile-dropdown">
@@ -203,12 +204,22 @@ onBeforeUnmount(() => {
 .profile-trigger {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.55rem;
   font-size: 0.9rem;
   justify-content: center;
   padding: 0 0.5rem;
   border-radius: 999px;
   background: transparent;
+}
+
+.profile-trigger-name {
+  max-width: 160px;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #33435d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-trigger i {
@@ -268,6 +279,13 @@ onBeforeUnmount(() => {
   font-size: 1rem;
   color: #111827;
   margin-bottom: 0.15rem;
+}
+
+@media (max-width: 640px) {
+  .profile-trigger-name {
+    max-width: 120px;
+    font-size: 0.9rem;
+  }
 }
 
 .profile-role {

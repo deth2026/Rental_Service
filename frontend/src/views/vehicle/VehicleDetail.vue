@@ -8,6 +8,15 @@ export default {
       error: null
     }
   },
+  computed: {
+    isVehicleUnavailable() {
+      // Check if vehicle is unavailable (is_available === false from backend)
+      if (this.vehicle && this.vehicle.is_available === false) {
+        return true;
+      }
+      return false;
+    }
+  },
   async mounted() {
     await this.fetchVehicle()
   },
@@ -40,6 +49,7 @@ export default {
           fuel_type: 'Petrol',
           transmission: 'Automatic',
           status: 'available',
+          is_available: true,
           image_url: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800'
         }
       } finally {
@@ -51,23 +61,14 @@ export default {
 </script>
 
 <template>
-  <div class="vehicle-detail-container">
-    <nav class="navbar">
-      <div class="nav-logo">
-        <div class="logo-icon"></div>
-        <span class="logo-text">ChongChoul</span>
+  <div class="vehicle-detail-page">
+    <div class="page-header">
+      <div>
+        <h1>Vehicle Details</h1>
+        <p class="page-subtitle">Overview of the selected ride and its availability.</p>
       </div>
-      <div class="nav-links">
-        <a href="#">Home</a>
-        <a href="#">MY Booking</a>
-        <a href="#">Promotions</a>
-        <a href="#" class="partner-link">Become a Partner</a>
-      </div>
-      <div class="nav-auth">
-        <button class="btn-login"><a href="/login">Login</a></button>
-        <button class="btn-signup"><a href="/register">Sign Up</a></button>
-      </div>
-    </nav>
+      <button class="primary-btn">Book Now</button>
+    </div>
 
     <div v-if="loading" class="loading-container">
       <div class="loading-spinner"></div>
@@ -79,48 +80,111 @@ export default {
       <button @click="fetchVehicle" class="retry-btn">Retry</button>
     </div>
 
-    <div v-else class="vehicle-content">
-      <div class="vehicle-image-section">
-        <img 
-          :src="vehicle.image_url_full || vehicle.image_url || 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800'" 
-          :alt="vehicle.model" 
-          class="vehicle-image"
-        />
-        <div class="status-badge" :class="vehicle.status">
-          {{ vehicle.status }}
+    <div v-else class="vehicle-card">
+      <div class="vehicle-card-header">
+        <div class="settings-title">
+          <span class="settings-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8">
+              <path d="M12 3v2.2"></path>
+              <path d="M12 18.8V21"></path>
+              <path d="M4.22 5.64l1.56 1.56"></path>
+              <path d="M17.22 16.64l1.56 1.56"></path>
+              <path d="M3 12h2.2"></path>
+              <path d="M18.8 12H21"></path>
+              <path d="M4.22 18.36l1.56-1.56"></path>
+              <path d="M17.22 7.36l1.56-1.56"></path>
+              <circle cx="12" cy="12" r="5"></circle>
+            </svg>
+          </span>
+          <div>
+            <h2>Vehicle snapshot</h2>
+            <p>Review the key specs, pricing, and availability before booking.</p>
+          </div>
+        </div>
+        <span
+          class="status-badge"
+          :class="(vehicle.status || 'inactive').toLowerCase()"
+        >
+          {{ vehicle.status || "Status unknown" }}
+        </span>
+      </div>
+
+      <div class="vehicle-profile-row">
+        <div class="vehicle-avatar-stack">
+          <img
+            :src="vehicle.image_url_full || vehicle.image_url"
+            :alt="vehicle.model"
+            class="vehicle-cover-image"
+          />
+          <div class="vehicle-cover-placeholder" v-if="!vehicle.image_url_full && !vehicle.image_url">
+            <svg
+              viewBox="0 0 32 32"
+              width="32"
+              height="32"
+              fill="none"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+            >
+              <rect x="3" y="3" width="26" height="26" rx="4" ry="4"></rect>
+              <circle cx="10.5" cy="10.5" r="2"></circle>
+              <polyline points="27 20 17 10 5 22"></polyline>
+            </svg>
+          </div>
+        </div>
+        <div class="profile-actions">
+          <button class="profile-btn primary">View gallery</button>
+          <button class="profile-btn ghost">Share details</button>
         </div>
       </div>
 
-      <div class="vehicle-info-section">
-        <div class="vehicle-header">
-          <h1>{{ vehicle.brand }} {{ vehicle.model }}</h1>
-          <p class="vehicle-type">{{ vehicle.type }}</p>
+      <div class="vehicle-info-grid">
+        <div class="info-field">
+          <span>Brand</span>
+          <strong>{{ vehicle.brand }}</strong>
         </div>
+        <div class="info-field">
+          <span>Model</span>
+          <strong>{{ vehicle.model }}</strong>
+        </div>
+        <div class="info-field">
+          <span>Year</span>
+          <strong>{{ vehicle.year }}</strong>
+        </div>
+        <div class="info-field">
+          <span>Fuel Type</span>
+          <strong>{{ vehicle.fuel_type }}</strong>
+        </div>
+        <div class="info-field">
+          <span>Transmission</span>
+          <strong>{{ vehicle.transmission }}</strong>
+        </div>
+        <div class="info-field">
+          <span>Type</span>
+          <strong>{{ vehicle.type }}</strong>
+        </div>
+        <div class="info-field">
+          <span>Price per day</span>
+          <strong>${{ vehicle.price_per_day }}</strong>
+        </div>
+        <div class="info-field">
+          <span>Availability</span>
+          <strong>{{ vehicle.is_available ? "Available" : "Unavailable" }}</strong>
+        </div>
+        <div class="info-field full">
+          <span>Description</span>
+          <p>{{ vehicle.description || "No description provided." }}</p>
+        </div>
+      </div>
 
-        <div class="vehicle-details">
-          <div class="detail-item">
-            <span class="detail-label">Year</span>
-            <span class="detail-value">{{ vehicle.year }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">Fuel Type</span>
-            <span class="detail-value">{{ vehicle.fuel_type }}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">Transmission</span>
-            <span class="detail-value">{{ vehicle.transmission }}</span>
-          </div>
-        </div>
-
-        <div class="vehicle-price">
-          <span class="price-label">Price per day</span>
-          <span class="price-value">${{ vehicle.price_per_day }}</span>
-        </div>
-
-        <div class="vehicle-actions">
-          <button class="btn-rent-now">Rent Now</button>
-          <button class="btn-contact-shop">Contact Shop</button>
-        </div>
+      <div class="vehicle-actions">
+        <button 
+          class="btn-rent-now" 
+          :disabled="isVehicleUnavailable"
+          :title="isVehicleUnavailable ? 'This vehicle is currently unavailable' : ''"
+        >
+          {{ isVehicleUnavailable ? 'Unavailable' : 'Rent Now' }}
+        </button>
+        <button class="btn-contact-shop">Contact Shop</button>
       </div>
     </div>
   </div>
@@ -367,7 +431,12 @@ export default {
   color: white;
 }
 
-.btn-rent-now:hover {
+.btn-rent-now:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-rent-now:hover:not(:disabled) {
   background: #5568d3;
 }
 

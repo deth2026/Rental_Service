@@ -105,6 +105,26 @@
               <textarea v-model="form.shop_address" rows="5"></textarea>
             </label>
 
+            <label class="field">
+              <span>Latitude</span>
+              <input v-model="form.latitude" type="number" step="any" placeholder="e.g. 11.5564" />
+            </label>
+
+            <label class="field">
+              <span>Longitude</span>
+              <input v-model="form.longitude" type="number" step="any" placeholder="e.g. 104.9282" />
+            </label>
+
+            <label class="field full">
+              <span>Google Map URL</span>
+              <input
+                v-model="form.map_url"
+                type="url"
+                placeholder="https://maps.google.com/..."
+                @blur="syncCoordinatesFromMapUrl"
+              />
+            </label>
+
             <!-- Language Selector near Notifications -->
             <div class="field notification-field language-field">
               <span>{{ t('language') }}</span>
@@ -280,9 +300,42 @@ const form = reactive({
   shop_status: 'active',
   phone: '',
   shop_address: '',
+  latitude: '',
+  longitude: '',
+  map_url: '',
   notifications_enabled: true,
   password: '',
 });
+
+const extractCoordinatesFromMapUrl = (value) => {
+  const url = String(value || '').trim();
+  if (!url) return null;
+
+  const patterns = [
+    /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /[?&](?:q|query|ll|destination|origin)=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/,
+    /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (!match) continue;
+    const lat = Number(match[1]);
+    const lng = Number(match[2]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) continue;
+    return { lat, lng };
+  }
+
+  return null;
+};
+
+const syncCoordinatesFromMapUrl = () => {
+  const coords = extractCoordinatesFromMapUrl(form.map_url);
+  if (!coords) return;
+  if (!form.latitude) form.latitude = String(coords.lat);
+  if (!form.longitude) form.longitude = String(coords.lng);
+};
 
 const extractCollection = (responseData) => {
   if (Array.isArray(responseData)) return responseData;
@@ -391,6 +444,9 @@ const loadData = async () => {
       form.shop_status = cachedShop.status || 'active';
       form.shop_address = cachedShop.address || '';
       form.phone = cachedShop.phone || storedUser.phone || '';
+      form.latitude = cachedShop.latitude != null ? String(cachedShop.latitude) : '';
+      form.longitude = cachedShop.longitude != null ? String(cachedShop.longitude) : '';
+      form.map_url = cachedShop.map_url || '';
     }
 
     const [usersResult, shopsResult] = await Promise.allSettled([
@@ -425,6 +481,9 @@ const loadData = async () => {
     form.shop_name = selectedShop?.name || '';
     form.shop_status = selectedShop?.status || 'active';
     form.shop_address = selectedShop?.address || '';
+    form.latitude = selectedShop?.latitude != null ? String(selectedShop.latitude) : '';
+    form.longitude = selectedShop?.longitude != null ? String(selectedShop.longitude) : '';
+    form.map_url = selectedShop?.map_url || '';
     form.password = '';
 
     const notifyRaw = localStorage.getItem(`${NOTIFY_KEY_PREFIX}${user.id}`);
@@ -583,6 +642,15 @@ const saveSettings = async () => {
   success.value = '';
   error.value = '';
   try {
+    syncCoordinatesFromMapUrl();
+
+    if (form.latitude && (!Number.isFinite(Number(form.latitude)) || Number(form.latitude) < -90 || Number(form.latitude) > 90)) {
+      throw new Error('Latitude must be between -90 and 90.');
+    }
+    if (form.longitude && (!Number.isFinite(Number(form.longitude)) || Number(form.longitude) < -180 || Number(form.longitude) > 180)) {
+      throw new Error('Longitude must be between -180 and 180.');
+    }
+
     const userPayload = {
       name: form.name,
       email: form.email,
@@ -619,6 +687,9 @@ const saveSettings = async () => {
       name: form.shop_name,
       address: form.shop_address || '',
       phone: form.phone || '',
+      latitude: form.latitude || null,
+      longitude: form.longitude || null,
+      map_url: form.map_url || null,
       status: form.shop_status || 'active'
     };
 
@@ -633,7 +704,10 @@ const saveSettings = async () => {
       name: form.shop_name,
       status: form.shop_status || 'active',
       address: form.shop_address,
-      phone: form.phone
+      phone: form.phone,
+      latitude: form.latitude || null,
+      longitude: form.longitude || null,
+      map_url: form.map_url || null
     });
 
     localStorage.setItem(`${NOTIFY_KEY_PREFIX}${user.id}`, form.notifications_enabled ? '1' : '0');

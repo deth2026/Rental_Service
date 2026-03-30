@@ -8,7 +8,7 @@
   --muted: #c4ccda;
   min-height: 100vh;
   padding: 0 40px;
-  font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg);
   color: var(--text);
 }
@@ -205,6 +205,7 @@
   gap: 10px;
   color: #1d6fff;
   font-weight: 800;
+  font-size: 30px;
   margin-bottom: 12px;
 }
 
@@ -795,7 +796,7 @@
   text-align: left;
   color: white;
   transform: translate(0, -50%);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans);
   display: none;
 }
 
@@ -912,4 +913,138 @@
     left: 40px;
     width: 320px;
   }
+}
+.promo-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.promo-body-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.promo-body h3 {
+  margin: 0;
+  font-size: 1.7rem;
+}
+
+.vehicle-sub {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #56627a;
+}
+
+.promo-status {
+  padding: 6px 18px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.status-available {
+  background: #dcfce7;
+  color: #16a34a;
+  border-color: #86efac;
+}
+
+.status-out {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.promo-meta-tags {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: #f1f5ff;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  font-weight: 600;
+  color: #1d4ed8;
+  letter-spacing: 0.05em;
+  font-size: 0.8rem;
+}
+
+.shop-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: #5b6a84;
+}
+
+.shop-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.availability-note-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 16px;
+  border: 1px dashed rgba(37, 99, 235, 0.3);
+  background: #fff;
+  font-size: 0.85rem;
+  color: #2563eb;
+  font-weight: 700;
+}
+
+.promo-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.promo-card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(236, 245, 255, 0.8) 60%, #fdfcff 100%);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  box-shadow: 0 25px 60px rgba(37, 99, 235, 0.25);
+  transform: translateY(0);
+}
+
+.promo-media {
+  height: 270px;
+  background: radial-gradient(circle at top, rgba(37, 99, 235, 0.2), transparent 60%);
+}
+
+.promo-media img {
+  transition: transform 0.4s ease;
+}
+
+.promo-media:hover img {
+  transform: scale(1.05);
+}
+
+.promo-ribbon,
+.promo-type {
+  top: 14px;
+}
+
+.promo-ribbon {
+  left: 18px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.promo-type {
+  right: 18px;
+  border: none;
 }

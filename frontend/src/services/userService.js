@@ -68,9 +68,7 @@ const userService = {
    * @param {FormData} formData  (name, email, phone, profile_picture?)
    */
   async updateProfile(id, formData) {
-    const { data } = await http.post(`/users/${id}/update-profile`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    const { data } = await http.post(`/users/${id}/update-profile`, formData)
     return data
   },
 
