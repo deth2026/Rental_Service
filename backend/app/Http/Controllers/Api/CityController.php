@@ -10,7 +10,7 @@ class CityController extends Controller
 {
     public function index()
     {
-        return response()->json(City::paginate(15));
+        return response()->json(City::orderBy('name')->get());
     }
 
     public function store(Request $_request)

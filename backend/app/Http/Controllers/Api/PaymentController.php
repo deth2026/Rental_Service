@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Shop;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -167,10 +169,15 @@ class PaymentController extends Controller
 
         if (!$this->isAdmin($user)) {
             $shopIds = $this->ownedShopIds($user);
+            $requestedShopId = $request->integer('shop_id');
+
+            if ($requestedShopId) {
+                $shopIds = $shopIds->filter(fn ($id) => (int) $id === $requestedShopId)->values();
+            }
 
             if ($shopIds->isEmpty()) {
                 \Log::warning('PaymentController.shopPayments: No shops found for user', ['user_id' => $user->id]);
-                // return all payments when the user has no shops
+                return response()->json([]);
             } else {
                 // Filter payments by booking shop_id or vehicle shop_id
                 $query->whereHas('booking', function ($bookingQuery) use ($shopIds) {
@@ -206,6 +213,7 @@ class PaymentController extends Controller
         ]);
 
         $existingPayment = Payment::where('booking_id', $payload['booking_id'])->first();
+        $previousStatus = strtolower((string) ($existingPayment?->payment_status ?? ''));
         $payload['transaction_id'] = $this->resolveUniqueTransactionId(
             $payload['transaction_id'],
             $existingPayment?->id
@@ -217,6 +225,8 @@ class PaymentController extends Controller
         } else {
             $record = Payment::create($payload);
         }
+
+        $this->dispatchPaidNotificationIfNeeded($record, $previousStatus);
 
         return response()->json($record, 201);
     }
@@ -248,6 +258,8 @@ class PaymentController extends Controller
             'paid_at' => 'nullable|date',
         ]);
 
+        $previousStatus = strtolower((string) ($payment->payment_status ?? ''));
+
         if (array_key_exists('transaction_id', $payload)) {
             $payload['transaction_id'] = $this->resolveUniqueTransactionId(
                 $payload['transaction_id'],
@@ -256,8 +268,10 @@ class PaymentController extends Controller
         }
 
         $payment->update($payload);
+        $freshPayment = $payment->fresh();
+        $this->dispatchPaidNotificationIfNeeded($freshPayment, $previousStatus);
 
-        return response()->json($payment->fresh());
+        return response()->json($freshPayment);
     }
 
     public function destroy(Request $request, Payment $payment)
@@ -271,5 +285,22 @@ class PaymentController extends Controller
         $payment->delete();
 
         return response()->json(['message' => 'Payment deleted successfully']);
+    }
+
+    private function dispatchPaidNotificationIfNeeded(Payment $payment, string $previousStatus = ''): void
+    {
+        $currentStatus = strtolower((string) ($payment->payment_status ?? ''));
+        if ($currentStatus !== 'paid' || $previousStatus === 'paid') {
+            return;
+        }
+
+        try {
+            NotificationService::paymentPaid($payment);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send payment notifications.', [
+                'payment_id' => $payment->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

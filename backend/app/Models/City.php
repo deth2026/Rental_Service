@@ -18,4 +18,9 @@ class City extends Model
     protected $casts = [
         'created_at' => 'datetime'
     ];
+
+    public function shops()
+    {
+        return $this->hasMany(Shop::class, 'city_id');
+    }
 }

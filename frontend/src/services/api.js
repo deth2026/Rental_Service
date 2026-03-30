@@ -27,8 +27,8 @@ api.interceptors.request.use((config) => {
     console.log('API Interceptor: No token found, skipping Authorization header');
   }
 
-  // Add timeout for performance
-  nextConfig.timeout = 10000; // 10s
+   // Add timeout for performance
+   nextConfig.timeout = 20000; // 20s
 
   // Let browser set correct multipart boundary automatically.
   if (typeof FormData !== 'undefined' && nextConfig.data instanceof FormData && nextConfig.headers) {
@@ -67,7 +67,7 @@ export const vehicleApi = {
 
 // Shop API calls
 export const shopApi = {
-  getAll: () => api.get('/shops'),
+  getAll: (params = {}) => api.get('/shops', { params }),
   getById: (id) => api.get(`/shops/${id}`),
   create: (data) => api.post('/shops', data),
   update: (id, data) => {
@@ -82,7 +82,11 @@ export const shopApi = {
 
 // City API calls
 export const cityApi = {
-  getAll: () => api.get('/cities')
+  getAll: () => api.get('/cities'),
+  getById: (id) => api.get(`/cities/${id}`),
+  create: (data) => api.post('/cities', data),
+  update: (id, data) => api.put(`/cities/${id}`, data),
+  delete: (id) => api.delete(`/cities/${id}`)
 };
 
 // Category API calls
@@ -112,7 +116,7 @@ export const userApi = {
 
 // Coupon API calls
 export const couponApi = {
-  getAll: () => api.get('/coupons'),
+  getAll: (params = {}) => api.get('/coupons', { params }),
   getById: (id) => api.get(`/coupons/${id}`),
   create: (data) => api.post('/coupons', data),
   update: (id, data) => api.put(`/coupons/${id}`, data),
@@ -122,7 +126,7 @@ export const couponApi = {
 
 // Feedback API calls
 export const feedbackApi = {
-  getAll: () => api.get('/feedback'),
+  getAll: (params = {}) => api.get('/feedback', { params }),
   getById: (id) => api.get(`/feedback/${id}`),
   create: (data) => api.post('/feedback', data),
   update: (id, data) => api.put(`/feedback/${id}`, data),
@@ -154,6 +158,8 @@ export const bookingApi = {
   create: (data) => api.post('/bookings', data),
   update: (id, data) => api.put(`/bookings/${id}`, data),
   delete: (id) => api.delete(`/bookings/${id}`),
+  getShopBookings: (params = {}) => api.get('/shop-bookings', { params }),
+  getShopPayments: (params = {}) => api.get('/shop-payments', { params }),
   getMyBookings: () => api.get('/my-bookings')
 };
 

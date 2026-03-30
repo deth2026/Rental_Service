@@ -10,14 +10,13 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
-  return matchedItem?.label || 'My Booking'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const handleLogout = async () => {
@@ -182,8 +181,30 @@ const startBookingPolling = () => {
   pollingTimer.value = setInterval(fetchBookings, POLL_INTERVAL_MS)
 }
 
+const activeMenuId = ref(null)
+
+const toggleMenu = (event, bookingId) => {
+  event.stopPropagation()
+  if (activeMenuId.value === bookingId) {
+    activeMenuId.value = null
+  } else {
+    activeMenuId.value = bookingId
+  }
+}
+
+const closeAllMenus = () => {
+  activeMenuId.value = null
+}
+
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.card-menu-container')) {
+    closeAllMenus()
+  }
+}
+
 onMounted(() => {
   startBookingPolling()
+  window.addEventListener('click', handleClickOutside)
 })
 
 onBeforeUnmount(() => {
@@ -191,6 +212,7 @@ onBeforeUnmount(() => {
     clearInterval(pollingTimer.value)
     pollingTimer.value = null
   }
+  window.removeEventListener('click', handleClickOutside)
 })
 
 const filteredBookings = computed(() => {
@@ -665,7 +687,9 @@ const skipRating = () => {
     <section class="booking-list-wrap">
       <div class="booking-list-header">
         <span class="booking-list-title">Bookings</span>
-        
+        <!-- <button class="bookings-home-btn" type="button" @click="goHome">
+          Back to Home
+        </button> -->
       </div>
       <div v-if="loading" class="empty-state">
         Loading bookings...
@@ -684,7 +708,37 @@ const skipRating = () => {
         <div class="booking-info">
           <div class="booking-header">
             <h3 class="vehicle-name">{{ getBookingVehicleName(booking) }}</h3>
-            <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
+            <div class="card-top-right">
+              <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
+              
+              <div class="card-menu-container">
+                <button class="menu-trigger" @click.stop="toggleMenu($event, booking.id)">
+                  <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <div v-if="activeMenuId === booking.id" class="menu-dropdown">
+                  <button class="menu-item" @click="openDetails(booking)">
+                    <i class="fa-solid fa-eye"></i>
+                    View Details
+                  </button>
+                  <button 
+                    v-if="booking.status === 'pending' || booking.status === 'confirmed'" 
+                    class="menu-item danger" 
+                    @click="openCancelModal(booking)"
+                  >
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel Booking
+                  </button>
+                  <button 
+                    v-if="isBookingCompleted(booking) && !booking.rating" 
+                    class="menu-item" 
+                    @click="openRatingOverlay(booking)"
+                  >
+                    <i class="fa-solid fa-star"></i>
+                    Rate Vehicle
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <p><span class="meta-label">Booking ID:</span> {{ booking.booking_code }}</p>
@@ -694,17 +748,6 @@ const skipRating = () => {
             {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
-
-          <div class="card-actions">
-            <button class="details-btn" @click="openDetails(booking)">View Details</button>
-            <button 
-              v-if="booking.status === 'pending' || booking.status === 'confirmed'" 
-              class="cancel-btn" 
-              @click="openCancelModal(booking)"
-            >
-              Cancel Booking
-            </button>
-          </div>
         </div>
 
         <div class="booking-price">
@@ -751,6 +794,31 @@ const skipRating = () => {
                 :alt="detailTitle"
               />
             </div>
+            
+            <div class="history-section">
+              <h3 class="history-title">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Booking History
+              </h3>
+              <div class="history-timeline">
+                <div v-for="log in selectedBooking?.booking_status_logs" :key="log.id" class="history-item">
+                  <div class="history-dot" :class="{ active: log.status === selectedBooking.status }"></div>
+                  <div class="history-content">
+                    <span class="history-status">{{ getStatusLabel(log.status) }}</span>
+                    <span class="history-time">{{ formatDate(log.changed_at) }}</span>
+                  </div>
+                </div>
+                <!-- Fallback if no logs -->
+                <div v-if="!selectedBooking?.booking_status_logs?.length" class="history-item">
+                  <div class="history-dot active"></div>
+                  <div class="history-content">
+                    <span class="history-status">Created</span>
+                    <span class="history-time">{{ formatDate(selectedBooking?.created_at) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="detail-rating-row" v-if="selectedBooking?.rating?.rating">
               <span class="detail-rating-label">Rating</span>
               <strong>{{ selectedBooking.rating.rating.toFixed(1) }}</strong>
@@ -776,8 +844,7 @@ const skipRating = () => {
             </div>
 
             <div class="detail-price-row">
-
-                <div class="detail-total-box">
+              <div class="detail-total-box">
                 <span>Total</span>
                 <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
               </div>
@@ -786,7 +853,6 @@ const skipRating = () => {
                 <strong class="detail-price">{{ formatCurrency(detailPricePerDay) }}</strong>
                 <span class="detail-price-suffix">USD</span>
               </div>
-            
             </div>
 
             <div class="detail-section detail-section--compact">
@@ -824,7 +890,6 @@ const skipRating = () => {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>

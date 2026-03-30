@@ -12,11 +12,11 @@
         <div class="logo-wrapper">
           <div class="app-logo__mark">
             <div class="logo-orbit"></div>
-            <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="logo-img" />
+            <img :src="logoUrl" alt="Chong Choul Logo" class="logo-img" />
             <div class="shimmer"></div>
           </div>
         </div>
-        
+
         <div class="text-wrapper">
           <h1 class="app-name">Chong Choul</h1>
           <p class="tagline">Premium Vehicle Rentals</p>
@@ -43,7 +43,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="footer-credit">
         <span>Powered by Chong Choul Eco-System</span>
       </div>
@@ -62,6 +62,8 @@ defineProps({
     default: false
   }
 })
+
+const logoUrl = '/images/logo-removebg.png'
 </script>
 
 <style scoped>

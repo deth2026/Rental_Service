@@ -8,16 +8,28 @@ use App\Models\Shop;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 
 class ShopController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $shops = Shop::with(['owner:id,name,email,phone'])
-            ->orderByDesc('id')
-            ->paginate(25);
+        $shopsQuery = Shop::with([
+            'owner:id,name,email,phone',
+            'city:id,name',
+        ])->orderByDesc('id');
+
+        if ($request->boolean('active_only')) {
+            $shopsQuery->where('status', 'active');
+        }
+
+        if ($request->filled('owner_id')) {
+            $shopsQuery->where('owner_id', $request->integer('owner_id'));
+        }
+
+        $shops = $shopsQuery->paginate(25);
 
         // Manually add img_url_full to ensure it's included
         $shopsWithImages = $shops->map(function ($shop) {
@@ -48,7 +60,10 @@ class ShopController extends Controller
                 'status' => $shop->status,
                 'created_at' => $shop->created_at,
                 'updated_at' => $shop->updated_at,
-                'owner' => $shop->owner
+                'owner' => $shop->owner,
+                'city' => $shop->city,
+                 'qr_url' => $shop->qr_url,
+                 'qr_url_full' => $shop->qr_url_full,
             ];
         });
 
@@ -62,14 +77,15 @@ class ShopController extends Controller
         // Validate most fields first; img_url is handled separately because it
         // can be either a file upload (multipart) or a plain string URL.
         $payload = $request->validate([
+            'owner_id' => 'nullable|integer|exists:users,id',
             'city_id' => 'nullable|integer',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'address' => 'required|string|max:255',
-            'location' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:2048',
             'phone' => 'nullable|string|max:20',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
@@ -82,6 +98,18 @@ class ShopController extends Controller
         if (!$this->shopColumnExists('map_url')) {
             unset($payload['map_url']);
         }
+
+        $payload = $this->sanitizeCoordinatePayload($payload);
+
+        $mapUrlValue = trim((string) ($request->input('map_url') ?? ($payload['map_url'] ?? '')));
+        $locationValue = trim((string) ($payload['location'] ?? ''));
+        if ($this->shopColumnExists('location')) {
+            $payload['location'] = $this->buildLocationValue(
+                $locationValue,
+                $mapUrlValue,
+                $payload['address'] ?? null
+            );
+        }
         
         // handle image validation / payload separately
         if ($request->hasFile('img_url')) {
@@ -93,8 +121,13 @@ class ShopController extends Controller
             $request->validate(['img_url' => 'string']);
         }
 
-        // The creator becomes the owner by default.
-        $payload['owner_id'] = $request->user()?->id;
+        // Admin may assign shop ownership explicitly; others default to self.
+        $role = strtolower((string) ($request->user()?->role ?? $request->user()?->user_type ?? ''));
+        if ($role === 'admin' && isset($payload['owner_id']) && (int) $payload['owner_id'] > 0) {
+            $payload['owner_id'] = (int) $payload['owner_id'];
+        } else {
+            $payload['owner_id'] = $request->user()?->id;
+        }
 
         // Handle image upload or URL
         if ($request->hasFile('img_url')) {
@@ -105,24 +138,29 @@ class ShopController extends Controller
         } elseif ($request->input('img_url')) {
             // Accept base64 data URL or regular URL
             $imgUrl = $request->input('img_url');
-            // If it's a base64 data URL, decode and save it
-            if (preg_match('/^data:image\/(\w+);base64,/', $imgUrl, $matches)) {
-                $extension = $matches[1];
-                $imageName = time() . '_' . uniqid() . '.' . $extension;
-                $imageData = base64_decode(substr($imgUrl, strpos($imgUrl, ',') + 1));
-                $path = storage_path('app/public/shops/' . $imageName);
-                
-                // Ensure directory exists
-                if (!file_exists(storage_path('app/public/shops'))) {
-                    mkdir(storage_path('app/public/shops'), 0755, true);
-                }
-                
-                file_put_contents($path, $imageData);
-                $payload['img_url'] = 'shops/' . $imageName;
-            }
-            // If it's a regular URL, store it as-is
-            elseif (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
+            if ($stored = $this->storeBase64Image($imgUrl, 'shops')) {
+                $payload['img_url'] = $stored;
+            } elseif (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
                 $payload['img_url'] = $imgUrl;
+            }
+        }
+
+        if ($this->canStoreQrCode()) {
+            if ($request->hasFile('qr_url')) {
+                $request->validate(['qr_url' => 'image|max:10240']);
+            } elseif ($request->filled('qr_url')) {
+                $request->validate(['qr_url' => 'string']);
+            }
+
+            if ($request->hasFile('qr_url')) {
+                $payload['qr_url'] = $this->storeUploadedFile($request->file('qr_url'), 'qr_codes');
+            } elseif ($request->input('qr_url')) {
+                $qrValue = $request->input('qr_url');
+                if ($storedQr = $this->storeBase64Image($qrValue, 'qr_codes')) {
+                    $payload['qr_url'] = $storedQr;
+                } elseif (filter_var($qrValue, FILTER_VALIDATE_URL)) {
+                    $payload['qr_url'] = $qrValue;
+                }
             }
         }
 
@@ -178,20 +216,32 @@ class ShopController extends Controller
             'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
             'address' => 'sometimes|string|max:255',
-            'location' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:2048',
             'phone' => 'nullable|string|max:20',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'map_url' => 'nullable|string|max:2048',
             'total_reviews' => 'nullable|integer|min:0',
             'status' => 'nullable|string|in:active,inactive',
         ]);
+
+        $payload = $this->sanitizeCoordinatePayload($payload);
 
         if (!$this->shopColumnExists('location')) {
             unset($payload['location']);
         }
         if (!$this->shopColumnExists('map_url')) {
             unset($payload['map_url']);
+        }
+
+        $mapUrlValue = trim((string) ($request->input('map_url') ?? ($payload['map_url'] ?? $shop->map_url ?? '')));
+        $locationValue = trim((string) ($payload['location'] ?? $shop->location ?? ''));
+        if ($this->shopColumnExists('location')) {
+            $payload['location'] = $this->buildLocationValue(
+                $locationValue,
+                $mapUrlValue,
+                $payload['address'] ?? $shop->address ?? null
+            );
         }
 
         // validate img_url value type depending on upload or text
@@ -205,59 +255,56 @@ class ShopController extends Controller
 
         // Handle image upload or URL
         if ($shouldRemoveImage) {
-            if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
-                $oldPath = storage_path('app/public/' . $shop->img_url);
-                if (file_exists($oldPath)) {
-                    unlink($oldPath);
-                }
-            }
+            $this->deleteStoredFile($shop->img_url);
             $payload['img_url'] = null;
         } elseif ($request->hasFile('img_url')) {
-            // Delete old image if exists
-            if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
-                $oldPath = storage_path('app/public/' . $shop->img_url);
-                if (file_exists($oldPath)) {
-                    unlink($oldPath);
-                }
-            }
-            
-            $image = $request->file('img_url');
-            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-            $image->storeAs('public/shops', $imageName);
-            $payload['img_url'] = 'shops/' . $imageName;
+            $this->deleteStoredFile($shop->img_url);
+            $payload['img_url'] = $this->storeUploadedFile($request->file('img_url'), 'shops');
         } elseif ($request->input('img_url')) {
-            // Accept base64 data URL or regular URL
             $imgUrl = $request->input('img_url');
-            // If it's a base64 data URL, decode and save it
-            if (preg_match('/^data:image\/(\w+);base64,/', $imgUrl, $matches)) {
-                // Delete old image if exists
-                if ($shop->img_url && !filter_var($shop->img_url, FILTER_VALIDATE_URL)) {
-                    $oldPath = storage_path('app/public/' . $shop->img_url);
-                    if (file_exists($oldPath)) {
-                        unlink($oldPath);
-                    }
-                }
-                
-                $extension = $matches[1];
-                $imageName = time() . '_' . uniqid() . '.' . $extension;
-                $imageData = base64_decode(substr($imgUrl, strpos($imgUrl, ',') + 1));
-                $path = storage_path('app/public/shops/' . $imageName);
-                
-                // Ensure directory exists
-                if (!file_exists(storage_path('app/public/shops'))) {
-                    mkdir(storage_path('app/public/shops'), 0755, true);
-                }
-                
-                file_put_contents($path, $imageData);
-                $payload['img_url'] = 'shops/' . $imageName;
-            }
-            // If it's a regular URL, store it as-is
-            elseif (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
+            if ($stored = $this->storeBase64Image($imgUrl, 'shops')) {
+                $this->deleteStoredFile($shop->img_url);
+                $payload['img_url'] = $stored;
+            } elseif (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
                 $payload['img_url'] = $imgUrl;
             }
         } else {
             // Remove img_url from payload if not uploading new image
             unset($payload['img_url']);
+        }
+
+        $shouldRemoveQrUrl = $request->boolean('remove_qr_url');
+        $qrHandled = false;
+
+        if ($this->canStoreQrCode()) {
+            if ($request->hasFile('qr_url')) {
+                $request->validate(['qr_url' => 'image|max:10240']);
+            } elseif ($request->filled('qr_url')) {
+                $request->validate(['qr_url' => 'string']);
+            }
+
+            if ($shouldRemoveQrUrl) {
+                $this->deleteStoredFile($shop->qr_url);
+                $payload['qr_url'] = null;
+                $qrHandled = true;
+            } elseif ($request->hasFile('qr_url')) {
+                $this->deleteStoredFile($shop->qr_url);
+                $payload['qr_url'] = $this->storeUploadedFile($request->file('qr_url'), 'qr_codes');
+                $qrHandled = true;
+            } elseif ($request->input('qr_url')) {
+                $qrValue = $request->input('qr_url');
+                if ($storedQr = $this->storeBase64Image($qrValue, 'qr_codes')) {
+                    $this->deleteStoredFile($shop->qr_url);
+                    $payload['qr_url'] = $storedQr;
+                } elseif (filter_var($qrValue, FILTER_VALIDATE_URL)) {
+                    $payload['qr_url'] = $qrValue;
+                }
+                $qrHandled = true;
+            }
+        }
+
+        if (!$qrHandled) {
+            unset($payload['qr_url']);
         }
 
         $mapUrlForCoords = array_key_exists('map_url', $payload)
@@ -320,6 +367,68 @@ class ShopController extends Controller
             $cache[$column] = Schema::hasColumn('shops', $column);
         }
         return $cache[$column];
+    }
+
+    private function canStoreQrCode(): bool
+    {
+        return $this->shopColumnExists('qr_url') || $this->shopColumnExists('qr_code');
+    }
+
+    /**
+     * Build a location value that is short enough for the DB column and usable for navigation.
+     * Priority: map URL -> explicit location -> address.
+     */
+    private function buildLocationValue($locationValue, $mapUrlValue, $addressValue): ?string
+    {
+        $location = trim((string) $locationValue);
+        $mapUrl = trim((string) $mapUrlValue);
+        $address = trim((string) $addressValue);
+
+        if ($mapUrl !== '') {
+            return $this->compactLocationLink($mapUrl, $address);
+        }
+        if ($location !== '') {
+            return $this->compactLocationLink($location, $address);
+        }
+        if ($address !== '') {
+            return mb_substr($address, 0, 255);
+        }
+
+        return null;
+    }
+
+    private function compactLocationLink(string $value, string $fallbackAddress = ''): string
+    {
+        $input = trim($value);
+        [$lat, $lng] = $this->extractCoordinatesFromMapUrl($input);
+        if ($lat !== null && $lng !== null) {
+            return 'https://www.google.com/maps?q='
+                . $this->formatCoordinate($lat)
+                . ','
+                . $this->formatCoordinate($lng);
+        }
+
+        if (mb_strlen($input) <= 255) {
+            return $input;
+        }
+
+        $address = trim($fallbackAddress);
+        if ($address !== '') {
+            $searchLink = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($address);
+            if (mb_strlen($searchLink) <= 255) {
+                return $searchLink;
+            }
+            return mb_substr($searchLink, 0, 255);
+        }
+
+        return mb_substr($input, 0, 255);
+    }
+
+    private function formatCoordinate(float $value): string
+    {
+        $formatted = number_format($value, 7, '.', '');
+        $trimmed = rtrim(rtrim($formatted, '0'), '.');
+        return $trimmed === '-0' ? '0' : $trimmed;
     }
 
     /**
@@ -389,5 +498,89 @@ class ShopController extends Controller
         }
 
         return [null, null];
+    }
+
+    private function storeUploadedFile(UploadedFile $file, string $folder): string
+    {
+        $fileName = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+        $file->storeAs('public/' . $folder, $fileName);
+        return $folder . '/' . $fileName;
+    }
+
+    private function storeBase64Image(string $dataUrl, string $folder): ?string
+    {
+        if (!preg_match('/^data:image\/(\w+);base64,/', $dataUrl, $matches)) {
+            return null;
+        }
+
+        $extension = $matches[1];
+        $fileName = time() . '_' . uniqid() . '.' . $extension;
+        $data = base64_decode(substr($dataUrl, strpos($dataUrl, ',') + 1));
+        if ($data === false) {
+            return null;
+        }
+
+        $directory = storage_path('app/public/' . $folder);
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $path = $directory . '/' . $fileName;
+        file_put_contents($path, $data);
+        return $folder . '/' . $fileName;
+    }
+
+    private function deleteStoredFile(?string $value): void
+    {
+        if (!$value || filter_var($value, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        $path = storage_path('app/public/' . ltrim($value, '/'));
+        if (file_exists($path)) {
+            unlink($path);
+        }
+    }
+
+    private function sanitizeCoordinatePayload(array $payload): array
+    {
+        $lat = $this->normalizeCoordinateValue($payload['latitude'] ?? null, -90, 90);
+        $lng = $this->normalizeCoordinateValue($payload['longitude'] ?? null, -180, 180);
+
+        if ($lat === null) {
+            unset($payload['latitude']);
+        } else {
+            $payload['latitude'] = $lat;
+        }
+
+        if ($lng === null) {
+            unset($payload['longitude']);
+        } else {
+            $payload['longitude'] = $lng;
+        }
+
+        return $payload;
+    }
+
+    private function normalizeCoordinateValue($value, float $min, float $max): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $normalized = (float) $value;
+        if (!is_finite($normalized)) {
+            return null;
+        }
+
+        if ($normalized < $min || $normalized > $max) {
+            return null;
+        }
+
+        return $normalized;
     }
 }

@@ -16,13 +16,27 @@ const formatDate = (dateStr) => {
   return d.toISOString().split('T')[0]
 }
 
+const normalizeToDayStart = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
 const getStatus = (coupon) => {
-  if (!coupon.is_active) return 'Inactive';
-  const today = new Date().toISOString().split('T')[0];
-  if (coupon.valid_from && today < coupon.valid_from) return 'Not Started';
-  if (coupon.valid_until && today > coupon.valid_until) return 'Expired';
-  return 'Active';
-};
+  if (coupon.is_active === false || coupon.is_active === 0 || coupon.is_active === '0') return 'Inactive'
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const validFrom = normalizeToDayStart(coupon.valid_from)
+  const validUntil = normalizeToDayStart(coupon.valid_until)
+
+  if (validFrom && validFrom > today) return 'Not Started'
+  if (validUntil && validUntil < today) return 'Expired'
+  return 'Active'
+}
 
 const getBadgeClass = (status) => {
   switch (status) {
@@ -33,6 +47,20 @@ const getBadgeClass = (status) => {
     default: return 'badge';
   }
 };
+
+const formatMoney = (value) => {
+  if (value === null || value === undefined || value === '') return '—'
+  const amount = Number(value)
+  if (Number.isNaN(amount)) return value
+  return `$${amount.toFixed(amount % 1 === 0 ? 0 : 2)}`
+}
+
+const formatPercent = (value) => {
+  if (value === null || value === undefined || value === '') return '—'
+  const amount = Number(value)
+  if (Number.isNaN(amount)) return value
+  return `${amount.toFixed(amount % 1 === 0 ? 0 : 2)}%`
+}
 
 const loading = ref(false)
 const items = ref([])
@@ -313,7 +341,7 @@ onMounted(load)
     </div>
 
     <div v-if="showView" class="modal-backdrop" role="dialog" aria-modal="true" @click.self="showView = false">
-      <div class="modal">
+      <div class="modal coupon-view-modal">
         <div class="modal-head">
           <div>
             <div class="modal-title">Coupon Details</div>
@@ -321,8 +349,65 @@ onMounted(load)
           </div>
           <button type="button" class="icon-action" title="Close" @click="showView = false"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="modal-body">
-          <pre class="code-block">{{ JSON.stringify(selected, null, 2) }}</pre>
+        <div v-if="selected" class="modal-body coupon-view">
+          <section class="coupon-view-hero">
+            <div class="coupon-view-ticket">
+              <span class="coupon-view-icon" aria-hidden="true"><i class="fa-solid fa-ticket"></i></span>
+              <div>
+                <div class="coupon-view-label">Coupon Code</div>
+                <h3>{{ selected.code || 'Untitled Coupon' }}</h3>
+              </div>
+            </div>
+            <span :class="getBadgeClass(getStatus(selected))">{{ getStatus(selected) }}</span>
+          </section>
+
+          <section class="coupon-view-grid">
+            <article class="coupon-detail-card">
+              <div class="coupon-detail-label">Discount Percent</div>
+              <div class="coupon-detail-value">{{ formatPercent(selected.discount_percent) }}</div>
+            </article>
+
+            <article class="coupon-detail-card">
+              <div class="coupon-detail-label">Discount Amount</div>
+              <div class="coupon-detail-value">{{ formatMoney(selected.discount_amount) }}</div>
+            </article>
+
+            <article class="coupon-detail-card">
+              <div class="coupon-detail-label">Minimum Amount</div>
+              <div class="coupon-detail-value">{{ formatMoney(selected.minimum_amount) }}</div>
+            </article>
+
+            <article class="coupon-detail-card">
+              <div class="coupon-detail-label">Usage Limit</div>
+              <div class="coupon-detail-value">{{ selected.usage_limit ?? '—' }}</div>
+            </article>
+          </section>
+
+          <section class="coupon-view-timeline">
+            <div class="coupon-view-section-title">Validity</div>
+            <div class="coupon-date-row">
+              <div class="coupon-date-card">
+                <div class="coupon-detail-label">Valid From</div>
+                <div class="coupon-detail-value">{{ formatDate(selected.valid_from) }}</div>
+              </div>
+              <div class="coupon-date-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></div>
+              <div class="coupon-date-card">
+                <div class="coupon-detail-label">Valid Until</div>
+                <div class="coupon-detail-value">{{ formatDate(selected.valid_until) }}</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="coupon-view-meta">
+            <div class="coupon-meta-item">
+              <span class="coupon-detail-label">Coupon ID</span>
+              <strong>#{{ selected.id }}</strong>
+            </div>
+            <div class="coupon-meta-item">
+              <span class="coupon-detail-label">Active Flag</span>
+              <strong>{{ selected.is_active ? 'Enabled' : 'Disabled' }}</strong>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -340,14 +425,140 @@ onMounted(load)
 </template>
 
 <style scoped>
-.code-block {
-  margin: 0;
-  padding: 12px;
-  border-radius: 12px;
+.coupon-view {
+  display: grid;
+  gap: 14px;
+}
+
+.coupon-view-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.coupon-view-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
   border: 1px solid var(--mp-border);
-  background: rgba(148, 163, 184, 0.08);
-  overflow: auto;
-  max-height: 52vh;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(37, 99, 235, 0.04));
+}
+
+.coupon-view-ticket {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.coupon-view-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.coupon-view-label,
+.coupon-detail-label {
+  display: block;
   font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.coupon-view-ticket h3 {
+  margin: 4px 0 0;
+  color: #0f172a;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.coupon-view-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.coupon-detail-card,
+.coupon-date-card,
+.coupon-meta-item {
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--mp-border);
+  background: #fff;
+}
+
+.coupon-detail-value {
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.coupon-view-timeline {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--mp-border);
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.coupon-view-section-title {
+  margin-bottom: 14px;
+  color: #0f172a;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.coupon-date-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.coupon-date-arrow {
+  color: #94a3b8;
+  font-size: 16px;
+}
+
+.coupon-view-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.coupon-meta-item strong {
+  display: block;
+  margin-top: 6px;
+  color: #0f172a;
+  font-size: 16px;
+}
+
+@media (max-width: 720px) {
+  .coupon-view-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .coupon-view-grid,
+  .coupon-view-meta,
+  .coupon-date-row {
+    grid-template-columns: 1fr;
+  }
+
+  .coupon-date-arrow {
+    display: none;
+  }
 }
 </style>

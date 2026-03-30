@@ -1,17 +1,57 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { couponApi } from '@/services/api'
+import { ref, onMounted, watch } from 'vue'
+import { couponApi, shopApi } from '@/services/api'
+import { getSessionUser } from '@/services/auth'
 import '../../css/Coupons.css'
+
+const props = defineProps({
+  shopId: {
+    type: [String, Number],
+    default: null
+  }
+})
 
 const loading = ref(true)
 const error = ref(null)
 const coupons = ref([])
+const ownerShops = ref([])
+const ownerShopsLoading = ref(false)
 
 const normalizeActiveFlag = (value) => {
   if (value === undefined || value === null || value === '') return true
   if (value === false || value === 0 || value === '0' || value === 'false') return false
   return true
 }
+
+const normalizeCollection = (response) => {
+  const payload = response?.data?.data || response?.data || []
+  return Array.isArray(payload) ? payload : []
+}
+
+const getDefaultShopId = () => {
+  if (props.shopId) {
+    const parsed = Number(props.shopId)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+
+  if (ownerShops.value.length) {
+    const first = ownerShops.value[0]
+    const parsed = Number(first?.id)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+  }
+
+  return null
+}
+
+const parseShopId = (value) => {
+  const parsed = Number(value)
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed
+  }
+  return null
+}
+
+const resolveShopFromForm = () => parseShopId(form.value.shopId) ?? getDefaultShopId()
 
 // Toast notification
 const toast = ref({ show: false, message: '', type: 'success' })
@@ -24,8 +64,8 @@ const showToast = (message, type = 'success') => {
 const fetchCoupons = async () => {
   try {
     loading.value = true
-    const response = await couponApi.getAll()
-    const data = response.data.data || response.data || []
+    const response = await couponApi.getAll(props.shopId ? { shop_id: props.shopId } : {})
+    const data = normalizeCollection(response)
     coupons.value = data.map((c) => ({
       id: c.id,
       code: c.code || '',
@@ -33,7 +73,8 @@ const fetchCoupons = async () => {
       discountAmount: c.discount_amount ?? null,
       createDate: c.valid_from || c.created_at || '',
       expireDate: c.valid_until || '',
-      isActive: normalizeActiveFlag(c.is_active)
+      isActive: normalizeActiveFlag(c.is_active),
+      shopId: parseShopId(c.shop_id)
     }))
   } catch (err) {
     console.error('Error fetching coupons:', err)
@@ -43,7 +84,31 @@ const fetchCoupons = async () => {
   }
 }
 
-onMounted(fetchCoupons)
+const fetchOwnerShops = async () => {
+  const user = getSessionUser()
+  if (!user?.id) {
+    ownerShops.value = []
+    return
+  }
+
+  try {
+    ownerShopsLoading.value = true
+    const response = await shopApi.getAll({ owner_id: user.id, active_only: true })
+    ownerShops.value = normalizeCollection(response)
+    updateDefaultShopSelection()
+  } catch (err) {
+    console.error('Failed to load owner shops:', err)
+    ownerShops.value = []
+  } finally {
+    ownerShopsLoading.value = false
+  }
+}
+
+onMounted(async () => {
+  await fetchOwnerShops()
+  await fetchCoupons()
+})
+
 
 // Create / Edit modal
 const showModal = ref(false)
@@ -54,8 +119,31 @@ const form = ref({
   discountAmount: '',
   createDate: '',
   expireDate: '',
-  isActive: true
+  isActive: true,
+  shopId: getDefaultShopId()
 })
+
+const updateDefaultShopSelection = () => {
+  const defaultShopId = getDefaultShopId()
+  if (defaultShopId && parseShopId(form.value.shopId) !== defaultShopId) {
+    form.value.shopId = defaultShopId
+  }
+}
+
+watch(
+  () => props.shopId,
+  () => {
+    updateDefaultShopSelection()
+    fetchCoupons()
+  }
+)
+
+watch(
+  ownerShops,
+  () => {
+    updateDefaultShopSelection()
+  }
+)
 
 const openCreate = () => {
   editId.value = null
@@ -66,7 +154,8 @@ const openCreate = () => {
     discountAmount: '',
     createDate: today,
     expireDate: '',
-    isActive: true
+    isActive: true,
+    shopId: getDefaultShopId()
   }
   showModal.value = true
 }
@@ -81,15 +170,21 @@ const openEdit = (c) => {
     expireDate: c.expireDate ? c.expireDate.split('T')[0] : '',
     isActive: c.isActive !== false
   }
+  form.value.shopId = c.shopId ?? getDefaultShopId()
   showModal.value = true
 }
 
 const save = async () => {
-  if (!form.value.code || !form.value.expireDate) {
-    showToast('Please fill in Code and Expire Date', 'error')
+  if (!ownerShops.value.length && !ownerShopsLoading.value) {
+    await fetchOwnerShops()
+  }
+  const shopId = resolveShopFromForm()
+  if (!form.value.code || !form.value.expireDate || !shopId) {
+    showToast('Please fill in Code, Expire Date, and ensure a shop is available', 'error')
     return
   }
   const payload = {
+    shop_id: shopId,
     code: form.value.code.toUpperCase(),
     discount_percent: form.value.discountPercent !== '' ? Number(form.value.discountPercent) : null,
     discount_amount: form.value.discountAmount !== '' ? Number(form.value.discountAmount) : null,
@@ -386,6 +481,3 @@ const isExpired = (expireDate) => {
     </div>
   </div>
 </template>
-
-
-

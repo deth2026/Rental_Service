@@ -337,6 +337,13 @@ const syncCoordinatesFromMapUrl = () => {
   if (!form.longitude) form.longitude = String(coords.lng);
 };
 
+const toLocationFallback = (mapUrl, shopAddress) => {
+  const mapValue = String(mapUrl || '').trim();
+  if (mapValue) return mapValue.slice(0, 255);
+  const addressValue = String(shopAddress || '').trim();
+  return addressValue ? addressValue.slice(0, 255) : null;
+};
+
 const extractCollection = (responseData) => {
   if (Array.isArray(responseData)) return responseData;
   if (Array.isArray(responseData?.data)) return responseData.data;
@@ -446,7 +453,8 @@ const loadData = async () => {
       form.phone = cachedShop.phone || storedUser.phone || '';
       form.latitude = cachedShop.latitude != null ? String(cachedShop.latitude) : '';
       form.longitude = cachedShop.longitude != null ? String(cachedShop.longitude) : '';
-      form.map_url = cachedShop.map_url || '';
+      const cachedLocation = String(cachedShop.location || '').trim();
+      form.map_url = cachedShop.map_url || (/^https?:\/\//i.test(cachedLocation) ? cachedLocation : '');
     }
 
     const [usersResult, shopsResult] = await Promise.allSettled([
@@ -483,7 +491,8 @@ const loadData = async () => {
     form.shop_address = selectedShop?.address || '';
     form.latitude = selectedShop?.latitude != null ? String(selectedShop.latitude) : '';
     form.longitude = selectedShop?.longitude != null ? String(selectedShop.longitude) : '';
-    form.map_url = selectedShop?.map_url || '';
+    const selectedLocation = String(selectedShop?.location || '').trim();
+    form.map_url = selectedShop?.map_url || (/^https?:\/\//i.test(selectedLocation) ? selectedLocation : '');
     form.password = '';
 
     const notifyRaw = localStorage.getItem(`${NOTIFY_KEY_PREFIX}${user.id}`);
@@ -686,6 +695,7 @@ const saveSettings = async () => {
       owner_id: user.id,
       name: form.shop_name,
       address: form.shop_address || '',
+      location: toLocationFallback(form.map_url, form.shop_address),
       phone: form.phone || '',
       latitude: form.latitude || null,
       longitude: form.longitude || null,
@@ -704,6 +714,7 @@ const saveSettings = async () => {
       name: form.shop_name,
       status: form.shop_status || 'active',
       address: form.shop_address,
+      location: toLocationFallback(form.map_url, form.shop_address),
       phone: form.phone,
       latitude: form.latitude || null,
       longitude: form.longitude || null,

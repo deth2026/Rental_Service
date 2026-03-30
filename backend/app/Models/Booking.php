@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Rating;
 
 class Booking extends Model
 {
@@ -13,6 +14,7 @@ class Booking extends Model
 
     protected $fillable = [
         'user_id',
+        'phone_number',
         'vehicle_id',
         'shop_id',
         'coupon_id',

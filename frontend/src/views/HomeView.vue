@@ -1,60 +1,8 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 <template>
-  <main class="home">
-    <h1>Rental Service</h1>
-    <p>Frontend is running successfully.</p>
-    <div class="links">
-      <router-link to="/login">Login</router-link>
-      <router-link to="/register">Register</router-link>
-      <router-link to="/dashboard">User Dashboard</router-link>
-      <router-link to="/admin/dashboard">Admin Dashboard</router-link>
-    </div>
-  </main>
-</template>
-
-<style scoped>
-.home {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  gap: 12px;
-  text-align: center;
-}
-
-.links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-}
-
-.links a {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  text-decoration: none;
-  color: #222;
-}
-</style>
-=======
-<script>
-import { reactive } from "vue";
-import "../assets/HomeView.css";
-=======
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
-
-
-<template>
-  <div class="home-page">
-=======
-   <template>
   <main class="home-page">
->>>>>>> 4ecff457c455e0fa2d252bec5ddf48f9ed99a23b
     <header class="top-nav">
       <div class="brand-container">
-        <Logo class="home-brand" theme="light" size="lg" :showTagline="true" src="/Images/logo-removebg.png" />
+        <Logo class="home-brand" theme="light" size="lg" :showTagline="true" src="/images/logo-removebg.png" />
       </div>
 
       <div class="nav-auth">
@@ -165,7 +113,7 @@ import "../assets/HomeView.css";
       <div class="footer-main">
         <div class="footer-brand">
           <div class="footer-brand-head">
-            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/Images/logo-removebg.png" brandName="CHONG CHOUL" />
+            <Logo class="footer-brand-logo" theme="dark" size="lg" :showTagline="true" src="/images/logo-removebg.png" brandName="CHONG CHOUL" />
           </div>
           <p class="footer-desc">The premier vehicle rental marketplace in Cambodia.</p>
           <div class="footer-social" aria-label="Social media">
@@ -302,21 +250,9 @@ export default {
   }
 };
 </script>
-<<<<<<< HEAD
 
-<<<<<<< HEAD
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
-=======
-<style>
-@import "../css/HomeView.css";
-
+<style scoped>
 .home-page .common-footer {
   margin-top: 0;
 }
 </style>
-
-
-
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
-=======
->>>>>>> 4ecff457c455e0fa2d252bec5ddf48f9ed99a23b

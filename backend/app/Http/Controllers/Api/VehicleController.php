@@ -190,6 +190,11 @@ class VehicleController extends Controller
         return $data;
     }
 
+    private function currentRole(Request $request): string
+    {
+        return strtolower((string) ($request->user()?->role ?? $request->user()?->user_type ?? ''));
+    }
+
     public function index(Request $request)
     {
         // Debug logging
@@ -206,6 +211,26 @@ class VehicleController extends Controller
             \Illuminate\Support\Facades\Log::info('No shop_id provided, returning all vehicles');
         }
 
+        $user = $request->user();
+
+        if ($user && $this->currentRole($request) === 'shop_owner') {
+            $shopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
+
+            if (empty($shopIds)) {
+                return response()->json([
+                    'data' => [],
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 15,
+                    'total' => 0
+                ]);
+            }
+
+            $query = $this->ratingAwareVehicleQuery()->whereIn('shop_id', $shopIds);
+            return VehicleResource::collection($query->paginate(15));
+        }
+
+        $query = $this->ratingAwareVehicleQuery();
         return VehicleResource::collection($query->paginate(15));
     }
 
@@ -315,7 +340,7 @@ class VehicleController extends Controller
     {
         // Check if user is authorized to update this vehicle
         $user = $request->user();
-        if ($user && $user->role !== 'admin') {
+        if ($user && $this->currentRole($request) !== 'admin') {
             // Get user's shop IDs
             $userShopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
             
@@ -412,7 +437,7 @@ class VehicleController extends Controller
     {
         // Check if user is authorized to delete this vehicle
         $user = $request->user();
-        if ($user && $user->role !== 'admin') {
+        if ($user && $this->currentRole($request) !== 'admin') {
             // Get user's shop IDs
             $userShopIds = \App\Models\Shop::where('owner_id', $user->id)->pluck('id')->toArray();
             

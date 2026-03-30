@@ -1,52 +1,35 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory } from 'vue-router'
 
-<<<<<<< HEAD
-import HomeView from '../views/HomeView.vue';
-import ChooseRole from '../views/ChooseRole.vue';
-import Login from '../views/auth/Login.vue';
-import Register from '../views/auth/Register.vue';
-import ShopDashboard from '../views/shop/DashboardLayout.vue';
-import UserDashboard from '../views/user/Dashboard.vue';
-import UserBookings from '../views/user/Bookings.vue';
-import PromotionView from '../views/user/Promotion.vue';
-import SettingUser from '../views/user/Setting_user.vue';
-import AdminDashboard from '../views/admin/Dashboard.vue';
-import ShopVehicles from '../views/user/ShopVehicles.vue';
-import VehiclesByShop from '../views/user/VehiclesByShop.vue';
-import ViewDetail from '../views/user/ViewDetail.vue';
-=======
-const ChooseRole = () => import('../views/ChooseRole.vue');
-const Login = () => import('../views/auth/Login.vue');
-const Register = () => import('../views/auth/Register.vue');
-const HomeView = () => import('../views/HomeView.vue');
-const ShopDashboard = () => import('../views/shop/DashboardLayout.vue');
-const UserDashboard = () => import('../views/users/Dashboard.vue');
-const UserBookings = () => import('../views/users/MyBookings.vue');
-const PromotionView = () => import('../views/users/Promotion.vue');
-const SettingUser = () => import('../views/users/Setting_user.vue');
-const AdminDashboard = () => import('../views/admin/Dashboard.vue');
-const ShopVehicles = () => import('../views/users/ShopVehicles.vue');
-const VehiclesByShop = () => import('../views/users/VehiclesByShop.vue');
-const Booking = () => import('../views/users/Booking.vue');
-const ViewDetail = () => import('../views/users/ViewDetail.vue');
-const AdminLayout = () => import('../views/admin/AdminLayout.vue');
-const UserNotifications = () => import('../views/users/Notification.vue');
->>>>>>> 4ecff457c455e0fa2d252bec5ddf48f9ed99a23b
+const ChooseRole = () => import('../views/ChooseRole.vue')
+const Login = () => import('../views/auth/Login.vue')
+const Register = () => import('../views/auth/Register.vue')
+const HomeView = () => import('../views/HomeView.vue')
+const ShopDashboard = () => import('../views/shop/DashboardLayout.vue')
+const UserBookings = () => import('../views/users/MyBookings.vue')
+const PromotionView = () => import('../views/users/Promotion.vue')
+const SettingUser = () => import('../views/users/Setting_user.vue')
+const AdminDashboard = () => import('../views/admin/Dashboard.vue')
+const ShopVehicles = () => import('../views/users/ShopVehicles.vue')
+const VehiclesByShop = () => import('../views/users/VehiclesByShop.vue')
+const Booking = () => import('../views/users/Booking.vue')
+const ViewDetail = () => import('../views/users/ViewDetail.vue')
+const AdminLayout = () => import('../views/admin/AdminLayout.vue')
+const UserNotifications = () => import('../views/users/Notification.vue')
 
 // Check if user is authenticated
 const isAuthenticated = () => {
-  return Boolean(localStorage.getItem('auth_token') || localStorage.getItem('token'));
-};
+  return Boolean(localStorage.getItem('auth_token') || localStorage.getItem('token'))
+}
 
 // Get user role from localStorage
 const getUserRole = () => {
-  const userStr = localStorage.getItem('user');
+  const userStr = localStorage.getItem('user')
   if (userStr) {
-    const user = JSON.parse(userStr);
-    return user.role || 'customer';
+    const user = JSON.parse(userStr)
+    return String(user.role || user.user_type || 'customer').toLowerCase()
   }
-  return null;
-};
+  return null
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -165,6 +148,16 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['shop_owner'] }
     },
     {
+      path: '/dashboard/report',
+      name: 'shop-report',
+      component: ShopDashboard,
+      meta: {
+        requiresAuth: true,
+        allowedRoles: ['shop_owner'],
+        defaultSection: 'activity'
+      }
+    },
+    {
       path: '/shop/notifications',
       name: 'shop-notifications',
       component: ShopDashboard,
@@ -177,7 +170,7 @@ const router = createRouter({
     {
       path: '/view_shop',
       name: 'view_shop',
-      component: UserDashboard,
+      component: () => import('../views/users/Dashboard.vue'),
       meta: { requiresAuth: false, allowedRoles: ['customer', 'user', 'admin'] }
     },
     {
@@ -245,52 +238,53 @@ const router = createRouter({
       redirect: '/login'
     }
   ]
-});
+})
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-  const isGuestOnly = to.matched.some(record => record.meta.guest);
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const isGuestOnly = to.matched.some(record => record.meta.guest)
   // Get allowedRoles from the LAST matched record (most specific route)
-  const allowedRoles = [...to.matched].reverse().find(record => record.meta.allowedRoles)?.meta.allowedRoles || [];
-  const isAuth = isAuthenticated();
-  const userRole = getUserRole();
+  const allowedRoles = [...to.matched].reverse().find(record => record.meta.allowedRoles)?.meta.allowedRoles || []
+  const isAuth = isAuthenticated()
+  const userRole = getUserRole()
 
   if (requiresAuth && !isAuth) {
-    next('/login');
-    return;
+    next('/login')
+    return
   }
 
   if (isGuestOnly && isAuth) {
-    const allowAuthenticated = to.matched.some(record => record.meta.allowAuthenticated);
+    const allowAuthenticated = to.matched.some(record => record.meta.allowAuthenticated)
     if (allowAuthenticated) {
-      next();
-      return;
+      next()
+      return
     }
     if (userRole === 'admin') {
-      next('/admin');
+      next('/admin')
     } else if (userRole === 'shop_owner') {
-      next('/dashboard');
+      next('/dashboard')
     } else {
-      next('/view_shop');
+      next('/view_shop')
     }
-    return;
+    return
   }
 
   if (requiresAuth && isAuth && allowedRoles.length > 0) {
     if (!allowedRoles.includes(userRole)) {
       if (userRole === 'admin') {
-        next('/admin');
+        next('/admin')
       } else if (userRole === 'shop_owner') {
-        next('/dashboard');
+        next('/dashboard')
       } else {
-        next('/view_shop');
+        next('/view_shop')
       }
-      return;
+      return
     }
   }
 
-  next();
-});
+  next()
+})
 
-export default router;
+export default router
+

@@ -21,7 +21,7 @@ use App\Http\Controllers\Api\RatingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Public authentication routes
+// // Public authentication routes
 // Route::post('/register', [AuthController::class, 'register']);
 // Route::post('/login', [UserController::class, 'login']);
 // Route::post('/users/register', [AuthController::class, 'register']);
@@ -59,11 +59,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Admin only routes
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::apiResource('users', UserController::class)->except(['create', 'edit']);
+    Route::apiResource('users', UserController::class)->except(['create', 'edit', 'show', 'update']);
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('cities', CityController::class)->except(['index']);
     Route::get('admin/stats', [AdminController::class, 'stats']);
 });
+
+Route::middleware('auth:sanctum')->get('/users/{user}', [UserController::class, 'show']);
 
 // Public cities endpoint - needed for dropdowns in shop creation forms
 Route::get('/cities', [CityController::class, 'index']);
@@ -78,11 +80,9 @@ Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () 
     Route::apiResource('loyalty-points', LoyaltyPointController::class);
 });
 
-// User routes - make update public for testing (remove auth for now)
-Route::put('/users/{user}', [UserController::class, 'update']);
-
 // Authenticated user routes
 Route::middleware('auth:sanctum')->group(function () {
+    Route::match(['put', 'patch'], '/users/{user}', [UserController::class, 'update']);
     Route::post('/users/{user}/avatar', [UserController::class, 'uploadAvatar']);
     Route::delete('/users/{user}/avatar', [UserController::class, 'removeAvatar']);
 });
@@ -124,7 +124,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('damage-reports', DamageReportController::class);
     Route::apiResource('feedback', FeedbackController::class);
     Route::apiResource('histories', HistoryController::class);
-    Route::apiResource('payments', PaymentController::class);
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::post('/payments', [PaymentController::class, 'store']);
+    Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+    Route::match(['put', 'patch'], '/payments/{payment}', [PaymentController::class, 'update']);
+    Route::delete('/payments/{payment}', [PaymentController::class, 'destroy']);
 });
 
 // Shop dashboard payments derived from bookings

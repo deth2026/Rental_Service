@@ -29,7 +29,8 @@ const vehicleError = ref(null)
 const fetchFeedback = async () => {
   try {
     loading.value = true
-    const response = await feedbackApi.getAll()
+    const params = props.shopId ? { shop_id: props.shopId } : {}
+    const response = await feedbackApi.getAll(params)
     const data = response.data.data || response.data || []
     
     // Map database fields to expected format
@@ -623,6 +624,7 @@ const getRatingDistribution = (ratings) => {
   background: #fff;
   border: 1px solid #e2e8f0;
   padding: 8px 12px;
+  border-radius: 14px;
   text-align: center;
   border-radius: 18px;
   transition: all 0.3s ease;

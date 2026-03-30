@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Coupon extends Model
 {
@@ -11,6 +12,7 @@ class Coupon extends Model
 
     public $timestamps = false;
     protected $fillable = [
+        'shop_id',
         'code',
         'discount_percent',
         'valid_from',
@@ -32,4 +34,9 @@ class Coupon extends Model
         'valid_from' => 'date',
         'valid_until' => 'date'
     ];
+
+    public function shop(): BelongsTo
+    {
+        return $this->belongsTo(Shop::class);
+    }
 }

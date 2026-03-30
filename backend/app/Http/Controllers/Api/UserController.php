@@ -93,10 +93,15 @@ class UserController extends Controller
             ]);
         }
 
+        if (User::hasLastLoginColumn()) {
+            $user->last_login = now();
+            $user->save();
+        }
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => $user->fresh(),
             'token' => $token,
         ]);
     }
@@ -137,14 +142,41 @@ class UserController extends Controller
         return response()->json($user, 201);
     }
 
-    public function show(User $user)
+    public function show(Request $request, User $user)
     {
+        $authenticatedUser = $request->user();
+        if (!$authenticatedUser) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $role = strtolower((string) ($authenticatedUser->role ?? $authenticatedUser->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+
+        if (!$isAdmin && (int) $authenticatedUser->id !== (int) $user->id) {
+            return response()->json(['message' => 'Unauthorized to view this user'], 403);
+        }
+
         return response()->json($user);
     }
 
     public function update(Request $request, User $user)
     {
+        $authenticatedUser = $request->user();
+        if (!$authenticatedUser) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $role = strtolower((string) ($authenticatedUser->role ?? $authenticatedUser->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+        if (!$isAdmin && (int) $authenticatedUser->id !== (int) $user->id) {
+            return response()->json(['message' => 'Unauthorized to update this user'], 403);
+        }
+
         $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'phone' => 'nullable|string|max:30',
+            'role' => 'sometimes|string|in:customer,admin,shop_owner,shop_staff',
+            'is_verified' => 'sometimes|boolean',
             'password' => 'nullable|string|min:8',
         ]);
 
@@ -152,6 +184,10 @@ class UserController extends Controller
 
         // Don't allow email change to avoid duplicate errors
         unset($data['email']);
+        if (!$isAdmin) {
+            // Only admin can change role/verification status.
+            unset($data['role'], $data['is_verified'], $data['status']);
+        }
 
         if (isset($data['password']) && $data['password'] !== '') {
             // Store the plain password before hashing

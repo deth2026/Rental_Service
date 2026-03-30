@@ -1,11 +1,10 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getSessionUser, logoutUser } from '@/services/auth'
+import { logoutUser } from '@/services/auth'
 import { shopApi } from '@/services/api'
 import CommonFooter from '@/components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
-import NotificationMenu from '@/components/NotificationMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
 import CambodiaMap from '@/components/CambodiaMap.vue'
 import { readStoredLocation, saveLocationAccess } from '@/utils/locationAccess'
 import { useNotifications } from '@/composables/useNotifications'
@@ -13,17 +12,18 @@ import '@/css/userDashboard.css'
 
 const router = useRouter()
 const route = useRoute()
+const { loadNotifications } = useNotifications()
 
 const SEARCH_HISTORY_KEY = 'chong_choul_province_searches'
 
 const CAMBODIA_PROVINCES = [
   'Banteay Meanchey',
   'Battambang',
-  'Kampong Cham',
-  'Kampong Chhnang',
-  'Kampong Speu',
-  'Kampong Thom',
-  'Kampot',
+  'Kompong Cham',
+  'Kompong Chhnang',
+  'Kompong Speu',
+  'Kompong Thom',
+  'Kompot',
   'Kandal',
   'Kep',
   'Koh Kong',
@@ -44,68 +44,37 @@ const CAMBODIA_PROVINCES = [
   'Tboung Khmum',
 ]
 
-const currentUser = ref(getSessionUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Customer')
-
-// Notification state
-const { unreadCount, loadNotifications } = useNotifications()
-const showNotifications = ref(false)
-const notificationRoot = ref(null)
-const badgeDismissed = ref(false)
-const previousUnread = ref(unreadCount.value)
-
-const badgeLabel = computed(() => {
-  if (badgeDismissed.value) return ''
-  if (!unreadCount.value) return ''
-  return unreadCount.value > 9 ? '9+' : String(unreadCount.value)
-})
-
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value
-  if (showNotifications.value) {
-    badgeDismissed.value = true
-  }
-}
-
-const closeNotifications = () => {
-  showNotifications.value = false
-}
-
-const handleDocumentClick = (event) => {
-  if (showNotifications.value && notificationRoot.value && !notificationRoot.value.contains(event.target)) {
-    closeNotifications()
-  }
-}
-
-watch(unreadCount, (value) => {
-  if (value > previousUnread.value) {
-    badgeDismissed.value = false
-  }
-  previousUnread.value = value
-})
-
-watch(
-  () => route.fullPath,
-  () => {
-    closeNotifications()
-  }
-)
-
-onMounted(() => {
-  loadNotifications()
-  document.addEventListener('mousedown', handleDocumentClick)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleDocumentClick)
-})
-
 const isLoading = ref(false)
 const dataError = ref('')
 const shops = ref([])
 const provinceQuery = ref('')
+const showSuggestions = ref(false)
 const selectedProvince = ref('Phnom Penh')
 const searchMessage = ref('')
+
+const suggestions = computed(() => {
+  const query = provinceQuery.value.trim().toLowerCase()
+  if (!query) return []
+  return provinceOptions.value.filter(province => 
+    province.toLowerCase().startsWith(query)
+  ).slice(0, 5)
+})
+
+const selectSuggestion = (province) => {
+  provinceQuery.value = province
+  showSuggestions.value = false
+  searchProvince()
+}
+
+const onSearchInput = () => {
+  showSuggestions.value = true
+}
+
+const hideSuggestions = () => {
+  setTimeout(() => {
+    showSuggestions.value = false
+  }, 200)
+}
 
 const userLocation = ref(getStoredLocation())
 const locationStatus = ref(userLocation.value ? 'Current location detected.' : 'Enable location for nearest distance.')
@@ -178,6 +147,34 @@ const normalizeProvinceName = (value) => {
 const extractProvinceFromText = (value) => {
   const normalized = String(value || '').toLowerCase()
   if (!normalized) return ''
+  if (normalized.includes('phnom') && normalized.includes('penh')) return 'Phnom Penh'
+  if (normalized.includes('preah') && normalized.includes('sihanouk')) return 'Preah Sihanouk'
+  if (normalized.includes('sihanoukville')) return 'Preah Sihanouk'
+
+  const flexibleMatches = [
+    { province: 'Phnom Penh', patterns: [/phnom[\s\S]{0,160}penh/] },
+    { province: 'Preah Sihanouk', patterns: [/preah[\s\S]{0,160}sihanouk/, /sihanoukville/] },
+    { province: 'Banteay Meanchey', patterns: [/banteay[\s,/-]*meanchey/] },
+    { province: 'Kampong Cham', patterns: [/kampong[\s,/-]*cham/] },
+    { province: 'Kampong Chhnang', patterns: [/kampong[\s,/-]*chhnang/] },
+    { province: 'Kampong Speu', patterns: [/kampong[\s,/-]*speu/] },
+    { province: 'Kampong Thom', patterns: [/kampong[\s,/-]*thom/] },
+    { province: 'Koh Kong', patterns: [/koh[\s,/-]*kong/] },
+    { province: 'Oddar Meanchey', patterns: [/oddar[\s,/-]*meanchey/] },
+    { province: 'Preah Vihear', patterns: [/preah[\s,/-]*vihear/] },
+    { province: 'Prey Veng', patterns: [/prey[\s,/-]*veng/] },
+    { province: 'Siem Reap', patterns: [/siem[\s,/-]*reap/] },
+    { province: 'Stung Treng', patterns: [/stung[\s,/-]*treng/] },
+    { province: 'Svay Rieng', patterns: [/svay[\s,/-]*rieng/] },
+    { province: 'Tboung Khmum', patterns: [/tboung[\s,/-]*khmum/, /tbong[\s,/-]*khmum/] },
+  ]
+
+  for (const entry of flexibleMatches) {
+    if (entry.patterns.some((pattern) => pattern.test(normalized))) {
+      return entry.province
+    }
+  }
+
   return CAMBODIA_PROVINCES.find((province) => normalized.includes(province.toLowerCase())) || ''
 }
 
@@ -206,7 +203,11 @@ const calculateDistanceKm = (lat1, lng1, lat2, lng2) => {
 
 const normalizeShop = (shop) => {
   const province = normalizeProvinceName(
-    shop?.province || shop?.city?.name || extractProvinceFromText(shop?.location) || extractProvinceFromText(shop?.address)
+    shop?.province ||
+      shop?.city?.name ||
+      extractProvinceFromText(shop?.location) ||
+      extractProvinceFromText(shop?.address) ||
+      extractProvinceFromText(shop?.map_url)
   )
 
   return {
@@ -218,8 +219,12 @@ const normalizeShop = (shop) => {
     longitude: Number(shop.longitude ?? shop.lng),
     map_url: shop.map_url || shop.location || '',
     vehiclesCount: Number(shop.vehicles_count || 0),
+    rating:
+      (shop.rating ?? shop.avg_rating ?? shop.rating_avg ?? shop.rating_score ?? shop.average_rating) !== undefined
+        ? Number(shop.rating ?? shop.avg_rating ?? shop.rating_avg ?? shop.rating_score ?? shop.average_rating)
+        : null,
     status: String(shop.status || 'active').toLowerCase(),
-    img_url: shop.img_url_full || shop.img_url || '/images/default-shop.png'
+    img_url: shop.img_url_full || shop.img_url || '/images/default-avatar.svg'
   }
 }
 
@@ -247,9 +252,20 @@ const provinceChips = computed(() => {
   return [...historyProvinces, ...remaining]
 })
 
+const selectedCategory = ref('All')
+const categories = ['All', 'Motorcycles', 'Bicycles', 'Cars']
+
 const selectedProvinceShops = computed(() => {
   const normalized = normalizeProvinceName(selectedProvince.value)
-  const inProvince = shops.value.filter((shop) => normalizeProvinceName(shop.province) === normalized)
+  let inProvince = shops.value.filter((shop) => normalizeProvinceName(shop.province) === normalized)
+
+  // Filter by category if not 'All'
+  if (selectedCategory.value !== 'All') {
+    // In a real app, this would check if the shop has vehicles of this category
+    // For now, we'll keep it simple or filter based on shop names/types if available
+    // result = result.filter(shop => shop.category === selectedCategory.value)
+  }
+
   const withDistance = inProvince.map((shop) => {
     let distanceKm = null
     if (userLocation.value && Number.isFinite(shop.latitude) && Number.isFinite(shop.longitude)) {
@@ -312,7 +328,7 @@ const loadShops = async () => {
     const response = await shopApi.getAll({ active_only: true })
     shops.value = parseArrayPayload(response.data)
       .map((shop) => normalizeShop(shop))
-      .filter((shop) => shop.status === 'active' && shop.province)
+      .filter((shop) => shop.status === 'active')
 
     if (!shops.value.some((shop) => normalizeProvinceName(shop.province) === normalizeProvinceName(selectedProvince.value))) {
       selectedProvince.value = shops.value[0]?.province || 'Phnom Penh'
@@ -364,8 +380,10 @@ const enableLocation = () => {
   )
 }
 
-const openProfile = () => router.push('/user/profile')
-const openBookings = () => router.push('/my-bookings')
+const dashboardNavItems = [
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' },
+]
 
 const onLogout = async () => {
   await logoutUser()
@@ -413,38 +431,12 @@ onMounted(async () => {
 
 <template>
   <div class="customer-page">
-    <header class="customer-topbar">
-      <div class="brand-left">
-        <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="top-links">
-        <button class="link-btn" @click="openBookings">My Bookings</button>
-        <button class="link-btn" @click="openProfile">Profile</button>
-      </nav>
-
-
-      <div class="top-actions">
-        <div class="notification-wrapper" ref="notificationRoot">
-          <button
-            type="button"
-            class="icon-btn notification-btn"
-            aria-label="Open notifications"
-            @click.stop="toggleNotifications"
-          >
-            <i class="fa-regular fa-bell" aria-hidden="true"></i>
-            <span v-if="badgeLabel" class="notification-count">{{ badgeLabel }}</span>
-          </button>
-          <transition name="notification-fade">
-            <div v-if="showNotifications" class="notification-popup">
-              <NotificationMenu />
-            </div>
-          </transition>
-        </div>
-        <UserProfileMenu @settings="openProfile" @logout="onLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="dashboardNavItems"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="onLogout"
+    />
 
     <main class="customer-main">
       <!-- Hero Banner -->
@@ -468,8 +460,20 @@ onMounted(async () => {
                   type="text"
                   class="province-search-input"
                   placeholder="Search for a province (e.g., Siem Reap)..."
+                  @input="onSearchInput"
+                  @blur="hideSuggestions"
                   @keydown.enter.prevent="searchProvince"
                 />
+                <div v-if="showSuggestions && suggestions.length > 0" class="province-suggestions">
+                  <div
+                    v-for="suggestion in suggestions"
+                    :key="suggestion"
+                    class="suggestion-item"
+                    @mousedown="selectSuggestion(suggestion)"
+                  >
+                    {{ suggestion }}
+                  </div>
+                </div>
               </div>
               <button class="province-search-btn" @click="searchProvince" aria-label="Search province">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -526,6 +530,17 @@ onMounted(async () => {
       <section class="shop-result-section">
         <div class="section-header">
           <h2>Our Branches in {{ selectedProvince }}</h2>
+          <div class="category-filters">
+            <button
+              v-for="cat in categories"
+              :key="cat"
+              class="category-btn"
+              :class="{ active: selectedCategory === cat }"
+              @click="selectedCategory = cat"
+            >
+              {{ cat }}
+            </button>
+          </div>
           <span class="shop-count">{{ selectedProvinceShops.length }} branches</span>
         </div>
 
@@ -561,10 +576,10 @@ onMounted(async () => {
                 </span>
               </div>
 
-              <div class="shop-footer">
+                <div class="shop-footer">
                 <div class="shop-stats-pills">
-                  <span><i class="fa-solid fa-motorcycle"></i> {{ shop.vehiclesCount }}</span>
-                  <span><i class="fa-solid fa-star"></i> 4.8</span>
+                  <span title="Number of vehicles available"><i class="fa-solid fa-motorcycle"></i> {{ shop.vehiclesCount }}</span>
+                  <span title="Average rating"><i class="fa-solid fa-star"></i> {{ typeof shop.rating === 'number' && !isNaN(shop.rating) ? shop.rating.toFixed(1) : '—' }}</span>
                 </div>
                 <button class="visit-btn" @click="viewShop(shop)">View Details</button>
               </div>
@@ -577,3 +592,4 @@ onMounted(async () => {
     <CommonFooter />
   </div>
 </template>
+

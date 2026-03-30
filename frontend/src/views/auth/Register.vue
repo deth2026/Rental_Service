@@ -1,28 +1,10 @@
 <template>
-<<<<<<< HEAD
-  <section class="auth-page">
-    <h2>Register</h2>
-    <p>This is a placeholder register view.</p>
-    <router-link to="/">Back to Home</router-link>
-  </section>
-</template>
-
-<style scoped>
-.auth-page {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  gap: 10px;
-  text-align: center;
-}
-</style>
-=======
   <div class="container" style="min-height: 100vh">
     <!-- LEFT SIDE -->
     <div class="left">
       <div class="overlay">
         <div class="logo">
-          <Logo src="/Images/logo-removebg.png" size="lg" :showTagline="false" />
+          <Logo src="/images/logo-removebg.png" size="lg" :showTagline="false" />
         </div>
 
         <div class="left-content">
@@ -324,6 +306,7 @@
       </div>
     </div>
   </div>
+
 </template>
 
 <script setup>
@@ -554,12 +537,12 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<style>
-<<<<<<< HEAD
+<style scoped>
+
 @import "../../assets/auth.css";
-</style>
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
-=======
 @import "../../css/register.css";
+
 </style>
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
+
+
+

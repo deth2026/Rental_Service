@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { couponApi } from '@/services/api'
+import { couponApi, vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserNavbar from '@/components/UserNavbar.vue'
+import { getCachedSelectedShop } from '@/utils/shopSelectionCache'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,11 +15,49 @@ const error = ref('')
 const promotions = ref([])
 const activeFilter = ref('all')
 const dealsSection = ref(null)
+const ownerShopIds = ref([])
+const currentUser = computed(() => userService.getCurrentUser())
+const currentUserRole = computed(() => {
+  const role = String(currentUser.value?.role || currentUser.value?.user_type || 'customer').toLowerCase()
+  return role
+})
+const isShopTeam = computed(() => {
+  return ['shop_owner', 'owner', 'shop_staff'].includes(currentUserRole.value)
+})
+
+const selectedShopInfo = ref({ id: null, name: '' })
+
+const parseShopIdParam = (value) => {
+  if (value == null) return null
+  const normalized = Number(String(value).trim())
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : null
+}
+
+const refreshSelectedShopFilter = () => {
+  const queryId = parseShopIdParam(route.query.shop_id)
+  if (queryId) {
+    const cached = getCachedSelectedShop()
+    const name = cached.id === queryId ? cached.name : ''
+    selectedShopInfo.value = { id: queryId, name }
+    return
+  }
+  selectedShopInfo.value = getCachedSelectedShop()
+}
+
+
+const selectedShopFilterId = computed(() => selectedShopInfo.value.id)
+const selectedShopDisplayName = computed(() => selectedShopInfo.value.name)
+const promotionsEmptyMessage = computed(() => {
+  if (!selectedShopFilterId.value) {
+    return 'No active promotions are available right now.'
+  }
+  const displayName = selectedShopDisplayName.value || 'this shop'
+  return `No active promotions are available for ${displayName} at the moment.`
+})
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const filterItems = [
@@ -52,46 +91,10 @@ const categoryVisuals = {
   }
 }
 
-const fallbackCoupons = [
-  {
-    id: 'fallback-car',
-    code: 'WEEKEND30',
-    discount_percent: 30,
-    valid_from: '2026-03-01',
-    valid_until: '2026-03-31',
-    minimum_amount: 50,
-    usage_limit: 100,
-    is_active: true,
-    category_hint: 'car'
-  },
-  {
-    id: 'fallback-moto',
-    code: 'CITY25',
-    discount_percent: 25,
-    valid_from: '2026-03-01',
-    valid_until: '2026-04-15',
-    minimum_amount: 35,
-    usage_limit: 100,
-    is_active: true,
-    category_hint: 'moto'
-  },
-  {
-    id: 'fallback-bike',
-    code: 'BIKE40',
-    discount_percent: 40,
-    valid_from: '2026-03-01',
-    valid_until: '2026-03-30',
-    minimum_amount: 15,
-    usage_limit: 100,
-    is_active: true,
-    category_hint: 'bike'
-  }
-]
-
 const activeNavLabel = computed(() => {
   const currentPath = route.path
   const matchedItem = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-  return matchedItem?.label || 'Promotions'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const handleLogout = async () => {
@@ -102,9 +105,8 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-const inferCategory = (coupon, index) => {
-  if (coupon.category_hint && categoryVisuals[coupon.category_hint]) return coupon.category_hint
-  const source = `${coupon.code || ''} ${coupon.description || ''}`.toLowerCase()
+const inferCategory = (sourceValue, index = 0) => {
+  const source = String(sourceValue || '').toLowerCase()
   if (/(bike|bicycle|cycle)/.test(source)) return 'bike'
   if (/(moto|motor|scooter)/.test(source)) return 'moto'
   if (/(car|sedan|suv|van)/.test(source)) return 'car'
@@ -132,6 +134,50 @@ const buildDescription = (coupon, category) => {
   }
 
   return categoryVisuals[category].description
+}
+
+const normalizeDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+const resolveCouponStatus = (coupon) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const isActiveFlag = !(
+    coupon.is_active === false ||
+    coupon.is_active === 0 ||
+    coupon.is_active === '0'
+  )
+
+  if (!isActiveFlag) {
+    return { key: 'inactive', label: 'Inactive', usable: false }
+  }
+
+  const validFrom = normalizeDate(coupon.valid_from)
+  if (validFrom && validFrom > today) {
+    return { key: 'scheduled', label: `Starts ${formatDate(validFrom)}`, usable: false }
+  }
+
+  const validUntil = normalizeDate(coupon.valid_until)
+  if (validUntil && validUntil < today) {
+    return { key: 'expired', label: 'Expired', usable: false }
+  }
+
+  if (!validUntil && !validFrom) {
+    return { key: 'active', label: 'Active', usable: true }
+  }
+
+  const isEndingSoon = validUntil && validUntil.getTime() - today.getTime() <= 1000 * 60 * 60 * 24
+  return {
+    key: 'active',
+    label: isEndingSoon ? 'Ends soon' : 'Active',
+    usable: true
+  }
 }
 
 const buildPrimaryValue = (coupon) => {
@@ -173,50 +219,144 @@ const formatDate = (value) => {
 
 const isCouponActive = (coupon) => {
   if (coupon.is_active === false || coupon.is_active === 0 || coupon.is_active === '0') return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  if (coupon.valid_from) {
+    const validFrom = new Date(coupon.valid_from)
+    if (!Number.isNaN(validFrom.getTime())) {
+      validFrom.setHours(0, 0, 0, 0)
+      if (validFrom > today) return false
+    }
+  }
+
   if (!coupon.valid_until) return true
-  return new Date(coupon.valid_until) >= new Date(new Date().toDateString())
+
+  const validUntil = new Date(coupon.valid_until)
+  if (Number.isNaN(validUntil.getTime())) return false
+  validUntil.setHours(0, 0, 0, 0)
+
+  return validUntil >= today
 }
 
-const mapCouponsToPromotions = (items) => {
-  return items
-    .filter((coupon) => isCouponActive(coupon))
-    .map((coupon, index) => {
-      const category = inferCategory(coupon, index)
+const normalizeCollection = (response) => {
+  const payload = response?.data?.data || response?.data || []
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
+const loadVehiclesForShop = async (shopId) => {
+  let currentPage = 1
+  let lastPage = 1
+  const vehicles = []
+
+  while (currentPage <= lastPage) {
+    const response = await vehicleApi.getAll({ shop_id: shopId, page: currentPage })
+    const pageItems = normalizeCollection(response)
+    vehicles.push(...pageItems)
+
+    const pagination = response?.data
+    lastPage = Number(pagination?.last_page || pagination?.meta?.last_page || 1)
+    currentPage += 1
+  }
+
+  return vehicles
+}
+
+const loadOwnerShops = async () => {
+  if (!isShopTeam.value || !currentUser.value?.id) {
+    ownerShopIds.value = []
+    return
+  }
+
+  try {
+    const response = await shopApi.getAll({
+      owner_id: currentUser.value.id,
+      active_only: true
+    })
+    const shops = normalizeCollection(response)
+    ownerShopIds.value = shops
+      .map((shop) => Number(shop.id))
+      .filter((id) => Number.isFinite(id) && id > 0)
+  } catch (err) {
+    console.error('Failed to load owner shops:', err)
+    ownerShopIds.value = []
+  }
+}
+
+const mapCouponsToPromotions = (coupons, vehiclesByShop) => {
+  return coupons
+    .map((coupon, couponIndex) => {
+      const shopId = Number(coupon.shop_id)
+      const vehicles = (vehiclesByShop.get(shopId) || []).filter((vehicle) => Number(vehicle.shop_id) === shopId)
+      const vehicle = vehicles.find((v) => Number(v.id) === Number(coupon.vehicle_id)) || vehicles[0]
+
+      if (!vehicle) {
+        return null
+      }
+
+      const statusInfo = resolveCouponStatus(coupon)
+      const titleSource = `${vehicle.type || ''} ${vehicle.brand || ''} ${vehicle.model || ''} ${vehicle.name || ''}`
+      const category = inferCategory(titleSource, couponIndex)
       const visual = categoryVisuals[category]
+      const vehicleTitle = [vehicle.brand, vehicle.model].filter(Boolean).join(' ') || vehicle.name || titleFromCode(coupon.code, category)
+      const vehicleImage = vehicle.photo_urls?.[0] || vehicle.image_url_full || visual.image
+      const shopName = vehicle.shop?.name || coupon.shop?.name || 'This shop'
 
       return {
-        id: coupon.id,
+        id: `${coupon.id}-${vehicle.id}`,
+        couponId: coupon.id,
+        vehicleId: vehicle.id,
+        shopId,
         code: coupon.code || `COUPON-${coupon.id}`,
         category,
-        title: titleFromCode(coupon.code, category),
-        description: buildDescription(coupon, category),
+        title: vehicleTitle,
+        description: `${buildPrimaryValue(coupon)} from ${shopName}. ${buildDescription(coupon, category)}`,
         validUntil: coupon.valid_until,
         validFrom: coupon.valid_from,
         minimumAmount: coupon.minimum_amount,
         usageLimit: coupon.usage_limit,
         primaryValue: buildPrimaryValue(coupon),
         ribbon: buildRibbon(coupon),
-        image: visual.image,
+        image: vehicleImage,
         badge: visual.badge,
-        accent: visual.accent
+        accent: visual.accent,
+        shopName,
+        dailyRate: Number(vehicle.price_per_day || 0),
+        insuranceFee: Number(vehicle.insurance_fee || 0),
+        taxesFee: Number(vehicle.taxes_fee || 0),
+        couponStatus: statusInfo.key,
+        couponStatusLabel: statusInfo.label,
+        couponUsable: statusInfo.usable,
       }
     })
+    .filter(Boolean)
 }
 
 const fetchPromotions = async () => {
   try {
     loading.value = true
     error.value = ''
-    const response = await couponApi.getAll()
-    const data = response.data.data || response.data || []
-    promotions.value = mapCouponsToPromotions(data)
 
-    if (promotions.value.length === 0) {
-      promotions.value = mapCouponsToPromotions(fallbackCoupons)
+    const couponResponse = await couponApi.getAll()
+    let coupons = normalizeCollection(couponResponse).filter((coupon) => Number(coupon.shop_id))
+    if (isShopTeam.value && ownerShopIds.value.length) {
+      coupons = coupons.filter((coupon) => ownerShopIds.value.includes(Number(coupon.shop_id)))
     }
+    if (selectedShopFilterId.value) {
+      coupons = coupons.filter((coupon) => Number(coupon.shop_id) === selectedShopFilterId.value)
+    }
+    const uniqueShopIds = [...new Set(coupons.map((coupon) => Number(coupon.shop_id)).filter(Boolean))]
+    const vehiclesPerShop = await Promise.all(uniqueShopIds.map((shopId) => loadVehiclesForShop(shopId)))
+    const vehiclesByShop = new Map(uniqueShopIds.map((shopId, index) => [shopId, vehiclesPerShop[index] || []]))
+
+    promotions.value = mapCouponsToPromotions(coupons, vehiclesByShop)
   } catch (err) {
     console.error('Error fetching promotions:', err)
-    promotions.value = mapCouponsToPromotions(fallbackCoupons)
+    error.value = 'Failed to load promotions.'
+    promotions.value = []
   } finally {
     loading.value = false
   }
@@ -233,20 +373,37 @@ const scrollToDeals = () => {
   dealsSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-const copyCouponCode = async (code) => {
-  try {
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(code)
-      return
+const usePromotion = (item) => {
+  if (!item.couponUsable) return
+  router.push({
+    name: 'booking',
+    params: { id: item.vehicleId },
+    query: {
+      coupon_id: item.couponId,
+      coupon_code: item.code,
+      insuranceFee: item.insuranceFee,
+      includeInsurance: 'true',
+      includeTaxes: 'true',
+      shop_id: item.shopId
     }
-  } catch {
-    // Ignore clipboard failures and fall back to alert.
-  }
-
-  window.alert(`Coupon code: ${code}`)
+  })
 }
 
-onMounted(fetchPromotions)
+const initializePromotions = async () => {
+  refreshSelectedShopFilter()
+  await loadOwnerShops()
+  await fetchPromotions()
+}
+
+watch(
+  () => route.query.shop_id,
+  () => {
+    refreshSelectedShopFilter()
+    fetchPromotions()
+  }
+)
+
+onMounted(initializePromotions)
 </script>
 
 <template>
@@ -288,15 +445,10 @@ onMounted(fetchPromotions)
 
       <section ref="dealsSection" class="deals-section">
         <div class="section-header">
-          <div class="section-title-col">
-            <div class="section-badge">
-              <i class="fa-solid fa-sparkles"></i>
-              <span>HOT DEALS</span>
-            </div>
-
-            <h2>Current Promotions</h2>
-            <p>Browse our latest offers across all vehicle categories and save on your next rental.</p>
-          </div>
+          <!-- <div class="section-badge">
+            <i class="fa-solid fa-sparkles"></i>
+            <span>HOT DEALS</span>
+          </div> -->
 
           <div class="filter-col">
             <div class="filter-row">
@@ -315,8 +467,11 @@ onMounted(fetchPromotions)
         </div>
 
         <div v-if="loading" class="status-card">Loading promotions...</div>
+        <div v-else-if="error" class="status-card error">
+          {{ error }}
+        </div>
         <div v-else-if="filteredPromotions.length === 0" class="status-card">
-          No active promotions found in the coupons table.
+          {{ promotionsEmptyMessage }}
         </div>
 
         <div v-else>
@@ -329,6 +484,9 @@ onMounted(fetchPromotions)
             </div>
 
             <div class="promo-body">
+              <div class="promo-status" :class="`promo-status--${item.couponStatus}`">
+                {{ item.couponStatusLabel }}
+              </div>
               <h3>{{ item.title }}</h3>
               <p>{{ item.description }}</p>
 
@@ -341,8 +499,15 @@ onMounted(fetchPromotions)
                 <div class="promo-value">
                   <span class="promo-code">{{ item.code }}</span>
                   <strong>{{ item.primaryValue }}</strong>
+                  <small class="promo-shop">{{ item.shopName }} · ${{ item.dailyRate.toFixed(2) }}/day</small>
                 </div>
-                <button class="book-btn" @click="copyCouponCode(item.code)">Use Now</button>
+                <button
+                  class="book-btn"
+                  :disabled="!item.couponUsable"
+                  @click="usePromotion(item)"
+                >
+                  {{ item.couponUsable ? 'Use Now' : 'Unavailable' }}
+                </button>
               </div>
             </div>
           </article>
@@ -558,26 +723,21 @@ onMounted(fetchPromotions)
 
 .deals-section {
   max-width: 1340px;
-  margin: -12px auto 0;
+  margin: 12px auto 0;
   padding: 0 16px 40px;
 }
 
 .section-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 32px;
-  text-align: left;
+  flex-direction: column;
+  text-align: center;
   padding: 40px 0 22px;
   max-width: 1340px;
   margin: 0 auto;
 }
 
-.section-title-col {
-  flex: 1;
-}
-
-.section-title-col .section-badge {
+.section-badge {
+  margin: 0 0 10px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -588,6 +748,7 @@ onMounted(fetchPromotions)
 
 .section-title-col h2 {
   margin: 0 0 10px;
+  margin-right: 35%;
   font-size: clamp(2rem, 4vw, 2.65rem);
   color: #18253b;
 }
@@ -604,6 +765,8 @@ onMounted(fetchPromotions)
 
 .filter-row {
   display: flex;
+  justify-content: center;
+  margin-right: 32%;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -698,6 +861,34 @@ onMounted(fetchPromotions)
   padding: 22px 18px 16px;
 }
 
+.promo-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  width: fit-content;
+}
+.promo-status--active {
+  background: #e3f3ff;
+  color: #1d6fff;
+}
+.promo-status--expired {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.promo-status--inactive {
+  background: #f4f4f5;
+  color: #6b7280;
+}
+.promo-status--scheduled {
+  background: #fef3c7;
+  color: #b45309;
+}
+
 .promo-body h3 {
   margin: 0 0 10px;
   font-size: 1.35rem;
@@ -747,6 +938,11 @@ onMounted(fetchPromotions)
   color: #1363ea;
   font-size: 1.9rem;
   line-height: 1;
+}
+
+.promo-shop {
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .book-btn {
@@ -802,10 +998,6 @@ onMounted(fetchPromotions)
     grid-template-columns: 1fr;
   }
 
-  .section-footer {
-    flex-direction: column;
-    text-align: center;
-  }
 }
 
 @media (max-width: 640px) {

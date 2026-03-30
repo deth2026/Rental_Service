@@ -1,30 +1,10 @@
-<<<<<<< HEAD
-<template>
-  <section class="auth-page">
-    <h2>Login</h2>
-    <p>This is a placeholder login view.</p>
-    <router-link to="/">Back to Home</router-link>
-  </section>
-</template>
-
-<style scoped>
-.auth-page {
-  min-height: 100vh;
-  display: grid;
-  place-content: center;
-  gap: 10px;
-  text-align: center;
-}
-</style>
-=======
-
 <template>
   <div class="container">
     <!-- LEFT SIDE -->
     <div class="left">
         <div class="overlay">
             <div class="logo">
-              <Logo src="/Images/logo-removebg.png" size="lg" :showTagline="false" />
+              <Logo src="/images/logo-removebg.png" size="lg" :showTagline="false" />
             </div>
 
           <div class="left-content">
@@ -249,11 +229,11 @@ const handleLogin = async () => {
     // Redirect based on user role
     const userRole = user?.role;
     if (userRole === 'admin') {
-      router.push('/admin');
+      router.replace('/admin');
     } else if (userRole === 'shop_owner') {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } else {
-      router.push('/view_shop');
+      router.replace('/view_shop');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -318,9 +298,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("location-access-updated", syncLocationState);
 });
 </script>
-<<<<<<< HEAD
 
-
->>>>>>> b11f4a5c301bc31d8d2aac6512ebafd9c7cae5ac
-=======
->>>>>>> d9950b55d15a8c1d02e11f6e24682b1f5b876a67
+<style scoped>
+/* Any additional local styles if needed */
+</style>

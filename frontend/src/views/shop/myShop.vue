@@ -1,14 +1,22 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
-import { shopApi } from "@/services/api";
+import { shopApi, cityApi } from "@/services/api";
 import "../../css/Myshop.css";
 
 const shop = ref(null);
 const ownerName = ref("");
 const ownerEmail = ref("");
+const cities = ref([]);
+const loadingCities = ref(false);
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);
+const shopMapLink = computed(() => {
+  const primary = String(shop.value?.map_url || "").trim();
+  if (primary) return primary;
+  const fallback = String(shop.value?.location || "").trim();
+  return /^https?:\/\//i.test(fallback) ? fallback : "";
+});
 
 const showCreateModal = ref(false);
 const showSuccessPopup = ref(false);
@@ -23,9 +31,17 @@ const shopImageInputRef = ref(null);
 const isShopImageDragOver = ref(false);
 const changeImageInputRef = ref(null);
 const isUpdatingImage = ref(false);
+const qrUrlFile = ref(null);
+const qrUrlPreview = ref("");
+const isCreateQrUrlDragOver = ref(false);
+const createQrUrlInputRef = ref(null);
+const isQrUrlDragOver = ref(false);
+const qrUrlUpdateInputRef = ref(null);
+const isUpdatingQrUrl = ref(false);
 
 const createForm = reactive({
   name: "",
+  city_id: "",
   phone: "",
   description: "",
   address: "",
@@ -37,6 +53,7 @@ const createForm = reactive({
   instagram: "",
   facebook: "",
   img_url: "",
+  qr_url: "",
 });
 
 const getCachedShop = (ownerId) => {
@@ -126,7 +143,7 @@ const loadMyShop = async () => {
   const ownerId = getUserId();
   const storedUser = getStoredUser();
   ownerName.value = storedUser?.name || "N/A";
-  ownerEmail.value = storedUser?.email || "";
+  ownerEmail.value = storedUser?.email || "N/A";
 
   // Clear shop first to ensure we get fresh data
   shop.value = null;
@@ -165,16 +182,16 @@ const loadMyShop = async () => {
       storedUser?.name ||
       "N/A";
     ownerEmail.value =
-      shop.value?.owner_email ||
+      shop.value?.owner?.email ||
       storedUser?.email ||
-      ownerEmail.value ||
-      "";
+      "N/A";
   } catch (e) {
     console.error("Failed to load shop", e);
     if (!cachedShop) {
       shop.value = null;
     }
     ownerName.value = storedUser?.name || "N/A";
+    ownerEmail.value = storedUser?.email || "N/A";
   }
 };
 
@@ -191,21 +208,40 @@ const resetForm = () => {
   createForm.instagram = "";
   createForm.facebook = "";
   createForm.img_url = "";
+  createForm.qr_url = "";
   shopImageFile.value = null;
   if (shopImagePreview.value) {
     URL.revokeObjectURL(shopImagePreview.value);
     shopImagePreview.value = "";
   }
+  qrUrlFile.value = null;
+  if (qrUrlPreview.value) {
+    URL.revokeObjectURL(qrUrlPreview.value);
+    qrUrlPreview.value = "";
+  }
   error.value = "";
 };
 
 const validateCreateForm = () => {
+  const errors = [];
   const name = createForm.name.trim();
   const address = createForm.address.trim();
   const phone = createForm.phone.trim();
   const description = createForm.description.trim();
 
-  if (!name || !address || !phone || !description) {
+  // Required fields
+  if (!name) errors.push('Name');
+  if (!address) errors.push('Address');
+  if (!phone) errors.push('Phone');
+  if (!description) errors.push('Description');
+
+  // Phone validation
+  if (phone && !/^[0-9+\-\s()]{8,20}$/.test(phone)) {
+    errors.push('Invalid phone format');
+  }
+
+  if (errors.length > 0) {
+    error.value = 'Please fill all required fields: ' + errors.join(', ');
     return false;
   }
 
@@ -239,9 +275,15 @@ const extractCoordinatesFromMapUrl = (value) => {
 const onMapUrlBlur = () => {
   const coords = extractCoordinatesFromMapUrl(createForm.map_url);
   if (!coords) return;
-  // Always update latitude and longitude from the map URL
-  createForm.latitude = String(coords.lat);
-  createForm.longitude = String(coords.lng);
+  if (!createForm.latitude) {
+    createForm.latitude = String(coords.lat);
+  }
+  if (!createForm.longitude) {
+    createForm.longitude = String(coords.lng);
+  }
+  if (!String(createForm.location || '').trim()) {
+    createForm.location = String(createForm.map_url || '').trim().slice(0, 255);
+  }
 };
 
 const applyShopImageFile = (file) => {
@@ -259,6 +301,21 @@ const applyShopImageFile = (file) => {
   error.value = "";
 };
 
+const applyQrUrlFile = (file) => {
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    error.value = "Please select a valid QR code image.";
+    return;
+  }
+  if (qrUrlPreview.value) {
+    URL.revokeObjectURL(qrUrlPreview.value);
+  }
+  qrUrlFile.value = file;
+  createForm.qr_url = "";
+  qrUrlPreview.value = URL.createObjectURL(file);
+  error.value = "";
+};
+
 const onShopImageChange = (event) => {
   const file = event.target.files?.[0] || null;
   applyShopImageFile(file);
@@ -268,6 +325,17 @@ const onShopImageDrop = (event) => {
   isShopImageDragOver.value = false;
   const file = event.dataTransfer?.files?.[0] || null;
   applyShopImageFile(file);
+};
+
+const onCreateQrUrlChange = (event) => {
+  const file = event.target.files?.[0] || null;
+  applyQrUrlFile(file);
+};
+
+const onCreateQrUrlDrop = (event) => {
+  isCreateQrUrlDragOver.value = false;
+  const file = event.dataTransfer?.files?.[0] || null;
+  applyQrUrlFile(file);
 };
 
 const openCreateModal = () => {
@@ -367,6 +435,16 @@ const shopImageSrc = computed(() => {
   return getShopImageUrl(raw);
 });
 
+const normalizedShopStatus = computed(() =>
+  String(shop.value?.status || "active").toLowerCase(),
+);
+
+const shopQrUrl = computed(() => {
+  if (qrUrlPreview.value) return qrUrlPreview.value;
+  if (shop.value?.qr_url_full) return shop.value.qr_url_full;
+  return getShopImageUrl(shop.value?.qr_url || "");
+});
+
 const removeShopImage = async () => {
   if (!shop.value?.id) return;
 
@@ -395,30 +473,107 @@ const removeShopImage = async () => {
   }
 };
 
-const createShop = async () => {
-  if (createForm.map_url && (!createForm.latitude || !createForm.longitude)) {
-    onMapUrlBlur();
+const triggerUpdateQrUrlPicker = () => {
+  if (qrUrlUpdateInputRef.value) {
+    qrUrlUpdateInputRef.value.value = "";
+    qrUrlUpdateInputRef.value.click();
   }
-  
+};
+
+const updateShopQr = async (file) => {
+  if (!shop.value?.id) return;
+  if (!file || !file.type.startsWith("image/")) {
+    error.value = "Please select a valid QR code image.";
+    return;
+  }
+
+  isUpdatingQrUrl.value = true;
+  error.value = "";
+
+  try {
+    const payload = new FormData();
+    payload.append("qr_url", file);
+
+    const { data } = await shopApi.update(shop.value.id, payload);
+    const updatedShop = data?.data || data || null;
+    if (updatedShop && typeof updatedShop === "object") {
+      shop.value = updatedShop;
+      setCachedShop(getUserId(), updatedShop);
+    }
+    await loadMyShop();
+  } catch (e) {
+    error.value = e?.response?.data?.message || "Failed to update QR code.";
+    console.error("Update shop QR code error", e);
+  } finally {
+    isUpdatingQrUrl.value = false;
+  }
+};
+
+const onQrUrlUpdateChange = async (event) => {
+  const file = event.target.files?.[0] || null;
+  if (file) {
+    await updateShopQr(file);
+  }
+};
+
+const onQrUrlUpdateDrop = async (event) => {
+  isQrUrlDragOver.value = false;
+  const file = event.dataTransfer?.files?.[0] || null;
+  if (file) {
+    await updateShopQr(file);
+  }
+};
+
+const removeShopQr = async () => {
+  if (!shop.value?.id) return;
+
+  isUpdatingQrUrl.value = true;
+  error.value = "";
+
+  try {
+    const payload = new FormData();
+    payload.append("remove_qr_url", "1");
+
+    const { data } = await shopApi.update(shop.value.id, payload);
+    const updatedShop = data?.data || data || null;
+    if (updatedShop && typeof updatedShop === "object") {
+      shop.value = updatedShop;
+      setCachedShop(getUserId(), updatedShop);
+    }
+    await loadMyShop();
+  } catch (e) {
+    error.value = e?.response?.data?.message || "Failed to remove QR code.";
+    console.error("Remove shop QR code error", e);
+  } finally {
+    isUpdatingQrUrl.value = false;
+  }
+};
+
+const createShop = async () => {
   if (!validateCreateForm()) {
-    error.value = "Please fill all required fields (name, address, phone, description).";
+    // Error message is already set in validateCreateForm
     return;
   }
 
   loading.value = true;
   error.value = "";
 
+  const normalizedLocation =
+    String(createForm.location || '').trim() ||
+    String(createForm.map_url || '').trim().slice(0, 255) ||
+    String(createForm.address || '').trim();
+
   try {
     let payload;
     // if an image file has been selected, use FormData to send multipart request
-    if (shopImageFile.value) {
+    if (shopImageFile.value || qrUrlFile.value) {
       payload = new FormData();
       payload.append("owner_id", getUserId());
+      if (createForm.city_id) payload.append("city_id", createForm.city_id);
       payload.append("name", createForm.name.trim());
       payload.append("description", createForm.description.trim());
       payload.append("address", createForm.address.trim());
-      if (createForm.location)
-        payload.append("location", createForm.location.trim());
+      if (normalizedLocation) payload.append("location", normalizedLocation);
       if (createForm.latitude) payload.append("latitude", createForm.latitude);
       if (createForm.longitude)
         payload.append("longitude", createForm.longitude);
@@ -426,14 +581,20 @@ const createShop = async () => {
       payload.append("phone", createForm.phone.trim());
       payload.append("status", createForm.status);
       // the backend expects the field name img_url
-      payload.append("img_url", shopImageFile.value);
+      if (shopImageFile.value) {
+        payload.append("img_url", shopImageFile.value);
+      }
+      if (qrUrlFile.value) {
+        payload.append("qr_url", qrUrlFile.value);
+      }
     } else {
       payload = {
         owner_id: getUserId(),
+        city_id: createForm.city_id || null,
         name: createForm.name.trim(),
         description: createForm.description.trim(),
         address: createForm.address.trim(),
-        location: createForm.location.trim() || null,
+        location: normalizedLocation || null,
         latitude: createForm.latitude || null,
         longitude: createForm.longitude || null,
         map_url: createForm.map_url.trim() || null,
@@ -441,6 +602,9 @@ const createShop = async () => {
         status: createForm.status,
         img_url: createForm.img_url || null,
       };
+        if (createForm.qr_url) {
+          payload.qr_url = createForm.qr_url;
+        }
     }
 
     const { data: created } = await shopApi.create(payload);
@@ -466,24 +630,21 @@ const createShop = async () => {
   }
 };
 
-const copyStatus = ref("Copy link");
-
-const copyMapUrl = async () => {
-  const url = shop.value?.map_url;
-  if (!url || !navigator?.clipboard) return;
+const loadCities = async () => {
+  loadingCities.value = true;
   try {
-    await navigator.clipboard.writeText(url);
-    copyStatus.value = "Copied!";
-    window.setTimeout(() => {
-      copyStatus.value = "Copy link";
-    }, 1600);
-  } catch {
-    copyStatus.value = "Try again";
+    const { data } = await cityApi.getAll();
+    cities.value = asArray(data);
+  } catch (e) {
+    console.error("Failed to load cities", e);
+  } finally {
+    loadingCities.value = false;
   }
 };
 
 onMounted(async () => {
   await loadMyShop();
+  await loadCities();
 });
 
 onBeforeUnmount(() => {
@@ -492,6 +653,9 @@ onBeforeUnmount(() => {
   }
   if (changeImagePreview.value) {
     URL.revokeObjectURL(changeImagePreview.value);
+  }
+  if (qrUrlPreview.value) {
+    URL.revokeObjectURL(qrUrlPreview.value);
   }
 });
 </script>
@@ -508,147 +672,184 @@ onBeforeUnmount(() => {
       <p>Click Create Shop and fill in your shop information.</p>
     </div>
 
-    <div v-else class="shop-card">
-      <div class="shop-settings-card">
-        <div class="shop-settings-header">
-          <div class="settings-title">
-            <span class="settings-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="1.8">
-                <path d="M12 3v2.2"></path>
-                <path d="M12 18.8V21"></path>
-                <path d="M4.22 5.64l1.56 1.56"></path>
-                <path d="M17.22 16.64l1.56 1.56"></path>
-                <path d="M3 12h2.2"></path>
-                <path d="M18.8 12H21"></path>
-                <path d="M4.22 18.36l1.56-1.56"></path>
-                <path d="M17.22 7.36l1.56-1.56"></path>
-                <circle cx="12" cy="12" r="5"></circle>
-              </svg>
-            </span>
-            <div>
-              <h2>Ownership setting</h2>
-              <p>Manage your shop profile details and contact info.</p>
-            </div>
+    <div v-else class="shop-settings-card">
+      <div class="shop-settings-header">
+        <div class="settings-title">
+          <div class="settings-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="3.2" />
+              <path d="M19.4 15a1 1 0 0 0 .2 1.1l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1 1 0 0 0-1.1-.2 1 1 0 0 0-.6.9V20a2 2 0 0 1-4 0v-.2a1 1 0 0 0-.6-.9 1 1 0 0 0-1.1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1 1 0 0 0 .2-1.1 1 1 0 0 0-.9-.6H4a2 2 0 0 1 0-4h.2a1 1 0 0 0 .9-.6 1 1 0 0 0-.2-1.1l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1 1 0 0 0 1.1.2 1 1 0 0 0 .6-.9V4a2 2 0 0 1 4 0v.2a1 1 0 0 0 .6.9 1 1 0 0 0 1.1-.2l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1 1 0 0 0-.2 1.1 1 1 0 0 0 .9.6H20a2 2 0 0 1 0 4h-.2a1 1 0 0 0-.9.6z" />
+            </svg>
           </div>
-          <span
-            class="status-badge"
-            :class="(shop.status || 'inactive').toLowerCase()"
+          <div>
+            <h2>Ownership setting</h2>
+            <p>Manage your shop profile details and contact info.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="shop-settings-profile">
+        <div class="shop-avatar-stack">
+          <img
+            v-if="shopImageSrc"
+            :src="shopImageSrc"
+            alt="Shop Image"
+            class="shop-cover-image"
+            @error="onShopImageError"
+          />
+          <div v-else class="shop-cover-placeholder">
+            <svg
+              viewBox="0 0 24 24"
+              width="32"
+              height="32"
+              fill="none"
+              stroke="#94a3b8"
+              stroke-width="1.5"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <input
+          ref="changeImageInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="hidden-file-input"
+          @change="onChangeShopImage"
+        />
+
+        <div class="profile-actions">
+          <button
+            type="button"
+            class="profile-btn primary"
+            :disabled="isUpdatingImage"
+            @click="triggerChangeImagePicker"
           >
-            <span>{{ shop.status || "inactive" }}</span>
-          </span>
+            {{ isUpdatingImage ? "Uploading..." : "Upload Profile" }}
+          </button>
+          <button
+            type="button"
+            class="profile-btn ghost"
+            :disabled="isUpdatingImage || !shop.img_url"
+            @click="removeShopImage"
+          >
+            Remove Profile
+          </button>
         </div>
+      </div>
 
-        <div class="shop-settings-profile">
-          <div class="shop-avatar-stack">
-            <img
-              v-if="shopImageSrc"
-              :src="shopImageSrc"
-              alt="Shop Image"
-              class="shop-cover-image"
-              @error="onShopImageError"
-            />
-            <div v-else class="shop-cover-placeholder">
-              <svg
-                viewBox="0 0 32 32"
-                width="32"
-                height="32"
-                fill="none"
-                stroke="#94a3b8"
-                stroke-width="1.5"
-              >
-                <rect x="3" y="3" width="26" height="26" rx="4" ry="4"></rect>
-                <circle cx="10.5" cy="10.5" r="2"></circle>
-                <polyline points="27 20 17 10 5 22"></polyline>
+      <div
+        class="qr-code-panel"
+        :class="{ 'qr-code-panel--dragover': isQrUrlDragOver }"
+        @dragover.prevent="isQrUrlDragOver = true"
+        @dragleave.prevent="isQrUrlDragOver = false"
+        @drop.prevent="onQrUrlUpdateDrop"
+      >
+        <div class="qr-code-panel__header">
+          <span>Shop QR code</span>
+          <p v-if="!shopQrUrl" class="qr-code-panel__hint">Upload a QR image via the Create Shop modal to show it here.</p>
+        </div>
+        <div class="qr-code-panel__body">
+          <img
+            v-if="shopQrUrl"
+            :src="shopQrUrl"
+            alt="Shop QR code"
+            class="qr-code-image"
+          />
+          <div v-else class="qr-code-empty">
+            No QR code uploaded yet.
+          </div>
+        </div>
+        <input
+          ref="qrUrlUpdateInputRef"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          class="hidden-file-input"
+          @change="onQrUrlUpdateChange"
+        />
+        <div class="qr-code-actions">
+          <button
+            type="button"
+            class="profile-btn primary"
+            :disabled="isUpdatingQrUrl"
+            @click="triggerUpdateQrUrlPicker"
+          >
+            {{ isUpdatingQrUrl ? "Uploading..." : "Change QR" }}
+          </button>
+          <button
+            type="button"
+            class="profile-btn ghost"
+            :disabled="isUpdatingQrUrl || !shop.qr_url"
+            @click="removeShopQr"
+          >
+            Remove QR
+          </button>
+        </div>
+      </div>
+
+      <p
+        v-if="error && !showCreateModal"
+        class="error-text"
+        style="margin: 0 0 18px"
+      >
+        {{ error }}
+      </p>
+
+      <div class="settings-form-grid">
+        <label class="settings-field">
+          <span>Full name</span>
+          <input :value="ownerName" type="text" readonly />
+        </label>
+
+        <label class="settings-field">
+          <span>Email address</span>
+          <div class="input-with-badge">
+            <input :value="ownerEmail" type="text" readonly />
+            <span class="verified-badge">Verified</span>
+          </div>
+        </label>
+
+        <label class="settings-field">
+          <span>Shop name</span>
+          <input :value="shop.name || 'N/A'" type="text" readonly />
+        </label>
+
+        <label class="settings-field">
+          <span>Status</span>
+          <select :value="normalizedShopStatus" disabled>
+            <option :value="normalizedShopStatus">{{ normalizedShopStatus }}</option>
+          </select>
+        </label>
+
+        <label class="settings-field">
+          <span>Phone number</span>
+          <input :value="shop.phone || 'N/A'" type="text" readonly />
+        </label>
+
+        <label class="settings-field">
+          <span>Password</span>
+          <div class="password-field">
+            <input value="Enter new password or leave blank" type="text" readonly />
+            <button type="button" class="eye-btn" aria-label="Password placeholder">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z" />
+                <circle cx="12" cy="12" r="3" />
               </svg>
-            </div>
-            <input
-              ref="changeImageInputRef"
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              class="hidden-file-input"
-              @change="onChangeShopImage"
-            />
-          </div>
-          <div class="profile-actions">
-            <button
-              v-if="!shop"
-              type="button"
-              class="profile-btn primary"
-              @click="handleCreateClick"
-            >
-              Create Shop
-            </button>
-            <button
-              v-else
-              type="button"
-              class="profile-btn primary"
-              :disabled="isUpdatingImage"
-              @click="triggerChangeImagePicker"
-            >
-              {{ isUpdatingImage ? "Updating..." : "Upload Profile" }}
-            </button>
-            <button
-              v-if="shop"
-              type="button"
-              class="profile-btn ghost"
-              :disabled="isUpdatingImage || !shopImageSrc"
-              @click="removeShopImage"
-            >
-              Remove Profile
             </button>
           </div>
-        </div>
-        <p v-if="error && !showCreateModal" class="error-text">
-          {{ error }}
-        </p>
+        </label>
 
-        <div class="settings-form-grid">
-          <label class="settings-field">
-            <span>Full name</span>
-            <input type="text" :value="ownerName" readonly />
-          </label>
-          <label class="settings-field">
-            <span>Email address</span>
-            <div class="input-with-badge">
-              <input type="email" :value="ownerEmail" readonly />
-              <span class="verified-badge">Verified</span>
-            </div>
-          </label>
-          <label class="settings-field">
-            <span>Shop name</span>
-            <input type="text" :value="shop.name || ''" readonly />
-          </label>
-          <label class="settings-field">
-            <span>Status</span>
-            <select disabled>
-              <option :value="shop.status">{{ shop.status || "inactive" }}</option>
-            </select>
-          </label>
-          <label class="settings-field">
-            <span>Phone number</span>
-            <input type="text" :value="shop.phone || ''" readonly />
-          </label>
-          <label class="settings-field">
-            <span>Password</span>
-            <div class="password-field">
-              <input
-                type="password"
-                placeholder="Enter new password or leave blank"
-                readonly
-              />
-              <button class="eye-btn" type="button" aria-label="Show password">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-            </div>
-          </label>
-          <label class="settings-field full">
-            <span>Shop address</span>
-            <textarea rows="2" :value="shop.address || ''" readonly></textarea>
-          </label>
-        </div>
+        <label class="settings-field full">
+          <span>Shop Address</span>
+          <textarea
+            :value="shop.address || shop.location || 'N/A'"
+            rows="4"
+            readonly
+          ></textarea>
+        </label>
       </div>
     </div>
 
@@ -743,7 +944,59 @@ onBeforeUnmount(() => {
                 </div>
               </label>
 
+              <label
+                class="upload-card qr-upload"
+                :class="{ active: isCreateQrUrlDragOver }"
+                @dragover.prevent="isCreateQrUrlDragOver = true"
+                @dragleave.prevent="isCreateQrUrlDragOver = false"
+                @drop.prevent="onCreateQrUrlDrop"
+              >
+                <input
+                  ref="createQrUrlInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  class="hidden-file-input"
+                  @change="onCreateQrUrlChange"
+                />
+                <div class="upload-content">
+                  <div class="upload-icon">
+                    <svg
+                      viewBox="0 0 64 64"
+                      fill="none"
+                      stroke="#2563eb"
+                      stroke-width="1.5"
+                    >
+                      <rect x="6" y="6" width="16" height="16" rx="2" />
+                      <rect x="6" y="26" width="16" height="16" rx="2" />
+                      <rect x="26" y="6" width="32" height="32" rx="4" />
+                      <rect x="38" y="38" width="12" height="12" rx="2" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="upload-title">Upload QR code</p>
+                    <p class="upload-sub">Drop a PNG/JPG of your shop QR code</p>
+                  </div>
+                </div>
+                <div v-if="qrUrlPreview" class="qr-preview-wrapper">
+                  <img
+                    :src="qrUrlPreview"
+                    alt="QR code preview"
+                    class="qr-preview-image"
+                  />
+                  <span class="qr-preview-label">Preview</span>
+                </div>
+              </label>
+
               <div class="field-grid">
+                <label class="form-field">
+                  <span>Province/City</span>
+                  <select v-model="createForm.city_id" class="form-select">
+                    <option value="" disabled>Select Province</option>
+                    <option v-for="city in cities" :key="city.id" :value="city.id">
+                      {{ city.name }}
+                    </option>
+                  </select>
+                </label>
                 <label class="form-field">
                   <span>Shop Name</span>
                   <input

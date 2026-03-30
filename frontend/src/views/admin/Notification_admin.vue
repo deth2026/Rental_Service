@@ -90,26 +90,6 @@
               <span>{{ formatFullDate(item.timestamp) }}</span>
             </div>
           </div>
-          <div class="notification-card__actions">
-            <span
-              class="status-badge"
-              :class="{
-                'status-badge--new': isNewNotification(item),
-                'status-badge--unread': !isNewNotification(item) && item.status === 'unread',
-                'status-badge--read': item.status === 'read'
-              }"
-            >
-              {{ item.status === 'unread' ? 'Unread' : 'Read' }}
-            </span>
-            <button
-              v-if="canManageReadState(item)"
-              class="ghost-pill"
-              type="button"
-              @click.stop="handleToggleRead(item)"
-            >
-              {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
-            </button>
-          </div>
         </article>
           </template>
           <div v-if="canToggleView" class="notification-list__actions">
@@ -131,30 +111,50 @@
           <span class="sr-only">Close</span>
         </button>
       </header>
-      <div class="platform-popup__selector-grid">
-        <select v-model="platformTargetType">
-          <option value="user">User</option>
-          <option value="shop">Shop owner</option>
-        </select>
-        <select
-          id="platform-recipient-popup"
-          v-model="platformSelectedKey"
-          :disabled="!platformOptionsForType.length"
-        >
-          <option value="" disabled>Select recipient</option>
-          <option
-            v-for="recipient in platformOptionsForType"
-            :key="`${recipient.type}-${recipient.id}`"
-            :value="`${recipient.type}:${recipient.id}`"
+      <div class="platform-popup__field-grid">
+        <label class="platform-popup__field">
+          <span>Recipient Type</span>
+          <select v-model="platformTargetType" class="platform-popup__control">
+            <option
+              v-for="option in platformTargetChoices"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </label>
+        <label v-if="targetTypeRequiresRecipient" class="platform-popup__field">
+          <span>Recipient</span>
+          <select
+            id="platform-recipient-popup"
+            v-model="platformSelectedKey"
+            class="platform-popup__control"
+            :disabled="!platformOptionsForType.length"
           >
-            {{ recipient.label }}
-          </option>
-        </select>
+            <option value="" disabled>Select recipient</option>
+            <option
+              v-for="recipient in platformOptionsForType"
+              :key="`${recipient.type}-${recipient.id}`"
+              :value="`${recipient.type}:${recipient.id}`"
+            >
+              {{ recipient.label }}
+            </option>
+          </select>
+        </label>
+      </div>
+      <div class="platform-popup__recipient-card">
+        <div class="platform-popup__recipient-avatar">{{ platformRecipientMeta.initials }}</div>
+        <div class="platform-popup__recipient-copy">
+          <strong>{{ platformRecipientMeta.title }}</strong>
+          <span>{{ platformRecipientMeta.subtitle }}</span>
+        </div>
       </div>
       <label class="platform-popup__field">
         <span>Title</span>
         <input
           v-model="platformTitle"
+          class="platform-popup__control"
           type="text"
           maxlength="128"
           placeholder="E.g. Welcome to the platform"
@@ -164,6 +164,7 @@
         <span>Message</span>
         <textarea
           v-model="platformMessage"
+          class="platform-popup__control platform-popup__textarea"
           rows="4"
           placeholder="Enter the details you want to share."
         ></textarea>
@@ -464,7 +465,23 @@ const platformRecipientOptions = computed(() => {
   }
 })
 
-const platformOptionsForType = computed(() => platformRecipientOptions.value[platformTargetType.value] || [])
+const platformTargetChoices = [
+  { value: 'user', label: 'User' },
+  { value: 'shop', label: 'Shop owner' },
+  { value: 'all_users', label: 'All users' },
+  { value: 'all_shop_owners', label: 'All shop owners' },
+  { value: 'all', label: 'All users + shop owners' }
+]
+
+const targetTypeRequiresRecipient = computed(
+  () => platformTargetType.value === 'user' || platformTargetType.value === 'shop'
+)
+
+const platformOptionsForType = computed(() => {
+  if (platformTargetType.value === 'user') return platformRecipientOptions.value.user || []
+  if (platformTargetType.value === 'shop') return platformRecipientOptions.value.shop || []
+  return []
+})
 const selectedPlatformRecipient = computed(() => {
   if (!platformSelectedKey.value) return null
   const [type, rawId] = platformSelectedKey.value.split(':')
@@ -472,9 +489,57 @@ const selectedPlatformRecipient = computed(() => {
   return pool.find((entry) => String(entry.id) === rawId) || null
 })
 
+const platformRecipientMeta = computed(() => {
+  const recipient = selectedPlatformRecipient.value
+  if (!recipient) {
+    if (platformTargetType.value === 'all_users') {
+      return {
+        title: `All users (${platformRecipientOptions.value.user?.length || 0})`,
+        subtitle: 'This message will be sent to every user account.',
+        initials: 'AU'
+      }
+    }
+    if (platformTargetType.value === 'all_shop_owners') {
+      return {
+        title: `All shop owners (${platformRecipientOptions.value.shop?.length || 0})`,
+        subtitle: 'This message will be sent to every shop owner.',
+        initials: 'AS'
+      }
+    }
+    if (platformTargetType.value === 'all') {
+      return {
+        title: 'All users and shop owners',
+        subtitle: 'This message will be broadcast to everyone in the platform.',
+        initials: 'ALL'
+      }
+    }
+
+    return {
+      title: 'No recipient selected',
+      subtitle: 'Choose who should receive this platform message.',
+      initials: 'NA'
+    }
+  }
+
+  return {
+    title: recipient.label,
+    subtitle: recipient.secondary || (recipient.type === 'shop' ? 'Shop owner notification' : 'Platform user notification'),
+    initials: String(recipient.label || 'NA')
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('') || 'NA'
+  }
+})
+
 watch(
   [() => platformTargetType.value, () => platformOptionsForType.value],
   ([type, options]) => {
+    if (type !== 'user' && type !== 'shop') {
+      platformSelectedKey.value = ''
+      return
+    }
     const pool = options || []
     platformSelectedKey.value = pool.length ? `${type}:${pool[0].id}` : ''
   },
@@ -491,40 +556,81 @@ watch(
 )
 
 const canSendPlatformMessage = computed(
-  () => Boolean(selectedPlatformRecipient.value && platformTitle.value.trim() && platformMessage.value.trim())
+  () => {
+    const hasMessage = Boolean(platformTitle.value.trim() && platformMessage.value.trim())
+    if (!hasMessage) return false
+    if (!targetTypeRequiresRecipient.value) return true
+    return Boolean(selectedPlatformRecipient.value)
+  }
 )
 
 const handlePlatformSendClick = async () => {
-  if (!selectedPlatformRecipient.value) {
+  if (targetTypeRequiresRecipient.value && !selectedPlatformRecipient.value) {
     toast.info('Select a recipient before sending an update.')
     return
   }
-  const recipient = selectedPlatformRecipient.value
-  const payload = {
-    title: String(platformTitle.value || '').trim(),
-    message: String(platformMessage.value || '').trim(),
-    target: recipient.type === 'shop' ? 'shop_owner' : 'user'
-  }
-  if (recipient.type === 'shop') {
-    payload.shop_id = recipient.id
-  } else {
-    payload.user_id = recipient.id
+
+  const title = String(platformTitle.value || '').trim()
+  const message = String(platformMessage.value || '').trim()
+  const recipients = []
+
+  if (platformTargetType.value === 'user' && selectedPlatformRecipient.value) {
+    recipients.push(selectedPlatformRecipient.value)
+  } else if (platformTargetType.value === 'shop' && selectedPlatformRecipient.value) {
+    recipients.push(selectedPlatformRecipient.value)
+  } else if (platformTargetType.value === 'all_users') {
+    recipients.push(...(platformRecipientOptions.value.user || []))
+  } else if (platformTargetType.value === 'all_shop_owners') {
+    recipients.push(...(platformRecipientOptions.value.shop || []))
+  } else if (platformTargetType.value === 'all') {
+    recipients.push(...(platformRecipientOptions.value.user || []), ...(platformRecipientOptions.value.shop || []))
   }
 
-  if (!payload.title || !payload.message) {
+  if (!title || !message) {
     toast.error('Please provide a title and message.')
+    return
+  }
+
+  if (!recipients.length) {
+    toast.info('No recipients found for this selection.')
     return
   }
 
   isSendingInfo.value = true
   try {
-    await api.post('/notifications', payload)
-    toast.success(`Information sent to ${recipient.label}.`)
+    const requests = recipients.map((recipient) => {
+      const payload = {
+        title,
+        message,
+        target: recipient.type === 'shop' ? 'shop_owner' : 'user'
+      }
+
+      if (recipient.type === 'shop') {
+        payload.shop_id = recipient.id
+      } else {
+        payload.user_id = recipient.id
+      }
+
+      return api.post('/notifications', payload)
+    })
+
+    const results = await Promise.allSettled(requests)
+    const successCount = results.filter((result) => result.status === 'fulfilled').length
+
+    if (!successCount) {
+      throw new Error('Failed to send information.')
+    }
+
     platformTitle.value = ''
     platformMessage.value = ''
     loadNotifications(null, { include_all: true })
     platformPopupVisible.value = false
     activeCategory.value = 'all'
+    toast.success(
+      successCount === 1
+        ? 'Information sent successfully.'
+        : `Information sent to ${successCount} recipients.`
+    )
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to send information.')
   } finally {
@@ -798,14 +904,15 @@ watch(
   padding: 1.5rem;
 }
 .platform-popup__panel {
-  background: var(--color-card-bg);
-  border-radius: 20px;
-  padding: 1.5rem;
-  width: min(480px, 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 22px;
+  padding: 1.2rem;
+  width: min(500px, 100%);
   box-shadow: 0 30px 60px rgba(15, 23, 42, 0.35);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.9rem;
   position: relative;
 }
 .platform-popup__header {
@@ -832,7 +939,7 @@ watch(
   color: #6b7280;
   padding: 0;
 }
-.platform-popup__selector-grid {
+.platform-popup__field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
@@ -841,8 +948,73 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  color: #475569;
+}
+.platform-popup__field > span {
+  font-weight: 700;
+  color: #334155;
+}
+.platform-popup__control {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.92rem;
+  font-family: inherit;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.platform-popup__control:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+.platform-popup__control:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+}
+.platform-popup__textarea {
+  min-height: 104px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.platform-popup__recipient-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.platform-popup__recipient-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.platform-popup__recipient-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.platform-popup__recipient-copy strong {
+  color: #0f172a;
+  font-size: 0.9rem;
+}
+.platform-popup__recipient-copy span {
+  color: #64748b;
+  font-size: 0.8rem;
 }
 .platform-popup__actions {
   display: flex;
@@ -873,10 +1045,10 @@ watch(
   background: #93c5fd;
 }
 .ghost-pill.platform-popup__cancel {
-  background: #ef4444;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 10px 20px rgba(239, 68, 68, 0.25);
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
 }
 
 .admin-notifications-page__list {
@@ -981,38 +1153,6 @@ watch(
   gap: 1rem;
   font-size: 0.85rem;
   color: #6b7280;
-}
-
-.notification-card__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.6rem;
-}
-
-.status-badge {
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.status-badge--new {
-  background: var(--color-success-light);
-  color: var(--color-success);
-  border-color: var(--color-success-border);
-}
-
-.status-badge--unread {
-  background: rgba(249, 115, 22, 0.12);
-  color: var(--color-warning);
-  border-color: rgba(249, 115, 22, 0.4);
-}
-
-.status-badge--read {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
 }
 
 .ghost-pill {
@@ -1129,6 +1269,10 @@ watch(
   }
 
   .platform-send-panel__selector-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .platform-popup__field-grid {
     grid-template-columns: 1fr;
   }
 }

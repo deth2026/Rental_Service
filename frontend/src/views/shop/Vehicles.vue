@@ -149,6 +149,17 @@ const fetchVehicles = async () => {
                     : `${baseUrl}/${imageUrl}`.replace(/\/+/g, '/'))
                 : (parsedPhotos[0] || sampleThumb)
 
+            const totalVehiclesCount = normalizeNonNegativeInteger(
+                source.total_vehicles ?? source.totalVehicles ?? 0,
+            )
+            const rawAvailableStock = normalizeNonNegativeInteger(
+                source.available_vehicles ?? source.availableVehicles ?? totalVehiclesCount,
+            )
+            const availableStock =
+                totalVehiclesCount > 0
+                    ? Math.min(rawAvailableStock, totalVehiclesCount)
+                    : rawAvailableStock
+
             return {
                 ...source,
                 shop_id: source.shop_id,
@@ -165,7 +176,9 @@ const fetchVehicles = async () => {
                 base64Photos: parsedPhotos,
                 riderDetails: source.rider_details ?? '',
                 insuranceFee: source.insurance_fee ?? '',
-                taxesFee: source.taxes_fee ?? ''
+                taxesFee: source.taxes_fee ?? '',
+                total_vehicles: totalVehiclesCount,
+                availableStock,
             }
         })
     } catch (error) {
@@ -204,6 +217,19 @@ const normalizeOptionalNumber = (value) => {
 
     const parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : null
+}
+
+const normalizeNonNegativeInteger = (value, fallback = 0) => {
+    if (value === '' || value === null || value === undefined) {
+        return fallback
+    }
+
+    const parsed = Number(value)
+    if (!Number.isFinite(parsed)) {
+        return fallback
+    }
+
+    return Math.max(0, Math.trunc(parsed))
 }
 
 // Fetch user's shop
@@ -273,14 +299,42 @@ const formatDate = (dateStr) => {
   }
 }
 
+const normalizeStatusKey = (status) =>
+  (status || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/-/g, ' ')
+
+const getDisplayStatus = (vehicle) => {
+  if (!vehicle) return 'Available'
+
+  const available =
+    Number.isFinite(vehicle.availableStock) && vehicle.availableStock >= 0
+      ? Math.trunc(vehicle.availableStock)
+      : normalizeNonNegativeInteger(
+          vehicle.available_vehicles ?? vehicle.availableVehicles ?? 0,
+        )
+
+  if (available <= 0) {
+    return 'Out of Stock'
+  }
+
+  const declaredStatus = (vehicle.status ?? 'Available').toString().trim()
+  return declaredStatus || 'Available'
+}
+
 // Status icons
 const getStatusIcon = (status) => {
-  if (status === 'Available') {
+  const key = normalizeStatusKey(status)
+  if (key === 'available') {
     return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
-  } else if (status === 'Rented') {
+  } else if (key === 'rented') {
     return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
-  } else if (status === 'Maintenance') {
+  } else if (key === 'maintenance') {
     return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>'
+  } else if (key === 'out of stock') {
+    return '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#b91c1c" stroke-width="2.5"><circle cx="12" cy="12" r="8"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>'
   }
   return ''
 }
@@ -299,9 +353,11 @@ const getCategoryIcon = (category) => {
 
 // Get status badge class
 const getStatusClass = (status) => {
-  if (status === 'Available') return 'status-available'
-  if (status === 'Rented') return 'status-rented'
-  if (status === 'Maintenance') return 'status-maintenance'
+  const key = normalizeStatusKey(status)
+  if (key === 'available') return 'status-available'
+  if (key === 'rented') return 'status-rented'
+  if (key === 'maintenance') return 'status-maintenance'
+  if (key === 'out of stock') return 'status-out-of-stock'
   return ''
 }
 
@@ -321,7 +377,12 @@ const filteredVehicles = computed(() => {
 })
 
 const totalVehicles = computed(() => vehicles.value.length)
-const availableVehicles = computed(() => vehicles.value.filter(v => v.status === 'Available').length)
+const availableVehicles = computed(() =>
+    vehicles.value.reduce((sum, entry) => {
+        const available = Number.isFinite(entry.availableStock) ? entry.availableStock : 0
+        return sum + Math.max(0, Math.trunc(available))
+    }, 0)
+)
 const maintenanceVehicles = computed(() => vehicles.value.filter(v => v.status === 'Maintenance').length)
 const potentialPerDay = computed(() => vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0))
 
@@ -769,11 +830,19 @@ const onPhotoDrop = async (e) => {
             <td>{{ v.stock }}</td>
             <td>{{ v.category }}</td>
             <td>{{ v.plate }}</td>
-            <td>{{ v.total_vehicles ?? 1 }}</td>
+            <td>
+              <div class="stock-cell">
+                <span v-if="(v.availableStock ?? 0) > 0">
+                  {{ v.availableStock }} / {{ v.total_vehicles ?? 0 }} in stock
+                </span>
+                <span v-else class="stock-out">Out of stock</span>
+              </div>
+            </td>
             <td>${{ v.price }}</td>
             <td>
-              <span :class="['status-badge', getStatusClass(v.status)]">
-                <span v-html="getStatusIcon(v.status)"></span> {{ v.status }}
+              <span :class="['status-badge', getStatusClass(getDisplayStatus(v))]">
+                <span v-html="getStatusIcon(getDisplayStatus(v))"></span>
+                {{ getDisplayStatus(v) }}
               </span>
             </td>
             <td>{{ formatDate(v.createdAt) }}</td>

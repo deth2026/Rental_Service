@@ -5,6 +5,8 @@ let nextId = 1
 
 const state = reactive({
   items: [],
+  // When true, only toasts marked important (or errors/successes) will be shown.
+  showOnlyImportant: true,
 })
 
 const remove = (id) => {
@@ -18,6 +20,12 @@ const push = (message, type = 'info', options = {}) => {
 
   const duration = Number(options.duration ?? DEFAULT_DURATION)
   const id = nextId++
+
+  // Determine whether this toast should be considered important.
+  const isImportant = Boolean(options.important) || type === 'error' || type === 'success'
+
+  // If configured to only show important toasts and this one is not important, skip it.
+  if (state.showOnlyImportant && !isImportant) return null
 
   state.items.push({
     id,

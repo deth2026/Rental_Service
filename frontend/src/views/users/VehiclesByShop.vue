@@ -1,31 +1,12 @@
 <template>
   <div>
   <div class="vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon">
-          <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-        </div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="userNavItems"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="content">
       <section class="deals-section">
@@ -34,13 +15,10 @@
             <i class="fa-solid fa-car"></i>
             <span>AVAILABLE VEHICLES</span>
           </div>
-  
-          <p v-if="selectedDateError" class="selected-date-error">{{ selectedDateError }}</p>
-          <p v-else class="availability-note">
-            Vehicles that are fully booked for the selected dates are dimmed and cannot be reserved.
-          </p>
 
-          <div class="filter-row">
+           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
+
+           <div class="filter-row">
            <button  
               v-for="item in filterItems"
               :key="item.id"
@@ -155,13 +133,14 @@
 
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
+import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -176,9 +155,11 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const navItems = ['Home', 'View Details', 'Bookings'];
 const router = useRouter();
-const activeNav = ref('Home');
+const userNavItems = [
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
+];
 const actionMessage = ref('');
 const activeFilter = ref('all');
 const filterItems = [
@@ -191,11 +172,12 @@ const filterItems = [
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
   if (!t) return '';
+  // Prefer explicit car detection before motorbike keywords
+  if (t.includes('car') || t.includes('suv')) return 'car';
+  if (t.includes('bicy')) return 'bicycle';
   if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
     return 'motorbike';
   }
-  if (t.includes('bicy')) return 'bicycle';
-  if (t.includes('car') || t.includes('suv')) return 'car';
   return t;
 };
 
@@ -244,6 +226,22 @@ const selectedShopLocationLink = computed(() => {
   if (typeof loc !== 'string') return '';
   return loc.trim();
 });
+
+const syncShopSelectionToStorage = () => {
+  if (selectedShopId.value) {
+    cacheSelectedShop(selectedShopId.value, selectedShopName.value)
+  } else {
+    clearSelectedShopCache()
+  }
+}
+
+watch(
+  [() => selectedShopId.value, () => selectedShopName.value],
+  () => {
+    syncShopSelectionToStorage()
+  },
+  { immediate: true }
+)
 const extractCoordinatesFromMapUrl = (value) => {
   const url = String(value || '').trim();
   if (!url) return null;
@@ -539,7 +537,7 @@ const loadVehiclesAndShops = async () => {
 
     vehicles.value = vehicleList.map((vehicle) => ({
       ...vehicle,
-      rating: vehicle.rating ?? 4.8
+      rating: Number(vehicle.rating ?? vehicle.average_rating ?? 0),
     }));
     shopNamesById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
@@ -553,23 +551,6 @@ const loadVehiclesAndShops = async () => {
   }
 };
 
-
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.push('/view_shop');
-    return;
-  }
-  if (item === 'My Bookings') {
-    router.push('/my-bookings');
-    return;
-  }
-  if (item === 'Promotion') {
-    router.push('/promotions');
-    return;
-  }
-  actionMessage.value = `${item} opened.`;
-};
 
 const handleSearch = () => {
   actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
@@ -603,10 +584,6 @@ const notify = (message) => {
   actionMessage.value = message;
 };
 
-const openProfile = () => {
-  router.push('/user/profile');
-};
-
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
@@ -637,9 +614,11 @@ const bookNow = (vehicle) => {
 };
 
 onMounted(() => {
-  dateRangeTimer = window.setInterval(() => {
-    dateRange.value = buildRollingDateRange();
-  }, 60 * 1000);
+   dateRangeTimer = window.setInterval(() => {
+     dateRange.value = buildRollingDateRange();
+   }, 60 * 1000);
+   // Scroll to top when page loads to ensure user sees vehicles first
+   window.scrollTo(0, 0);
   loadVehiclesAndShops();
 });
 
@@ -690,6 +669,7 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
+  padding-right: 60px;
 }
 
 .book-btn {

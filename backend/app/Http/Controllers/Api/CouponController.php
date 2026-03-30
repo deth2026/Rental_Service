@@ -4,32 +4,102 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
+use App\Models\Shop;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class CouponController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Coupon::paginate(15));
+        $query = Coupon::with('shop.owner')->orderByDesc('id');
+        $user = $request->user();
+        $role = strtolower((string) ($user->role ?? ''));
+        $hasShopColumn = $this->couponColumnExists('shop_id');
+
+        if ($hasShopColumn && $request->filled('shop_id')) {
+            $query->where('shop_id', $request->integer('shop_id'));
+        }
+
+        if ($request->filled('code')) {
+            $query->whereRaw('LOWER(code) = ?', [strtolower((string) $request->query('code'))]);
+        }
+
+        if ($hasShopColumn && $user && $role === 'shop_owner') {
+            $shopIds = Shop::where('owner_id', $user->id)->pluck('id')->all();
+            $query->whereIn('shop_id', $shopIds ?: [0]);
+        }
+
+        return response()->json($query->paginate(15));
     }
 
     public function store(Request $request)
     {
-        $record = Coupon::create($request->all());
+        $payload = $request->validate([
+            'shop_id' => 'nullable|integer|exists:shops,id',
+            'code' => 'required|string|max:255',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'valid_from' => 'nullable|date',
+            'valid_until' => 'required|date',
+            'usage_limit' => 'nullable|integer|min:0',
+            'minimum_amount' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
 
-        return response()->json($record, 201);
+        if ($this->couponColumnExists('shop_id')) {
+            $payload['shop_id'] = $this->resolveShopId($request, $payload['shop_id'] ?? null);
+        } else {
+            unset($payload['shop_id']);
+        }
+
+        $record = Coupon::create($payload);
+        $record->loadMissing('shop.owner');
+
+        try {
+            NotificationService::couponCreated($record);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send coupon notifications.', [
+                'coupon_id' => $record->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        return response()->json($record->load('shop.owner'), 201);
     }
 
     public function show(Coupon $coupon)
     {
-        return response()->json($coupon);
+        return response()->json($coupon->load('shop.owner'));
     }
 
     public function update(Request $request, Coupon $coupon)
     {
-        $coupon->update($request->all());
+        $payload = $request->validate([
+            'shop_id' => 'nullable|integer|exists:shops,id',
+            'code' => 'sometimes|string|max:255',
+            'discount_percent' => 'nullable|numeric|min:0|max:100',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'valid_from' => 'nullable|date',
+            'valid_until' => 'nullable|date',
+            'usage_limit' => 'nullable|integer|min:0',
+            'minimum_amount' => 'nullable|numeric|min:0',
+            'is_active' => 'nullable|boolean',
+        ]);
 
-        return response()->json($coupon->fresh());
+        if ($this->couponColumnExists('shop_id')) {
+            $resolvedShopId = $this->resolveShopId($request, $payload['shop_id'] ?? $coupon->shop_id, $coupon);
+            $payload['shop_id'] = $resolvedShopId;
+        } else {
+            unset($payload['shop_id']);
+        }
+
+        $coupon->update($payload);
+
+        return response()->json($coupon->fresh()->load('shop.owner'));
     }
 
     public function destroy(Coupon $coupon)
@@ -39,83 +109,42 @@ class CouponController extends Controller
         return response()->json(['message' => 'Coupon deleted successfully']);
     }
 
-    public function check(Request $request)
+    private function couponColumnExists(string $column): bool
     {
-        $code = $request->query('code');
-        $totalAmount = $request->query('total_amount', 0);
+        static $cache = [];
+        if (!array_key_exists($column, $cache)) {
+            $cache[$column] = Schema::hasColumn('coupons', $column);
+        }
+        return $cache[$column];
+    }
 
-        if (!$code) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Coupon code is required'
-            ], 400);
+    private function resolveShopId(Request $request, ?int $requestedShopId = null, ?Coupon $coupon = null): ?int
+    {
+        if (!$this->couponColumnExists('shop_id')) {
+            return $requestedShopId;
         }
 
-        $coupon = Coupon::where('code', $code)->first();
+        $user = $request->user();
+        $role = strtolower((string) ($user->role ?? ''));
 
-        if (!$coupon) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Invalid coupon code'
-            ], 404);
+        if ($role === 'shop_owner') {
+            $shop = Shop::where('owner_id', $user->id)->first();
+
+            if (!$shop) {
+                throw ValidationException::withMessages([
+                    'shop_id' => ['No shop found for this shop owner.'],
+                ]);
+            }
+
+            if ($coupon && $coupon->shop_id && (int) $coupon->shop_id !== (int) $shop->id) {
+                throw ValidationException::withMessages([
+                    'shop_id' => ['You can only manage coupons for your own shop.'],
+                ]);
+            }
+
+            return (int) $shop->id;
         }
 
-        // Check if coupon is active
-        if (!$coupon->is_active) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'This coupon is no longer active'
-            ], 400);
-        }
-
-        // Check validity dates
-        $now = now();
-        if ($coupon->valid_from && $now->lt($coupon->valid_from)) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'This coupon is not yet valid'
-            ], 400);
-        }
-
-        if ($coupon->valid_until && $now->gt($coupon->valid_until)) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'This coupon has expired'
-            ], 400);
-        }
-
-        // Check usage limit
-        if ($coupon->usage_limit !== null && $coupon->usage_limit <= 0) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'This coupon has reached its usage limit'
-            ], 400);
-        }
-
-        // Check minimum amount
-        if ($coupon->minimum_amount && $totalAmount < $coupon->minimum_amount) {
-            return response()->json([
-                'valid' => false,
-                'message' => 'Minimum purchase amount of $' . number_format($coupon->minimum_amount, 2) . ' required'
-            ], 400);
-        }
-
-        // Calculate discount
-        $discount = 0;
-        if ($coupon->discount_percent) {
-            $discount = ($totalAmount * $coupon->discount_percent) / 100;
-        } elseif ($coupon->discount_amount) {
-            $discount = $coupon->discount_amount;
-        }
-
-        // Ensure discount doesn't exceed total amount
-        $discount = min($discount, $totalAmount);
-
-        return response()->json([
-            'valid' => true,
-            'coupon_id' => $coupon->id,
-            'discount_amount' => $discount,
-            'message' => 'Coupon applied successfully'
-        ]);
+        return $requestedShopId;
     }
 }

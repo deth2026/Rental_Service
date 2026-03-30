@@ -67,6 +67,11 @@
     color: #92400e;
 }
 
+.status-badge.status-out-of-stock {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
 .line {
     display: flex;
     justify-content: space-between;
@@ -135,6 +140,17 @@ th {
     background: #f8fafc;
     text-transform: uppercase;
     color: #475569
+}
+
+.stock-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stock-out {
+    color: #991b1b;
+    font-weight: 600;
 }
 
 .primary,

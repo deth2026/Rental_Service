@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Bookings from "./Bookings.vue";
+import ManageCustomer from "./ManageCustomer.vue";
 import Payments from "./Payments.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
@@ -17,8 +18,9 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/Images/logo-removebg.png";
+const logoUrl = "/images/logo-removebg.png";
 const route = useRoute();
+const reportFocus = computed(() => String(route.query.reportType || ""));
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
 const showToast = (message, type = "success") => {
@@ -26,7 +28,7 @@ const showToast = (message, type = "success") => {
   setTimeout(() => (toast.value.show = false), 100);
 };
 
-const { unreadCount } = useNotifications();
+const { unreadCount, loadNotifications } = useNotifications();
 const showNotifications = ref(false);
 const notificationRoot = ref(null);
 const isDarkMode = ref(false);
@@ -86,10 +88,10 @@ const sections = [
   { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
   { id: "bookings", label: "Bookings", icon: "calendar-check" },
   { id: "payments", label: "Payments", icon: "wallet" },
-  { id: "damage", label: "Damage Reports", icon: "shield-alert" },
   { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },
+  { id: "manage-customer", label: "Manage Customer", icon: "users" },
   { id: "activity", label: "Activity History", icon: "history" },
   { id: "notifications", label: "Notifications", icon: "bell" },
   { id: "settings", label: "Settings", icon: "settings" },
@@ -204,6 +206,16 @@ watch(
     const matching = sections.find((s) => s.id === section);
     if (matching) {
       active.value = section;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => reportFocus.value,
+  (value) => {
+    if (value) {
+      active.value = "activity";
     }
   },
   { immediate: true }
@@ -608,6 +620,43 @@ const getDateKey = (value) => {
   return `${year}-${month}-${day}`;
 };
 
+const isRevenueBooking = (booking) => {
+  const statusKey = normalizePaymentStatusKey(booking?.status);
+  return ["paid", "confirmed", "completed"].includes(statusKey);
+};
+
+const paidPaymentBookingIds = computed(
+  () =>
+    new Set(
+      filteredPayments.value
+        .filter((payment) => isPaidPayment(payment))
+        .map((payment) => Number(payment?.booking_id || payment?.booking?.id || 0))
+        .filter((id) => id > 0),
+    ),
+);
+
+const revenueRecords = computed(() => {
+  const paymentRecords = filteredPayments.value
+    .filter((payment) => isPaidPayment(payment))
+    .map((payment) => ({
+      amount: Number(payment.amount || payment.total_price || 0),
+      date: getPaymentDate(payment),
+    }));
+
+  const bookingFallbackRecords = filteredBookings.value
+    .filter((booking) => {
+      const bookingId = Number(booking?.id || 0);
+      if (!isRevenueBooking(booking)) return false;
+      return bookingId <= 0 || !paidPaymentBookingIds.value.has(bookingId);
+    })
+    .map((booking) => ({
+      amount: Number(booking.total_price || 0),
+      date: booking.updated_at || booking.created_at || booking.start_date || "",
+    }));
+
+  return [...paymentRecords, ...bookingFallbackRecords];
+});
+
 const shopMatchesEntry = (entry) => {
   const shopId = Number(shop.value?.id);
   if (!shopId) return true;
@@ -619,15 +668,41 @@ const shopMatchesEntry = (entry) => {
   return Number(bookingShopId) === shopId;
 };
 
-const shopPayments = computed(() =>
-  payments.value.filter((payment) => shopMatchesEntry(payment)),
+const getEntryCategory = (entry) => {
+  return (
+    entry?.vehicle?.category ||
+    entry?.vehicle?.type ||
+    entry?.booking?.vehicle?.category ||
+    entry?.booking?.vehicle?.type ||
+    entry?.booking?.category ||
+    entry?.booking?.type ||
+    entry?.category ||
+    entry?.type ||
+    ""
+  );
+};
+
+const categoryMatchesEntry = (entry) => {
+  if (!categoryFilter.value || categoryFilter.value === "All Categories") return true;
+  const cat = String(getEntryCategory(entry) || "").trim().toLowerCase();
+  return cat === String(categoryFilter.value || "").trim().toLowerCase();
+};
+
+const filteredBookings = computed(() =>
+  (bookings.value || []).filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry)),
+);
+
+const filteredPayments = computed(() =>
+  (payments.value || []).filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry)),
 );
 
 const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
   dashboardError.value = null;
   try {
-    const response = await api.get("/shop-bookings");
+    const response = await api.get("/shop-bookings", {
+      params: shop.value?.id ? { shop_id: shop.value.id } : {},
+    });
     bookings.value = response.data || [];
     console.log("Dashboard bookings loaded:", bookings.value.length);
   } catch (error) {
@@ -672,7 +747,9 @@ const fetchShopRating = async () => {
 
 const fetchShopPayments = async () => {
   try {
-    const response = await api.get("/shop-payments");
+    const response = await api.get("/shop-payments", {
+      params: shop.value?.id ? { shop_id: shop.value.id } : {},
+    });
     const data = response.data || [];
     payments.value = Array.isArray(data) ? data : data.data || [];
     console.log("Dashboard payments loaded:", payments.value.length);
@@ -862,21 +939,24 @@ initializeShopData = async () => {
   await loadOwnerShopName();
 };
 
-initializeShopData().catch(() => {});
+    watch(
+      shop,
+      (current) => {
+        if (current?.id) {
+          fetchShopBookings().catch(() => {});
+          fetchShopPayments().catch(() => {});
+          loadNotifications(current.id).catch(() => {});
+          fetchFeedback().catch(() => {});
+          fetchShopRating().catch(() => {});
+          return;
+        }
+        feedback.value = [];
+        shopRating.value = { average_rating: 0, total_ratings: 0 };
+      },
+      { immediate: true },
+    );
 
-watch(
-  shop,
-  (current) => {
-    if (current?.id) {
-      fetchFeedback().catch(() => {});
-      fetchShopRating().catch(() => {});
-      return;
-    }
-    feedback.value = [];
-    shopRating.value = { average_rating: 0, total_ratings: 0 };
-  },
-  { immediate: true },
-);
+    initializeShopData().catch(() => {});
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -955,7 +1035,7 @@ const filteredVehicles = computed(() => {
   });
 });
 
-const totalBookings = computed(() => bookings.value.length);
+const totalBookings = computed(() => filteredBookings.value.length);
 const totalEarnings = computed(() =>
   shopPayments.value.reduce((sum, payment) => {
     if (!isPaidPayment(payment)) return sum;
@@ -964,7 +1044,7 @@ const totalEarnings = computed(() =>
 );
 const todayBookings = computed(
   () =>
-    bookings.value.filter((b) => {
+    filteredBookings.value.filter((b) => {
       const key = getDateKey(b.start_date || b.created_at || b.startDate);
       return key && key === today.value;
     }).length,
@@ -988,20 +1068,23 @@ const monthlyIncome = computed(() => {
       date.getFullYear() === now.getFullYear() &&
       date.getMonth() === now.getMonth()
     ) {
-      return sum + Number(payment.amount || payment.total_price || 0);
+      return sum + Number(entry.amount || 0);
     }
     return sum;
   }, 0);
 });
 const newCustomers = computed(
-  () => new Set(bookings.value.map((b) => b.customer)).size,
+  () =>
+    new Set(
+      filteredBookings.value.map(
+        (b) => b.customer_email || b.customer_name || b.customer || b.user_id || b.id,
+      ),
+    ).size,
 );
 const averageRating = computed(() => {
-  // Only show rating if shop has ratings
-  if (!shopRating.value.total_ratings || shopRating.value.total_ratings === 0) {
-    return "- ";
-  }
-  return String(shopRating.value.average_rating || "0");
+  const raw = Number(shopRating.value.average_rating ?? 0);
+  const normalized = Number.isFinite(raw) ? raw : 0;
+  return normalized.toFixed(1);
 });
 const potentialPerDay = computed(() =>
   vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0),
@@ -1557,7 +1640,7 @@ const iconSvg = (name) => {
             <h3>{{ newCustomers }}</h3>
             <b class="stat-icon icon-teal" v-html="iconSvg('users')"></b>
           </article>
-          <article class="card" v-if="shopRating.total_ratings > 0">
+          <article class="card">
             <span>Average Rating</span>
             <h3>{{ averageRating }}</h3>
             <b class="stat-icon icon-yellow" v-html="iconSvg('star')"></b>
@@ -1597,7 +1680,7 @@ const iconSvg = (name) => {
       </section>
 
       <section v-else-if="active === 'coupons'" class="coupons-view">
-        <Coupons />
+        <Coupons :shop-id="shop?.id" />
       </section>
 
       <section v-else-if="active === 'notifications'" class="notifications-view">
@@ -1608,8 +1691,12 @@ const iconSvg = (name) => {
         <LoyaltyPoints />
       </section>
 
+      <section v-else-if="active === 'manage-customer'" class="manage-customer-view">
+        <ManageCustomer />
+      </section>
+
       <section v-else-if="active === 'activity'" class="activity-view">
-        <ActivityHistory />
+        <ActivityHistory :focus="reportFocus" />
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
@@ -2531,7 +2618,7 @@ const iconSvg = (name) => {
   background: #f8fafc;
   border: 1px solid #dbe1ea;
   padding: 0 !important;
-  margin: 0;
+  margin: 0 0 0 40px;
   display: grid;
   place-items: center;
   z-index: 50;
@@ -3644,7 +3731,7 @@ textarea {
 
   .topbar-right {
     order: 2;
-    margin-right: 0;
+    margin-right: -40px;
   }
 
   .user-box {

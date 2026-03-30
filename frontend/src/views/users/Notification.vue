@@ -30,7 +30,7 @@
           </button>
         </div>
 
-        <div class="notification-list">
+    <div class="notification-list">
           <div v-if="isLoading" class="notification-list__state">Loading notifications...</div>
           <div v-else-if="error" class="notification-list__state notification-list__state--error">
             {{ error }}
@@ -40,7 +40,7 @@
               v-for="item in displayedNotifications"
               :key="item.id"
               :class="['notification-row', { unread: item.status === 'unread' }]"
-              @click="openNotificationDetail(item)"
+              @click="handleNotificationClick(item)"
             >
               <img :src="item.user.avatar" :alt="item.user.name" class="notification-row__avatar" />
               <div class="notification-row__content">
@@ -111,13 +111,13 @@ import { userService } from '@/services/database.js'
 import UserNavbar from '@/components/UserNavbar.vue'
 import CommonFooter from '@/components/CommonFooter.vue'
 import { useNotifications } from '@/composables/useNotifications'
+import { navigateFromNotification } from '@/utils/notificationNavigation'
 
 const router = useRouter()
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const handleLogout = async () => {
@@ -171,7 +171,23 @@ const detailNotificationInfo = computed(() => {
   }
 })
 
-const openNotificationDetail = (item) => {
+const handleNotificationClick = async (item) => {
+  if (!item) return
+  if (item.status === 'unread') {
+    try {
+      await toggleReadStatus(item.id)
+    } catch (e) {
+      console.error('Failed to mark notification as read', e)
+    }
+  }
+
+  const navigated = navigateFromNotification(router, item)
+  if (navigated) {
+    detailModalVisible.value = false
+    detailNotification.value = null
+    return
+  }
+
   detailNotification.value = item
   detailModalVisible.value = true
 }
@@ -340,6 +356,7 @@ const formatFullDate = (timestamp) => {
   background: #eef2ff;
   align-items: center;
   position: relative;
+  min-width: 0;
 }
 
 .notification-row.unread {
@@ -359,10 +376,15 @@ const formatFullDate = (timestamp) => {
   background: #fff;
   border-radius: 22px;
   padding: 16px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.notification-row__heading {
+  min-width: 0;
 }
 
 .notification-row__title {
@@ -371,7 +393,11 @@ const formatFullDate = (timestamp) => {
   font-weight: 700;
   color: #111827;
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notification-row__name {
@@ -382,11 +408,16 @@ const formatFullDate = (timestamp) => {
   margin: 0;
   color: #475569;
   font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notification-row__footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 8px;
   font-size: 0.8rem;
   color: #94a3b8;
   align-items: center;
@@ -546,6 +577,14 @@ const formatFullDate = (timestamp) => {
 
   .notification-shell__footer {
     flex-direction: column;
+  }
+
+  .notification-row {
+    grid-template-columns: 1fr;
+  }
+
+  .notification-row__dot {
+    display: none;
   }
 }
 </style>

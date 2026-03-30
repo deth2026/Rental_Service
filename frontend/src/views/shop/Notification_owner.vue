@@ -13,7 +13,6 @@
           <span class="unread-count">{{ unreadCountDisplay }}</span>
           <span class="unread-label">unread</span>
         </div>
-        <button class="select-date-btn" type="button">Select Date</button>
       </div>
     </header>
 
@@ -37,17 +36,18 @@
       <template v-else-if="error">
         <div class="empty-state error">{{ error }}</div>
       </template>
-      <template v-else-if="!filteredNotifications.length">
+      <template v-else-if="!visibleNotifications.length">
         <div class="empty-state">
           No notifications yet. Once customers book, message, or cancel, you&apos;ll see the updates here.
         </div>
       </template>
       <template v-else>
         <article
-          v-for="item in filteredNotifications"
+          v-for="item in visibleNotifications"
           :key="item.id"
           class="notification-card"
           :class="{ unread: item.status === 'unread' }"
+          @click="openReportForNotification(item)"
         >
           <header class="notification-card__top">
             <div class="notification-card__user">
@@ -64,7 +64,7 @@
                 <p class="notification-card__subtitle">{{ item.message || 'No additional details' }}</p>
               </div>
             </div>
-            <button class="toggle-read" type="button" @click="toggleReadStatus(item.id)">
+            <button class="toggle-read" type="button" @click.stop="toggleReadStatus(item.id)">
               {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
             </button>
           </header>
@@ -81,12 +81,20 @@
               type="button"
               class="action-btn"
               :class="action.variant"
-              @click="action.handler"
+              @click.stop="action.handler"
             >
               {{ action.label }}
             </button>
           </div>
         </article>
+        <button
+          v-if="hasHiddenNotifications"
+          type="button"
+          class="see-more-btn"
+          @click="showAllNotifications = !showAllNotifications"
+        >
+          {{ showAllNotifications ? 'See less' : 'See more' }}
+        </button>
       </template>
     </section>
 
@@ -164,10 +172,12 @@ const tabOptions = [
   { label: 'All', value: 'all' },
   { label: 'Comments', value: 'message' },
   { label: 'Submitted For Review', value: 'booking' },
-  { label: 'Ready For Dev', value: 'general' }
+  { label: 'Discount', value: 'coupon' },
+  { label: 'Payments', value: 'payment' }
 ]
 
 const activeTab = ref('all')
+const showAllNotifications = ref(false)
 
 const refreshNotifications = () => {
   loadNotifications(props.shopId).catch(() => {})
@@ -191,6 +201,22 @@ const filteredNotifications = computed(() => {
   }
   return base
 })
+
+const recentNotifications = computed(() => {
+  const cutoff = Date.now() - (24 * 60 * 60 * 1000)
+  return filteredNotifications.value.filter((item) => {
+    const timestamp = Number(new Date(item.timestamp))
+    if (!Number.isFinite(timestamp)) return true
+    return timestamp >= cutoff
+  })
+})
+
+const visibleNotifications = computed(() => {
+  if (showAllNotifications.value) return recentNotifications.value
+  return recentNotifications.value.slice(0, 4)
+})
+
+const hasHiddenNotifications = computed(() => recentNotifications.value.length > 4)
 
 const replyModalVisible = ref(false)
 const replyTarget = ref(null)
@@ -267,6 +293,17 @@ const openNotificationCenter = () => {
   router.push({ name: 'shop-notifications' })
 }
 
+const openReportForNotification = (item) => {
+  if (!props.shopId) return
+  const focus = String(item?.type || 'general').trim().toLowerCase()
+  router.push({
+    name: 'shop-report',
+    query: {
+      reportType: focus
+    }
+  })
+}
+
 const getActionButtons = (item) => {
   const buttons = []
   if (item.type === 'booking') {
@@ -274,11 +311,6 @@ const getActionButtons = (item) => {
       label: 'View booking',
       variant: 'primary',
       handler: () => openBookingDetail(item)
-    })
-    buttons.push({
-      label: 'See all bookings',
-      variant: 'secondary',
-      handler: openBookingList
     })
     return buttons
   }
@@ -299,11 +331,6 @@ const getActionButtons = (item) => {
     label: 'View notification',
     variant: 'primary',
     handler: openNotificationCenter
-  })
-  buttons.push({
-    label: 'Browse bookings',
-    variant: 'secondary',
-    handler: openBookingList
   })
   return buttons
 }
@@ -351,6 +378,16 @@ const formatWorkDuration = (timestamp) => {
   if (!parts.length) return 'Worked 0M'
   return `Worked ${parts.join(' ')}`
 }
+
+watch(
+  filteredNotifications,
+  () => {
+    if (showAllNotifications.value && filteredNotifications.value.length <= 4) {
+      showAllNotifications.value = false
+    }
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
@@ -425,23 +462,6 @@ const formatWorkDuration = (timestamp) => {
   line-height: 1;
 }
 
-.select-date-btn {
-  border-radius: 999px;
-  border: 1px solid #d5d5d5;
-  background: #ffffff;
-  padding: 10px 18px;
-  font-weight: 600;
-  color: #111827;
-  cursor: pointer;
-  transition: border 0.2s ease, transform 0.2s ease;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.15);
-}
-
-.select-date-btn:hover {
-  border-color: #a855f7;
-  transform: translateY(-1px);
-}
-
 .notification-tabs {
   display: flex;
   gap: 8px;
@@ -470,6 +490,21 @@ const formatWorkDuration = (timestamp) => {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.see-more-btn {
+  align-self: center;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+
+.see-more-btn:hover {
+  text-decoration: underline;
 }
 
 .reply-modal {
@@ -561,6 +596,7 @@ const formatWorkDuration = (timestamp) => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 .notification-card.unread {
@@ -572,12 +608,15 @@ const formatWorkDuration = (timestamp) => {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
+  min-width: 0;
 }
 
 .notification-card__user {
   display: flex;
   gap: 16px;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .notification-card__avatar {
@@ -604,12 +643,18 @@ const formatWorkDuration = (timestamp) => {
   font-weight: 700;
   font-size: 1.05rem;
   color: #0f172a;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .notification-card__subtitle {
   margin: 4px 0 0;
   color: #475569;
   font-size: 0.9rem;
+  line-height: 1.45;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .toggle-read {
@@ -631,7 +676,9 @@ const formatWorkDuration = (timestamp) => {
 
 .notification-card__meta {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
+  gap: 8px;
   align-items: center;
   color: #94a3b8;
   font-size: 0.9rem;

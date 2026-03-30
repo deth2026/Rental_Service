@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAdminStore } from '../../stores/adminStore.js'
 import { useToast } from '../../composables/useToast.js'
+import { cityApi } from '../../services/api.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 
 const admin = useAdminStore()
@@ -16,13 +17,16 @@ const showSortMenu = ref(false)
 const page = ref(1)
 const perPage = 6
 
+const cities = ref([])
+const loadingCities = ref(false)
+
 const showCreate = ref(false)
-const createForm = ref({ name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const createForm = ref({ name: '', city_id: '', address: '', location: '', phone: '', description: '', img_url: '' })
 const createImageFile = ref(null)
 const createImagePreview = ref('')
 
 const showEdit = ref(false)
-const editForm = ref({ id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' })
+const editForm = ref({ id: null, name: '', city_id: '', address: '', location: '', phone: '', description: '', img_url: '' })
 const editImageFile = ref(null)
 const editImagePreview = ref('')
 
@@ -90,6 +94,90 @@ const sortedShops = computed(() => {
   return items
 })
 
+const toDate = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const reportSummary = computed(() => {
+  const shops = admin.state.shops || []
+  const vehicles = admin.state.vehicles || []
+  const bookings = admin.state.bookings || []
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const activeShops = shops.filter((shop) => statusLabel(shop.status) === 'ACTIVE').length
+  const pendingShops = shops.filter((shop) => statusLabel(shop.status) === 'PENDING').length
+  const bookingsThisMonth = bookings.filter((booking) => {
+    const bookingDate = toDate(booking?.start_date || booking?.created_at || booking?.booking_date || booking?.date)
+    return bookingDate && bookingDate >= monthStart && bookingDate <= now
+  }).length
+
+  return {
+    activeShops,
+    pendingShops,
+    totalVehicles: vehicles.length,
+    bookingsThisMonth,
+  }
+})
+
+const reportMonthSeries = computed(() => {
+  const now = new Date()
+  const buckets = []
+
+  for (let i = 5; i >= 0; i -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    buckets.push({
+      key,
+      label: date.toLocaleDateString('en-US', { month: 'short' }),
+      count: 0,
+    })
+  }
+
+  const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]))
+  ;(admin.state.shops || []).forEach((shop) => {
+    const created = toDate(shop?.created_at || shop?.updated_at)
+    if (!created) return
+    const key = `${created.getFullYear()}-${String(created.getMonth() + 1).padStart(2, '0')}`
+    const bucket = byKey.get(key)
+    if (bucket) bucket.count += 1
+  })
+
+  const maxCount = Math.max(1, ...buckets.map((bucket) => bucket.count))
+  return buckets.map((bucket) => ({
+    ...bucket,
+    heightPercent: bucket.count > 0 ? Math.max(16, Math.round((bucket.count / maxCount) * 100)) : 0,
+  }))
+})
+
+const reportGrowthLabel = computed(() => {
+  const series = reportMonthSeries.value
+  if (series.length < 2) return 'No change'
+  const current = Number(series[series.length - 1]?.count || 0)
+  const previous = Number(series[series.length - 2]?.count || 0)
+
+  if (previous <= 0) {
+    if (current <= 0) return 'No change'
+    return '+100% vs last month'
+  }
+
+  const growth = Math.round(((current - previous) / previous) * 100)
+  const sign = growth > 0 ? '+' : ''
+  return `${sign}${growth}% vs last month`
+})
+
+const reportLastUpdateLabel = computed(() => {
+  const latestDate = (admin.state.shops || [])
+    .map((shop) => toDate(shop?.updated_at || shop?.created_at))
+    .filter(Boolean)
+    .sort((a, b) => b - a)[0]
+
+  if (!latestDate) return 'No update yet'
+  return latestDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+})
+
 // Download functionality
 const downloadShops = () => {
   const shops = sortedShops.value
@@ -121,6 +209,7 @@ const downloadShops = () => {
 
 
 const totalPages = computed(() => Math.max(1, Math.ceil(sortedShops.value.length / perPage)))
+const showingStart = computed(() => (sortedShops.value.length ? ((page.value - 1) * perPage) + 1 : 0))
 
 watch(totalPages, (next) => {
   if (page.value > next) page.value = next
@@ -234,6 +323,7 @@ const submitCreate = async () => {
     let payload = {
       name,
       address,
+      city_id: createForm.value.city_id || null,
       location: createForm.value.location || null,
       phone: createForm.value.phone || null,
       description: createForm.value.description || null,
@@ -246,6 +336,7 @@ const submitCreate = async () => {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (createForm.value.city_id) formData.append('city_id', createForm.value.city_id)
       if (createForm.value.location) formData.append('location', createForm.value.location)
       if (createForm.value.phone) formData.append('phone', createForm.value.phone)
       if (createForm.value.description) formData.append('description', createForm.value.description)
@@ -271,6 +362,7 @@ const openEdit = (shop) => {
   editForm.value = {
     id,
     name: shop?.name || '',
+    city_id: shop?.city_id || '',
     address: shop?.address || '',
     location: shop?.location || '',
     phone: shop?.phone || '',
@@ -284,7 +376,7 @@ const openEdit = (shop) => {
 
 const closeEdit = () => {
   showEdit.value = false
-  editForm.value = { id: null, name: '', address: '', location: '', phone: '', description: '', img_url: '' }
+  editForm.value = { id: null, city_id: '', name: '', address: '', location: '', phone: '', description: '', img_url: '' }
   editImageFile.value = null
   editImagePreview.value = ''
 }
@@ -305,6 +397,7 @@ const submitEdit = async () => {
     let payload = {
       name,
       address,
+      city_id: editForm.value.city_id || null,
       location: editForm.value.location || null,
       phone: editForm.value.phone || null,
       description: editForm.value.description || null,
@@ -315,6 +408,7 @@ const submitEdit = async () => {
       const formData = new FormData()
       formData.append('name', name)
       formData.append('address', address)
+      if (editForm.value.city_id) formData.append('city_id', editForm.value.city_id)
       if (editForm.value.location) formData.append('location', editForm.value.location)
       if (editForm.value.phone) formData.append('phone', editForm.value.phone)
       if (editForm.value.description) formData.append('description', editForm.value.description)
@@ -329,6 +423,18 @@ const submitEdit = async () => {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to update shop.')
   } finally {
     isUpdating.value = false
+  }
+}
+
+const loadCities = async () => {
+  loadingCities.value = true
+  try {
+    const { data } = await cityApi.getAll()
+    cities.value = data?.data || data || []
+  } catch (e) {
+    console.error('Failed to load cities', e)
+  } finally {
+    loadingCities.value = false
   }
 }
 
@@ -402,6 +508,7 @@ watch(
 )
 
 onMounted(() => {
+  loadCities()
   // Use cached data first, then force-refresh if empty so Admin page always tries to recover.
   admin.load()
     .then(() => {
@@ -427,6 +534,61 @@ onMounted(() => {
         <span>Add New Shop</span>
       </button>
     </header>
+
+    <section class="card shops-report">
+      <div class="shops-report-head">
+        <div>
+          <p class="shops-report-kicker">REPORT</p>
+          <h2 class="shops-report-title">Shop Operations Overview</h2>
+          <p class="shops-report-subtitle">Only the most important numbers for daily checks.</p>
+        </div>
+        <div class="shops-report-updated">
+          <i class="fa-regular fa-calendar"></i>
+          <span>Updated: {{ reportLastUpdateLabel }}</span>
+        </div>
+      </div>
+
+      <div class="shops-report-metrics">
+        <article class="shops-metric-card">
+          <p class="shops-metric-label">Pending Approval</p>
+          <p class="shops-metric-value">{{ reportSummary.pendingShops }}</p>
+          <p class="shops-metric-note">Shops waiting for review</p>
+        </article>
+        <article class="shops-metric-card">
+          <p class="shops-metric-label">Active Shops</p>
+          <p class="shops-metric-value">{{ reportSummary.activeShops }}</p>
+          <p class="shops-metric-note">Ready to take bookings</p>
+        </article>
+        <article class="shops-metric-card">
+          <p class="shops-metric-label">Bookings This Month</p>
+          <p class="shops-metric-value">{{ admin.formatted.fmtNumber(reportSummary.bookingsThisMonth) }}</p>
+          <p class="shops-metric-note">{{ admin.formatted.fmtNumber(reportSummary.totalVehicles) }} vehicles in system</p>
+        </article>
+      </div>
+
+      <div class="shops-report-bottom">
+        <div class="shops-mini-chart">
+          <div class="shops-mini-chart-head">
+            <h3>New Shops (Last 6 Months)</h3>
+            <span>{{ reportGrowthLabel }}</span>
+          </div>
+          <div class="shops-mini-bars">
+            <div v-for="item in reportMonthSeries" :key="item.key" class="shops-mini-col">
+              <div class="shops-mini-track">
+                <div class="shops-mini-fill" :style="{ height: `${item.heightPercent}%` }"></div>
+              </div>
+              <span class="shops-mini-count">{{ item.count }}</span>
+              <span class="shops-mini-label">{{ item.label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="shops-report-note">
+          <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+          <p>Approve pending shops daily so new vehicles can appear and bookings stay smooth.</p>
+        </aside>
+      </div>
+    </section>
 
     <section class="card">
       <div class="card-toolbar">
@@ -511,19 +673,19 @@ onMounted(() => {
 
       <div class="table-footer">
         <div class="muted">
-          SHOWING {{ (page - 1) * perPage + 1 }} TO {{ Math.min(page * perPage, sortedShops.length) }} OF
+          SHOWING {{ showingStart }} TO {{ Math.min(page * perPage, sortedShops.length) }} OF
           {{ admin.formatted.fmtNumber(sortedShops.length) }} SHOPS
         </div>
         <div class="pager">
-          <button type="button" class="pager-btn" :disabled="page === 1" @click="page -= 1">‹</button>
+          <button type="button" class="pager-btn" :disabled="page === 1" @click="page -= 1">&lt;</button>
           <button type="button" class="pager-btn is-active">{{ page }}</button>
-          <button type="button" class="pager-btn" :disabled="page === totalPages" @click="page += 1">›</button>
+          <button type="button" class="pager-btn" :disabled="page === totalPages" @click="page += 1">&gt;</button>
         </div>
       </div>
     </section>
 
     <div v-if="showCreate" class="modal-backdrop" role="dialog" aria-modal="true">
-      <div class="modal">
+      <div class="modal modal--create-shop">
         <div class="modal-head">
           <div>
             <div class="modal-title">Create New Shop</div>
@@ -573,16 +735,21 @@ onMounted(() => {
             </label>
             <div class="field-grid two-column">
               <label class="field">
+                <span class="field-label">Province/City</span>
+                <select v-model="createForm.city_id" class="form-select" style="width: 100%; border-radius: 12px; border: 1px solid #d6dbec; padding: 10px 12px;">
+                  <option value="" disabled>Select Province</option>
+                  <option v-for="city in cities" :key="city.id" :value="city.id">
+                    {{ city.name }}
+                  </option>
+                </select>
+              </label>
+              <label class="field">
                 <span class="field-label">Shop Name</span>
                 <input
                   v-model="createForm.name"
                   type="text"
                   placeholder="e.g. Berlin Elite Rentals"
                 />
-              </label>
-              <label class="field">
-                <span class="field-label">Address</span>
-                <input v-model="createForm.address" type="text" placeholder="Street, City, Country" />
               </label>
             </div>
             <div class="field-grid two-column">
@@ -626,6 +793,15 @@ onMounted(() => {
         </div>
 
         <div class="modal-body form-grid">
+          <label class="field">
+            <span class="field-label">Province/City</span>
+            <select v-model="editForm.city_id" class="form-select" style="width: 100%; border-radius: 12px; border: 1px solid #d6dbec; padding: 10px 12px;">
+              <option value="" disabled>Select Province</option>
+              <option v-for="city in cities" :key="city.id" :value="city.id">
+                {{ city.name }}
+              </option>
+            </select>
+          </label>
           <label class="field">
             <span class="field-label">Shop Name</span>
             <input v-model="editForm.name" type="text" />
@@ -677,6 +853,195 @@ onMounted(() => {
 </template>
 
 <style>
+  .shops-report {
+    border-radius: 18px;
+    border: 1px solid #d7e1f0;
+    background: linear-gradient(145deg, #f9fbff 0%, #f2f6ff 100%);
+  }
+
+  .shops-report-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .shops-report-kicker {
+    margin: 0;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: #5c7292;
+    font-weight: 800;
+  }
+
+  .shops-report-title {
+    margin: 2px 0 4px;
+    font-size: 1.35rem;
+    color: #102d4a;
+    font-weight: 800;
+  }
+
+  .shops-report-subtitle {
+    margin: 0;
+    color: #627791;
+    font-size: 0.9rem;
+  }
+
+  .shops-report-updated {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #d5deed;
+    color: #5f738f;
+    padding: 0.45rem 0.72rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .shops-report-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .shops-metric-card {
+    border: 1px solid #d9e2f0;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 12px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  .shops-metric-label {
+    margin: 0;
+    color: #56708f;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.74rem;
+    font-weight: 800;
+  }
+
+  .shops-metric-value {
+    margin: 8px 0 4px;
+    color: #0f2944;
+    font-weight: 900;
+    font-size: 1.8rem;
+    line-height: 1;
+  }
+
+  .shops-metric-note {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.83rem;
+    font-weight: 600;
+  }
+
+  .shops-report-bottom {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(220px, 1fr);
+    gap: 12px;
+  }
+
+  .shops-mini-chart {
+    border: 1px solid #d9e2f0;
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px;
+  }
+
+  .shops-mini-chart-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+
+  .shops-mini-chart-head h3 {
+    margin: 0;
+    color: #173a60;
+    font-size: 0.95rem;
+    font-weight: 800;
+  }
+
+  .shops-mini-chart-head span {
+    color: #1e40af;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  .shops-mini-bars {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .shops-mini-col {
+    text-align: center;
+    display: grid;
+    gap: 4px;
+    justify-items: center;
+  }
+
+  .shops-mini-track {
+    width: 100%;
+    max-width: 34px;
+    height: 88px;
+    border-radius: 10px;
+    background: #eaf0fa;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shops-mini-fill {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 10px 10px 0 0;
+    background: linear-gradient(180deg, #4d93ff 0%, #1e63d6 100%);
+    transition: height 320ms ease;
+  }
+
+  .shops-mini-count {
+    font-size: 0.78rem;
+    color: #1e3a5f;
+    font-weight: 800;
+  }
+
+  .shops-mini-label {
+    color: #637790;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .shops-report-note {
+    border: 1px solid #d9e2f0;
+    border-radius: 14px;
+    background: #fff;
+    padding: 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: #4d6784;
+  }
+
+  .shops-report-note i {
+    margin-top: 2px;
+    color: #f59e0b;
+  }
+
+  .shops-report-note p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    font-weight: 600;
+  }
+
   .sort-menu {
     padding: 10px;
   }
@@ -686,9 +1051,14 @@ onMounted(() => {
 
   .create-shop-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 280px) 1fr;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
     gap: 24px;
     align-items: start;
+    overflow-x: hidden;
+  }
+
+  .create-shop-layout > * {
+    min-width: 0;
   }
 
   .create-shop-preview {
@@ -764,6 +1134,7 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    min-width: 0;
   }
 
   .upload-drop {
@@ -806,14 +1177,19 @@ onMounted(() => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .field label {
+  .create-shop-form .field {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-width: 0;
   }
 
-  .field input,
-  .field textarea {
+  .create-shop-form .field input,
+  .create-shop-form .field textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     border-radius: 12px;
     border: 1px solid #d6dbec;
     padding: 10px 12px;
@@ -821,8 +1197,51 @@ onMounted(() => {
     font-family: 'Inter', system-ui, sans-serif;
   }
 
-  .field textarea {
+  .create-shop-form .field textarea {
     min-height: 120px;
     resize: vertical;
+  }
+
+  .modal--create-shop {
+    max-width: 960px;
+  }
+
+  @media (max-width: 980px) {
+    .shops-report-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .shops-report-bottom {
+      grid-template-columns: 1fr;
+    }
+
+    .modal--create-shop {
+      max-width: 760px;
+    }
+
+    .create-shop-layout {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .shops-report-head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .shops-report-metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .create-shop-form .field-grid.two-column {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .upload-drop {
+      padding: 22px 14px;
+    }
   }
 </style>

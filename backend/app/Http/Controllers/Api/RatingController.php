@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Rating;
 use App\Models\Vehicle;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class RatingController extends Controller
 {
@@ -146,6 +148,17 @@ class RatingController extends Controller
             'rating' => $validated['rating'],
             'comment' => $validated['comment'] ?? null,
         ]);
+        $rating->loadMissing(['booking.user', 'booking.vehicle', 'shop.owner', 'user']);
+
+        try {
+            NotificationService::ratingSubmitted($rating);
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to send rating notifications.', [
+                'rating_id' => $rating->id,
+                'booking_id' => $booking->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
 
         return response()->json($rating);
     }

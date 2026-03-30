@@ -118,8 +118,34 @@ const shopPins = computed(() => {
   const pins = []
   const provinceShopCounts = {}
 
+  // Helper: find nearest province by lat/lng
+  const findNearestProvince = (lat, lng) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    let best = null
+    let bestDist = Infinity
+    for (const [prov, center] of Object.entries(PROVINCE_CENTERS)) {
+      const dLat = center[0] - lat
+      const dLng = center[1] - lng
+      const dist = dLat * dLat + dLng * dLng
+      if (dist < bestDist) {
+        bestDist = dist
+        best = prov
+      }
+    }
+    return best
+  }
+
   for (const shop of props.shops) {
-    const province = shop.province
+    let province = shop.province
+
+    // If no province provided, attempt to derive from coordinates
+    if (!province && (shop.latitude || shop.lat) && (shop.longitude || shop.lng)) {
+      const lat = Number(shop.latitude ?? shop.lat)
+      const lng = Number(shop.longitude ?? shop.lng)
+      const nearest = findNearestProvince(lat, lng)
+      if (nearest) province = nearest
+    }
+
     if (!province) continue
     if (!provinceShopCounts[province]) provinceShopCounts[province] = 0
     provinceShopCounts[province]++
