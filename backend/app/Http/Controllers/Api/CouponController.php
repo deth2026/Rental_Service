@@ -5,19 +5,35 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 class CouponController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Coupon::paginate(15));
+        $query = Coupon::query();
+
+        if ($this->hasShopColumn()) {
+            $query = $query->with('shop:id,name');
+
+            if ($request->filled('shop_id')) {
+                $query->where('shop_id', $request->input('shop_id'));
+            }
+        }
+
+        return response()->json($query->paginate(15));
     }
 
     public function store(Request $request)
     {
-        $record = Coupon::create($request->all());
+        $payload = $this->validateCouponRequest($request);
+        if (!$this->hasShopColumn()) {
+            unset($payload['shop_id']);
+        }
+        $record = Coupon::create($payload);
 
-        return response()->json($record, 201);
+        return response()->json($this->hasShopColumn() ? $record->load('shop') : $record, 201);
     }
 
     public function show(Coupon $coupon)
@@ -27,9 +43,13 @@ class CouponController extends Controller
 
     public function update(Request $request, Coupon $coupon)
     {
-        $coupon->update($request->all());
+        $payload = $this->validateCouponRequest($request, $coupon);
+        if (!$this->hasShopColumn()) {
+            unset($payload['shop_id']);
+        }
+        $coupon->update($payload);
 
-        return response()->json($coupon->fresh());
+        return response()->json($this->hasShopColumn() ? $coupon->fresh('shop') : $coupon->fresh());
     }
 
     public function destroy(Coupon $coupon)
@@ -37,6 +57,43 @@ class CouponController extends Controller
         $coupon->delete();
 
         return response()->json(['message' => 'Coupon deleted successfully']);
+    }
+
+    protected function validateCouponRequest(Request $request, ?Coupon $coupon = null): array
+    {
+        $codeRule = ['required', 'string', 'max:255'];
+        if ($coupon) {
+            $codeRule[] = Rule::unique('coupons')->ignore($coupon->id);
+        } else {
+            $codeRule[] = 'unique:coupons,code';
+        }
+
+        $rules = [
+            'code' => $codeRule,
+            'discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_amount' => ['nullable', 'numeric', 'min:0'],
+            'minimum_amount' => ['nullable', 'numeric', 'min:0'],
+            'usage_limit' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['sometimes', 'boolean'],
+        ];
+        if ($this->hasShopColumn()) {
+            $rules['shop_id'] = ['nullable', 'exists:shops,id'];
+        }
+
+        if ($coupon) {
+            $rules['valid_from'] = ['sometimes', 'date'];
+            $rules['valid_until'] = ['sometimes', 'date'];
+        } else {
+            $rules['valid_from'] = ['required', 'date'];
+            $rules['valid_until'] = ['required', 'date', 'after_or_equal:valid_from'];
+        }
+
+        return $request->validate($rules);
+    }
+
+    protected function hasShopColumn(): bool
+    {
+        return Schema::hasColumn('coupons', 'shop_id');
     }
 
     public function check(Request $request)
@@ -52,6 +109,16 @@ class CouponController extends Controller
         }
 
         $coupon = Coupon::where('code', $code)->first();
+        $shopId = $request->query('shop_id');
+
+        if ($this->hasShopColumn() && $coupon && $coupon->shop_id) {
+            if ((int) $shopId !== (int) $coupon->shop_id) {
+                return response()->json([
+                    'valid' => false,
+                    'message' => 'This coupon is only valid for the assigned shop.'
+                ], 400);
+            }
+        }
 
         if (!$coupon) {
             return response()->json([

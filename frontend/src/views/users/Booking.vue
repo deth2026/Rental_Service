@@ -920,7 +920,8 @@ const applyCoupon = async () => {
   }
 
   try {
-    const response = await couponApi.validate(promoCode.value, totalAmount.value);
+    const shopForCoupon = vehicle.value?.shop_id ?? null;
+    const response = await couponApi.validate(promoCode.value, totalAmount.value, shopForCoupon);
     const data = response.data;
     
     if (data.valid) {
@@ -1228,4 +1229,3 @@ watch(method, (value) => {
 
 initDates();
 </script>
-

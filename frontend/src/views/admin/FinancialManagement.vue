@@ -23,7 +23,7 @@ const state = ref({ processed_keys: [] })
 const isProcessingAll = ref(false)
 const page = ref(1)
 const perPage = 8
-const periodMode = ref('day')
+const periodMode = ref('month')
 const selectedCategory = ref(CATEGORY_ALL)
 const chartReady = ref(false)
 const hoveredDonutCategory = ref('')
@@ -116,6 +116,7 @@ const shopsById = computed(() => {
 const isBookingInSelectedPeriod = (booking) => {
   const d = toDate(booking?.start_date || booking?.created_at || booking?.booking_date || booking?.date)
   if (!d) return false
+  if (periodMode.value === 'all') return true
   return periodMode.value === 'month'
     ? toMonthKey(d) === periodKey.value
     : toDateKey(d) === periodKey.value
@@ -829,6 +830,7 @@ onMounted(async () => {
             <select v-model="periodMode" aria-label="Choose period mode">
               <option value="day">Per Day (Today)</option>
               <option value="month">Per Month (This Month)</option>
+              <option value="all">All time</option>
             </select>
             <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
           </label>

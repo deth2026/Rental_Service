@@ -54,6 +54,14 @@ h1 {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
+.role-card--disabled {
+  background: #f1f5f9;
+  border-color: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .role-card:hover {
   border-color: #b6bfd0;
   box-shadow: 0 10px 20px rgba(18, 30, 52, 0.08);

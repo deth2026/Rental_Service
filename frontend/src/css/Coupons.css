@@ -2,7 +2,11 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 12px;
+  padding: 120px;
+}
+
+.panel.coupons-page {
+  padding: 20px;
 }
 
 .line {
@@ -29,6 +33,57 @@
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.shop-filter {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.shop-filter label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.shop-filter select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5f5;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.shop-filter.loading select {
+  opacity: 0.7;
+}
+
+.shop-error {
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: #dc2626;
+  letter-spacing: 0.01em;
+}
+
+.export-btn {
+  border: 0;
+  border-radius: 9px;
+  padding: 8px 14px;
+  cursor: pointer;
+  background: #e2e8f0;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.export-btn:hover {
+  background: #cbd5f5;
 }
 
 .primary,
@@ -103,6 +158,11 @@ button {
   text-transform: uppercase;
 }
 
+.shop-name-cell {
+  font-weight: 600;
+  color: #0f172a;
+}
+
 .discount-percent {
   font-weight: 700;
   color: #059669;
@@ -136,24 +196,29 @@ button {
   font-weight: 600;
 }
 
-.status-active {
+.status-badge.status-active {
   background: #d1fae5;
   color: #065f46;
 }
 
-.status-expired {
+.status-badge.status-expired {
   background: #fee2e2;
   color: #dc2626;
 }
 
-.status-expiring {
+.status-badge.status-expiring {
   background: #fef3c7;
   color: #92400e;
 }
 
-.status-inactive {
+.status-badge.status-inactive {
   background: #e2e8f0;
   color: #475569;
+}
+
+.status-badge.status-not-started {
+  background: #e0f2fe;
+  color: #0f172a;
 }
 
 .status-toggle {

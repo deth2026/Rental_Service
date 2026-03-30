@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useAttrs, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useTheme } from '../../composables/useTheme'
@@ -10,6 +10,10 @@ import { CAMBODIA_TIMEZONE, cambodiaDateTimeLabel, cambodiaYear } from '../../ut
 import '../../css/DashboardAdmin.css'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 import ToastStack from '../../components/ToastStack.vue'
+
+defineOptions({
+  inheritAttrs: false,
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -58,7 +62,16 @@ const adminInitials = computed(() => {
   return `${parts[0][0] || ''}${parts[parts.length - 1][0] || ''}`.toUpperCase()
 })
 
+const adminProfilePicture = computed(() => {
+  const user = currentUser.value || {}
+  const stored = localStorage.getItem('user_profile_picture') || ''
+  const path = user.profile_picture || user.avatar_url || stored || ''
+  return userService.getAvatarUrl(path) || null
+})
+
 const activePath = computed(() => route.path)
+
+const routerViewAttrs = useAttrs()
 
 // Check if current page should hide search bar
 const shouldShowSearch = computed(() => {
@@ -285,162 +298,165 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
 </script>
 
 <template>
-  <div class="admin-app" :class="{ 'is-admin': isAdmin }">
-    <aside class="admin-sidebar">
-       <div class="admin-brand">
-         <div class="brand-badge" aria-hidden="true">
-           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 4px; border-radius: 50px; width: 50px; height: 50px; object-fit: contain;" />
+  <div class="admin-layout-shell">
+    <div class="admin-app" :class="{ 'is-admin': isAdmin }">
+      <aside class="admin-sidebar">
+         <div class="admin-brand">
+           <div class="brand-badge" aria-hidden="true">
+             <img class="brand-logo" :src="logoUrl" alt="Chong Choul" style="background-color: white; padding: 4px; border-radius: 50px; width: 50px; height: 50px; object-fit: contain;" />
+           </div>
+           <div class="brand-text">
+             <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
+           </div>
          </div>
-         <div class="brand-text">
-           <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
-         </div>
-       </div>
 
-      <nav class="admin-nav">
-        <RouterLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="admin-nav-item"
-          :class="{ active: isActive(item.to) }"
-        >
-          <i :class="item.icon" aria-hidden="true"></i>
-          <span>{{ item.label }}</span>
-        </RouterLink>
-      </nav>
-
-      <button type="button" class="admin-logout" @click="showLogoutConfirm = true">
-        <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
-        <span>{{ t('logout') }}</span>
-      </button>
-    </aside>
-
-    <div class="admin-main">
-      <header class="admin-topbar">
-        <form v-if="shouldShowSearch" class="topbar-search" @submit.prevent="onSearchSubmit">
-          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-          <input
-            v-model="searchQuery"
-            type="search"
-            :placeholder="t('searchPlaceholder')"
-            aria-label="Search"
-          />
-        </form>
-        <div v-else class="topbar-search"></div>
-
-        <div class="topbar-actions">
-          <div class="topbar-time" :title="`Cambodia time (${CAMBODIA_TIMEZONE})`">
-            <span class="topbar-time-year">{{ cambodiaCurrentYear }}</span>
-            <span class="dot">•</span>
-            <span class="topbar-time-clock">{{ cambodiaClockLabel }}</span>
-          </div>
-          <button 
-            type="button" 
-            class="icon-btn" 
-            :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'" 
-            @click="toggleTheme"
+        <nav class="admin-nav">
+          <RouterLink
+            v-for="item in navItems"
+            :key="item.to"
+            :to="item.to"
+            class="admin-nav-item"
+            :class="{ active: isActive(item.to) }"
           >
-            <i :class="isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon'" aria-hidden="true"></i>
-          </button>
-          <div class="topbar-notifications" ref="notificationButtonRef">
-            <button
-              type="button"
-              class="icon-btn"
-              title="Notifications"
-              @click.stop="toggleNotificationsPopup"
+            <i :class="item.icon" aria-hidden="true"></i>
+            <span>{{ item.label }}</span>
+          </RouterLink>
+        </nav>
+
+        <button type="button" class="admin-logout" @click="showLogoutConfirm = true">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span>{{ t('logout') }}</span>
+        </button>
+      </aside>
+
+      <div class="admin-main">
+        <header class="admin-topbar">
+          <form v-if="shouldShowSearch" class="topbar-search" @submit.prevent="onSearchSubmit">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              v-model="searchQuery"
+              type="search"
+              :placeholder="t('searchPlaceholder')"
+              aria-label="Search"
+            />
+          </form>
+          <div v-else class="topbar-search"></div>
+
+          <div class="topbar-actions">
+            <div class="topbar-time" :title="`Cambodia time (${CAMBODIA_TIMEZONE})`">
+              <span class="topbar-time-year">{{ cambodiaCurrentYear }}</span>
+              <span class="dot">•</span>
+              <span class="topbar-time-clock">{{ cambodiaClockLabel }}</span>
+            </div>
+            <button 
+              type="button" 
+              class="icon-btn" 
+              :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'" 
+              @click="toggleTheme"
             >
-              <i class="fa-regular fa-bell" aria-hidden="true"></i>
-              <span v-if="hasUnreadNotifications" class="notif-dot">{{ unreadCount }}</span>
+              <i :class="isDark ? 'fa-regular fa-sun' : 'fa-regular fa-moon'" aria-hidden="true"></i>
             </button>
-            <div
-              v-if="showNotificationsPopup"
-              class="notifications-popup"
-              ref="notificationPopupRef"
-              @click.stop
-            >
-              <header class="notifications-popup__header">
-                <strong>Notifications</strong>
-                <button
-                  type="button"
-                  class="ghost-pill ghost-pill--mini"
-                  @click="handleMarkAllNotificationsRead"
-                  :disabled="notificationsLoading || !hasAdminNotifications"
-                >
-                  Mark all read
-                </button>
-              </header>
-              <section class="notifications-popup__content">
-                <div v-if="notificationsLoading" class="notifications-popup__empty">
-                  Loading…
-                </div>
-                <div v-else-if="notificationsError" class="notifications-popup__empty error">
-                  {{ notificationsError }}
-                </div>
-                <div v-else-if="!hasAnyNotifications" class="notifications-popup__empty">
-                  No notifications found.
-                </div>
-                <ul v-else class="notifications-popup__list">
-                  <li
-                    v-for="item in notificationPreview"
-                    :key="item.id"
-                    class="notifications-popup__item"
+            <div class="topbar-notifications" ref="notificationButtonRef">
+              <button
+                type="button"
+                class="icon-btn"
+                title="Notifications"
+                @click.stop="toggleNotificationsPopup"
+              >
+                <i class="fa-regular fa-bell" aria-hidden="true"></i>
+                <span v-if="hasUnreadNotifications" class="notif-dot">{{ unreadCount }}</span>
+              </button>
+              <div
+                v-if="showNotificationsPopup"
+                class="notifications-popup"
+                ref="notificationPopupRef"
+                @click.stop
+              >
+                <header class="notifications-popup__header">
+                  <strong>Notifications</strong>
+                  <button
+                    type="button"
+                    class="ghost-pill ghost-pill--mini"
+                    @click="handleMarkAllNotificationsRead"
+                    :disabled="notificationsLoading || !hasAdminNotifications"
                   >
-                    <div class="notifications-popup__avatar">
-                      <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="item.user?.name || 'user avatar'" />
-                      <span v-else>{{ getAvatarInitials(item) }}</span>
-                      <span v-if="item.status === 'unread'" class="notifications-popup__status-dot" />
-                    </div>
-                    <div>
-                      <p class="notifications-popup__title">{{ item.action }}</p>
-                      <p class="notifications-popup__message">{{ item.message }}</p>
-                      <span class="notifications-popup__time">
-                        {{ formatPopupTime(item.timestamp) }}
-                      </span>
-                    </div>
-                  </li>
-                </ul>
-              </section>
-              <footer class="notifications-popup__footer">
-                <RouterLink to="/admin/notifications" class="link-btn">View all »</RouterLink>
-              </footer>
+                    Mark all read
+                  </button>
+                </header>
+                <section class="notifications-popup__content">
+                  <div v-if="notificationsLoading" class="notifications-popup__empty">
+                    Loading…
+                  </div>
+                  <div v-else-if="notificationsError" class="notifications-popup__empty error">
+                    {{ notificationsError }}
+                  </div>
+                  <div v-else-if="!hasAnyNotifications" class="notifications-popup__empty">
+                    No notifications found.
+                  </div>
+                  <ul v-else class="notifications-popup__list">
+                    <li
+                      v-for="item in notificationPreview"
+                      :key="item.id"
+                      class="notifications-popup__item"
+                    >
+                      <div class="notifications-popup__avatar">
+                        <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="item.user?.name || 'user avatar'" />
+                        <span v-else>{{ getAvatarInitials(item) }}</span>
+                        <span v-if="item.status === 'unread'" class="notifications-popup__status-dot" />
+                      </div>
+                      <div>
+                        <p class="notifications-popup__title">{{ item.action }}</p>
+                        <p class="notifications-popup__message">{{ item.message }}</p>
+                        <span class="notifications-popup__time">
+                          {{ formatPopupTime(item.timestamp) }}
+                        </span>
+                      </div>
+                    </li>
+                  </ul>
+                </section>
+                <footer class="notifications-popup__footer">
+                  <RouterLink to="/admin/notifications" class="link-btn">View all »</RouterLink>
+                </footer>
+              </div>
             </div>
+
+              <div class="topbar-user">
+                <div class="user-meta">
+                  <div class="user-name">{{ adminName }}</div>
+                  <div class="user-status">{{ adminRole }}</div>
+                </div>
+                <div class="user-avatar" :aria-label="adminName">
+                  <img v-if="adminProfilePicture" :src="adminProfilePicture" :alt="`${adminName} avatar`" />
+                  <span v-else>{{ adminInitials }}</span>
+                </div>
+              </div>
           </div>
+        </header>
 
-            <div class="topbar-user">
-              <div class="user-meta">
-                <div class="user-name">{{ adminName }}</div>
-                <div class="user-status">{{ adminRole }}</div>
-              </div>
-              <div class="user-avatar" :aria-label="adminName">
-                {{ adminInitials }}
-              </div>
-            </div>
-        </div>
-      </header>
-
-      <main class="admin-content">
-        <div class="admin-content-inner">
-          <RouterView />
-          <footer class="admin-footer">
-            <span>{{ t('footerCopyright') }}</span>
-          </footer>
-        </div>
-      </main>
+        <main class="admin-content">
+          <div class="admin-content-inner">
+            <RouterView v-bind="routerViewAttrs" />
+            <footer class="admin-footer">
+              <span>{{ t('footerCopyright') }}</span>
+            </footer>
+          </div>
+        </main>
+      </div>
     </div>
+
+     <ToastStack />
+
+     <ConfirmModal
+       v-model="showLogoutConfirm"
+       title="Logout"
+       message="Are you sure you want to logout?"
+       cancel-text="Cancel"
+       confirm-text="Yes, Logout"
+       variant="danger"
+       @confirm="handleLogout"
+     />
   </div>
-
-   <ToastStack />
-
-   <ConfirmModal
-     v-model="showLogoutConfirm"
-     title="Logout"
-     message="Are you sure you want to logout?"
-     cancel-text="Cancel"
-     confirm-text="Yes, Logout"
-     variant="danger"
-     @confirm="handleLogout"
-   />
-  </template>
+</template>
 
 <style scoped>
 .topbar-notifications {

@@ -112,12 +112,18 @@ export const userApi = {
 
 // Coupon API calls
 export const couponApi = {
-  getAll: () => api.get('/coupons'),
+  getAll: (params = {}) => api.get('/coupons', { params }),
   getById: (id) => api.get(`/coupons/${id}`),
   create: (data) => api.post('/coupons', data),
   update: (id, data) => api.put(`/coupons/${id}`, data),
   delete: (id) => api.delete(`/coupons/${id}`),
-  validate: (code, totalAmount) => api.get('/coupons/check', { params: { code, total_amount: totalAmount } })
+  validate: (code, totalAmount, shopId = null) => {
+    const params = { code, total_amount: totalAmount };
+    if (shopId != null && shopId !== '') {
+      params.shop_id = shopId;
+    }
+    return api.get('/coupons/check', { params });
+  }
 };
 
 // Feedback API calls
