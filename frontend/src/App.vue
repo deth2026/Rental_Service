@@ -119,17 +119,13 @@ const topLevelRoutes = new Set([
   '/admin',
 ])
 
-const showGlobalBackButton = computed(() => {
-  if (showSplash.value) return false
-  if (route.path.startsWith('/admin')) return false
-  if (route.path.startsWith('/shop/notifications')) return false
-  if (route.path.startsWith('/booking')) return false
-  if (usesUserNavbar.value) return false
-  return !topLevelRoutes.has(route.path)
-})
-
 const isAuthEntryPage = computed(() => {
   return route.path === '/login' || route.path === '/register'
+})
+
+const showGlobalBackButton = computed(() => {
+  if (showSplash.value) return false
+  return isAuthEntryPage.value
 })
 
 const usesUserNavbar = computed(() => {

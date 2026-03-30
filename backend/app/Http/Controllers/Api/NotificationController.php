@@ -21,7 +21,11 @@ class NotificationController extends Controller
             return response()->json([]);
         }
 
+        NotificationRecord::pruneExpired();
+
         $user = $request->user();
+        $includeAllForAdmin = filter_var($request->query('include_all'), FILTER_VALIDATE_BOOLEAN);
+
         $query = NotificationRecord::with([
             'user:id,name,email,profile_picture,img_url',
             'related' => fn (MorphTo $relation) => $relation->morphWith([
@@ -30,21 +34,16 @@ class NotificationController extends Controller
         ])
             ->orderByDesc('created_at');
 
-        $includeAllForAdmin = filter_var($request->query('include_all'), FILTER_VALIDATE_BOOLEAN);
-        if ($this->isAdmin($user) && $includeAllForAdmin) {
-            // Admin overview intentionally sees all records when requested.
-        } elseif ($this->isAdmin($user)) {
-            $query->where(function ($builder) use ($user) {
-                $builder->where('user_id', $user->id)
-                    ->orWhere('role', 'admin');
-            });
-        } else {
-            $query->where('user_id', $user->id);
-        }
+        $query = $this->scopeVisibleNotifications($query, $user, $includeAllForAdmin);
 
         $shopId = $request->query('shop_id');
         if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
-            $query->where('shop_id', $shopId);
+            $shopId = (int) $shopId;
+            if ($this->isAdmin($user) || $this->userOwnsShop($user, $shopId)) {
+                $query->where('shop_id', $shopId);
+            } else {
+                abort(403, 'Forbidden shop notifications.');
+            }
         }
 
         if ($search = trim((string) $request->query('q', ''))) {
@@ -75,18 +74,18 @@ class NotificationController extends Controller
 
         $user = $request->user();
         $query = NotificationRecord::query();
-        if ($this->isAdmin($user)) {
-            $query->where(function ($builder) use ($user) {
-                $builder->where('user_id', $user->id)
-                    ->orWhere('role', 'admin');
-            });
-        } else {
-            $query->where('user_id', $user->id);
-        }
+        $this->scopeVisibleNotifications($query, $user);
+
         $shopId = $request->input('shop_id');
         if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
-            $query->where('shop_id', $shopId);
+            $shopId = (int) $shopId;
+            if ($this->isAdmin($user) || $this->userOwnsShop($user, $shopId)) {
+                $query->where('shop_id', $shopId);
+            } else {
+                abort(403, 'Forbidden shop notifications.');
+            }
         }
+
         $updated = $query->update(['is_read' => true]);
         return response()->json(['updated' => $updated]);
     }
@@ -153,10 +152,94 @@ class NotificationController extends Controller
         if ($notification->user_id === $user->id) {
             return true;
         }
+
+        $userRole = $this->getUserRole($user);
+        if ($userRole && $notification->role === $userRole) {
+            if ($userRole === 'shop_owner' && $notification->shop_id) {
+                return $this->userOwnsShop($user, $notification->shop_id);
+            }
+            return true;
+        }
+
         if ($this->isAdmin($user) && $notification->role === 'admin') {
             return true;
         }
+
         abort(403);
+    }
+
+    protected function scopeVisibleNotifications($query, $user, bool $includeAllForAdmin = false)
+    {
+        if ($includeAllForAdmin && $this->isAdmin($user)) {
+            return $query;
+        }
+
+        if ($this->isAdmin($user)) {
+            return $query->where(function ($builder) use ($user) {
+                $builder->where('user_id', $user->id)
+                    ->orWhere('role', 'admin');
+            });
+        }
+
+        $userRole = $this->getUserRole($user);
+        $shopIds = $this->getShopIdsForUser($user);
+
+        return $query->where(function ($builder) use ($user, $userRole, $shopIds) {
+            $builder->where('user_id', $user->id);
+
+            if ($userRole === 'shop_owner') {
+                $builder->orWhere(function ($inner) use ($userRole, $shopIds) {
+                    $inner->where('role', $userRole)
+                        ->where(function ($scope) use ($shopIds) {
+                            $scope->whereNull('shop_id');
+                            if (!empty($shopIds)) {
+                                $scope->orWhereIn('shop_id', $shopIds);
+                            }
+                        });
+                });
+            } elseif ($userRole) {
+                $builder->orWhere('role', $userRole);
+            }
+        });
+    }
+
+    protected function getShopIdsForUser($user): array
+    {
+        if (!$user) {
+            return [];
+        }
+
+        static $cache = [];
+        $cacheKey = $user->id;
+        if ($cacheKey !== null && array_key_exists($cacheKey, $cache)) {
+            return $cache[$cacheKey];
+        }
+
+        $ids = Shop::where('owner_id', $user->id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if ($cacheKey !== null) {
+            $cache[$cacheKey] = $ids;
+        }
+
+        return $ids;
+    }
+
+    private function getUserRole(?User $user): ?string
+    {
+        if (!$user) {
+            return null;
+        }
+        $role = strtolower((string) ($user->role ?? $user->user_type ?? ''));
+        $normalized = match ($role) {
+            'shop' => 'shop_owner',
+            'user' => 'customer',
+            default => $role,
+        };
+        return $normalized !== '' ? $normalized : null;
     }
 
     protected function isAdmin($user): bool
@@ -169,5 +252,17 @@ class NotificationController extends Controller
         }
         $role = strtolower((string) ($user->role ?? ''));
         return $role === 'admin';
+    }
+
+    protected function userOwnsShop($user, $shopId): bool
+    {
+        if (!$user || !$shopId) {
+            return false;
+        }
+
+        return 
+            \App\Models\Shop::where('id', $shopId)
+                ->where('owner_id', $user->id)
+                ->exists();
     }
 }

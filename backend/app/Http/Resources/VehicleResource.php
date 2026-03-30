@@ -2,12 +2,20 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Booking;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Str;
 
 class VehicleResource extends JsonResource
 {
+    private const BLOCKING_BOOKING_STATUSES = [
+        'pending',
+        'pending_payment',
+        'confirmed',
+        'paid',
+    ];
+
     /**
      * Transform the resource into an array.
      *
@@ -50,6 +58,13 @@ class VehicleResource extends JsonResource
             }
         }
 
+        $totalVehicles = max((int) ($this->total_vehicles ?? 1), 1);
+        $activeBookingsCount = Booking::query()
+            ->where('vehicle_id', $this->id)
+            ->whereIn('status', self::BLOCKING_BOOKING_STATUSES)
+            ->count();
+        $availableVehicles = max($totalVehicles - $activeBookingsCount, 0);
+
         return [
             'id' => $this->id,
             'shop_id' => $this->shop_id,
@@ -82,6 +97,8 @@ class VehicleResource extends JsonResource
             'shop' => $this->whenLoaded('shop'),
             'rating' => $this->ratings_count > 0 ? round($this->ratings_avg_rating, 1) : null,
             'rating_count' => (int) ($this->ratings_count ?? 0),
+            'active_bookings' => $activeBookingsCount,
+            'available_vehicles' => $availableVehicles,
         ];
     }
 }

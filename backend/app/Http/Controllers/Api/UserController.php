@@ -142,8 +142,20 @@ class UserController extends Controller
         return response()->json($user, 201);
     }
 
-    public function show(User $user)
+    public function show(Request $request, User $user)
     {
+        $authenticatedUser = $request->user();
+        if (!$authenticatedUser) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $role = strtolower((string) ($authenticatedUser->role ?? $authenticatedUser->user_type ?? ''));
+        $isAdmin = $role === 'admin';
+
+        if (!$isAdmin && (int) $authenticatedUser->id !== (int) $user->id) {
+            return response()->json(['message' => 'Unauthorized to view this user'], 403);
+        }
+
         return response()->json($user);
     }
 

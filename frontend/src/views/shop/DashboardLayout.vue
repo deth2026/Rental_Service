@@ -20,6 +20,7 @@ import { useNotifications } from "@/composables/useNotifications";
 const router = useRouter();
 const logoUrl = "/images/logo-removebg.png";
 const route = useRoute();
+const reportFocus = computed(() => String(route.query.reportType || ""));
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
 const showToast = (message, type = "success") => {
@@ -205,6 +206,16 @@ watch(
     const matching = sections.find((s) => s.id === section);
     if (matching) {
       active.value = section;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => reportFocus.value,
+  (value) => {
+    if (value) {
+      active.value = "activity";
     }
   },
   { immediate: true }
@@ -924,24 +935,24 @@ initializeShopData = async () => {
   await loadOwnerShopName();
 };
 
-initializeShopData().catch(() => {});
+    watch(
+      shop,
+      (current) => {
+        if (current?.id) {
+          fetchShopBookings().catch(() => {});
+          fetchShopPayments().catch(() => {});
+          loadNotifications(current.id).catch(() => {});
+          fetchFeedback().catch(() => {});
+          fetchShopRating().catch(() => {});
+          return;
+        }
+        feedback.value = [];
+        shopRating.value = { average_rating: 0, total_ratings: 0 };
+      },
+      { immediate: true },
+    );
 
-watch(
-  shop,
-  (current) => {
-    if (current?.id) {
-      fetchShopBookings().catch(() => {});
-      fetchShopPayments().catch(() => {});
-      loadNotifications(current.id).catch(() => {});
-      fetchFeedback().catch(() => {});
-      fetchShopRating().catch(() => {});
-      return;
-    }
-    feedback.value = [];
-    shopRating.value = { average_rating: 0, total_ratings: 0 };
-  },
-  { immediate: true },
-);
+    initializeShopData().catch(() => {});
 
 const khTime = () => {
   const parts = Object.fromEntries(
@@ -1063,11 +1074,9 @@ const newCustomers = computed(
     ).size,
 );
 const averageRating = computed(() => {
-  // Only show rating if shop has ratings
-  if (!shopRating.value.total_ratings || shopRating.value.total_ratings === 0) {
-    return "- ";
-  }
-  return String(shopRating.value.average_rating || "0");
+  const raw = Number(shopRating.value.average_rating ?? 0);
+  const normalized = Number.isFinite(raw) ? raw : 0;
+  return normalized.toFixed(1);
 });
 const potentialPerDay = computed(() =>
   vehicles.value.reduce((a, b) => a + Number(b.price || 0), 0),
@@ -1612,7 +1621,7 @@ const iconSvg = (name) => {
             <h3>{{ newCustomers }}</h3>
             <b class="stat-icon icon-teal" v-html="iconSvg('users')"></b>
           </article>
-          <article class="card" v-if="shopRating.total_ratings > 0">
+          <article class="card">
             <span>Average Rating</span>
             <h3>{{ averageRating }}</h3>
             <b class="stat-icon icon-yellow" v-html="iconSvg('star')"></b>
@@ -1668,7 +1677,7 @@ const iconSvg = (name) => {
       </section>
 
       <section v-else-if="active === 'activity'" class="activity-view">
-        <ActivityHistory />
+        <ActivityHistory :focus="reportFocus" />
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
@@ -5506,4 +5515,3 @@ textarea {
   }
 }
 </style>
-

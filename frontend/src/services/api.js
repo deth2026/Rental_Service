@@ -125,7 +125,7 @@ export const couponApi = {
 
 // Feedback API calls
 export const feedbackApi = {
-  getAll: () => api.get('/feedback'),
+  getAll: (params = {}) => api.get('/feedback', { params }),
   getById: (id) => api.get(`/feedback/${id}`),
   create: (data) => api.post('/feedback', data),
   update: (id, data) => api.put(`/feedback/${id}`, data),
@@ -157,6 +157,8 @@ export const bookingApi = {
   create: (data) => api.post('/bookings', data),
   update: (id, data) => api.put(`/bookings/${id}`, data),
   delete: (id) => api.delete(`/bookings/${id}`),
+  getShopBookings: (params = {}) => api.get('/shop-bookings', { params }),
+  getShopPayments: (params = {}) => api.get('/shop-payments', { params }),
   getMyBookings: () => api.get('/my-bookings')
 };
 

@@ -6,9 +6,8 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
-        // Bookings: 80% of slow queries hit these
         Schema::table('bookings', function (Blueprint $table) {
             $table->index(['shop_id', 'status']);
             $table->index(['shop_id', 'created_at']);
@@ -16,32 +15,18 @@ return new class extends Migration
             $table->index('vehicle_id');
         });
 
-        // Shops: owner queries
         Schema::table('shops', function (Blueprint $table) {
             $table->index('owner_id');
             $table->index('status');
         });
 
-        // Payments/Feedback for dashboard
-// Skip payments - missing status column
         Schema::table('feedback', function (Blueprint $table) {
             $table->index('shop_id');
             $table->index('created_at');
         });
-
-        Schema::table('feedback', function (Blueprint $table) {
-            $table->index('shop_id');
-            $table->index('created_at');
-        });
-
-        // Vehicle ratings summary
-// Skip ratings if needed - focus on core tables
-    }
-};
-
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
             $table->dropIndex(['shop_id', 'status']);
@@ -55,7 +40,9 @@ return new class extends Migration
             $table->dropIndex('status');
         });
 
-        // Reverse other indexes...
+        Schema::table('feedback', function (Blueprint $table) {
+            $table->dropIndex(['shop_id']);
+            $table->dropIndex(['created_at']);
+        });
     }
 };
-

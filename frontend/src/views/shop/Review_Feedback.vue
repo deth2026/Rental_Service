@@ -29,7 +29,8 @@ const vehicleError = ref(null)
 const fetchFeedback = async () => {
   try {
     loading.value = true
-    const response = await feedbackApi.getAll()
+    const params = props.shopId ? { shop_id: props.shopId } : {}
+    const response = await feedbackApi.getAll(params)
     const data = response.data.data || response.data || []
     
     // Map database fields to expected format

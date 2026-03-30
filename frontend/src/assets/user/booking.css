@@ -1133,6 +1133,41 @@
   margin-top: 12px;
 }
 
+.qr-shop-selection {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.qr-shop-selection label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.qr-shop-selection select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d2e1fa;
+  font-size: 0.95rem;
+}
+
+.qr-owner-note {
+  margin-top: 6px;
+  color: #5b6f8a;
+  font-size: 0.85rem;
+}
+
+.qr-missing-note {
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #c24f4f;
+  background: #fef2f2;
+  border: 1px solid #fccaca;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 .qr-placeholder,
 .qr-active {
   text-align: center;

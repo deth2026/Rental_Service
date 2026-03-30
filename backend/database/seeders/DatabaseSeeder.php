@@ -143,7 +143,11 @@ class DatabaseSeeder extends Seeder
             );
             $shopMap[$definition['name']] = $shop;
         }
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> e1412b2cb6bce3aada8bdfd4a6f2ac198ac4c0a0
         $vehicleDefinitions = [
             // [
             //     'shop' => 'Phnom Penh City Rides',

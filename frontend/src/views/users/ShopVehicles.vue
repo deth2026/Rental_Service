@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi, ratingApi } from '@/services/api'
 import { userService } from '../../services/database.js'
@@ -7,6 +7,7 @@ import { readStoredLocation } from '@/utils/locationAccess'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 import UserNavbar from '@/components/UserNavbar.vue'
+import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +20,7 @@ const shopId = computed(() => route.params.id)
 const vehicles = ref([])
 const selectedCategory = ref('all')
 const shop = ref(null)
+const shopDisplayName = computed(() => shop.value?.name || '')
 const isLoading = ref(true)
 const error = ref('')
 const shopError = ref('')
@@ -144,6 +146,10 @@ const normalizeVehicle = (vehicle) => {
     rating: typeof vehicle.rating === 'number' || !Number.isNaN(Number(vehicle.rating)) ? Number(vehicle.rating) : null,
     ratingCount: Number(vehicle.rating_count ?? 0),
     total_vehicles: vehicle.total_vehicles ?? 1,
+    available_vehicles:
+      typeof vehicle.available_vehicles === 'number'
+        ? Math.max(0, Math.trunc(vehicle.available_vehicles))
+        : null,
     rider_details: vehicle.rider_details || '',
     insurance_fee: vehicle.insurance_fee ?? 0,
     taxes_fee: vehicle.taxes_fee ?? 0
@@ -173,23 +179,27 @@ const fetchVehicles = async () => {
 const activeBookingsMap = ref({})
 
 const fetchActiveBookings = async () => {
+  const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+  if (!token) {
+    activeBookingsMap.value = {}
+    return
+  }
+
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/bookings?shop_id=' + shopId.value, {
+    const response = await fetch(`http://127.0.0.1:8000/api/bookings?shop_id=${shopId.value}`, {
       headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-      }
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
     })
     const result = await response.json()
     const bookings = result.data || result || []
-    
-    // Count active bookings per vehicle (bookings that are not completed/returned)
+
     const counts = {}
-    bookings.forEach(booking => {
+    bookings.forEach((booking) => {
       const vehicleId = booking.vehicle_id
       const status = booking.status?.toLowerCase() || ''
-      // Only count active bookings (not returned, not cancelled)
-      if (status !== 'returned' && status !== 'completed' && status !== 'cancelled' && status !== 'canceled') {
+      if (!['returned', 'completed', 'cancelled', 'canceled'].includes(status)) {
         counts[vehicleId] = (counts[vehicleId] || 0) + 1
       }
     })
@@ -202,6 +212,10 @@ const fetchActiveBookings = async () => {
 
 // Calculate available vehicles (total - active bookings)
 const getAvailableVehicles = (vehicle) => {
+  if (typeof vehicle.available_vehicles === 'number') {
+    return Math.max(0, Math.trunc(vehicle.available_vehicles))
+  }
+
   const total = vehicle.total_vehicles || 1
   const activeBookings = activeBookingsMap.value[vehicle.id] || 0
   return Math.max(0, total - activeBookings)
@@ -253,6 +267,17 @@ const fetchShop = async () => {
   }
 }
 
+const syncShopSelectionCache = () => {
+  const parsedId = Number(shopId.value)
+  if (Number.isFinite(parsedId) && parsedId > 0) {
+    cacheSelectedShop(parsedId, shopDisplayName.value)
+    return
+  }
+  clearSelectedShopCache()
+}
+
+watch([() => shopId.value, shopDisplayName], syncShopSelectionCache, { immediate: true })
+
 const goBack = () => {
   router.push('/view_shop')
 }
@@ -266,7 +291,7 @@ const handleLogout = async () => {
 }
 
 const viewVehicleDetails = (vehicle) => {
-  router.push(`/vehicles/${vehicle.id}`)
+  router.push({ path: `/vehicles/${vehicle.id}`, query: route.query })
 }
 
 const getStatusClass = (status) => {
@@ -1236,4 +1261,3 @@ const extractCoordinatesFromMapUrl = (value) => {
   }
 }
 </style>
-
