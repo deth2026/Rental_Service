@@ -18,7 +18,7 @@ const adminStore = useAdminStore()
 const { t } = useI18n()
 
 // Admin logo from public/images
-const logoUrl = '/Images/logo-removebg.png'
+const logoUrl = '/images/logo-removebg.png'
 
 const searchQuery = ref('')
 const showLogoutConfirm = ref(false)

@@ -45,8 +45,33 @@ const isLoading = ref(false)
 const dataError = ref('')
 const shops = ref([])
 const provinceQuery = ref('')
+const showSuggestions = ref(false)
 const selectedProvince = ref('Phnom Penh')
 const searchMessage = ref('')
+
+const suggestions = computed(() => {
+  const query = provinceQuery.value.trim().toLowerCase()
+  if (!query) return []
+  return provinceOptions.value.filter(province => 
+    province.toLowerCase().startsWith(query)
+  ).slice(0, 5)
+})
+
+const selectSuggestion = (province) => {
+  provinceQuery.value = province
+  showSuggestions.value = false
+  searchProvince()
+}
+
+const onSearchInput = () => {
+  showSuggestions.value = true
+}
+
+const hideSuggestions = () => {
+  setTimeout(() => {
+    showSuggestions.value = false
+  }, 200)
+}
 
 const userLocation = ref(getStoredLocation())
 const locationStatus = ref(userLocation.value ? 'Current location detected.' : 'Enable location for nearest distance.')
@@ -190,6 +215,10 @@ const normalizeShop = (shop) => {
     longitude: Number(shop.longitude ?? shop.lng),
     map_url: shop.map_url || shop.location || '',
     vehiclesCount: Number(shop.vehicles_count || 0),
+    rating:
+      (shop.rating ?? shop.avg_rating ?? shop.rating_avg ?? shop.rating_score ?? shop.average_rating) !== undefined
+        ? Number(shop.rating ?? shop.avg_rating ?? shop.rating_avg ?? shop.rating_score ?? shop.average_rating)
+        : null,
     status: String(shop.status || 'active').toLowerCase(),
     img_url: shop.img_url_full || shop.img_url || '/Images/default-avatar.svg'
   }
@@ -219,9 +248,20 @@ const provinceChips = computed(() => {
   return [...historyProvinces, ...remaining]
 })
 
+const selectedCategory = ref('All')
+const categories = ['All', 'Motorcycles', 'Bicycles', 'Cars']
+
 const selectedProvinceShops = computed(() => {
   const normalized = normalizeProvinceName(selectedProvince.value)
-  const inProvince = shops.value.filter((shop) => normalizeProvinceName(shop.province) === normalized)
+  let inProvince = shops.value.filter((shop) => normalizeProvinceName(shop.province) === normalized)
+
+  // Filter by category if not 'All'
+  if (selectedCategory.value !== 'All') {
+    // In a real app, this would check if the shop has vehicles of this category
+    // For now, we'll keep it simple or filter based on shop names/types if available
+    // result = result.filter(shop => shop.category === selectedCategory.value)
+  }
+
   const withDistance = inProvince.map((shop) => {
     let distanceKm = null
     if (userLocation.value && Number.isFinite(shop.latitude) && Number.isFinite(shop.longitude)) {
@@ -415,8 +455,20 @@ onMounted(async () => {
                   type="text"
                   class="province-search-input"
                   placeholder="Search for a province (e.g., Siem Reap)..."
+                  @input="onSearchInput"
+                  @blur="hideSuggestions"
                   @keydown.enter.prevent="searchProvince"
                 />
+                <div v-if="showSuggestions && suggestions.length > 0" class="province-suggestions">
+                  <div
+                    v-for="suggestion in suggestions"
+                    :key="suggestion"
+                    class="suggestion-item"
+                    @mousedown="selectSuggestion(suggestion)"
+                  >
+                    {{ suggestion }}
+                  </div>
+                </div>
               </div>
               <button class="province-search-btn" @click="searchProvince" aria-label="Search province">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -473,6 +525,17 @@ onMounted(async () => {
       <section class="shop-result-section">
         <div class="section-header">
           <h2>Our Branches in {{ selectedProvince }}</h2>
+          <div class="category-filters">
+            <button
+              v-for="cat in categories"
+              :key="cat"
+              class="category-btn"
+              :class="{ active: selectedCategory === cat }"
+              @click="selectedCategory = cat"
+            >
+              {{ cat }}
+            </button>
+          </div>
           <span class="shop-count">{{ selectedProvinceShops.length }} branches</span>
         </div>
 
@@ -507,10 +570,10 @@ onMounted(async () => {
                 </span>
               </div>
 
-              <div class="shop-footer">
+                <div class="shop-footer">
                 <div class="shop-stats-pills">
-                  <span><i class="fa-solid fa-motorcycle"></i> {{ shop.vehiclesCount }}</span>
-                  <span><i class="fa-solid fa-star"></i> 4.8</span>
+                  <span title="Number of vehicles available"><i class="fa-solid fa-motorcycle"></i> {{ shop.vehiclesCount }}</span>
+                  <span title="Average rating"><i class="fa-solid fa-star"></i> {{ typeof shop.rating === 'number' && !isNaN(shop.rating) ? shop.rating.toFixed(1) : '—' }}</span>
                 </div>
                 <button class="visit-btn" @click="viewShop(shop)">View Details</button>
               </div>

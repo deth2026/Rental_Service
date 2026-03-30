@@ -16,10 +16,9 @@
             <span>AVAILABLE VEHICLES</span>
           </div>
 
-          <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
-          <p>Available for your selected dates ({{ dateRange }})</p>
+           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
 
-          <div class="filter-row">
+           <div class="filter-row">
            <button  
               v-for="item in filterItems"
               :key="item.id"
@@ -154,11 +153,12 @@ const filterItems = [
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
   if (!t) return '';
+  // Prefer explicit car detection before motorbike keywords
+  if (t.includes('car') || t.includes('suv')) return 'car';
+  if (t.includes('bicy')) return 'bicycle';
   if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
     return 'motorbike';
   }
-  if (t.includes('bicy')) return 'bicycle';
-  if (t.includes('car') || t.includes('suv')) return 'car';
   return t;
 };
 
@@ -496,9 +496,11 @@ const bookNow = (vehicle) => {
 };
 
 onMounted(() => {
-  dateRangeTimer = window.setInterval(() => {
-    dateRange.value = buildRollingDateRange();
-  }, 60 * 1000);
+   dateRangeTimer = window.setInterval(() => {
+     dateRange.value = buildRollingDateRange();
+   }, 60 * 1000);
+   // Scroll to top when page loads to ensure user sees vehicles first
+   window.scrollTo(0, 0);
   loadVehiclesAndShops();
 });
 

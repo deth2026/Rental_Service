@@ -5,12 +5,9 @@ import "../../css/Myshop.css";
 
 const shop = ref(null);
 const ownerName = ref("");
-<<<<<<< HEAD
+const ownerEmail = ref("");
 const cities = ref([]);
 const loadingCities = ref(false);
-=======
-const ownerEmail = ref("");
->>>>>>> 2d2a8b930983e188da51cace70b2691710da7b83
 
 // Computed property to check if shop exists
 const hasShop = computed(() => !!shop.value);

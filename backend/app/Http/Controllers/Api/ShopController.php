@@ -14,11 +14,6 @@ class ShopController extends Controller
 {
     public function index(Request $request)
     {
-<<<<<<< HEAD
-        $shops = Shop::with(['owner:id,name,email,phone', 'city:id,name'])
-            ->orderByDesc('id')
-            ->paginate(25);
-=======
         $shopsQuery = Shop::with([
             'owner:id,name,email,phone',
             'city:id,name',
@@ -29,7 +24,6 @@ class ShopController extends Controller
         }
 
         $shops = $shopsQuery->paginate(25);
->>>>>>> 2d2a8b930983e188da51cace70b2691710da7b83
 
         // Transform paginated collection
         $shopsWithImages = $shops->getCollection()->map(function ($shop) {
@@ -53,11 +47,7 @@ class ShopController extends Controller
                 'created_at' => $shop->created_at,
                 'updated_at' => $shop->updated_at,
                 'owner' => $shop->owner,
-<<<<<<< HEAD
-                'city' => $shop->city
-=======
                 'city' => $shop->city,
->>>>>>> 2d2a8b930983e188da51cace70b2691710da7b83
             ];
         });
 

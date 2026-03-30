@@ -21,76 +21,6 @@
   cursor: pointer;
 }
 
-.vehicles-page .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 32px;
-  align-items: center;
-  width: calc(100% + 80px);
-  margin-left: -40px;
-  margin-right: -40px;
-  padding: 14px 20px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-  box-sizing: border-box;
-}
-
-.vehicles-page .brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #2563eb;
-  white-space: nowrap;
-  margin-left: 40px;
-}
-
-.vehicles-page .brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: #dbeafe;
-}
-
-.vehicles-page .top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-self: end;
-  white-space: nowrap;
-  margin-right: 40px;
-}
-
-.vehicles-page .nav-links {
-  display: flex;
-  gap: 24px;
-  justify-self: center;
-}
-
-.vehicles-page .nav-link {
-  padding: 8px 16px;
-  border-radius: 16px;
-  color: #4a556b;
-  font-size: 14px;
-  font-weight: 750;
-}
-
-.vehicles-page .nav-link.active,
-.vehicles-page .nav-link:hover {
-  background: #eef7ff;
-  color: #2563eb;
-}
-
-.vehicles-page .brand-icon i {
-  color: #2563eb;
-}
-
 .user-display-name {
   font-size: 16px;
   font-weight: 800;
@@ -687,17 +617,6 @@
 @media (max-width: 640px) {
   .vehicles-page {
     padding: 0 12px;
-  }
-
-  .vehicles-page .topbar {
-    width: calc(100% + 24px);
-    margin-left: -12px;
-    margin-right: -12px;
-    padding: 12px;
-  }
-
-  .vehicles-page .nav-links {
-    flex-wrap: wrap;
   }
 
   .grid {

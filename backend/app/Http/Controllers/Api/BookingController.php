@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Coupon;
 use App\Models\Vehicle;
 use App\Services\NotificationService;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -231,6 +232,7 @@ class BookingController extends Controller
 
         $validated = $request->validate([
             'user_id' => 'required|integer|exists:users,id',
+            'phone_number' => 'nullable|string|max:20',
             'vehicle_id' => 'required|integer|exists:vehicles,id',
             'shop_id' => 'nullable|integer',
             'coupon_id' => 'nullable|integer',
@@ -343,9 +345,10 @@ class BookingController extends Controller
             }
             
             $bookings = Booking::where('user_id', $user->id)
-                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs', 'rating'])
+                ->select(['id', 'user_id', 'vehicle_id', 'shop_id', 'start_date', 'total_days', 'total_price', 'status', 'daily_rate', 'created_at'])
+                ->with(['vehicle:id,shop_id,brand,model,name,image_url', 'vehicle.shop:id,name,img_url', 'shop:id,name', 'bookingStatusLogs:id,booking_id,status,changed_at', 'rating:id,rating,comment,created_at'])
                 ->orderBy('created_at', 'desc')
-                ->get();
+                ->paginate(25);
             
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
@@ -449,7 +452,7 @@ $bookings = Booking::whereIn('shop_id', $shops)
                 ->orderBy('created_at', 'desc')
                 ->paginate(25);
             
-            $formattedBookings = $bookings->map(function ($booking) {
+            $formattedBookings = $bookings->getCollection()->map(function ($booking) {
                 $vehicle = $booking->vehicle;
                 $shop = optional($booking)->shop;
                 $vehicleImage = '';
@@ -495,7 +498,8 @@ $bookings = Booking::whereIn('shop_id', $shops)
                 ];
             });
             
-            return response()->json($formattedBookings);
+            $bookings->setCollection($formattedBookings);
+            return response()->json($bookings);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
@@ -509,8 +513,27 @@ $bookings = Booking::whereIn('shop_id', $shops)
         try {
             $user = Auth::user();
 
-            $query = \App\Models\Booking::with(['payment', 'user', 'vehicle'])
-                ->orderBy('created_at', 'desc');
+            $query = Payment::leftJoin('bookings', 'payments.booking_id', '=', 'bookings.id')
+                ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
+                ->leftJoin('vehicles', 'bookings.vehicle_id', '=', 'vehicles.id')
+                ->leftJoin('shops', 'vehicles.shop_id', '=', 'shops.id')
+                ->select(
+                    'payments.*',
+                    'bookings.id as booking_id',
+                    'bookings.shop_id',
+                    'bookings.status as booking_status',
+                    'bookings.total_price',
+                    'users.name as user_name',
+                    'users.email as user_email',
+                    'vehicles.id as vehicle_id',
+                    'vehicles.brand',
+                    'vehicles.model',
+                    'vehicles.name as vehicle_name',
+                    'vehicles.type as vehicle_type',
+                    'shops.name as shop_name'
+                )
+                ->orderByDesc('payments.paid_at')
+                ->orderByDesc('payments.created_at');
 
             // If user is not admin, include bookings from all shops owned by this user
             if ($user->role !== 'admin') {

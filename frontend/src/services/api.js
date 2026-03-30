@@ -27,8 +27,8 @@ api.interceptors.request.use((config) => {
     console.log('API Interceptor: No token found, skipping Authorization header');
   }
 
-  // Add timeout for performance
-  nextConfig.timeout = 10000; // 10s
+   // Add timeout for performance
+   nextConfig.timeout = 20000; // 20s
 
   // Let browser set correct multipart boundary automatically.
   if (typeof FormData !== 'undefined' && nextConfig.data instanceof FormData && nextConfig.headers) {

@@ -12,7 +12,7 @@
         <div class="logo-wrapper">
           <div class="app-logo__mark">
             <div class="logo-orbit"></div>
-            <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="logo-img" />
+            <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="logo-img" />
             <div class="shimmer"></div>
           </div>
         </div>

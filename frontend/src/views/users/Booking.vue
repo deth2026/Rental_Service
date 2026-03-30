@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="booking-checkout-page">
     <UserNavbar
       :nav-items="userNavItems"
@@ -64,13 +64,12 @@
                 <span>Insurance</span>
                 <span>${{ insuranceAmount.toFixed(2) }}</span>
               </div>
-              <div class="row">
-                <span>Taxes & Fees</span>
-                <span>${{ taxesAmount.toFixed(2) }}</span>
-              </div>
               <div v-if="appliedCoupon && couponDiscount > 0" class="row">
-                <span>Coupon ({{ appliedCoupon.code }})</span>
-                <span>-${{ couponDiscount.toFixed(2) }}</span>
+                <span class="label">Coupon ({{ appliedCoupon.code }})</span>
+                <div class="coupon-pricing">
+                  <span class="old-total">${{ (rental.subtotal + insuranceAmount).toFixed(2) }}</span>
+                  <span class="new-total">-${{ couponDiscount.toFixed(2) }}</span>
+                </div>
               </div>
               <hr class="dashed-divider" />
               <div class="row total-row">
@@ -125,23 +124,33 @@
             <div class="payment-tabs">
               <button
                 class="tab"
-                :class="{ active: method === 'card' }"
-                type="button"
-                @click="method = 'card'"
-              >
-                Credit Card
-              </button>
-              <button
-                class="tab"
                 :class="{ active: method === 'qr' }"
                 type="button"
                 @click="method = 'qr'"
               >
                 QR Code
               </button>
+              <button
+                class="tab"
+                :class="{ active: method === 'later' }"
+                type="button"
+                @click="method = 'later'"
+              >
+                Pay Later
+              </button>
             </div>
 
             <div class="date-selection">
+              <div class="input-group phone-input-group">
+                <label>Phone Number <span class="required">*</span></label>
+                <input
+                  type="tel"
+                  v-model="customerPhone"
+                  placeholder="Enter your phone number (e.g. 012345678)"
+                  required
+                />
+              </div>
+
               <h3>Rental dates</h3>
               <div class="date-inputs">
                 <div class="input-group">
@@ -174,73 +183,20 @@
               <p class="date-error" v-if="dateError">{{ dateError }}</p>
             </div>
 
-            <form
-              v-if="method === 'card'"
-              class="card-details-form"
-              autocomplete="on"
-              @submit.prevent="openConfirmModal('card')"
-            >
-              <div class="input-group">
-                <label>Cardholder Name</label>
-                <input type="text" placeholder="Johnathan Doe" required />
+            <div v-if="method === 'later'" class="later-payment-info">
+              <div class="info-card">
+                <i class="fa-solid fa-circle-info"></i>
+                <p>You can pay directly at the shop when you pick up your vehicle. We will generate a receipt for you to show the shop owner.</p>
               </div>
-
-              <div class="input-group">
-                <label>Card Number</label>
-                <input
-                  type="text"
-                  name="cc-number"
-                  autocomplete="cc-number"
-                  inputmode="numeric"
-                  placeholder="0000 0000 0000 0000"
-                  required
-                />
-              </div>
-
-              <div class="input-row">
-                <div class="input-group">
-                  <label>Expiry Date</label>
-                  <input
-                    type="text"
-                    name="cc-exp"
-                    autocomplete="cc-exp"
-                    inputmode="numeric"
-                    placeholder="MM / YY"
-                    pattern="(0[1-9]|1[0-2])\s?\/\s?\d{2}"
-                    required
-                  />
-                </div>
-                <div class="input-group">
-                  <label>CVV / CVC</label>
-                  <input
-                    type="password"
-                    name="cc-csc"
-                    autocomplete="cc-csc"
-                    inputmode="numeric"
-                    placeholder="***"
-                    maxlength="3"
-                    pattern="\d{3}"
-                    required
-                  />
-                </div>
-              </div>
-
-
-              <div class="secure-info-box">
-                <p>
-                  Your payment is processed securely via 256-bit SSL encryption.
-                  We never store your full card details.
-                </p>
-              </div>
-
               <button
-                type="submit"
+                type="button"
                 class="btn-primary-pay"
-                :disabled="!isFormValid"
+                :disabled="!isFormValid || isSubmittingPayment"
+                @click="handlePayment"
               >
-                Pay ${{ totalAmount.toFixed(2) }} Now
+                {{ isSubmittingPayment ? "Processing..." : "Booking" }}
               </button>
-            </form>
+            </div>
 
             <div v-if="method === 'bank'" class="bank-transfer-payment">
               <div class="bank-header">
@@ -290,10 +246,10 @@
               <button
                 type="button"
                 class="btn-primary-pay"
-                :disabled="!isFormValid"
-                @click="openConfirmModal('bank')"
+                :disabled="!isFormValid || isSubmittingPayment"
+                @click="handlePayment"
               >
-                Confirm bank transfer
+                {{ isSubmittingPayment ? "Processing..." : "Booking" }}
               </button>
             </div>
 
@@ -355,9 +311,9 @@
                     <button
                       type="button"
                       class="btn-primary-pay"
-                      @click="openConfirmModal('qr')"
+                      @click="handlePayment"
                     >
-                      I have paid
+                      Booking
                     </button>
                   </div>
                 </div>
@@ -373,90 +329,74 @@
     </div>
 
     <div
-      v-if="showConfirmModal"
-      class="confirm-modal-overlay"
-      @click="closeConfirmModal"
-    >
-      <div class="confirm-modal" @click.stop>
-        <div class="confirm-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-        </div>
-        <h2>Confirm Payment</h2>
-        <p>Please review the details before confirming your payment.</p>
-
-        <div class="confirm-details">
-          <div class="confirm-detail">
-            <span>Amount</span>
-            <strong>${{ totalAmount.toFixed(2) }}</strong>
-          </div>
-          <div class="confirm-detail">
-            <span>Method</span>
-            <strong>{{ receiptPaymentLabel }}</strong>
-          </div>
-        </div>
-
-        <div class="confirm-actions">
-          <button class="btn-cancel" type="button" @click="closeConfirmModal">
-            Cancel
-          </button>
-          <button class="btn-confirm" type="button" :disabled="isSubmittingPayment" @click="confirmPayment">
-            {{ isSubmittingPayment ? 'Processing...' : 'Confirm' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div
       v-if="showSuccessModal"
       class="success-modal-overlay"
       @click="returnToShopViewAfterSuccess"
     >
-      <div class="success-modal" @click.stop>
-        <div class="success-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
+      <div class="success-modal receipt-modal" @click.stop>
+        <div class="simple-success-header">
+          <div class="success-check-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h2 class="success-title">Successfully Booked!</h2>
         </div>
-        <h2>Successfully</h2>
 
-        <div class="success-card">
-          <div class="success-row">
-            <span>Booking ID</span>
-            <strong>{{ bookingId }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Transaction ID</span>
-            <strong>{{ transactionId }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Payment Method</span>
-            <strong>{{ receiptPaymentLabel }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Amount Paid</span>
-            <strong>${{ totalAmount.toFixed(2) }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Date</span>
-            <strong>{{ transactionDateTime }}</strong>
-          </div>
+        <div class="receipt-preview-container">
+          <ReceiptCard
+            :booking-id="bookingId"
+            :total-amount="totalAmount"
+            :subtotal="rental.subtotal"
+            :insurance="insuranceAmount"
+            :discount="couponDiscount"
+            :daily-rate="rental.dailyRate"
+            :total-days="calculateDays()"
+            :rider-count="riderCount"
+            :date-time="transactionDateTime"
+            :owner-name="shopOwnerName"
+            :customer-phone="customerPhone"
+            :vehicle-name="rental.title"
+            :plate-number="vehiclePlateNumber"
+            :address="rental.location"
+            :payment-method="method"
+            :payment-status="method === 'later' ? 'pending' : 'paid'"
+          />
+        </div>
+
+        <!-- Hidden wrapper for printing -->
+        <div id="receipt-wrapper" style="display: none;">
+          <ReceiptCard
+            :booking-id="bookingId"
+            :total-amount="totalAmount"
+            :subtotal="rental.subtotal"
+            :insurance="insuranceAmount"
+            :discount="couponDiscount"
+            :daily-rate="rental.dailyRate"
+            :total-days="calculateDays()"
+            :rider-count="riderCount"
+            :date-time="transactionDateTime"
+            :owner-name="shopOwnerName"
+            :customer-phone="customerPhone"
+            :vehicle-name="rental.title"
+            :plate-number="vehiclePlateNumber"
+            :address="rental.location"
+            :payment-method="method"
+            :payment-status="method === 'later' ? 'pending' : 'paid'"
+          />
         </div>
 
         <div class="modal-actions">
           <button class="btn-download" type="button" @click="downloadReceipt">
-            Download
+            <i class="fas fa-download"></i> Download Receipt
           </button>
           <button class="btn-close" type="button" @click="returnToShopViewAfterSuccess">
-            Close
+            Return to Shop
           </button>
         </div>
-        </div>
       </div>
-      <CommonFooter />
     </div>
-  </template>
+    <CommonFooter />
+  </div>
+</template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
@@ -465,6 +405,7 @@ import api, { couponApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
 import UserNavbar from '@/components/UserNavbar.vue';
+import ReceiptCard from '@/components/ReceiptCard.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
@@ -492,6 +433,7 @@ const vehicle = ref(null);
 const shopsById = ref({});
 const isLoading = ref(false);
 const loadingError = ref("");
+const showReceiptView = ref(false);
 const vehicleId = computed(() => {
   const value = Number(route.params.id);
   return Number.isFinite(value) && value > 0 ? value : null;
@@ -569,18 +511,29 @@ const loadVehicleDetail = async () => {
   loadingError.value = "";
 
   try {
-    const [vehicleList, shopList] = await Promise.all([
-      loadAllPages("vehicles"),
-      loadAllPages("shops"),
-    ]);
+    // First attempt: fetch the specific vehicle by ID (works even if list endpoints are filtered)
+    let found = null;
+    try {
+      const resp = await api.get(`/vehicles/${vehicleId.value}`);
+      found = resp?.data?.data || resp?.data || null;
+    } catch (err) {
+      // ignore and fallback to paginated list below
+      console.warn('vehicleApi.getById failed, falling back to list fetch', err?.message || err);
+      found = null;
+    }
 
-
+    // If single-vehicle fetch didn't return, fall back to loading all pages
+    const shopList = await loadAllPages("shops");
     shopsById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
       return acc;
     }, {});
 
-    const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
+    if (!found) {
+      const vehicleList = await loadAllPages("vehicles");
+      found = vehicleList.find((item) => Number(item.id) === vehicleId.value) || null;
+    }
+
     if (!found) {
       throw new Error("Vehicle not found.");
     }
@@ -588,7 +541,12 @@ const loadVehicleDetail = async () => {
     vehicle.value = found;
     rental.value.title = getVehicleName(found) || rental.value.title;
     rental.value.location = vehicleLocation.value;
-    rental.value.dailyRate = Number(found.price_per_day || 0);
+    rental.value.dailyRate = Number(found.price_per_day ?? found.price ?? 0);
+
+    // Update Insurance Fee from vehicle data
+    if (found.insurance_fee !== undefined) {
+      rental.value.insurance = Number(found.insurance_fee);
+    }
   } catch (error) {
     const status = error?.response?.status;
     const message = error?.response?.data?.message || error.message;
@@ -606,17 +564,16 @@ const loadVehicleDetail = async () => {
   }
 };
 
-const method = ref("card");
+const method = ref("qr");
 const promoCode = ref("");
 const appliedCoupon = ref(null);
 const promoFeedback = ref("");
 const promoFeedbackType = ref("success");
 const showQR = ref(false);
 const showSuccessModal = ref(false);
-const showConfirmModal = ref(false);
-const pendingPaymentAction = ref(null);
 const isSubmittingPayment = ref(false);
 const dateError = ref("");
+const customerPhone = ref("");
 let successRedirectTimer = null;
 const bookingId = ref("");
 const paymentId = ref(
@@ -637,11 +594,9 @@ const rental = ref({
   dailyRate: 0,
   subtotal: 0,
   insurance: 75,
-  taxes: 0,
 });
 
 const includeInsurance = ref(true);
-const includeTaxes = ref(true);
 
 const parseNumberFromQuery = (value) => {
   if (value === null || value === undefined) return null;
@@ -683,11 +638,6 @@ const applyRouteDefaults = () => {
   const includeInsuranceFromQuery = parseBooleanFlagFromQuery(route.query.includeInsurance);
   if (includeInsuranceFromQuery !== null) {
     includeInsurance.value = includeInsuranceFromQuery;
-  }
-
-  const includeTaxesFromQuery = parseBooleanFlagFromQuery(route.query.includeTaxes);
-  if (includeTaxesFromQuery !== null) {
-    includeTaxes.value = includeTaxesFromQuery;
   }
 
   const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
@@ -799,27 +749,9 @@ const applyPromoCode = async () => {
   }
 };
 
-const methodTitle = computed(() => {
-  if (method.value === "qr") return "QR Code Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Secure Checkout";
-});
-
-const methodDescription = computed(() => {
-  if (method.value === "qr") {
-    return "Pay directly using your banking app.";
-  }
-  if (method.value === "bank") {
-    return "Complete payment using a direct bank transfer.";
-  }
-  return "Complete your rental booking by choosing a payment method below.";
-});
-
-const receiptPaymentLabel = computed(() => {
-  if (method.value === "qr") return "QR Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Credit Card";
-});
+const methodTitle = computed(() => (method.value === 'qr' ? 'QR Code Payment' : 'Payment'));
+const methodDescription = computed(() => (method.value === 'qr' ? 'Pay directly using your banking app.' : ''));
+const receiptPaymentLabel = computed(() => (method.value === 'qr' ? 'QR Payment' : 'Pay Later'));
 
 const minDate = computed(() => {
   const today = new Date();
@@ -849,10 +781,7 @@ const insuranceAmount = computed(() => {
   return includeInsurance.value ? base : 0;
 });
 
-const taxesAmount = computed(() => {
-  const base = Number(rental.value.taxes || 0);
-  return includeTaxes.value ? base : 0;
-});
+const taxesAmount = computed(() => 0);
 
 const couponDiscount = computed(() => {
   const coupon = appliedCoupon.value;
@@ -881,8 +810,7 @@ const totalAmount = computed(() => {
   const riders = riderCount.value;
   const subtotal = days * rental.value.dailyRate * riders;
   rental.value.subtotal = subtotal;
-  rental.value.taxes = subtotal * 0.1;
-  return Math.max(0, rental.value.subtotal + insuranceAmount.value + taxesAmount.value - couponDiscount.value);
+  return Math.max(0, rental.value.subtotal + insuranceAmount.value - couponDiscount.value);
 });
 
 const isFormValid = computed(() => {
@@ -969,6 +897,7 @@ const saveBookingToDatabase = async (bookingData) => {
 
   const payload = {
     user_id: currentUser.id,
+    phone_number: customerPhone.value,
     vehicle_id: vehicleId.value,
       coupon_id: appliedCoupon.value?.id || null,
     start_date: rental.value.startDate,
@@ -984,13 +913,11 @@ const saveBookingToDatabase = async (bookingData) => {
   };
 
   try {
-    // Create the booking first
     const response = await api.post("/bookings", payload);
     const record = response?.data?.data || response?.data;
     const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
 
-    // Now save the payment record
     const paymentPayload = {
       booking_id: recordId,
       transaction_id: transactionId.value || paymentId.value,
@@ -1000,7 +927,6 @@ const saveBookingToDatabase = async (bookingData) => {
       paid_at: bookingData?.status === "confirmed" ? new Date().toISOString() : null,
     };
 
-    // Save payment to payments table
     await api.post("/payments", paymentPayload);
 
     return {
@@ -1038,29 +964,6 @@ const buildBookingData = (paymentMethod, status) => ({
   createdAt: new Date().toISOString(),
 });
 
-const openConfirmModal = (action) => {
-  pendingPaymentAction.value = action;
-  showConfirmModal.value = true;
-};
-
-const closeConfirmModal = () => {
-  showConfirmModal.value = false;
-  pendingPaymentAction.value = null;
-};
-
-const confirmPayment = async () => {
-  if (isSubmittingPayment.value) return;
-  const action = pendingPaymentAction.value;
-  closeConfirmModal();
-
-  if (action === "bank") {
-    await handleBankTransfer();
-    return;
-  }
-
-  await handlePayment();
-};
-
 const handlePayment = async () => {
   if (isSubmittingPayment.value) return;
   isSubmittingPayment.value = true;
@@ -1071,74 +974,21 @@ const handlePayment = async () => {
   }
 
   try {
+    if (!customerPhone.value) {
+      alert("Please enter your phone number.");
+      isSubmittingPayment.value = false;
+      return;
+    }
+
     await new Promise((resolve) => setTimeout(resolve, 1200));
     const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
 
     if (result.success) {
       bookingId.value = result.bookingId;
       showSuccessModal.value = true;
-      successRedirectTimer = window.setTimeout(() => {
-        returnToShopViewAfterSuccess();
-      }, 1800);
     } else {
       alert(result.message || "Payment failed. Please try again.");
     }
-  } finally {
-    isSubmittingPayment.value = false;
-  }
-};
-
-const handleBankTransfer = async () => {
-  if (isSubmittingPayment.value) return;
-  isSubmittingPayment.value = true;
-  await validateDates();
-  if (dateError.value) {
-    isSubmittingPayment.value = false;
-    return;
-  }
-
-  try {
-    const result = await saveBookingToDatabase(
-      buildBookingData("bank_transfer", "pending_payment")
-    );
-
-    if (!result.success) {
-      alert(result.message || "Failed to create bank transfer instructions.");
-      return;
-    }
-
-    bookingId.value = result.bookingId;
-
-    const instructions = `
-BANK TRANSFER INSTRUCTIONS
-============================
-Payment ID: ${paymentId.value}
-Amount: $${totalAmount.value.toFixed(2)}
-Booking ID: ${bookingId.value}
-
-BANK DETAILS:
-- Account Name: Moto Rental Pty Ltd
-- Bank: National Australia Bank
-- BSB: 082-123
-- Account: 1234 5678 9012
-- Reference: ${paymentId.value}
-  `.trim();
-
-    const blob = new Blob([instructions], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bank_transfer_${paymentId.value}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-
-
-    showSuccessModal.value = true;
-    successRedirectTimer = window.setTimeout(() => {
-      returnToShopViewAfterSuccess();
-    }, 1800);
   } finally {
     isSubmittingPayment.value = false;
   }
@@ -1183,31 +1033,77 @@ const returnToShopViewAfterSuccess = () => {
   router.replace('/view_shop');
 };
 
-const downloadReceipt = () => {
-  const receipt = `
-BOOKING RECEIPT
-================
-Booking ID: ${bookingId.value}
-Transaction ID: ${transactionId.value}
-Payment Method: ${receiptPaymentLabel.value}
-Amount Paid: $${totalAmount.value.toFixed(2)}
-Date: ${transactionDateTime.value}
+const loadExternalScript = (src) =>
+  new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = (e) => reject(e);
+    document.head.appendChild(s);
+  });
 
-Booking: ${rental.value.title}
-Location: ${rental.value.location}
-Period: ${rental.value.period}
-  `.trim();
+const renderReceiptToPdf = async (filename = `receipt_${bookingId.value || Date.now()}.pdf`) => {
+  try {
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 
-  const blob = new Blob([receipt], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `receipt_${transactionId.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
+    // @ts-ignore
+    const html2canvas = window.html2canvas || window.HTML2CANVAS || window.html2canvas;
+    // @ts-ignore
+    const jspdfModule = window.jspdf || window.jspPDF || window.jspdf;
+    const jsPDF = jspdfModule?.jsPDF || (jspdfModule && jspdfModule.default?.jsPDF) || (jspdfModule && jspdfModule.default) || null;
+
+    if (!html2canvas || !jsPDF) throw new Error('PDF libraries not available');
+
+    const el = document.getElementById('receipt') || document.getElementById('receipt-wrapper');
+    if (!el) throw new Error('Receipt element not found');
+
+    // Store original display style and temporarily make element visible for rendering
+    const originalDisplay = el.style.display;
+    el.style.display = 'block'; // Temporarily make visible for html2canvas
+
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+      if (canvas.width <= 0 || canvas.height <= 0) {
+          throw new Error('Invalid canvas dimensions');
+      }
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      // Convert canvas dimensions from pixels to points (1 pixel = 0.75 points)
+      const widthInPts = canvas.width * 0.75;
+      const heightInPts = canvas.height * 0.75;
+      // Create PDF with dimensions matching canvas in points
+      const pdf = new jsPDF({ unit: 'pt', format: [widthInPts, heightInPts] });
+      pdf.addImage(imgData, 'JPEG', 0, 0, widthInPts, heightInPts);
+      pdf.save(filename);
+      return true;
+    } finally {
+      // Restore original display style
+      el.style.display = originalDisplay;
+    }
+  } catch (err) {
+    console.error('PDF generation failed:', err);
+    return false;
+  }
 };
+
+const downloadReceipt = async () => {
+  const filename = `receipt_${bookingId.value || Date.now()}.pdf`;
+  const ok = await renderReceiptToPdf(filename);
+  if (!ok) {
+    alert('Failed to generate PDF receipt. Please try again.');
+  }
+};
+
+const shopOwnerName = computed(() => {
+  const shop = vehicle.value?.shop_id ? shopsById.value[vehicle.value.shop_id] : null;
+  return shop?.owner?.name || 'CHANTHEN ORN';
+});
+
+const vehiclePlateNumber = computed(() => {
+  return vehicle.value?.plate_number || 'N/A';
+});
 
 const initDates = () => {
   const start = new Date();
@@ -1241,6 +1137,3 @@ onBeforeUnmount(() => {
   }
 });
 </script>
-
-
-

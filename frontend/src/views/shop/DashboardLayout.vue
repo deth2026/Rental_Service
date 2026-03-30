@@ -18,7 +18,7 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/Images/logo-removebg.png";
+const logoUrl = "/images/logo-removebg.png";
 const route = useRoute();
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
@@ -653,12 +653,32 @@ const shopMatchesEntry = (entry) => {
   return Number(bookingShopId) === shopId;
 };
 
+const getEntryCategory = (entry) => {
+  return (
+    entry?.vehicle?.category ||
+    entry?.vehicle?.type ||
+    entry?.booking?.vehicle?.category ||
+    entry?.booking?.vehicle?.type ||
+    entry?.booking?.category ||
+    entry?.booking?.type ||
+    entry?.category ||
+    entry?.type ||
+    ""
+  );
+};
+
+const categoryMatchesEntry = (entry) => {
+  if (!categoryFilter.value || categoryFilter.value === "All Categories") return true;
+  const cat = String(getEntryCategory(entry) || "").trim().toLowerCase();
+  return cat === String(categoryFilter.value || "").trim().toLowerCase();
+};
+
 const filteredBookings = computed(() =>
-  (bookings.value || []).filter((entry) => shopMatchesEntry(entry)),
+  (bookings.value || []).filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry)),
 );
 
 const filteredPayments = computed(() =>
-  (payments.value || []).filter((entry) => shopMatchesEntry(entry)),
+  (payments.value || []).filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry)),
 );
 
 const fetchShopBookings = async () => {

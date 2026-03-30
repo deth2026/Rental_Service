@@ -89,11 +89,12 @@ const resolveVehicleImageUrl = (value) => {
 const normalizeType = (raw) => {
   const t = String(raw || '').trim().toLowerCase()
   if (!t) return ''
+  // Prefer explicit car detection before motorbike keywords
+  if (t.includes('car') || t.includes('suv')) return 'car'
+  if (t.includes('bicy')) return 'bicycle'
   if (['motorbike', 'motorbikes', 'motor', 'moto', 'motorbike ', 'motorbike-', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some(k => t.includes(k))) {
     return 'motorbike'
   }
-  if (t.includes('bicy')) return 'bicycle'
-  if (t.includes('car') || t.includes('suv')) return 'car'
   return t
 }
 
