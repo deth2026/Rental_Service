@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi, ratingApi } from '@/services/api'
 import { userService } from '../../services/database.js'
@@ -7,6 +7,7 @@ import { readStoredLocation } from '@/utils/locationAccess'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 import UserNavbar from '@/components/UserNavbar.vue'
+import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +20,7 @@ const shopId = computed(() => route.params.id)
 const vehicles = ref([])
 const selectedCategory = ref('all')
 const shop = ref(null)
+const shopDisplayName = computed(() => shop.value?.name || '')
 const isLoading = ref(true)
 const error = ref('')
 const shopError = ref('')
@@ -263,6 +265,17 @@ const fetchShop = async () => {
     isLoadingShop.value = false
   }
 }
+
+const syncShopSelectionCache = () => {
+  const parsedId = Number(shopId.value)
+  if (Number.isFinite(parsedId) && parsedId > 0) {
+    cacheSelectedShop(parsedId, shopDisplayName.value)
+    return
+  }
+  clearSelectedShopCache()
+}
+
+watch([() => shopId.value, shopDisplayName], syncShopSelectionCache, { immediate: true })
 
 const goBack = () => {
   router.push('/view_shop')

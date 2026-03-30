@@ -9,15 +9,6 @@ const bookings = ref([])
 const loading = ref(true)
 const error = ref(null)
 const processing = ref(false)
-const confirmationModal = ref({
-  visible: false,
-  booking: null,
-  action: ''
-})
-const completionModal = ref({
-  visible: false,
-  booking: null
-})
 const showDetailModal = ref(false)
 const selectedBookingDetail = ref(null)
 const cancelModal = ref({
@@ -203,58 +194,9 @@ const updateBookingStatus = async (bookingId, newStatus, extra = {}) => {
   }
 }
 
-const openBookingConfirmation = (booking, action) => {
-  confirmationModal.value = {
-    visible: true,
-    booking,
-    action
-  }
-}
-
-const closeBookingConfirmation = () => {
-  confirmationModal.value = {
-    visible: false,
-    booking: null,
-    action: ''
-  }
-}
-
-const confirmBookingAction = async () => {
-  const booking = confirmationModal.value.booking
-  if (!booking) return
-
-  const targetStatus = confirmationModal.value.action === 'accept' ? 'confirmed' : 'cancelled'
-  const success = await updateBookingStatus(booking.id, targetStatus)
-
-  if (success) {
-    closeBookingConfirmation()
-  }
-}
-
-const openCompletionModal = (booking) => {
-  completionModal.value = {
-    visible: true,
-    booking
-  }
-}
-
-const closeCompletionModal = () => {
-  completionModal.value = {
-    visible: false,
-    booking: null,
-    notes: ''
-  }
-}
-
-const submitCompletion = async () => {
-  const booking = completionModal.value.booking
-  if (!booking) return
-
-  const success = await updateBookingStatus(booking.id, 'completed')
-  if (success) {
-    closeCompletionModal()
-  }
-}
+const handleAcceptBooking = (booking) => updateBookingStatus(booking.id, 'confirmed')
+const handleRejectBooking = (booking) => updateBookingStatus(booking.id, 'cancelled')
+const handleMarkReturned = (booking) => updateBookingStatus(booking.id, 'completed')
 
 const openBookingDetails = (booking) => {
   selectedBookingDetail.value = booking
@@ -536,7 +478,7 @@ const getTotalDays = (start, end) => {
               <button
                 type="button"
                 class="action-btn btn-green"
-                @click="openBookingConfirmation(booking, 'accept')"
+                @click="handleAcceptBooking(booking)"
                 :disabled="processing"
               >
                 <i class="fa-solid fa-check"></i>
@@ -545,7 +487,7 @@ const getTotalDays = (start, end) => {
               <button
                 type="button"
                 class="action-btn btn-red"
-                @click="openBookingConfirmation(booking, 'reject')"
+                @click="handleRejectBooking(booking)"
                 :disabled="processing"
               >
                 <i class="fa-solid fa-xmark"></i>
@@ -564,7 +506,7 @@ const getTotalDays = (start, end) => {
               <button
                 type="button"
                 class="action-btn btn-gold"
-                @click="openCompletionModal(booking)"
+                @click="handleMarkReturned(booking)"
                 :disabled="processing"
               >
                 <i class="fa-solid fa-rotate-right"></i>
@@ -645,58 +587,6 @@ const getTotalDays = (start, end) => {
       </div>
     </div>
 
-    <div
-      v-if="confirmationModal.visible"
-      class="confirm-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      @click.self="closeBookingConfirmation"
-    >
-      <div class="confirm-modal-card">
-        <div class="confirm-modal-header">
-          <h2>
-            {{ confirmationModal.action === 'accept' ? 'Confirm acceptance' : 'Confirm rejection' }}
-          </h2>
-        </div>
-        <div class="confirm-modal-body">
-          <p>
-            You are about to
-            <strong>{{ confirmationModal.action === 'accept' ? 'accept' : 'reject' }}</strong>
-            the reservation for
-            <strong>{{ confirmationModal.booking?.vehicle_name || 'the vehicle' }}</strong>
-            booked by
-            <strong>{{ confirmationModal.booking?.customer_name || 'the customer' }}</strong>.
-          </p>
-          <p class="confirm-modal-period">
-            {{ formatDate(confirmationModal.booking?.start_date) }} to
-            {{ formatDate(confirmationModal.booking?.end_date) }}
-            ({{ getTotalDays(confirmationModal.booking?.start_date, confirmationModal.booking?.end_date) }} days)
-          </p>
-          <p class="confirm-modal-detail">
-            <span>Total:</span>
-            {{ formatCurrency(confirmationModal.booking?.total_price || 0) }}
-          </p>
-        </div>
-        <div class="confirm-modal-actions">
-          <button type="button" class="confirm-cancel-btn" @click="closeBookingConfirmation">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="confirm-submit-btn"
-            :class="{ reject: confirmationModal.action === 'reject' }"
-            :disabled="processing"
-            @click="confirmBookingAction"
-          >
-            {{ processing
-              ? 'Processing...'
-              : confirmationModal.action === 'accept'
-                ? 'Yes, accept the booking'
-                : 'Yes, reject the booking' }}
-          </button>
-        </div>
-      </div>
-    </div>
     <div
       v-if="showDetailModal"
       class="booking-detail-backdrop"
@@ -784,35 +674,6 @@ const getTotalDays = (start, end) => {
             <span v-if="detailVehicleData?.insurance_fee">Insurance: <strong>${{ detailVehicleData.insurance_fee }}</strong></span>
             <span v-if="detailVehicleData?.taxes_fee">Taxes: <strong>${{ detailVehicleData.taxes_fee }}</strong></span>
           </div>
-        </div>
-      </div>
-    </div>
-    <div
-      v-if="completionModal.visible"
-      class="completion-modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      @click.self="closeCompletionModal"
-    >
-      <div class="completion-modal-card">
-        <div class="completion-modal-header">
-          <div>
-            <h2>Complete this booking</h2>
-          </div>
-          <button type="button" class="completion-close" @click="closeCompletionModal">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
-        <div class="completion-modal-body">
-          <p>This confirms the vehicle has been returned and can be booked again.</p>
-        </div>
-        <div class="completion-modal-actions">
-          <button type="button" class="completion-cancel" @click="closeCompletionModal">
-            Cancel
-          </button>
-          <button type="button" class="completion-primary" @click="submitCompletion" :disabled="processing">
-            {{ processing ? 'Saving...' : 'Confirm return' }}
-          </button>
         </div>
       </div>
     </div>

@@ -21,11 +21,11 @@ use App\Http\Controllers\Api\RatingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-// Public authentication routes
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [UserController::class, 'login']);
-Route::post('/users/register', [AuthController::class, 'register']);
-Route::post('/users/login', [UserController::class, 'login']);
+// // Public authentication routes
+// Route::post('/register', [AuthController::class, 'register']);
+// Route::post('/login', [UserController::class, 'login']);
+// Route::post('/users/register', [AuthController::class, 'register']);
+// Route::post('/users/login', [UserController::class, 'login']);
 
 // Auth routes with /auth prefix
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -123,7 +123,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('damage-reports', DamageReportController::class);
     Route::apiResource('feedback', FeedbackController::class);
     Route::apiResource('histories', HistoryController::class);
-    Route::apiResource('payments', PaymentController::class);
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::post('/payments', [PaymentController::class, 'store']);
+    Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+    Route::match(['put', 'patch'], '/payments/{payment}', [PaymentController::class, 'update']);
+    Route::delete('/payments/{payment}', [PaymentController::class, 'destroy']);
 });
 
 // Shop dashboard payments derived from bookings

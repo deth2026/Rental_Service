@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { couponApi, vehicleApi, shopApi } from '@/services/api'
 import { userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserNavbar from '@/components/UserNavbar.vue'
+import { getCachedSelectedShop } from '@/utils/shopSelectionCache'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,6 +23,36 @@ const currentUserRole = computed(() => {
 })
 const isShopTeam = computed(() => {
   return ['shop_owner', 'owner', 'shop_staff'].includes(currentUserRole.value)
+})
+
+const selectedShopInfo = ref({ id: null, name: '' })
+
+const parseShopIdParam = (value) => {
+  if (value == null) return null
+  const normalized = Number(String(value).trim())
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : null
+}
+
+const refreshSelectedShopFilter = () => {
+  const queryId = parseShopIdParam(route.query.shop_id)
+  if (queryId) {
+    const cached = getCachedSelectedShop()
+    const name = cached.id === queryId ? cached.name : ''
+    selectedShopInfo.value = { id: queryId, name }
+    return
+  }
+  selectedShopInfo.value = getCachedSelectedShop()
+}
+
+
+const selectedShopFilterId = computed(() => selectedShopInfo.value.id)
+const selectedShopDisplayName = computed(() => selectedShopInfo.value.name)
+const promotionsEmptyMessage = computed(() => {
+  if (!selectedShopFilterId.value) {
+    return 'No active promotions are available right now.'
+  }
+  const displayName = selectedShopDisplayName.value || 'this shop'
+  return `No active promotions are available for ${displayName} at the moment.`
 })
 
 const navItems = [
@@ -314,6 +345,9 @@ const fetchPromotions = async () => {
     if (isShopTeam.value && ownerShopIds.value.length) {
       coupons = coupons.filter((coupon) => ownerShopIds.value.includes(Number(coupon.shop_id)))
     }
+    if (selectedShopFilterId.value) {
+      coupons = coupons.filter((coupon) => Number(coupon.shop_id) === selectedShopFilterId.value)
+    }
     const uniqueShopIds = [...new Set(coupons.map((coupon) => Number(coupon.shop_id)).filter(Boolean))]
     const vehiclesPerShop = await Promise.all(uniqueShopIds.map((shopId) => loadVehiclesForShop(shopId)))
     const vehiclesByShop = new Map(uniqueShopIds.map((shopId, index) => [shopId, vehiclesPerShop[index] || []]))
@@ -356,9 +390,18 @@ const usePromotion = (item) => {
 }
 
 const initializePromotions = async () => {
+  refreshSelectedShopFilter()
   await loadOwnerShops()
   await fetchPromotions()
 }
+
+watch(
+  () => route.query.shop_id,
+  () => {
+    refreshSelectedShopFilter()
+    fetchPromotions()
+  }
+)
 
 onMounted(initializePromotions)
 </script>
@@ -429,7 +472,7 @@ onMounted(initializePromotions)
           {{ error }}
         </div>
         <div v-else-if="filteredPromotions.length === 0" class="status-card">
-          No active promotions are available right now.
+          {{ promotionsEmptyMessage }}
         </div>
 
         <div v-else>

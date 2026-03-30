@@ -116,13 +116,14 @@
 
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
 import UserNavbar from '@/components/UserNavbar.vue'
+import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -207,6 +208,22 @@ const selectedShopLocationLink = computed(() => {
   if (typeof loc !== 'string') return '';
   return loc.trim();
 });
+
+const syncShopSelectionToStorage = () => {
+  if (selectedShopId.value) {
+    cacheSelectedShop(selectedShopId.value, selectedShopName.value)
+  } else {
+    clearSelectedShopCache()
+  }
+}
+
+watch(
+  [() => selectedShopId.value, () => selectedShopName.value],
+  () => {
+    syncShopSelectionToStorage()
+  },
+  { immediate: true }
+)
 const extractCoordinatesFromMapUrl = (value) => {
   const url = String(value || '').trim();
   if (!url) return null;

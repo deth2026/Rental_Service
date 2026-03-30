@@ -915,24 +915,24 @@ initializeShopData = async () => {
   await loadOwnerShopName();
 };
 
-initializeShopData().catch(() => {});
+    watch(
+      shop,
+      (current) => {
+        if (current?.id) {
+          fetchShopBookings().catch(() => {});
+          fetchShopPayments().catch(() => {});
+          loadNotifications(current.id).catch(() => {});
+          fetchFeedback().catch(() => {});
+          fetchShopRating().catch(() => {});
+          return;
+        }
+        feedback.value = [];
+        shopRating.value = { average_rating: 0, total_ratings: 0 };
+      },
+      { immediate: true },
+    );
 
-watch(
-  shop,
-  (current) => {
-    if (current?.id) {
-    fetchShopBookings().catch(() => {});
-    fetchShopPayments().catch(() => {});
-    loadNotifications(current.id).catch(() => {});
-    fetchFeedback().catch(() => {});
-    fetchShopRating().catch(() => {});
-    return;
-  }
-  feedback.value = [];
-  shopRating.value = { average_rating: 0, total_ratings: 0 };
-},
-  { immediate: true },
-);
+    initializeShopData().catch(() => {});
 
 const khTime = () => {
   const parts = Object.fromEntries(
