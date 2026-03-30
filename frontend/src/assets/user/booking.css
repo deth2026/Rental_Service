@@ -1704,11 +1704,15 @@
 
   display: flex;
 
-  align-items: center;
+  /* position modal starting from near top so full receipt is visible */
+  align-items: flex-start;
 
   justify-content: center;
 
-  padding: 20px;
+  /* extra top padding to keep green check and title visible */
+  padding: 30px 20px;
+
+  overflow-y: auto;
 
   z-index: 30;
 }
@@ -1716,25 +1720,30 @@
 .success-modal {
   width: 100%;
 
-  max-width: 440px;
+  /* make modal wider like the desired screenshot */
+  max-width: 520px;
 
-  border-radius: 28px;
+  border-radius: 20px;
 
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  /* solid white background so the whole popup appears on white */
+  background: #ffffff;
 
   border: 1px solid #dbe7f4;
 
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
 
-  padding: 34px 30px 28px;
+  /* extra top padding so the green check and title are comfortably inside */
+  padding: 44px 22px 22px;
 
   position: relative;
 
-  overflow: hidden;
+  /* constrain modal height to viewport and allow internal scrolling */
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
 
   text-align: center;
 
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.28s ease;
 }
 
 .success-modal::before {
@@ -2686,8 +2695,9 @@
 
 /* Receipt Modal Styles */
 .receipt-modal {
-  max-width: 500px !important;
-  padding: 20px !important;
+  /* match outer modal width so content is centered */
+  max-width: 520px !important;
+  padding: -60px !important;
 }
 
 .receipt-preview-container {
@@ -2759,17 +2769,15 @@
 }
 
 .receipt-preview-container {
-  margin: 10px 0;
-  max-height: 450px;
+  margin: 12px 0;
+  /* allow the receipt area to use most of the viewport but leave room for header/actions */
+  max-height: calc(100vh - 260px);
   overflow-y: auto;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
-  background: #f8fafc;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.receipt-modal {
-  max-width: 480px !important;
+  /* use white background so the receipt appears fully on white */
+  background: #ffffff;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
 }
 
 

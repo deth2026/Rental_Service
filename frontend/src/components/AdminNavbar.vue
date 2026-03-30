@@ -8,6 +8,7 @@ const router = useRouter()
 
 const DEFAULT_AVATAR = '/Images/default-avatar.svg'
 
+
 const currentUser = computed(() => userService.getCurrentUser())
 
 const profileName = computed(() => currentUser.value?.name || 'Admin Team')

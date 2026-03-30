@@ -147,14 +147,16 @@ const paymentMethodLabel = computed(() => {
   display: flex;
   justify-content: center;
   padding: 10px;
-  background-color: #f1f5f9;
+  /* keep container transparent so the modal's white background shows fully */
+  background-color: transparent;
   font-family: 'Inter', 'Kantumruy Pro', sans-serif;
 }
 
 .receipt-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
   background: white;
+  margin-top: 14px;
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   overflow: hidden;
