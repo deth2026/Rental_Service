@@ -20,6 +20,7 @@ const detailTitle = ref('')
 const detailSubtitle = ref('')
 const detailRows = ref([])
 const hoveredBarIndex = ref(null)
+
 const hoveredDonutName = ref('')
 
 const isFinancialRoute = computed(() => route.path.startsWith('/admin/financials'))

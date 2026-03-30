@@ -655,6 +655,10 @@ const loadVehicleDetail = async () => {
 
 const method = ref("qr");
 const promoCode = ref("");
+const promoSuccess = ref(false);
+const promoMessage = ref("");
+const promoDiscount = ref(0);
+const promoCouponId = ref(null);
 const appliedCoupon = ref(null);
 const promoFeedback = ref("");
 const promoFeedbackType = ref("success");
@@ -923,7 +927,8 @@ const totalAmount = computed(() => {
   const subtotal = days * rental.value.dailyRate;
   rental.value.subtotal = subtotal;
   const baseTotal = rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
-  return Math.max(baseTotal - promoDiscount.value, 0);
+  const discount = promoDiscount.value > 0 ? promoDiscount.value : couponDiscount.value;
+  return Math.max(baseTotal - discount, 0);
 });
 
 const isFormValid = computed(() => {
@@ -1017,6 +1022,14 @@ const applyCoupon = async () => {
       promoDiscount.value = Number(data.discount_amount || 0);
       promoSuccess.value = true;
       promoMessage.value = `Coupon applied! You save ${promoDiscount.value.toFixed(2)}`;
+      
+      // Also fetch and set appliedCoupon for UI consistency
+      try {
+        const couponResp = await api.get(`/coupons/${data.coupon_id}`);
+        appliedCoupon.value = couponResp.data?.data || couponResp.data;
+      } catch (err) {
+        console.warn("Failed to fetch coupon details:", err);
+      }
     } else {
       promoCouponId.value = null;
       promoDiscount.value = 0;

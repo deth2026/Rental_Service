@@ -688,13 +688,15 @@ const categoryMatchesEntry = (entry) => {
   return cat === String(categoryFilter.value || "").trim().toLowerCase();
 };
 
-const filteredBookings = computed(() =>
-  (bookings.value || []).filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry)),
-);
+const filteredBookings = computed(() => {
+  const list = Array.isArray(bookings.value) ? bookings.value : (bookings.value?.data || []);
+  return list.filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry));
+});
 
-const filteredPayments = computed(() =>
-  (payments.value || []).filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry)),
-);
+const filteredPayments = computed(() => {
+  const list = Array.isArray(payments.value) ? payments.value : (payments.value?.data || []);
+  return list.filter((entry) => shopMatchesEntry(entry) && categoryMatchesEntry(entry));
+});
 
 const fetchShopBookings = async () => {
   isLoadingDashboard.value = true;
@@ -703,7 +705,8 @@ const fetchShopBookings = async () => {
     const response = await api.get("/shop-bookings", {
       params: shop.value?.id ? { shop_id: shop.value.id } : {},
     });
-    bookings.value = response.data || [];
+    const data = response.data;
+    bookings.value = Array.isArray(data) ? data : (data?.data || []);
     console.log("Dashboard bookings loaded:", bookings.value.length);
   } catch (error) {
     console.error("Error fetching shop bookings:", error);
@@ -1037,7 +1040,7 @@ const filteredVehicles = computed(() => {
 
 const totalBookings = computed(() => filteredBookings.value.length);
 const totalEarnings = computed(() =>
-  shopPayments.value.reduce((sum, payment) => {
+  filteredPayments.value.reduce((sum, payment) => {
     if (!isPaidPayment(payment)) return sum;
     return sum + Number(payment.amount || payment.total_price || 0);
   }, 0),
@@ -1058,7 +1061,7 @@ const maintenanceVehicles = computed(
 );
 const monthlyIncome = computed(() => {
   const now = new Date();
-  return shopPayments.value.reduce((sum, payment) => {
+  return filteredPayments.value.reduce((sum, payment) => {
     if (!isPaidPayment(payment)) return sum;
     const dateStr = getPaymentDate(payment);
     if (!dateStr) return sum;
@@ -1068,7 +1071,7 @@ const monthlyIncome = computed(() => {
       date.getFullYear() === now.getFullYear() &&
       date.getMonth() === now.getMonth()
     ) {
-      return sum + Number(entry.amount || 0);
+      return sum + Number(payment.amount || 0);
     }
     return sum;
   }, 0);

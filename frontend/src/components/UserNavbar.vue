@@ -176,7 +176,6 @@ onBeforeUnmount(() => {
         </div>
         <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
       </div>
-    </div>
 
     <div v-if="shouldShowBackButton" class="navbar-back-row">
       <button type="button" class="btn-reset navbar-back-btn" @click="goBack">
