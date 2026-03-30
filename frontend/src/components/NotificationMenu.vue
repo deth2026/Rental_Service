@@ -121,7 +121,7 @@ const formatNotificationTitle = (item) => {
         <article
           v-for="item in filteredForTab"
           :key="item.id"
-          class="notification-item"
+          class="notification-item notification-card"
         >
           <div class="notification-item__avatar">
             <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="item.user?.name || 'avatar'" />
@@ -129,7 +129,7 @@ const formatNotificationTitle = (item) => {
             <span v-if="item.status === 'unread'" class="badge-dot" />
           </div>
           <div class="notification-item__body">
-            <p class="notification-item__title">{{ formatNotificationTitle(item) }}</p>
+            <h4 class="notification-item__title">Notification from {{ item.user?.name || 'User' }}</h4>
             <p class="notification-item__description">{{ item.message || item.action }}</p>
             <span class="notification-item__time">{{ formatRelativeTime(item.timestamp) }}</span>
           </div>
@@ -249,31 +249,36 @@ const formatNotificationTitle = (item) => {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px;
-  border-radius: 18px;
+  padding: 14px 16px;
+  border-radius: 24px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  margin-bottom: 6px;
 }
 
 .notification-item__avatar {
   position: relative;
   width: 48px;
   height: 48px;
-  border-radius: 16px;
+  border-radius: 50%;
   background: #eef2ff;
   display: grid;
   place-items: center;
   font-weight: 700;
   color: #1d4ed8;
   font-size: 1rem;
+  min-width: 48px;
+  min-height: 48px;
+  overflow: hidden;
 }
 
 .notification-item__avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 16px;
+  border-radius: 50%;
+  display: block;
 }
 
 .badge-dot {
@@ -294,22 +299,33 @@ const formatNotificationTitle = (item) => {
   gap: 4px;
 }
 
+.notification-item__content {
+  gap: 6px;
+}
+
+.notification-item__content > div {
+  min-height: 52px;
+}
+
 .notification-item__title {
   margin: 0;
   font-weight: 700;
-  color: #111827;
+  font-size: 1.15rem;
+  color: #0f172a;
 }
 
 .notification-item__description {
-  margin: 0;
+  margin: 4px 0 0.2rem;
   color: #475569;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .notification-item__time {
   font-size: 0.8rem;
   color: #94a3b8;
 }
+
 
 .notification-panel__empty {
   font-size: 0.9rem;

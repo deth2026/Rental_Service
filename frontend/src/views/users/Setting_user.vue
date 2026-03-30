@@ -870,6 +870,7 @@ onMounted(fetchProfile)
 
 .hero-content {
     background: #fff;
+    height:200px;
     display: flex;
     align-items: center;
     gap: 1.25rem;
@@ -887,7 +888,7 @@ onMounted(fetchProfile)
     font-weight: 700;
     color: #111827;
     position: absolute;
-    margin-bottom: 8%;
+    margin-bottom: 11%;
     cursor: pointer;
     border: 4px solid #fff;
     box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
@@ -947,7 +948,7 @@ onMounted(fetchProfile)
 .hero-text {
     flex: 1;
     position: relative;
-    top: 60px;
+    top: 40px;
 }
 
 .hero-name {

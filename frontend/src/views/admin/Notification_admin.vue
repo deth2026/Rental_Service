@@ -76,39 +76,17 @@
           :class="[{ unread: item.status === 'unread' }, 'notification-card--clickable']"
           @click="openNotificationDetail(item)"
         >
-          <div class="notification-card__icon">
-            <i :class="getNotificationTypeIcon(item.type)" aria-hidden="true"></i>
+          <div class="notification-card__avatar">
+            <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="`${senderName(item)} avatar`" />
+            <span v-else>{{ getInitials(senderName(item)) }}</span>
+            <span v-if="item.status === 'unread'" class="status-dot" />
           </div>
           <div class="notification-card__body">
-            <header class="notification-card__head">
-              <h3>{{ item.action }}</h3>
-              <span class="notification-card__tag">{{ getNotificationCategoryLabel(item.type) }}</span>
-            </header>
-            <p class="notification-card__message">{{ item.message }}</p>
+            <p class="notification-card__title">Notification from {{ senderName(item) }}</p>
+            <p class="notification-card__text">{{ notificationDetailText(item) }}</p>
             <div class="notification-card__meta">
               <span>{{ formatRelativeTime(item.timestamp) }}</span>
-              <span>{{ formatFullDate(item.timestamp) }}</span>
             </div>
-          </div>
-          <div class="notification-card__actions">
-            <span
-              class="status-badge"
-              :class="{
-                'status-badge--new': isNewNotification(item),
-                'status-badge--unread': !isNewNotification(item) && item.status === 'unread',
-                'status-badge--read': item.status === 'read'
-              }"
-            >
-              {{ item.status === 'unread' ? 'Unread' : 'Read' }}
-            </span>
-            <button
-              v-if="canManageReadState(item)"
-              class="ghost-pill"
-              type="button"
-              @click.stop="handleToggleRead(item)"
-            >
-              {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
-            </button>
           </div>
         </article>
           </template>
@@ -225,7 +203,6 @@ import api from '@/services/api'
 import {
   categorizeNotificationType,
   getNotificationCategoryLabel,
-  getNotificationTypeIcon,
   PLATFORM_CATEGORY_KEY,
   DISCOUNT_CATEGORY_KEY
 } from '@/utils/notificationHelpers'
@@ -284,6 +261,20 @@ const detailNotificationInfo = computed(() => {
     categoryLabel: getNotificationCategoryLabel(item.type)
   }
 })
+
+const senderName = (item) =>
+  item.relatedSender?.name || item.user?.name || 'System'
+
+const notificationDetailText = (item) =>
+  item.detailBody || item.message || item.action || 'No additional details provided.'
+
+const getInitials = (value) => {
+  const text = String(value || '').trim()
+  if (!text) return 'S'
+  const parts = text.split(/\s+/)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
 
 const openNotificationDetail = (item) => {
   detailNotification.value = item
@@ -915,7 +906,7 @@ watch(
   border-radius: 18px;
   padding: 1.3rem;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   gap: 1rem;
   align-items: center;
   border: 1px solid #e5e7eb;
@@ -935,84 +926,58 @@ watch(
   box-shadow: 0 14px 30px rgba(20, 168, 222, 0.15);
 }
 
-.notification-card__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: var(--color-primary-light);
+.notification-card__avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #eef2ff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
-  color: var(--color-primary);
+  font-weight: 700;
+  color: #1d4ed8;
+  font-size: 1rem;
+  overflow: hidden;
+  position: relative;
 }
 
-.notification-card__body h3 {
+.notification-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.status-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+}
+
+.notification-card__title {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
   color: #111827;
 }
 
-.notification-card__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.notification-card__tag {
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  padding: 0.25rem 0.85rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-primary);
-}
-
-.notification-card__message {
-  margin: 0.4rem 0 0.6rem;
-  color: #4b5563;
+.notification-card__text {
+  margin: 0.35rem 0 0.6rem;
+  color: #3b4b63;
   font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .notification-card__meta {
-  display: flex;
-  gap: 1rem;
   font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.notification-card__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.6rem;
-}
-
-.status-badge {
-  padding: 0.35rem 0.9rem;
-  border-radius: 999px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid transparent;
-}
-
-.status-badge--new {
-  background: var(--color-success-light);
-  color: var(--color-success);
-  border-color: var(--color-success-border);
-}
-
-.status-badge--unread {
-  background: rgba(249, 115, 22, 0.12);
-  color: var(--color-warning);
-  border-color: rgba(249, 115, 22, 0.4);
-}
-
-.status-badge--read {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  color: #94a3b8;
 }
 
 .ghost-pill {

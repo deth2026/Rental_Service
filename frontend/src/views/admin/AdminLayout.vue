@@ -99,6 +99,14 @@ const toggleNotificationsPopup = () => {
   }
 }
 
+const getAvatarInitials = (item) => {
+  const name = item?.relatedSender?.name || item?.user?.name || 'User'
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'U'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
 const formatPopupTime = (timestamp) => {
   const value = Number(new Date(timestamp))
   if (!Number.isFinite(value)) return ''
@@ -377,6 +385,11 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
                     :key="item.id"
                     class="notifications-popup__item"
                   >
+                    <div class="notifications-popup__avatar">
+                      <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="item.user?.name || 'user avatar'" />
+                      <span v-else>{{ getAvatarInitials(item) }}</span>
+                      <span v-if="item.status === 'unread'" class="notifications-popup__status-dot" />
+                    </div>
                     <div>
                       <p class="notifications-popup__title">{{ item.action }}</p>
                       <p class="notifications-popup__message">{{ item.message }}</p>
@@ -384,14 +397,6 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
                         {{ formatPopupTime(item.timestamp) }}
                       </span>
                     </div>
-                    <button
-                      v-if="canManageReadState(item)"
-                      type="button"
-                      class="ghost-pill ghost-pill--mini"
-                      @click="handleToggleNotificationRead(item)"
-                    >
-                      {{ item.status === 'unread' ? 'Mark as read' : 'Mark as unread' }}
-                    </button>
                   </li>
                 </ul>
               </section>
@@ -462,7 +467,7 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  width: 340px;
+  width: 420px;
   background: #ffffff;
   border-radius: 18px;
   padding: 0.85rem;
@@ -472,6 +477,38 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+.notifications-popup__avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #eef2ff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #1d4ed8;
+  font-size: 0.9rem;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.notifications-popup__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+.notifications-popup__status-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
 }
 .notifications-popup__header {
   display: flex;
@@ -504,8 +541,13 @@ const cambodiaCurrentYear = computed(() => cambodiaYear(new Date(nowTick.value))
 .notifications-popup__item {
   display: flex;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: flex-start;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  box-shadow: 0 12px 25px rgba(15, 23, 42, 0.08);
 }
 .notifications-popup__title {
   margin: 0;

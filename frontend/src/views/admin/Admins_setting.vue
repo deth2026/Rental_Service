@@ -7,8 +7,7 @@
         </div>
       </header>
 
-      <!-- Main Grid -->
-      <div class="content-grid">
+      <!-- Main Grid -->      <div class="content-grid">
         <!-- Profile Summary Card -->
         <div class="card profile-card">
           <div class="profile-avatar-large">
