@@ -69,6 +69,14 @@ const openEdit = (c) => {
   form.value = { id: c.id, name: c.name || '' }
 }
 
+const formatDate = (value) => {
+  if (!value) return '—'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+}
+
 const closeModals = () => {
   showCreate.value = false
   showEdit.value = false
@@ -226,8 +234,23 @@ onMounted(load)
           </div>
           <button type="button" class="icon-action" title="Close" @click="showView = false"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="modal-body">
-          <pre class="code-block">{{ JSON.stringify(selected, null, 2) }}</pre>
+        <div class="modal-body city-details-grid">
+          <div class="detail-card">
+            <span class="detail-label">Name</span>
+            <strong>{{ selected?.name || '—' }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">City ID</span>
+            <strong>{{ selected?.id ?? '—' }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Created at</span>
+            <strong>{{ formatDate(selected?.created_at) }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Updated at</span>
+            <strong>{{ formatDate(selected?.updated_at) }}</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -246,14 +269,25 @@ onMounted(load)
 </template>
 
 <style scoped>
-.code-block {
-  margin: 0;
-  padding: 12px;
-  border-radius: 12px;
+.city-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.detail-card {
+  background: #f9fafb;
   border: 1px solid var(--mp-border);
-  background: rgba(148, 163, 184, 0.08);
-  overflow: auto;
-  max-height: 52vh;
-  font-size: 12px;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #64748b;
+  display: block;
+  margin-bottom: 4px;
 }
 </style>

@@ -27,8 +27,8 @@ const deletingUserId = ref(null)
 const showView = ref(false)
 const showEdit = ref(false)
 const showDeleteConfirm = ref(false)
-const selectedUser = ref(null)
 const deleteTarget = ref(null)
+const selectedUser = ref(null)
 
 const editForm = ref({ id: null, name: '', phone: '', role: 'customer', is_verified: false })
 const currentUser = computed(() => userService.getCurrentUser())
@@ -48,6 +48,11 @@ const totals = computed(() => {
 })
 
 const query = computed(() => String(route.query.q || '').trim().toLowerCase())
+
+const canViewProfile = (user) => {
+  const role = String(user?.role || '').trim().toLowerCase()
+  return role === 'customer' || role === 'shop_owner'
+}
 
 const showRoleMenu = ref(false)
 const showStatusMenu = ref(false)
@@ -212,6 +217,25 @@ const statusOptions = computed(() => {
   return ['', ...statuses].map((s) => ({ value: s, label: statusLabel(s) }))
 })
 
+const selectedUserName = computed(() => selectedUser.value?.name || 'Unnamed user')
+const selectedUserEmailLabel = computed(() => selectedUser.value?.email || 'Not provided')
+const selectedUserPhoneLabel = computed(() => selectedUser.value?.phone || 'Not provided')
+const selectedUserRoleLabel = computed(() => {
+  if (!selectedUser.value?.role) return 'Role not set'
+  return roleLabel(selectedUser.value.role)
+})
+const selectedUserRoleClass = computed(() => roleBadgeClass(selectedUser.value?.role))
+const selectedUserStatusLabel = computed(() => {
+  if (!selectedUser.value) return 'Status unavailable'
+  return statusText(selectedUser.value)
+})
+const selectedUserJoinedLabel = computed(() => {
+  if (!selectedUser.value) return '—'
+  return formatUserDate(selectedUser.value.created_at || selectedUser.value.joined_at)
+})
+const selectedUserUpdatedLabel = computed(() => formatUserDate(selectedUser.value?.updated_at))
+const selectedUserAvatar = computed(() => getUserAvatar(selectedUser.value))
+
 const selectedRoleLabel = computed(() => roleLabel(selectedRole.value))
 const selectedStatusLabel = computed(() => statusLabel(selectedStatus.value))
 
@@ -250,6 +274,7 @@ const handleAvatarError = (user) => {
 }
 
 const isSelf = (user) => Number(user?.id) === currentUserId.value
+const isAdminRole = (user) => String(user?.role || '').trim().toLowerCase() === 'admin'
 
 const formatUserDate = (value) => {
   if (!value) return '—'
@@ -261,24 +286,6 @@ const formatUserDate = (value) => {
   })
 }
 
-const selectedUserName = computed(() => selectedUser.value?.name || 'Unnamed user')
-const selectedUserEmailLabel = computed(() => selectedUser.value?.email || 'Not provided')
-const selectedUserPhoneLabel = computed(() => selectedUser.value?.phone || 'Not provided')
-const selectedUserRoleLabel = computed(() => {
-  if (!selectedUser.value?.role) return 'Role not set'
-  return roleLabel(selectedUser.value.role)
-})
-const selectedUserRoleClass = computed(() => roleBadgeClass(selectedUser.value?.role))
-const selectedUserStatusLabel = computed(() => {
-  if (!selectedUser.value) return 'Status unavailable'
-  return statusText(selectedUser.value)
-})
-const selectedUserJoinedLabel = computed(() => {
-  if (!selectedUser.value) return '—'
-  return formatUserDate(selectedUser.value.created_at || selectedUser.value.joined_at)
-})
-const selectedUserUpdatedLabel = computed(() => formatUserDate(selectedUser.value?.updated_at))
-const selectedUserAvatar = computed(() => getUserAvatar(selectedUser.value))
 
 const registrationSeries = computed(() => {
   const now = new Date()
@@ -396,12 +403,18 @@ const toggleBlock = async (user) => {
 }
 
 const openView = (user) => {
+  if (!canViewProfile(user)) return
   selectedUser.value = user
   showView.value = true
 }
 
+const closeView = () => {
+  showView.value = false
+  selectedUser.value = null
+}
+
 const openEdit = (user) => {
-  selectedUser.value = user
+  if (isAdminRole(user)) return
   editForm.value = {
     id: user.id,
     name: user.name || '',
@@ -480,17 +493,6 @@ const confirmDelete = async () => {
   }
 }
 
-const exportList = () => {
-  const payload = JSON.stringify(filteredUsers.value.slice(0, 500), null, 2)
-  const blob = new Blob([payload], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'chong-choul-users.json'
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
 onMounted(async () => {
   await admin.load().catch(() => { })
   triggerAnimation()
@@ -510,10 +512,6 @@ watch(
         <p class="page-subtitle">Manage platform participants, monitor activity, and regulate access.</p>
       </div>
       <div class="head-actions">
-        <button type="button" class="btn btn-ghost" @click="exportList">
-          <i class="fa-solid fa-download" aria-hidden="true"></i>
-          <span>Export List</span>
-        </button>
         <button type="button" class="btn btn-primary" @click="openCreate">
           <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
           <span>Create User</span>
@@ -639,18 +637,14 @@ watch(
               <td><span :class="roleBadgeClass(user.role)">{{ String(user.role || '').toUpperCase() }}</span></td>
               <td><span :class="statusClass(user)">{{ statusText(user) }}</span></td>
               <td class="actions">
-                <button type="button" class="icon-action" title="View" @click="openView(user)"><i
-                    class="fa-regular fa-eye"></i></button>
-                <button type="button" class="icon-action" title="Edit" :disabled="isUpdating || togglingUserId === user.id || deletingUserId === user.id" @click="openEdit(user)"><i
+                <button v-if="canViewProfile(user)" type="button" class="icon-action" title="View" @click="openView(user)"><i class="fa-regular fa-eye"></i></button>
+                <button v-if="!isAdminRole(user)" type="button" class="icon-action" title="Edit" :disabled="isUpdating || togglingUserId === user.id || deletingUserId === user.id" @click="openEdit(user)"><i
                     class="fa-regular fa-pen-to-square"></i></button>
-                <button type="button" class="icon-action" title="Delete" :disabled="isSelf(user) || deletingUserId === user.id || isUpdating" @click="requestDelete(user)"><i
+                <button v-if="!isAdminRole(user)" type="button" class="icon-action" title="Delete" :disabled="isSelf(user) || deletingUserId === user.id || isUpdating" @click="requestDelete(user)"><i
                     class="fa-regular fa-trash-can"></i></button>
                 <button v-if="statusText(user) === 'BLOCKED'" type="button" class="btn btn-soft" :disabled="isSelf(user) || togglingUserId === user.id || deletingUserId === user.id"
                   @click="toggleBlock(user)">
                   {{ togglingUserId === user.id ? 'Processing...' : 'Unblock/Verify' }}
-                </button>
-                <button v-else type="button" class="btn btn-soft warn" :disabled="isSelf(user) || togglingUserId === user.id || deletingUserId === user.id" @click="toggleBlock(user)">
-                  {{ togglingUserId === user.id ? 'Processing...' : 'Block/Unverify' }}
                 </button>
               </td>
             </tr>
@@ -670,6 +664,75 @@ watch(
         </div>
       </div>
     </section>
+
+    <div
+      v-if="showView"
+      class="modal-backdrop modal-backdrop--center"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closeView"
+    >
+      <div class="modal modal--profile">
+        <div class="modal-head">
+          <div>
+            <div class="modal-title">User Details</div>
+            <div class="modal-sub">Read-only profile snapshot</div>
+          </div>
+          <button type="button" class="icon-action" title="Close" @click="closeView"><i
+              class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="user-details">
+            <div class="user-details__hero">
+              <div class="user-details__avatar">
+                <img
+                  v-if="selectedUserAvatar"
+                  :src="selectedUserAvatar"
+                  :alt="`Avatar for ${selectedUserName}`"
+                  @error="handleAvatarError(selectedUser)"
+                />
+                <span v-else>{{ initials(selectedUser?.name) }}</span>
+              </div>
+              <div class="user-details__hero-text">
+                <p class="user-details__name">{{ selectedUserName }}</p>
+                <div class="user-details__meta">
+                  <span>ID {{ selectedUser?.id || '—' }}</span>
+                  <span>{{ selectedUserJoinedLabel }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="detail-grid">
+              <div class="detail-row">
+                <span class="detail-label">Email</span>
+                <span class="detail-value">{{ selectedUserEmailLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Phone</span>
+                <span class="detail-value">{{ selectedUserPhoneLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Role</span>
+                <span class="detail-value detail-value--badge" :class="selectedUserRoleClass">
+                  {{ selectedUserRoleLabel }}
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Status</span>
+                <span class="detail-value">{{ selectedUserStatusLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Joined</span>
+                <span class="detail-value">{{ selectedUserJoinedLabel }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Last updated</span>
+                <span class="detail-value">{{ selectedUserUpdatedLabel }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <section class="grid-2 wide">
       <section class="card">
@@ -759,75 +822,6 @@ watch(
           <button type="button" class="btn btn-primary" :disabled="isCreating" @click="submitCreate">
             {{ isCreating ? 'Creating...' : 'Create' }}
           </button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      v-if="showView"
-      class="modal-backdrop modal-backdrop--center"
-      role="dialog"
-      aria-modal="true"
-      @click.self="showView = false"
-    >
-      <div class="modal modal--profile">
-        <div class="modal-head">
-          <div>
-            <div class="modal-title">User Details</div>
-            <div class="modal-sub">Read-only profile snapshot</div>
-          </div>
-          <button type="button" class="icon-action" title="Close" @click="showView = false"><i
-              class="fa-solid fa-xmark"></i></button>
-        </div>
-        <div class="modal-body">
-          <div class="user-details">
-            <div class="user-details__hero">
-              <div class="user-details__avatar">
-                <img
-                  v-if="selectedUserAvatar"
-                  :src="selectedUserAvatar"
-                  :alt="`Avatar for ${selectedUserName}`"
-                  @error="handleAvatarError(selectedUser)"
-                />
-                <span v-else>{{ initials(selectedUser?.name) }}</span>
-              </div>
-              <div class="user-details__hero-text">
-                <p class="user-details__name">{{ selectedUserName }}</p>
-                <div class="user-details__meta">
-                  <span>ID {{ selectedUser?.id || '—' }}</span>
-                  <span>{{ selectedUserJoinedLabel }}</span>
-                </div>
-              </div>
-            </div>
-            <div class="detail-grid">
-              <div class="detail-row">
-                <span class="detail-label">Email</span>
-                <span class="detail-value">{{ selectedUserEmailLabel }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Phone</span>
-                <span class="detail-value">{{ selectedUserPhoneLabel }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Role</span>
-                <span class="detail-value detail-value--badge" :class="selectedUserRoleClass">
-                  {{ selectedUserRoleLabel }}
-                </span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Status</span>
-                <span class="detail-value">{{ selectedUserStatusLabel }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Joined</span>
-                <span class="detail-value">{{ selectedUserJoinedLabel }}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Last updated</span>
-                <span class="detail-value">{{ selectedUserUpdatedLabel }}</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

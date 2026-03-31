@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { couponApi } from '../../services/api.js'
+import { couponApi, shopApi } from '../../services/api.js'
 import { useToast } from '../../composables/useToast.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 
@@ -45,8 +45,11 @@ const showEdit = ref(false)
 const showView = ref(false)
 const showDeleteConfirm = ref(false)
 
-const selected = ref(null)
 const deleteTarget = ref(null)
+const selectedCoupon = ref(null)
+const shops = ref([])
+const shopsLoading = ref(false)
+const shopsError = ref('')
 
 const form = ref({
   id: null,
@@ -58,16 +61,33 @@ const form = ref({
   valid_until: '',
   usage_limit: null,
   is_active: true,
+  shop_id: ''
 })
 
 const query = computed(() => String(route.query.q || '').trim().toLowerCase())
+
+const asArray = (payload) => {
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload?.data)) return payload.data
+  return []
+}
+
+const shopLabel = (shop, fallbackId) => {
+  if (shop) {
+    if (shop.name) return shop.name
+    if (shop.address) return shop.address
+    if (shop.location) return shop.location
+  }
+  if (fallbackId) return `Shop #${fallbackId}`
+  return 'General (all shops)'
+}
 
 const load = async () => {
   loading.value = true
   try {
     const { data } = await couponApi.getAll()
     const payload = data?.data?.data || data?.data || data
-    items.value = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : []
+    items.value = asArray(payload)
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to load coupons.')
     items.value = []
@@ -75,6 +95,122 @@ const load = async () => {
     loading.value = false
   }
 }
+
+const loadShops = async () => {
+  shopsLoading.value = true
+  shopsError.value = ''
+  try {
+    const { data } = await shopApi.getAll()
+    const payload = data?.data?.data || data?.data || data
+    shops.value = asArray(payload)
+  } catch (err) {
+    console.error('Failed to load shops:', err)
+    shopsError.value = 'Failed to load shops'
+    shops.value = []
+  } finally {
+    shopsLoading.value = false
+  }
+}
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+})
+
+const formatCurrency = (value) => {
+  if (value === undefined || value === null || value === '') return '—'
+  return currencyFormatter.format(Number(value))
+}
+
+const parseOptionalNumber = (value) => {
+  if (value === undefined || value === null || value === '') return null
+  const num = Number(value)
+  return Number.isFinite(num) ? num : null
+}
+
+const toDateOnly = (value) => {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toISOString().split('T')[0]
+}
+
+const couponStatusKey = (coupon) => {
+  if (!coupon) return 'inactive'
+  const today = new Date(new Date().toDateString())
+  const from = coupon.valid_from ? new Date(coupon.valid_from) : null
+  const until = coupon.valid_until ? new Date(coupon.valid_until) : null
+  if (!coupon.is_active) {
+    return 'inactive'
+  }
+  if (from && today < from) {
+    return 'not-started'
+  }
+  if (until && today > until) {
+    return 'expired'
+  }
+  return 'active'
+}
+
+const selectedDiscountText = computed(() => {
+  const coupon = selectedCoupon.value
+  if (!coupon) return '—'
+  if (coupon.discount_percent) return `${coupon.discount_percent}% off`
+  if (coupon.discount_amount) return `${formatCurrency(coupon.discount_amount)} off`
+  return '—'
+})
+
+const selectedMinimumText = computed(() => {
+  const coupon = selectedCoupon.value
+  if (!coupon) return '—'
+  if (coupon.minimum_amount === null || coupon.minimum_amount === undefined || coupon.minimum_amount === '') return 'No minimum'
+  return formatCurrency(coupon.minimum_amount)
+})
+
+const selectedUsageText = computed(() => {
+  const coupon = selectedCoupon.value
+  if (!coupon) return '—'
+  if (coupon.usage_limit === null || coupon.usage_limit === undefined || coupon.usage_limit === '') return 'Unlimited'
+  return String(coupon.usage_limit)
+})
+
+const selectedValidFrom = computed(() => formatDate(selectedCoupon.value?.valid_from))
+const selectedValidUntil = computed(() => formatDate(selectedCoupon.value?.valid_until))
+
+const normalizeDateInput = (value) => {
+  if (!value) return ''
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return String(value).split('T')[0]
+  return parsed.toISOString().split('T')[0]
+}
+
+const buildPayload = () => {
+  const code = String(form.value.code || '').trim().toUpperCase()
+  const validFrom = normalizeDateInput(form.value.valid_from)
+  const validUntil = normalizeDateInput(form.value.valid_until)
+  return {
+    code,
+    discount_percent: parseOptionalNumber(form.value.discount_percent),
+    discount_amount: parseOptionalNumber(form.value.discount_amount),
+    minimum_amount: parseOptionalNumber(form.value.minimum_amount),
+    usage_limit: parseOptionalNumber(form.value.usage_limit),
+    valid_from: validFrom,
+    valid_until: validUntil,
+    is_active: form.value.is_active ? 1 : 0,
+    shop_id: form.value.shop_id ? Number(form.value.shop_id) : null
+  }
+}
+
+const validatePayloadDates = (payload) => {
+  if (!payload.valid_from || !payload.valid_until) return true
+  if (payload.valid_until < payload.valid_from) {
+    toast.error('Valid until must be the same day or after valid from.')
+    return false
+  }
+  return true
+}
+
+const isSubmitting = ref(false)
 
 const filtered = computed(() => {
   const q = query.value
@@ -103,13 +239,16 @@ const openCreate = () => {
     valid_until: '',
     usage_limit: null,
     is_active: true,
+    shop_id: shops.value[0]?.id ? String(shops.value[0].id) : ''
   }
 }
 
-const openView = (c) => { selected.value = c; showView.value = true }
+const openView = (c) => {
+  selectedCoupon.value = c
+  showView.value = true
+}
 
 const openEdit = (c) => {
-  selected.value = c
   showEdit.value = true
   showCreate.value = false
   form.value = {
@@ -118,10 +257,11 @@ const openEdit = (c) => {
     discount_percent: c.discount_percent ?? null,
     discount_amount: c.discount_amount ?? null,
     minimum_amount: c.minimum_amount ?? null,
-    valid_from: c.valid_from || '',
-    valid_until: c.valid_until || '',
+    valid_from: toDateOnly(c.valid_from),
+    valid_until: toDateOnly(c.valid_until),
     usage_limit: c.usage_limit ?? null,
     is_active: Boolean(c.is_active),
+    shop_id: c.shop_id ? String(c.shop_id) : c.shop?.id ? String(c.shop.id) : ''
   }
 }
 
@@ -129,6 +269,7 @@ const closeModals = () => {
   showCreate.value = false
   showEdit.value = false
   showView.value = false
+  selectedCoupon.value = null
 }
 
 const submitCreate = async () => {
@@ -136,12 +277,17 @@ const submitCreate = async () => {
   if (!code) { toast.error('Coupon code is required.'); return }
   if (!form.value.valid_from || !form.value.valid_until) { toast.error('Valid from / until is required.'); return }
   try {
-    await couponApi.create({ ...form.value, code })
+    const payload = buildPayload()
+    if (!validatePayloadDates(payload)) return
+    isSubmitting.value = true
+    await couponApi.create(payload)
     toast.success('Coupon created successfully.')
     closeModals()
     await load()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to create coupon.')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -150,13 +296,19 @@ const submitEdit = async () => {
   if (!id) return
   const code = String(form.value.code || '').trim()
   if (!code) { toast.error('Coupon code is required.'); return }
+  if (!form.value.valid_from || !form.value.valid_until) { toast.error('Valid from / until is required.'); return }
   try {
-    await couponApi.update(id, { ...form.value, code })
+    const payload = buildPayload()
+    if (!validatePayloadDates(payload)) return
+    isSubmitting.value = true
+    await couponApi.update(id, payload)
     toast.success('Coupon updated successfully.')
     closeModals()
     await load()
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to update coupon.')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -183,7 +335,10 @@ const confirmDelete = async () => {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  await loadShops()
+  await load()
+})
 </script>
 
 <template>
@@ -260,24 +415,31 @@ onMounted(load)
         <div class="modal-head">
           <div>
             <div class="modal-title">{{ showEdit ? 'Edit Coupon' : 'Create Coupon' }}</div>
-            <div class="modal-sub">Set discount rules and validity.</div>
+            <div class="modal-sub">Assign the coupon to a shop and control its validity.</div>
           </div>
           <button type="button" class="icon-action" title="Close" @click="closeModals"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
-
         <div class="modal-body form-grid">
           <label class="field">
             <span class="field-label">Code</span>
-            <input v-model="form.code" type="text" placeholder="SAVE10" />
+            <input v-model="form.code" type="text" placeholder="SUMMER21" />
           </label>
           <label class="field">
-            <span class="field-label">Usage Limit</span>
-            <input v-model.number="form.usage_limit" type="number" min="0" />
+            <span class="field-label">Shop</span>
+            <select v-model="form.shop_id">
+              <option value="">General (all shops)</option>
+              <option v-for="shop in shops" :key="shop.id" :value="String(shop.id)">
+                {{ shopLabel(shop, shop.id) }}
+              </option>
+            </select>
+            <small class="muted" style="margin-top: 4px; display: block;">
+              Leave blank to apply the coupon across all shops.
+            </small>
           </label>
           <label class="field">
             <span class="field-label">Discount Percent</span>
-            <input v-model.number="form.discount_percent" type="number" min="0" step="0.01" />
+            <input v-model.number="form.discount_percent" type="number" min="0" max="100" step="0.01" />
           </label>
           <label class="field">
             <span class="field-label">Discount Amount</span>
@@ -288,11 +450,8 @@ onMounted(load)
             <input v-model.number="form.minimum_amount" type="number" min="0" step="0.01" />
           </label>
           <label class="field">
-            <span class="field-label">Active</span>
-            <select v-model="form.is_active">
-              <option :value="true">Yes</option>
-              <option :value="false">No</option>
-            </select>
+            <span class="field-label">Usage Limit</span>
+            <input v-model.number="form.usage_limit" type="number" min="0" placeholder="Unlimited" />
           </label>
           <label class="field">
             <span class="field-label">Valid From</span>
@@ -302,27 +461,62 @@ onMounted(load)
             <span class="field-label">Valid Until</span>
             <input v-model="form.valid_until" type="date" />
           </label>
+          <label class="field">
+            <span class="field-label">Active</span>
+            <select v-model="form.is_active">
+              <option :value="true">Yes</option>
+              <option :value="false">No</option>
+            </select>
+          </label>
         </div>
 
         <div class="modal-actions">
           <button type="button" class="btn btn-ghost" @click="closeModals">Cancel</button>
-          <button v-if="showEdit" type="button" class="btn btn-primary" @click="submitEdit">Save Changes</button>
-          <button v-else type="button" class="btn btn-primary" @click="submitCreate">Create Coupon</button>
+          <button type="button" class="btn btn-primary" :disabled="isSubmitting" @click="showEdit ? submitEdit : submitCreate">
+            {{ showEdit ? 'Update' : 'Create' }}
+          </button>
         </div>
       </div>
     </div>
 
-    <div v-if="showView" class="modal-backdrop" role="dialog" aria-modal="true" @click.self="showView = false">
-      <div class="modal">
+    <div v-if="showView && selectedCoupon" class="modal-backdrop" role="dialog" aria-modal="true" @click.self="closeModals">
+      <div class="modal coupon-view-modal">
         <div class="modal-head">
           <div>
             <div class="modal-title">Coupon Details</div>
-            <div class="modal-sub">Read-only view</div>
+            <div class="modal-sub">{{ shopLabel(selectedCoupon.shop, selectedCoupon.shop_id) }}</div>
           </div>
-          <button type="button" class="icon-action" title="Close" @click="showView = false"><i class="fa-solid fa-xmark"></i></button>
+          <button type="button" class="icon-action" title="Close" @click="closeModals"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="modal-body">
-          <pre class="code-block">{{ JSON.stringify(selected, null, 2) }}</pre>
+        <div class="modal-body coupon-details-grid">
+          <div class="detail-card">
+            <span class="detail-label">Code</span>
+            <strong>{{ selectedCoupon.code }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Status</span>
+            <span class="badge" :class="getBadgeClass(getStatus(selectedCoupon))">{{ getStatus(selectedCoupon) }}</span>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Discount</span>
+            <strong>{{ selectedDiscountText }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Minimum Spend</span>
+            <strong>{{ selectedMinimumText }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Usage Limit</span>
+            <strong>{{ selectedUsageText }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Valid From</span>
+            <strong>{{ selectedValidFrom }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Valid Until</span>
+            <strong>{{ selectedValidUntil }}</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -349,5 +543,47 @@ onMounted(load)
   overflow: auto;
   max-height: 52vh;
   font-size: 12px;
+}
+
+.modal-body .field select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--mp-border);
+  background: #fff;
+}
+
+.coupon-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.detail-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid var(--mp-border);
+}
+
+.coupon-view-modal {
+  width: min(90vw, 640px);
+}
+
+.detail-label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 </style>

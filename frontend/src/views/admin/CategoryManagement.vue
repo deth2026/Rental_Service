@@ -75,6 +75,14 @@ const closeModals = () => {
   showView.value = false
 }
 
+const formatDate = (value) => {
+  if (!value) return '—'
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+}
+
 const submitCreate = async () => {
   const name = String(form.value.name || '').trim()
   if (!name) { toast.error('Category name is required.'); return }
@@ -238,8 +246,27 @@ onMounted(load)
           </div>
           <button type="button" class="icon-action" title="Close" @click="showView = false"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <div class="modal-body">
-          <pre class="code-block">{{ JSON.stringify(selected, null, 2) }}</pre>
+        <div class="modal-body category-details-grid">
+          <div class="detail-card">
+            <span class="detail-label">Name</span>
+            <strong>{{ selected?.name || '—' }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Status</span>
+            <strong>{{ String(selected?.status || 'active').toUpperCase() }}</strong>
+          </div>
+          <div class="detail-card span-full">
+            <span class="detail-label">Description</span>
+            <strong>{{ selected?.description || 'No description provided.' }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Created at</span>
+            <strong>{{ formatDate(selected?.created_at) }}</strong>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Updated at</span>
+            <strong>{{ formatDate(selected?.updated_at) }}</strong>
+          </div>
         </div>
       </div>
     </div>
@@ -257,14 +284,29 @@ onMounted(load)
 </template>
 
 <style scoped>
-.code-block {
-  margin: 0;
-  padding: 12px;
+.category-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.category-details-grid .span-full {
+  grid-column: 1 / -1;
+}
+
+.detail-card {
   border-radius: 12px;
   border: 1px solid var(--mp-border);
-  background: rgba(148, 163, 184, 0.08);
-  overflow: auto;
-  max-height: 52vh;
-  font-size: 12px;
+  background: #f9fafb;
+  padding: 14px;
+}
+
+.detail-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+  display: block;
 }
 </style>

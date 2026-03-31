@@ -86,7 +86,6 @@ const sections = [
   { id: "vehicles", label: "Vehicles", icon: "motorcycle" },
   { id: "bookings", label: "Bookings", icon: "calendar-check" },
   { id: "payments", label: "Payments", icon: "wallet" },
-  { id: "damage", label: "Damage Reports", icon: "shield-alert" },
   { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
   { id: "loyalty", label: "Loyalty Points", icon: "gift" },

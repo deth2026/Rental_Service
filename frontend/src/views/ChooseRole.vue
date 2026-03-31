@@ -1,8 +1,11 @@
 <script setup>
 import { useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
+import api from "../services/api";
 import "../css/chooserole.css";
 
 const router = useRouter();
+const adminAlreadyRegistered = ref(false);
 
 const selectRole = (role) => {
   localStorage.setItem("selectedRole", role);
@@ -13,6 +16,15 @@ const selectRole = (role) => {
     router.push(`/register?role=${role}`);
   }
 };
+
+onMounted(async () => {
+  try {
+    const { data } = await api.get('/admin/exists');
+    adminAlreadyRegistered.value = Boolean(data?.has_admin);
+  } catch (error) {
+    console.error('Failed to check admin presence', error);
+  }
+});
 </script>
 <template>
   <main class="role-page">
@@ -49,7 +61,13 @@ const selectRole = (role) => {
           <span class="role-desc">Manage your vehicles and shop</span>
         </button>
 
-        <button type="button" class="role-card" @click="selectRole('admin')">
+        <button
+          type="button"
+          class="role-card"
+          :class="{ 'role-card--disabled': adminAlreadyRegistered }"
+          :disabled="adminAlreadyRegistered"
+          @click="selectRole('admin')"
+        >
           <span class="icon-wrap admin-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" focusable="false">
               <path

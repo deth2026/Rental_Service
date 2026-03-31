@@ -89,19 +89,10 @@ const openLocationPrompt = () => {
   showLocationPrompt.value = true
 }
 
-const topLevelRoutes = new Set([
-  '/',
-  '/home',
-  '/view_shop',
-  '/dashboard',
-  '/admin',
-])
-
-// const showGlobalBackButton = computed(() => {
-//   if (showSplash.value) return false
-//   if (route.path.startsWith('/booking')) return false
-//   return !topLevelRoutes.has(route.path)
-// })
+const showGlobalBackButton = computed(() => {
+  if (showSplash.value) return false
+  return route.path === '/login' || route.path === '/register'
+})
 
 const getFallbackRoute = () => {
   try {

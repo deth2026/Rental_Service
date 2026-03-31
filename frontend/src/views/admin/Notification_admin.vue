@@ -74,7 +74,8 @@
           :key="item.id"
           class="notification-card"
           :class="[{ unread: item.status === 'unread' }, 'notification-card--clickable']"
-          @click="openNotificationDetail(item)"
+          @click="handleNotificationClick(item)"
+          @dblclick.prevent="openNotificationDetail(item)"
         >
           <div class="notification-card__avatar">
             <img v-if="item.user?.avatar" :src="item.user.avatar" :alt="`${senderName(item)} avatar`" />
@@ -109,25 +110,42 @@
           <span class="sr-only">Close</span>
         </button>
       </header>
-      <div class="platform-popup__selector-grid">
-        <select v-model="platformTargetType">
-          <option value="user">User</option>
-          <option value="shop">Shop owner</option>
-        </select>
-        <select
-          id="platform-recipient-popup"
-          v-model="platformSelectedKey"
-          :disabled="!platformOptionsForType.length"
-        >
-          <option value="" disabled>Select recipient</option>
-          <option
-            v-for="recipient in platformOptionsForType"
-            :key="`${recipient.type}-${recipient.id}`"
-            :value="`${recipient.type}:${recipient.id}`"
+      <p class="platform-popup__summary">
+        Choose whether to notify a specific user or a shop owner, then pick the recipient from the list. If
+        you want to send a ping to multiple recipients, repeat the action for each one.
+      </p>
+      <div class="platform-popup__selectors">
+        <div class="platform-popup__selector-card">
+          <span class="platform-popup__selector-label">Recipient type</span>
+          <select v-model="platformTargetType" class="platform-popup__select">
+            <option value="user">User</option>
+            <option value="shop">Shop owner</option>
+          </select>
+          <span class="platform-popup__selector-hint">
+            Selecting “Shop owner” lets you notify a specific shop instead of a single account.
+          </span>
+        </div>
+        <div class="platform-popup__selector-card">
+          <span class="platform-popup__selector-label">Recipient</span>
+          <select
+            id="platform-recipient-popup"
+            v-model="platformSelectedKey"
+            :disabled="!platformOptionsForType.length"
+            class="platform-popup__select"
           >
-            {{ recipient.label }}
-          </option>
-        </select>
+            <option value="" disabled>Select recipient</option>
+            <option
+              v-for="recipient in platformOptionsForType"
+              :key="`${recipient.type}-${recipient.id}`"
+              :value="`${recipient.type}:${recipient.id}`"
+            >
+              {{ recipient.label }}
+            </option>
+          </select>
+          <span class="platform-popup__selector-hint">
+            {{ platformOptionsForType.length ? 'Use the dropdown to find the right recipient.' : 'No recipients available yet.' }}
+          </span>
+        </div>
       </div>
       <label class="platform-popup__field">
         <span>Title</span>
@@ -137,6 +155,7 @@
           maxlength="128"
           placeholder="E.g. Welcome to the platform"
         />
+        <small class="platform-popup__helper">Keep it short—aim for 5-7 words so recipients can scan quickly.</small>
       </label>
       <label class="platform-popup__field">
         <span>Message</span>
@@ -145,6 +164,7 @@
           rows="4"
           placeholder="Enter the details you want to share."
         ></textarea>
+        <small class="platform-popup__helper">Share the key updates and next steps; recipients will see this in their inbox.</small>
       </label>
       <div class="platform-popup__actions">
         <button
@@ -191,12 +211,32 @@
         <span>{{ detailNotificationInfo.categoryLabel }}</span>
       </div>
       <p class="notification-detail-modal__body">{{ detailNotificationInfo.body || 'No additional details provided.' }}</p>
+      <div class="notification-detail-modal__extras">
+        <div class="detail-extra-card">
+          <span class="detail-extra-label">Type</span>
+          <strong>{{ notificationContextInfo(detailNotification.value).badge }}</strong>
+        </div>
+        <div class="detail-extra-card">
+          <span class="detail-extra-label">Context</span>
+          <p>{{ notificationContextInfo(detailNotification.value).body }}</p>
+        </div>
+      </div>
+      <div class="notification-detail-modal__actions">
+        <button
+          class="primary-pill notification-detail-modal__goto"
+          type="button"
+          @click="handleNotificationClick(detailNotification.value)"
+        >
+          View related data
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useNotifications } from '@/composables/useNotifications'
 import { useToast } from '@/composables/useToast'
 import api from '@/services/api'
@@ -220,6 +260,7 @@ const {
 } = useNotifications()
 const adminStore = useAdminStore()
 const route = useRoute()
+const router = useRouter()
 
 const categoryFilters = [
   { label: 'All', value: 'all' },
@@ -262,6 +303,45 @@ const detailNotificationInfo = computed(() => {
   }
 })
 
+const notificationContextInfo = (item) => {
+  if (!item) return { badge: 'General', body: item?.message || 'No details' }
+  const typeKey = normalizeTypeKey(item)
+  const shopLabel = item.shopId ? `Shop #${item.shopId}` : null
+  const relatedLabel = item.related?.id ? `ID ${item.related.id}` : null
+  switch (typeKey) {
+    case 'payment':
+      return {
+        badge: 'Payment',
+        body: `Payment notification${shopLabel ? ` for ${shopLabel}` : ''}${relatedLabel ? ` (${relatedLabel})` : ''}`,
+      }
+    case 'booking':
+      return {
+        badge: 'Booking',
+        body: `Booking ${relatedLabel || ''} is mentioned${shopLabel ? ` for ${shopLabel}` : ''}`.trim(),
+      }
+    case 'message':
+      return {
+        badge: 'Message',
+        body: 'New message thread, open the board to view chat',
+      }
+    case 'report':
+      return {
+        badge: 'Report',
+        body: `Complaint related to ${shopLabel || 'a shop'}${relatedLabel ? ` (${relatedLabel})` : ''}`,
+      }
+    case 'shop':
+      return {
+        badge: 'Shop',
+        body: `Shop update${shopLabel ? `: ${shopLabel}` : ''}`,
+      }
+    default:
+      return {
+        badge: item.type || 'General',
+        body: item.message || 'Notification delivered',
+      }
+  }
+}
+
 const senderName = (item) =>
   item.relatedSender?.name || item.user?.name || 'System'
 
@@ -279,6 +359,45 @@ const getInitials = (value) => {
 const openNotificationDetail = (item) => {
   detailNotification.value = item
   detailModalVisible.value = true
+}
+
+const normalizeTypeKey = (item) => {
+  const raw = item.related?.type || item.relatedModel?.type || item.type || ''
+  const segments = raw.split('\\').filter(Boolean)
+  const base = segments.length ? segments.at(-1) : raw
+  return String(base || '').toLowerCase()
+}
+
+const resolveAdminNotificationRoute = (item) => {
+  const typeKey = normalizeTypeKey(item)
+  const targetId = item.related?.id || item.relatedModel?.id || item.related?.shop_id || ''
+  const shopId = item.shopId || item.related?.shop_id || item.relatedModel?.shop_id
+  switch (typeKey) {
+    case 'booking':
+      return { name: 'admin-bookings', query: { bookingId: targetId || '' } }
+    case 'report':
+    case 'damagereport':
+      return { name: 'admin-reports', query: { reportId: targetId || '' } }
+    case 'shop':
+      return { name: 'admin-shops', query: { shopId: targetId || shopId || '' } }
+    case 'payment':
+      return { name: 'admin-financials', query: shopId ? { shopId } : {} }
+    case 'user':
+      return { name: 'admin-users', query: { userId: targetId || '' } }
+    case 'message':
+      return { name: 'admin-notifications' }
+    default:
+      return null
+  }
+}
+
+const handleNotificationClick = (item) => {
+  const target = resolveAdminNotificationRoute(item)
+  if (target) {
+    router.push(target)
+  } else {
+    openNotificationDetail(item)
+  }
 }
 
 const closeDetailModal = () => {
@@ -823,10 +942,59 @@ watch(
   color: #6b7280;
   padding: 0;
 }
-.platform-popup__selector-grid {
+.platform-popup__summary {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin: 0;
+  background: #eef2ff;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  border: 1px solid #c7d2fe;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.15);
+}
+.platform-popup__selectors {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+.platform-popup__selector-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+.platform-popup__selector-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #6b7280;
+}
+.platform-popup__select {
+  border: none;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.08);
+  appearance: none;
+  width: 100%;
+  background-image: linear-gradient(45deg, transparent 50%, #0f172a 50%),
+    linear-gradient(135deg, #0f172a 50%, transparent 50%);
+  background-repeat: no-repeat;
+  background-position: calc(100% - 16px) calc(50% - 6px), calc(100% - 12px) calc(50% - 6px);
+  background-size: 6px 6px, 6px 6px;
+}
+.platform-popup__select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.platform-popup__selector-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
 }
 .platform-popup__field {
   display: flex;
@@ -834,6 +1002,24 @@ watch(
   gap: 0.35rem;
   font-size: 0.85rem;
   color: var(--color-text-secondary);
+}
+.platform-popup__field input,
+.platform-popup__field textarea {
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #f8fafc;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  min-height: 0;
+}
+.platform-popup__field input:focus,
+.platform-popup__field textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  background: #ffffff;
 }
 .platform-popup__actions {
   display: flex;
@@ -868,6 +1054,11 @@ watch(
   color: #ffffff;
   border: none;
   box-shadow: 0 10px 20px rgba(239, 68, 68, 0.25);
+}
+.platform-popup__helper {
+  font-size: 0.75rem;
+  color: #475569;
+  margin: 0;
 }
 
 .admin-notifications-page__list {
@@ -1065,6 +1256,35 @@ watch(
   color: #111827;
   white-space: pre-wrap;
   line-height: 1.5;
+}
+.notification-detail-modal__extras {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.detail-extra-card {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+}
+.detail-extra-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.notification-detail-modal__actions {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.notification-detail-modal__goto {
+  min-width: 180px;
+  justify-content: center;
 }
 
 .notification-detail-modal__close {

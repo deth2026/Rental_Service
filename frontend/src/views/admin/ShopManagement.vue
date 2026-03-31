@@ -150,6 +150,24 @@ const fleetCountByShop = computed(() => {
   return map
 })
 
+const revenueByShop = computed(() => {
+  const map = new Map()
+  admin.state.bookings.forEach((booking) => {
+    const amount = Number(
+      booking?.total_amount ??
+      booking?.total_price ??
+      booking?.price ??
+      booking?.gross_amount ??
+      booking?.amount ??
+      0
+    ) || 0
+    const key = String(booking.shop_id ?? booking.shop?.id ?? '')
+    if (!key) return
+    map.set(key, (map.get(key) || 0) + amount)
+  })
+  return map
+})
+
 const statusBadgeClass = (status) => {
   const label = statusLabel(status)
   if (label === 'ACTIVE') return 'badge badge-green'
@@ -157,6 +175,13 @@ const statusBadgeClass = (status) => {
   if (label === 'SUSPENDED') return 'badge badge-red'
   return 'badge'
 }
+
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+})
+
+const formatCurrency = (value) => currencyFormatter.format(Number(value) || 0)
 
 const resolveShopImageUrl = (value) => {
   const image = value ? String(value).trim() : ''
@@ -467,6 +492,7 @@ onMounted(() => {
               <th>OWNER</th>
               <th class="num">FLEET COUNT</th>
               <th class="num">TOTAL BOOKINGS</th>
+              <th class="num">REVENUE</th>
               <th>STATUS</th>
               <th class="actions">ACTIONS</th>
             </tr>
@@ -489,6 +515,9 @@ onMounted(() => {
               </td>
               <td class="num">
                 {{ admin.formatted.fmtNumber(bookingCountByShop.get(String(shop.id)) || 0) }}
+              </td>
+              <td class="num revenue-cell">
+                <strong>{{ formatCurrency(revenueByShop.get(String(shop.id))) }}</strong>
               </td>
               <td><span :class="statusBadgeClass(shop.status)">{{ statusLabel(shop.status) }}</span></td>
               <td class="actions">

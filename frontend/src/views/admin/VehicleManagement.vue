@@ -59,6 +59,8 @@ const normalizedVehicles = computed(() => {
   }))
 })
 
+const shopOptions = computed(() => admin.state.shops || [])
+
 const filteredVehicles = computed(() => {
   const q = query.value
   if (!q) return normalizedVehicles.value
@@ -386,8 +388,13 @@ onMounted(async () => {
             </select>
           </label>
           <label class="field">
-            <span class="field-label">Shop ID (optional)</span>
-            <input v-model.number="form.shop_id" type="number" min="1" />
+            <span class="field-label">Shop</span>
+            <select v-model.number="form.shop_id">
+              <option :value="null">Unassigned / select a shop</option>
+              <option v-for="shop in shopOptions" :key="shop.id" :value="shop.id">
+                {{ shop.name }} (ID: {{ shop.id }})
+              </option>
+            </select>
           </label>
           <label class="field span-2">
             <span class="field-label">Description</span>

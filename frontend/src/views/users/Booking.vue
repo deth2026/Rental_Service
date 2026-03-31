@@ -975,6 +975,7 @@ const validateDates = async () => {
   formatPeriod();
 };
 
+<<<<<<< HEAD
 const formatBackendValidationError = (error) => {
   const errors = error?.response?.data?.errors
   if (errors && typeof errors === 'object') {
@@ -988,6 +989,30 @@ const formatBackendValidationError = (error) => {
       } else if (typeof entry === 'string' && entry.trim()) {
         return entry
       }
+=======
+const applyCoupon = async () => {
+  if (!promoCode.value) {
+    promoMessage.value = "Please enter a promo code.";
+    promoSuccess.value = false;
+    return;
+  }
+
+  try {
+    const shopForCoupon = vehicle.value?.shop_id ?? null;
+    const response = await couponApi.validate(promoCode.value, totalAmount.value, shopForCoupon);
+    const data = response.data;
+    
+    if (data.valid) {
+      promoCouponId.value = data.coupon_id;
+      promoDiscount.value = Number(data.discount_amount || 0);
+      promoSuccess.value = true;
+      promoMessage.value = `Coupon applied! You save ${promoDiscount.value.toFixed(2)}`;
+    } else {
+      promoCouponId.value = null;
+      promoDiscount.value = 0;
+      promoSuccess.value = false;
+      promoMessage.value = data.message || "Invalid promo code.";
+>>>>>>> 2819421b0fc6e6719a8fc7601c9a85d6905db0b4
     }
   }
   return null
@@ -1277,6 +1302,7 @@ watch(selectedShopQrUrl, (url) => {
   }
 });
 initDates();
+<<<<<<< HEAD
 
 onBeforeUnmount(() => {
   if (successRedirectTimer) {
@@ -1284,4 +1310,6 @@ onBeforeUnmount(() => {
     successRedirectTimer = null;
   }
 });
+=======
+>>>>>>> 2819421b0fc6e6719a8fc7601c9a85d6905db0b4
 </script>

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\ShopController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\RatingController;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +50,11 @@ Route::get('/test', function () {
     return response()->json([
         'message' => 'Hello from Laravel Backend',
     ]);
+});
+
+Route::get('/admin/exists', function () {
+    $hasAdmin = User::where('role', 'admin')->exists();
+    return response()->json(['has_admin' => $hasAdmin]);
 });
 
 // Protected routes - require authentication
