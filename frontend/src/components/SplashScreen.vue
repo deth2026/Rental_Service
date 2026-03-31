@@ -12,7 +12,7 @@
         <div class="logo-wrapper">
           <div class="app-logo__mark">
             <div class="logo-orbit"></div>
-            <img src="/Images/logo-removebg.png" alt="Chong Choul Logo" class="logo-img" />
+            <img src="/images/logo-removebg.png" alt="Chong Choul Logo" class="logo-img" />
             <div class="shimmer"></div>
           </div>
         </div>
@@ -161,6 +161,7 @@ defineProps({
   box-shadow: 0 0 0 14px rgba(37, 99, 235, 0.08);
   animation: spin 16s linear infinite;
 }
+
 
 .logo-img {
   width: 72%;

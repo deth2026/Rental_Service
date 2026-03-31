@@ -17,7 +17,7 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/Images/logo-removebg.png";
+const logoUrl = "/images/logo-removebg.png";
 const route = useRoute();
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });

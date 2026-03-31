@@ -1,8 +1,8 @@
 <template>
   <div class="booking-checkout-page">
     <UserNavbar
-      :nav-items="navItems"
-      :active-label="activeNavLabel"
+      :nav-items="userNavItems"
+      :show-back-button="false"
       :show-fallback-message="false"
       @logout-request="handleLogout"
     />
@@ -14,10 +14,6 @@
           <h1>Checkout</h1>
           <span class="step-pill">Step 2 of 3</span>
         </div>
-        <button class="btn-back-top" type="button" @click="goHome">
-            <span class="back-arrow" aria-hidden="true">←</span>
-              Back to Home
-        </button>
       </div>
 
       <div class="checkout-progress" aria-hidden="true">
@@ -64,13 +60,20 @@
               <span>Daily Rate x {{ calculateDays() }} day(s)</span>
               <span>${{ rental.subtotal.toFixed(2) }}</span>
             </div>
+            <div class="row">
+              <span>Rider(s)</span>
+              <span>{{ riderCount }} rider(s)</span>
+            </div>
               <div class="row">
                 <span>Insurance</span>
                 <span>${{ insuranceAmount.toFixed(2) }}</span>
               </div>
-              <div class="row">
-                <span>Taxes & Fees</span>
-                <span>${{ taxesAmount.toFixed(2) }}</span>
+              <div v-if="appliedCoupon && couponDiscount > 0" class="row">
+                <span class="label">Coupon ({{ appliedCoupon.code }})</span>
+                <div class="coupon-pricing">
+                  <span class="old-total">${{ (rental.subtotal + insuranceAmount).toFixed(2) }}</span>
+                  <span class="new-total">-${{ couponDiscount.toFixed(2) }}</span>
+                </div>
               </div>
               <hr class="dashed-divider" />
               <div class="row total-row">
@@ -88,15 +91,16 @@
                 placeholder="Enter code"
                 v-model="promoCode"
               />
-              <button class="btn-secondary" type="button" @click="applyCoupon">Apply</button>
+              <button class="btn-secondary" type="button" @click="applyPromoCode">
+                {{ appliedCoupon && promoCode === appliedCoupon.code ? 'Applied' : 'Apply' }}
+              </button>
             </div>
-            <p v-if="promoMessage" :class="['promo-message', promoSuccess ? 'success' : 'error']">
-              {{ promoMessage }}
+            <p v-if="appliedCoupon" class="promo-applied-note">
+              {{ appliedCoupon.code }} is applied to this payment.
             </p>
-            <div v-if="promoSuccess && promoDiscount > 0" class="promo-discount">
-              <span>Discount</span>
-              <span>-${{ promoDiscount.toFixed(2) }}</span>
-            </div>
+            <p v-if="promoFeedback" :class="['promo-feedback', `promo-feedback--${promoFeedbackType}`]">
+              {{ promoFeedback }}
+            </p>
           </div>
 
 
@@ -124,23 +128,33 @@
             <div class="payment-tabs">
               <button
                 class="tab"
-                :class="{ active: method === 'card' }"
-                type="button"
-                @click="method = 'card'"
-              >
-                Credit Card
-              </button>
-              <button
-                class="tab"
                 :class="{ active: method === 'qr' }"
                 type="button"
                 @click="method = 'qr'"
               >
                 QR Code
               </button>
+              <button
+                class="tab"
+                :class="{ active: method === 'later' }"
+                type="button"
+                @click="method = 'later'"
+              >
+                Pay Later
+              </button>
             </div>
 
             <div class="date-selection">
+              <div class="input-group phone-input-group">
+                <label>Phone Number <span class="required">*</span></label>
+                <input
+                  type="tel"
+                  v-model="customerPhone"
+                  placeholder="Enter your phone number (e.g. 012345678)"
+                  required
+                />
+              </div>
+
               <h3>Rental dates</h3>
               <div class="date-inputs">
                 <div class="input-group">
@@ -173,79 +187,27 @@
               <p class="date-error" v-if="dateError">{{ dateError }}</p>
             </div>
 
-            <form
-              v-if="method === 'card'"
-              class="card-details-form"
-              autocomplete="on"
-              @submit.prevent="openConfirmModal('card')"
-            >
-              <div class="input-group">
-                <label>Cardholder Name</label>
-                <input type="text" placeholder="Johnathan Doe" required />
+            <div v-if="method === 'later'" class="later-payment-info">
+              <div class="info-card">
+                <i class="fa-solid fa-circle-info"></i>
+                <p>You can pay directly at the shop when you pick up your vehicle. We will generate a receipt for you to show the shop owner.</p>
               </div>
-
-              <div class="input-group">
-                <label>Card Number</label>
-                <input
-                  type="text"
-                  name="cc-number"
-                  autocomplete="cc-number"
-                  inputmode="numeric"
-                  placeholder="0000 0000 0000 0000"
-                  required
-                />
-              </div>
-
-              <div class="input-row">
-                <div class="input-group">
-                  <label>Expiry Date</label>
-                  <input
-                    type="text"
-                    name="cc-exp"
-                    autocomplete="cc-exp"
-                    inputmode="numeric"
-                    placeholder="MM / YY"
-                    pattern="(0[1-9]|1[0-2])\s?\/\s?\d{2}"
-                    required
-                  />
-                </div>
-                <div class="input-group">
-                  <label>CVV / CVC</label>
-                  <input
-                    type="password"
-                    name="cc-csc"
-                    autocomplete="cc-csc"
-                    inputmode="numeric"
-                    placeholder="***"
-                    maxlength="3"
-                    pattern="\d{3}"
-                    required
-                  />
-                </div>
-              </div>
-
-
-              <div class="secure-info-box">
-                <p>
-                  Your payment is processed securely via 256-bit SSL encryption.
-                  We never store your full card details.
-                </p>
-              </div>
-
               <button
-                type="submit"
+                type="button"
                 class="btn-primary-pay"
-                :disabled="!isFormValid"
+                :disabled="!isFormValid || isSubmittingPayment"
+                @click="handlePayment"
               >
-                Pay ${{ totalAmount.toFixed(2) }} Now
+                {{ isSubmittingPayment ? "Processing..." : "Booking" }}
               </button>
-            </form>
+            </div>
 
             <div v-if="method === 'bank'" class="bank-transfer-payment">
               <div class="bank-header">
                 <h3>Bank Transfer Payment</h3>
                 <p>Transfer funds directly to our bank account.</p>
               </div>
+
 
               <div class="bank-info-card">
                 <div class="bank-row">
@@ -289,10 +251,10 @@
               <button
                 type="button"
                 class="btn-primary-pay"
-                :disabled="!isFormValid"
-                @click="openConfirmModal('bank')"
+                :disabled="!isFormValid || isSubmittingPayment"
+                @click="handlePayment"
               >
-                Confirm bank transfer
+                {{ isSubmittingPayment ? "Processing..." : "Booking" }}
               </button>
             </div>
 
@@ -309,6 +271,27 @@
                 </div>
 
                 <div class="qr-code-section">
+                  <div v-if="shopQrOptions.length" class="qr-shop-selection">
+                    <label for="qr-shop-select">Select shop QR code</label>
+                    <select
+                      id="qr-shop-select"
+                      v-model="selectedShopQrId"
+                    >
+                      <option
+                        v-for="option in shopQrOptions"
+                        :key="option.id"
+                        :value="option.id"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                    <p v-if="selectedShopQrOption?.ownerName" class="qr-owner-note">
+                      Owner: {{ selectedShopQrOption.ownerName }}
+                    </p>
+                  </div>
+                  <div v-else class="qr-missing-note">
+                    This shop has not uploaded a QR code yet. You can still generate one below.
+                  </div>
                   <div v-if="!showQR" class="qr-placeholder">
                     <h4>Ready to generate your QR code</h4>
                     <p>Click below and scan it with your mobile banking app.</p>
@@ -322,6 +305,7 @@
                       Generate QR Code
                     </button>
                   </div>
+
 
                   <div v-else class="qr-active">
                     <img
@@ -354,9 +338,9 @@
                     <button
                       type="button"
                       class="btn-primary-pay"
-                      @click="openConfirmModal('qr')"
+                      @click="handlePayment"
                     >
-                      I have paid
+                      Booking
                     </button>
                   </div>
                 </div>
@@ -371,161 +355,98 @@
       </div>
     </div>
 
-    
-
-
-    <div
-      v-if="showConfirmModal"
-      class="confirm-modal-overlay"
-      @click="closeConfirmModal"
-    >
-      <div class="confirm-modal" @click.stop>
-        <div class="confirm-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-        </div>
-        <h2>Confirm Payment</h2>
-        <p>Please review the details before confirming your payment.</p>
-
-        <div class="confirm-details">
-          <div class="confirm-detail">
-            <span>Amount</span>
-            <strong>${{ totalAmount.toFixed(2) }}</strong>
-          </div>
-          <div class="confirm-detail">
-            <span>Method</span>
-            <strong>{{ receiptPaymentLabel }}</strong>
-          </div>
-        </div>
-
-        <div class="confirm-actions">
-          <button class="btn-cancel" type="button" @click="closeConfirmModal">
-            Cancel
-          </button>
-          <button class="btn-confirm" type="button" @click="confirmPayment">
-            Confirm
-          </button>
-        </div>
-      </div>
-    </div>
-
     <div
       v-if="showSuccessModal"
       class="success-modal-overlay"
-      @click="closeSuccessModal"
+      @click="returnToShopViewAfterSuccess"
     >
-      <div class="success-modal" @click.stop>
-        <div class="success-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
+      <div class="success-modal receipt-modal" @click.stop>
+        <div class="simple-success-header">
+          <div class="success-check-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h2 class="success-title">Successfully Booked!</h2>
         </div>
-        <h2>Successfully</h2>
 
-        <div class="success-card">
-          <div class="success-row">
-            <span>Booking ID</span>
-            <strong>{{ bookingId }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Transaction ID</span>
-            <strong>{{ transactionId }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Payment Method</span>
-            <strong>{{ receiptPaymentLabel }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Amount Paid</span>
-            <strong>${{ totalAmount.toFixed(2) }}</strong>
-          </div>
-          <div class="success-row">
-            <span>Date</span>
-            <strong>{{ transactionDateTime }}</strong>
-          </div>
+        <div class="receipt-preview-container">
+          <ReceiptCard
+            :booking-id="bookingId"
+            :total-amount="totalAmount"
+            :subtotal="rental.subtotal"
+            :insurance="insuranceAmount"
+            :discount="couponDiscount"
+            :daily-rate="rental.dailyRate"
+            :total-days="calculateDays()"
+            :rider-count="riderCount"
+            :date-time="transactionDateTime"
+            :owner-name="shopOwnerName"
+            :customer-phone="customerPhone"
+            :vehicle-name="rental.title"
+            :plate-number="vehiclePlateNumber"
+            :address="rental.location"
+            :payment-method="method"
+            :payment-status="method === 'later' ? 'pending' : 'paid'"
+          />
+        </div>
+
+        <!-- Hidden wrapper for printing -->
+        <div id="receipt-wrapper" style="display: none;">
+          <ReceiptCard
+            :booking-id="bookingId"
+            :total-amount="totalAmount"
+            :subtotal="rental.subtotal"
+            :insurance="insuranceAmount"
+            :discount="couponDiscount"
+            :daily-rate="rental.dailyRate"
+            :total-days="calculateDays()"
+            :rider-count="riderCount"
+            :date-time="transactionDateTime"
+            :owner-name="shopOwnerName"
+            :customer-phone="customerPhone"
+            :vehicle-name="rental.title"
+            :plate-number="vehiclePlateNumber"
+            :address="rental.location"
+            :payment-method="method"
+            :payment-status="method === 'later' ? 'pending' : 'paid'"
+          />
         </div>
 
         <div class="modal-actions">
           <button class="btn-download" type="button" @click="downloadReceipt">
-            Download
+            <i class="fas fa-download"></i> Download Receipt
           </button>
-          <button class="btn-close" type="button" @click="closeSuccessModal">
-            Close
+          <button class="btn-close" type="button" @click="returnToShopViewAfterSuccess">
+            Return to Shop
           </button>
+        </div>
       </div>
     </div>
+    <CommonFooter />
   </div>
-  <CommonFooter />
-</div>
 </template>
 
+
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import api, { couponApi } from "@/services/api";
-import { jsPDF } from "jspdf";
-import paymentQrCodeImage from "@/assets/img/image.png";
 import { userService } from "../../services/database.js";
 import CommonFooter from '../../components/CommonFooter.vue';
 import UserNavbar from '@/components/UserNavbar.vue';
+import ReceiptCard from '@/components/ReceiptCard.vue';
 import "../../assets/user/booking.css";
 
 // Navigation
 const router = useRouter();
 const route = useRoute();
-
-// Header data from ViewDetail page
-const navItems = [
-  { label: "Home", route: "/view_shop" },
-  { label: "My Booking", route: "/my-bookings" },
-  { label: "Promotions", route: "/promotions" },
+const userNavItems = [
+  { label: "My Bookings", route: "/my-bookings" },
+  { label: "Profile", route: "/user/profile" },
 ];
-const actionMessage = ref("");
-const avatarLoadFailed = ref(false);
-const currentUser = computed(() => userService.getCurrentUser());
-const activeNavLabel = computed(() => {
-  const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route));
-  return matchedItem?.label || "Home";
-});
 
-const normalizeAvatarUrl = (url) => {
-  if (!url) return '';
-  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/').replace(/^\/+/, '');
-  if (normalized.startsWith('storage/')) return `/${normalized}`;
-  return `/storage/${normalized}`;
-};
-
-const userAvatarUrl = computed(() => {
-  if (avatarLoadFailed.value) return '';
-  const src = currentUser.value?.avatar_url || currentUser.value?.profile_picture || currentUser.value?.img_url || '';
-  return normalizeAvatarUrl(src);
-});
-
-
-const userInitials = computed(() => {
-  const words = String(userDisplayName.value).trim().split(/\s+/).filter(Boolean);
-  if (words.length === 0) return 'CU';
-  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-  return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase();
-});
-
-// Navigation is handled by UserNavbar component
-
-const goHome = () => {
-  if (vehicleId.value) {
-    router.push({
-      name: 'vehicle-detail',
-      params: { id: String(vehicleId.value) },
-    });
-    return;
-  }
-  router.push({ name: 'vehicles-by-shop' });
-};
-
-const onAvatarError = () => {
-  avatarLoadFailed.value = true;
+const handleLogout = async () => {
+  await userService.logout();
+  router.push('/login');
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
@@ -540,6 +461,7 @@ const vehicle = ref(null);
 const shopsById = ref({});
 const isLoading = ref(false);
 const loadingError = ref("");
+const showReceiptView = ref(false);
 const vehicleId = computed(() => {
   const value = Number(route.params.id);
   return Number.isFinite(value) && value > 0 ? value : null;
@@ -581,6 +503,62 @@ const getShopLocation = (shop) => {
   return shop?.name || "Unknown Shop";
 };
 
+const resolveShopQrUrl = (shop) => {
+  const raw = String(shop?.qr_url_full || shop?.qr_url || "").trim();
+  if (!raw) return "";
+  if (/^(https?:\/\/|data:|blob:)/i.test(raw)) return raw;
+  const normalized = raw.replace(/^\/+/, "");
+  if (normalized.startsWith("storage/")) {
+    return `${API_ROOT}/${normalized}`;
+  }
+  return `${API_ROOT}/storage/${normalized.replace(/^storage\//, "")}`;
+};
+
+const shopQrOptions = computed(() =>
+  Object.values(shopsById.value)
+    .map((shop) => {
+      const url = resolveShopQrUrl(shop);
+      if (!url) return null;
+      return {
+        id: shop.id,
+        label: shop.name || `Shop #${shop.id}`,
+        ownerName: shop?.owner?.name || "",
+        qrUrl: url,
+      };
+    })
+    .filter(Boolean)
+);
+
+const selectedShopQrOption = computed(() => {
+  return (
+    shopQrOptions.value.find((option) => option.id === selectedShopQrId.value) ||
+    null
+  );
+});
+
+const selectedShopQrUrl = computed(() => selectedShopQrOption.value?.qrUrl || "");
+
+// Update the selected shop QR code when the vehicle's shop_id or shopQrOptions changes
+const updateShopQrSelection = () => {
+  if (!vehicle.value || !vehicle.value?.shop_id) {
+    selectedShopQrId.value = null;
+    return;
+  }
+
+
+  const shopId = vehicle.value.shop_id;
+  const shopOption = shopQrOptions.value.find(option => option.id === shopId);
+
+  if (shopOption) {
+    selectedShopQrId.value = shopId;
+  } else if (shopQrOptions.value.length > 0) {
+    // Select the first available shop with QR code
+    selectedShopQrId.value = shopQrOptions.value[0].id;
+  } else {
+    selectedShopQrId.value = null;
+  }
+};
+
 const vehicleName = computed(() => getVehicleName(vehicle.value) || "Vehicle");
 const vehicleType = computed(() => vehicle.value?.type || "");
 const vehicleTag = computed(() => (vehicleType.value ? String(vehicleType.value).toUpperCase() : "RENTAL"));
@@ -617,18 +595,29 @@ const loadVehicleDetail = async () => {
   loadingError.value = "";
 
   try {
-    const [vehicleList, shopList] = await Promise.all([
-      loadAllPages("vehicles"),
-      loadAllPages("shops"),
-    ]);
+    // First attempt: fetch the specific vehicle by ID (works even if list endpoints are filtered)
+    let found = null;
+    try {
+      const resp = await api.get(`/vehicles/${vehicleId.value}`);
+      found = resp?.data?.data || resp?.data || null;
+    } catch (err) {
+      // ignore and fallback to paginated list below
+      console.warn('vehicleApi.getById failed, falling back to list fetch', err?.message || err);
+      found = null;
+    }
 
-
+    // If single-vehicle fetch didn't return, fall back to loading all pages
+    const shopList = await loadAllPages("shops");
     shopsById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
       return acc;
     }, {});
 
-    const found = vehicleList.find((item) => Number(item.id) === vehicleId.value);
+    if (!found) {
+      const vehicleList = await loadAllPages("vehicles");
+      found = vehicleList.find((item) => Number(item.id) === vehicleId.value) || null;
+    }
+
     if (!found) {
       throw new Error("Vehicle not found.");
     }
@@ -636,7 +625,12 @@ const loadVehicleDetail = async () => {
     vehicle.value = found;
     rental.value.title = getVehicleName(found) || rental.value.title;
     rental.value.location = vehicleLocation.value;
-    rental.value.dailyRate = Number(found.price_per_day || 0);
+    rental.value.dailyRate = Number(found.price_per_day ?? found.price ?? 0);
+
+    // Update Insurance Fee from vehicle data
+    if (found.insurance_fee !== undefined) {
+      rental.value.insurance = Number(found.insurance_fee);
+    }
   } catch (error) {
     const status = error?.response?.status;
     const message = error?.response?.data?.message || error.message;
@@ -654,16 +648,17 @@ const loadVehicleDetail = async () => {
   }
 };
 
-const method = ref("card");
+const method = ref("qr");
 const promoCode = ref("");
-const promoDiscount = ref(0);
-const promoCouponId = ref(null);
-const promoMessage = ref("");
-const promoSuccess = ref(false);
+const appliedCoupon = ref(null);
+const promoFeedback = ref("");
+const promoFeedbackType = ref("success");
+const showQR = ref(false);
 const showSuccessModal = ref(false);
-const showConfirmModal = ref(false);
-const pendingPaymentAction = ref(null);
+const isSubmittingPayment = ref(false);
 const dateError = ref("");
+const customerPhone = ref("");
+let successRedirectTimer = null;
 const bookingId = ref("");
 const paymentId = ref(
   "PAY" + Math.random().toString(36).slice(2, 11).toUpperCase()
@@ -672,7 +667,8 @@ const transactionId = ref(
   "TXN" + Math.random().toString(36).slice(2, 14).toUpperCase()
 );
 const qrCodeUrl = ref("");
-const showQR = ref(false);
+const selectedShopQrId = ref(null);
+
 
 const rental = ref({
   title: "Vehicle",
@@ -684,12 +680,9 @@ const rental = ref({
   dailyRate: 0,
   subtotal: 0,
   insurance: 75,
-  taxes: 0,
-  totalPrice: 0,
 });
 
 const includeInsurance = ref(true);
-const includeTaxes = ref(true);
 
 const parseNumberFromQuery = (value) => {
   if (value === null || value === undefined) return null;
@@ -733,65 +726,119 @@ const applyRouteDefaults = () => {
     includeInsurance.value = includeInsuranceFromQuery;
   }
 
-  const includeTaxesFromQuery = parseBooleanFlagFromQuery(route.query.includeTaxes);
-  if (includeTaxesFromQuery !== null) {
-    includeTaxes.value = includeTaxesFromQuery;
-  }
-
   const riderFromQuery = parseRiderDetailsFromQuery(route.query.riderDetails);
   if (riderFromQuery) {
     rental.value.riders = riderFromQuery;
   }
 
-  // Read daily rate from query parameters
-  const dailyRateFromQuery = parseNumberFromQuery(route.query.dailyRate);
-  if (dailyRateFromQuery !== null && dailyRateFromQuery > 0) {
-    rental.value.dailyRate = dailyRateFromQuery;
-  }
-
-  // Read total price from query parameters for display purposes
-  const totalPriceFromQuery = parseNumberFromQuery(route.query.totalPrice);
-  if (totalPriceFromQuery !== null && totalPriceFromQuery > 0) {
-    rental.value.totalPrice = totalPriceFromQuery;
+  const couponCodeFromQuery = Array.isArray(route.query.coupon_code)
+    ? route.query.coupon_code[0]
+    : route.query.coupon_code;
+  if (couponCodeFromQuery) {
+    promoCode.value = String(couponCodeFromQuery);
   }
 };
 
-const methodTitle = computed(() => {
-  if (method.value === "qr") return "QR Code Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Secure Checkout";
-});
+const loadCouponFromRoute = async () => {
+  const rawCouponId = Array.isArray(route.query.coupon_id) ? route.query.coupon_id[0] : route.query.coupon_id;
+  const couponId = Number(rawCouponId);
 
-const methodDescription = computed(() => {
-  if (method.value === "qr") {
-    return "Pay directly using your banking app.";
+  if (!couponId) {
+    appliedCoupon.value = null;
+    return;
   }
-  if (method.value === "bank") {
-    return "Complete payment using a direct bank transfer.";
+
+  try {
+    const response = await api.get(`/coupons/${couponId}`);
+    appliedCoupon.value = response?.data || null;
+
+    if (appliedCoupon.value?.code) {
+      promoCode.value = appliedCoupon.value.code;
+    }
+    promoFeedback.value = appliedCoupon.value?.code ? `${appliedCoupon.value.code} applied successfully.` : "";
+    promoFeedbackType.value = "success";
+  } catch (error) {
+    console.error("Failed to load coupon:", error);
+    appliedCoupon.value = null;
+    promoFeedback.value = "";
   }
-  return "Complete your rental booking by choosing a payment method below.";
-});
+};
 
-const receiptPaymentLabel = computed(() => {
-  if (method.value === "qr") return "QR Payment";
-  if (method.value === "bank") return "Bank Transfer";
-  return "Credit Card";
-});
+const showPromoFeedback = (message, type = "success") => {
+  promoFeedback.value = message;
+  promoFeedbackType.value = type;
+};
 
-const paymentReferenceLabel = computed(() => {
-  if (method.value === "bank") return "Payment ID";
-  if (method.value === "qr") return "QR Reference";
-  return "Transaction ID";
-});
+const applyPromoCode = async () => {
+  const code = String(promoCode.value || "").trim().toUpperCase();
 
-const paymentReferenceValue = computed(() => {
-  if (method.value === "bank" || method.value === "qr") {
-    return paymentId.value;
+  if (!code) {
+    appliedCoupon.value = null;
+    showPromoFeedback("Please enter a coupon code.", "error");
+    return;
   }
-  return transactionId.value;
-});
 
-const completedPaymentLabel = computed(() => receiptPaymentLabel.value);
+  try {
+    const response = await couponApi.getAll({ code });
+    const payload = response?.data?.data || response?.data || [];
+    const records = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+    const coupon = records[0] || null;
+
+    if (!coupon) {
+      appliedCoupon.value = null;
+      showPromoFeedback("Coupon code not found.", "error");
+      return;
+    }
+
+    if (vehicle.value?.shop_id && Number(coupon.shop_id) !== Number(vehicle.value.shop_id)) {
+      appliedCoupon.value = null;
+      showPromoFeedback("This coupon is only valid for a different shop.", "error");
+      return;
+    }
+
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const validFrom = coupon.valid_from ? new Date(coupon.valid_from) : null;
+    const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
+
+    if (validFrom && !Number.isNaN(validFrom.getTime())) {
+      validFrom.setHours(0, 0, 0, 0);
+      if (validFrom > today) {
+        appliedCoupon.value = null;
+        showPromoFeedback("This coupon is not active yet.", "error");
+        return;
+      }
+    }
+
+    if (validUntil && !Number.isNaN(validUntil.getTime())) {
+      validUntil.setHours(0, 0, 0, 0);
+      if (validUntil < today) {
+        appliedCoupon.value = null;
+        showPromoFeedback("This coupon has expired.", "error");
+        return;
+      }
+    }
+
+    if (coupon.is_active === false || coupon.is_active === 0 || coupon.is_active === '0') {
+      appliedCoupon.value = null;
+      showPromoFeedback("This coupon is inactive.", "error");
+      return;
+    }
+
+    appliedCoupon.value = coupon;
+    promoCode.value = coupon.code || code;
+    showPromoFeedback(`${promoCode.value} applied successfully.`, "success");
+  } catch (error) {
+    console.error("Failed to apply coupon:", error);
+    appliedCoupon.value = null;
+    showPromoFeedback("Failed to apply coupon. Please try again.", "error");
+  }
+};
+
+const methodTitle = computed(() => (method.value === 'qr' ? 'QR Code Payment' : 'Payment'));
+const methodDescription = computed(() => (method.value === 'qr' ? 'Pay directly using your banking app.' : ''));
+const receiptPaymentLabel = computed(() => (method.value === 'qr' ? 'QR Payment' : 'Pay Later'));
 
 const minDate = computed(() => {
   const today = new Date();
@@ -821,23 +868,35 @@ const insuranceAmount = computed(() => {
   return includeInsurance.value ? base : 0;
 });
 
-const taxesAmount = computed(() => {
-  const base = Number(rental.value.taxes || 0);
-  return includeTaxes.value ? base : 0;
+const taxesAmount = computed(() => 0);
+
+const couponDiscount = computed(() => {
+  const coupon = appliedCoupon.value;
+  if (!coupon) return 0;
+
+  const subtotal = Number(rental.value.subtotal || 0);
+  const minimumAmount = Number(coupon.minimum_amount || 0);
+
+  if (minimumAmount > 0 && subtotal < minimumAmount) {
+    return 0;
+  }
+
+  if (coupon.discount_percent !== null && coupon.discount_percent !== undefined) {
+    return subtotal * (Number(coupon.discount_percent) / 100);
+  }
+
+  if (coupon.discount_amount !== null && coupon.discount_amount !== undefined) {
+    return Number(coupon.discount_amount);
+  }
+
+  return 0;
 });
 
 const totalAmount = computed(() => {
-  // If totalPrice was passed from ViewDetail, use it directly
-  const passedTotalPrice = Number(rental.value.totalPrice || 0);
-  if (passedTotalPrice > 0) {
-    return passedTotalPrice;
-  }
-  // Otherwise, recalculate from daily rate and other components
-  const days = calculateDays();
+  const days = Math.max(1, calculateDays());
   const subtotal = days * rental.value.dailyRate;
   rental.value.subtotal = subtotal;
-  const baseTotal = rental.value.subtotal + insuranceAmount.value + taxesAmount.value;
-  return Math.max(baseTotal - promoDiscount.value, 0);
+  return Math.max(0, rental.value.subtotal + insuranceAmount.value - couponDiscount.value);
 });
 
 const isFormValid = computed(() => {
@@ -867,6 +926,7 @@ const formatPeriod = () => {
   rental.value.period = `${start.toLocaleDateString("en-US", opts)} - ${end.toLocaleDateString("en-US", opts)} (${days} ${days === 1 ? "day" : "days"})`;
 };
 
+
 const isDateAvailable = async (startDate, endDate) => {
   const existingBookings = [
     { startDate: "2026-04-10", endDate: "2026-04-12" },
@@ -886,7 +946,10 @@ const isDateAvailable = async (startDate, endDate) => {
 const validateDates = async () => {
   dateError.value = "";
 
-  if (!rental.value.startDate || !rental.value.endDate) return;
+  if (!rental.value.startDate || !rental.value.endDate) {
+    dateError.value = "Please select both pick-up and drop-off dates.";
+    return;
+  }
 
   const start = new Date(rental.value.startDate);
   const end = new Date(rental.value.endDate);
@@ -912,35 +975,23 @@ const validateDates = async () => {
   formatPeriod();
 };
 
-const applyCoupon = async () => {
-  if (!promoCode.value) {
-    promoMessage.value = "Please enter a promo code.";
-    promoSuccess.value = false;
-    return;
-  }
-
-  try {
-    const response = await couponApi.validate(promoCode.value, totalAmount.value);
-    const data = response.data;
-    
-    if (data.valid) {
-      promoCouponId.value = data.coupon_id;
-      promoDiscount.value = Number(data.discount_amount || 0);
-      promoSuccess.value = true;
-      promoMessage.value = `Coupon applied! You save ${promoDiscount.value.toFixed(2)}`;
-    } else {
-      promoCouponId.value = null;
-      promoDiscount.value = 0;
-      promoSuccess.value = false;
-      promoMessage.value = data.message || "Invalid promo code.";
+const formatBackendValidationError = (error) => {
+  const errors = error?.response?.data?.errors
+  if (errors && typeof errors === 'object') {
+    for (const key of Object.keys(errors)) {
+      const entry = errors[key]
+      if (Array.isArray(entry)) {
+        const first = entry.find((item) => typeof item === 'string' && item.trim())
+        if (first) {
+          return first
+        }
+      } else if (typeof entry === 'string' && entry.trim()) {
+        return entry
+      }
     }
-  } catch (error) {
-    promoCouponId.value = null;
-    promoDiscount.value = 0;
-    promoSuccess.value = false;
-    promoMessage.value = error?.response?.data?.message || "Failed to validate promo code.";
   }
-};
+  return null
+}
 
 const saveBookingToDatabase = async (bookingData) => {
   const currentUser = userService.getCurrentUser();
@@ -952,15 +1003,19 @@ const saveBookingToDatabase = async (bookingData) => {
     return { success: false, message: "Vehicle not found." };
   }
 
+  const resolvedShopId = Number(vehicle.value?.shop_id ?? vehicle.value?.shop?.id);
+  const shopId = Number.isFinite(resolvedShopId) && resolvedShopId > 0 ? resolvedShopId : null;
+
   const payload = {
     user_id: currentUser.id,
+    phone_number: customerPhone.value,
     vehicle_id: vehicleId.value,
-    shop_id: vehicle.value?.shop_id ?? null,
-    coupon_id: promoCouponId.value,
+    shop_id: shopId,
+    coupon_id: appliedCoupon.value?.id || null,
     start_date: rental.value.startDate,
     total_days: calculateDays(),
     total_price: totalAmount.value,
-    status: "pending",
+    status: bookingData?.status || "pending",
     deposit_amount: 0,
     deposit_status: "unpaid",
     rider_details: rental.value.riders,
@@ -970,13 +1025,11 @@ const saveBookingToDatabase = async (bookingData) => {
   };
 
   try {
-    // Create the booking first
     const response = await api.post("/bookings", payload);
     const record = response?.data?.data || response?.data;
     const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
 
-    // Now save the payment record
     const paymentPayload = {
       booking_id: recordId,
       transaction_id: transactionId.value || paymentId.value,
@@ -986,7 +1039,6 @@ const saveBookingToDatabase = async (bookingData) => {
       paid_at: bookingData?.status === "confirmed" ? new Date().toISOString() : null,
     };
 
-    // Save payment to payments table
     await api.post("/payments", paymentPayload);
 
     return {
@@ -996,12 +1048,14 @@ const saveBookingToDatabase = async (bookingData) => {
   } catch (error) {
     console.error("Booking create error:", error);
     const message =
+      formatBackendValidationError(error) ||
       error?.response?.data?.message ||
       error?.message ||
       "Failed to create booking.";
     return { success: false, message };
   }
 };
+
 
 const buildBookingData = (paymentMethod, status) => ({
   bookingId: bookingId.value,
@@ -1024,85 +1078,39 @@ const buildBookingData = (paymentMethod, status) => ({
   createdAt: new Date().toISOString(),
 });
 
-const openConfirmModal = (action) => {
-  pendingPaymentAction.value = action;
-  showConfirmModal.value = true;
-};
-
-const closeConfirmModal = () => {
-  showConfirmModal.value = false;
-  pendingPaymentAction.value = null;
-};
-
-const confirmPayment = async () => {
-  const action = pendingPaymentAction.value;
-  closeConfirmModal();
-
-  if (action === "bank") {
-    await handleBankTransfer();
-    return;
-  }
-
-  await handlePayment();
-};
-
 const handlePayment = async () => {
+  if (isSubmittingPayment.value) return;
+  isSubmittingPayment.value = true;
   await validateDates();
-  if (dateError.value) return;
-
-  await new Promise((resolve) => setTimeout(resolve, 1200));
-  const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
-
-  if (result.success) {
-    bookingId.value = result.bookingId;
-    showSuccessModal.value = true;
-  } else {
-    alert(result.message || "Payment failed. Please try again.");
+  if (dateError.value) {
+    isSubmittingPayment.value = false;
+    return;
   }
-};
-
-const handleBankTransfer = async () => {
-  await validateDates();
-  if (dateError.value) return;
-
-  const result = await saveBookingToDatabase(
-    buildBookingData("bank_transfer", "pending_payment")
-  );
-
-  if (!result.success) {
-    alert(result.message || "Failed to create bank transfer instructions.");
+  if (!isFormValid.value) {
+    isSubmittingPayment.value = false;
+    alert("Please select valid rental dates before paying.");
     return;
   }
 
-  bookingId.value = result.bookingId;
+  try {
+    if (!customerPhone.value) {
+      alert("Please enter your phone number.");
+      isSubmittingPayment.value = false;
+      return;
+    }
 
-  const instructions = `
-BANK TRANSFER INSTRUCTIONS
-============================
-Payment ID: ${paymentId.value}
-Amount: $${totalAmount.value.toFixed(2)}
-Booking ID: ${bookingId.value}
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
 
-BANK DETAILS:
-- Account Name: Moto Rental Pty Ltd
-- Bank: National Australia Bank
-- BSB: 082-123
-- Account: 1234 5678 9012
-- Reference: ${paymentId.value}
-  `.trim();
-
-  const blob = new Blob([instructions], { type: "text/plain" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `bank_transfer_${paymentId.value}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  window.URL.revokeObjectURL(url);
-
-
-  showSuccessModal.value = true;
+    if (result.success) {
+      bookingId.value = result.bookingId;
+      showSuccessModal.value = true;
+    } else {
+      alert(result.message || "Payment failed. Please try again.");
+    }
+  } finally {
+    isSubmittingPayment.value = false;
+  }
 };
 
 const generateABAQRData = () => {
@@ -1127,76 +1135,99 @@ const generateQRCode = async () => {
   await validateDates();
   if (dateError.value) return;
 
-  const qrPayload = generateABAQRData();
-  qrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    qrPayload
-  )}`;
+  if (selectedShopQrUrl.value) {
+    qrCodeUrl.value = selectedShopQrUrl.value;
+  } else {
+    const qrPayload = generateABAQRData();
+    qrCodeUrl.value = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+      qrPayload
+    )}`;
+  }
 
   showQR.value = true;
 };
 
-const closeSuccessModal = () => {
+const returnToShopViewAfterSuccess = () => {
+  if (successRedirectTimer) {
+    window.clearTimeout(successRedirectTimer);
+    successRedirectTimer = null;
+  }
   showSuccessModal.value = false;
+  router.replace('/view_shop');
 };
 
-const downloadReceipt = () => {
-  // Create PDF document
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  
-  // Header
-  doc.setFontSize(24);
-  doc.setTextColor(51, 51, 51);
-  doc.text("Chong Choul Rental", pageWidth / 2, 25, { align: "center" });
-  
-  doc.setFontSize(14);
-  doc.setTextColor(102, 102, 102);
-  doc.text("Booking Receipt", pageWidth / 2, 35, { align: "center" });
-  
-  // Divider line
-  doc.setDrawColor(51, 51, 51);
-  doc.setLineWidth(0.5);
-  doc.line(20, 42, pageWidth - 20, 42);
-  
-  // Receipt Details
-  doc.setFontSize(11);
-  doc.setTextColor(85, 85, 85);
-  let yPos = 55;
-  
-  const addLine = (label, value) => {
-    doc.setFont("helvetica", "bold");
-    doc.text(label, 25, yPos);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(51, 51, 51);
-    doc.text(String(value), 80, yPos);
-    doc.setTextColor(85, 85, 85);
-    yPos += 10;
-  };
-  
-  addLine("Booking ID:", bookingId.value);
-  addLine(`${paymentReferenceLabel.value}:`, paymentReferenceValue.value);
-  addLine("Payment Method:", completedPaymentLabel.value);
-  addLine("Date:", transactionDateTime.value);
-  addLine("Vehicle:", rental.value.title);
-  addLine("Location:", rental.value.location);
-  addLine("Rental Period:", rental.value.period);
-  
-  // Total Amount
-  yPos += 10;
-  doc.setFontSize(16);
-  doc.setTextColor(46, 204, 113);
-  doc.text(`Total Paid: ${totalAmount.value.toFixed(2)}`, pageWidth / 2, yPos, { align: "center" });
-  
-  // Footer
-  yPos += 30;
-  doc.setFontSize(10);
-  doc.setTextColor(153, 153, 153);
-  doc.text("Thank you for choosing Chong Choul Rental!", pageWidth / 2, yPos, { align: "center" });
-  doc.text("For support, contact us at support@chongchoul.com", pageWidth / 2, yPos + 7, { align: "center" });
-  
-  // Save PDF
-  doc.save(`receipt_${paymentReferenceValue.value}.pdf`);
+const loadExternalScript = (src) =>
+  new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = (e) => reject(e);
+    document.head.appendChild(s);
+  });
+
+const renderReceiptToPdf = async (filename = `receipt_${bookingId.value || Date.now()}.pdf`) => {
+  try {
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+    // @ts-ignore
+    const html2canvas = window.html2canvas || window.HTML2CANVAS || window.html2canvas;
+    // @ts-ignore
+    const jspdfModule = window.jspdf || window.jspPDF || window.jspdf;
+    const jsPDF = jspdfModule?.jsPDF || (jspdfModule && jspdfModule.default?.jsPDF) || (jspdfModule && jspdfModule.default) || null;
+
+    if (!html2canvas || !jsPDF) throw new Error('PDF libraries not available');
+
+    const el = document.getElementById('receipt') || document.getElementById('receipt-wrapper');
+    if (!el) throw new Error('Receipt element not found');
+
+
+    // Store original display style and temporarily make element visible for rendering
+    const originalDisplay = el.style.display;
+    el.style.display = 'block'; // Temporarily make visible for html2canvas
+
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+      if (canvas.width <= 0 || canvas.height <= 0) {
+          throw new Error('Invalid canvas dimensions');
+      }
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      // Convert canvas dimensions from pixels to points (1 pixel = 0.75 points)
+      const widthInPts = canvas.width * 0.75;
+      const heightInPts = canvas.height * 0.75;
+      // Create PDF with dimensions matching canvas in points
+      const pdf = new jsPDF({ unit: 'pt', format: [widthInPts, heightInPts] });
+      pdf.addImage(imgData, 'JPEG', 0, 0, widthInPts, heightInPts);
+      pdf.save(filename);
+      return true;
+    } finally {
+      // Restore original display style
+      el.style.display = originalDisplay;
+    }
+  } catch (err) {
+    console.error('PDF generation failed:', err);
+    return false;
+  }
 };
+
+const downloadReceipt = async () => {
+  const filename = `receipt_${bookingId.value || Date.now()}.pdf`;
+  const ok = await renderReceiptToPdf(filename);
+  if (!ok) {
+    alert('Failed to generate PDF receipt. Please try again.');
+  }
+};
+
+const shopOwnerName = computed(() => {
+  const shop = vehicle.value?.shop_id ? shopsById.value[vehicle.value.shop_id] : null;
+  return shop?.owner?.name || 'CHANTHEN ORN';
+});
+
+const vehiclePlateNumber = computed(() => {
+  return vehicle.value?.plate_number || 'N/A';
+});
 
 const initDates = () => {
   const start = new Date();
@@ -1210,22 +1241,47 @@ const initDates = () => {
 
 onMounted(() => {
   loadVehicleDetail();
+  loadCouponFromRoute();
 });
 
 watch(
-  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails],
+  () => [route.query.insuranceFee, route.query.includeInsurance, route.query.includeTaxes, route.query.riderDetails, route.query.coupon_id, route.query.coupon_code],
   () => {
     applyRouteDefaults();
+    loadCouponFromRoute();
   },
   { immediate: true }
 );
 
-watch(method, (value) => {
-  if (value !== "qr") {
+watch(
+  () => [vehicle.value?.shop_id, shopQrOptions.value.length],
+  updateShopQrSelection,
+  { immediate: true }
+);
+
+watch(method, (next) => {
+  if (next !== "qr") {
     showQR.value = false;
+    return;
+  }
+  if (selectedShopQrUrl.value) {
+    qrCodeUrl.value = selectedShopQrUrl.value;
+    showQR.value = true;
   }
 });
 
+watch(selectedShopQrUrl, (url) => {
+  if (!url) return;
+  if (method.value === "qr" && showQR.value) {
+    qrCodeUrl.value = url;
+  }
+});
 initDates();
-</script>
 
+onBeforeUnmount(() => {
+  if (successRedirectTimer) {
+    window.clearTimeout(successRedirectTimer);
+    successRedirectTimer = null;
+  }
+});
+</script>

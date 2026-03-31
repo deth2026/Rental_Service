@@ -27,6 +27,19 @@ const mapUserToProfile = (user = {}) => {
 
 const storedUser = userService.getCurrentUser() || {}
 
+const persistCurrentUser = (nextFields = {}) => {
+    try {
+        const rawUser = localStorage.getItem('user')
+        const localUser = rawUser ? JSON.parse(rawUser) : {}
+        const nextUser = { ...localUser, ...nextFields }
+        localStorage.setItem('user', JSON.stringify(nextUser))
+        window.dispatchEvent(new Event('user-updated'))
+        return nextUser
+    } catch {
+        return null
+    }
+}
+
 // Get current logged-in user's ID
 const getUserId = () => userService.getCurrentUserId()
 
@@ -92,6 +105,7 @@ const pwdStrength = computed(() => {
     return { label: 'Strong', level: 'strong' }
 })
 
+
 const heroRoleLabel = computed(() => profile.value.role || 'Member')
 const heroLocationLabel = computed(() => profile.value.location || profile.value.country || 'Location not set')
 const heroJoinedLabel = computed(() => {
@@ -126,15 +140,14 @@ const overviewMetrics = computed(() => [
 ])
 
 const navItems = [
-    { label: 'Home', route: '/view_shop' },
-    { label: 'My Booking', route: '/my-bookings' },
-    { label: 'Promotions', route: '/promotions' },
+    { label: 'My Bookings', route: '/my-bookings' },
+    { label: 'Profile', route: '/user/profile' },
 ]
 
 const activeNavLabel = computed(() => {
     const currentPath = route.path
     const matched = navItems.find((item) => item.route && currentPath.startsWith(item.route))
-    return matched?.label || 'Home'
+    return matched?.label || 'Profile'
 })
 
 const timelineEvents = [
@@ -189,6 +202,7 @@ function triggerFileInput() {
     fileInput.value.click()
 }
 
+
 function handleFileChange(event) {
     const file = event.target.files[0]
     if (!file) return
@@ -217,6 +231,11 @@ async function fetchProfile() {
         const data = await userService.getAuthUser()
         const mappedProfile = mapUserToProfile(data)
         Object.assign(profile.value, mappedProfile)
+        persistCurrentUser({
+            ...data,
+            profile_picture: data.avatar_url || data.profile_picture || data.img_url || null,
+            avatar_url: data.avatar_url || userService.getAvatarUrl(data.profile_picture || data.img_url),
+        })
 
         // Store original values for comparison
         originalProfile.value = {
@@ -288,6 +307,7 @@ async function saveProfile() {
         const hasPhoneChange = (profile.value.phone || '').trim() !== (originalProfile.value.phone || '')
         const hasFileChange = profileFile.value !== null
 
+
         if (hasNameChange) {
             fd.append('name', profile.value.name.trim())
         }
@@ -316,15 +336,11 @@ async function saveProfile() {
             Object.assign(profile.value, mappedProfile, { profile_picture: avatar })
 
             // Keep local user snapshot in sync so header/profile components refresh immediately.
-            try {
-                const rawUser = localStorage.getItem('user')
-                const localUser = rawUser ? JSON.parse(rawUser) : {}
-                const nextUser = { ...localUser, ...res.user }
-                localStorage.setItem('user', JSON.stringify(nextUser))
-                window.dispatchEvent(new Event('user-updated'))
-            } catch {
-                // Ignore localStorage parse/write issues.
-            }
+            persistCurrentUser({
+                ...res.user,
+                profile_picture: res.user.avatar_url || res.user.profile_picture || res.user.img_url || null,
+                avatar_url: res.user.avatar_url || userService.getAvatarUrl(res.user.profile_picture || res.user.img_url),
+            })
         }
         
         profileFile.value = null
@@ -388,6 +404,7 @@ async function changePassword() {
         showToast('Please login first.', 'danger')
         return
     }
+
 
     loading.value.password = true
     try {
@@ -455,6 +472,7 @@ onMounted(fetchProfile)
             </div>
         </transition>
 
+
         <section :class="styles['hero']">
             <div :class="styles['hero-stripes']">
                 <span v-for="stripe in 5" :key="stripe" :class="styles['hero-stripe']"></span>
@@ -506,6 +524,7 @@ onMounted(fetchProfile)
                 {{ tab }}
             </button>
         </nav> -->
+
 
         <div :class="styles['content-grid']">
             <div :class="styles['left-column']">
@@ -574,6 +593,7 @@ onMounted(fetchProfile)
                                 {{ connection.initials }}
                             </div>
                             <div :class="styles['connection-details']">
+
                                 <span :class="styles['connection-name']">{{ connection.name }}</span>
                                 <span :class="styles['connection-info']">{{ connection.info }}</span>
                             </div>
@@ -637,6 +657,7 @@ onMounted(fetchProfile)
                         <p v-if="profileErrors.email" :class="styles['field-error']">{{ profileErrors.email }}</p>
                     </div>
                     <div :class="styles['field-group']">
+
                         <label :class="styles['field-label']">Phone Number</label>
                         <div :class="styles['input-wrap']">
                             <svg :class="styles['input-icon']" width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -690,6 +711,7 @@ onMounted(fetchProfile)
                                     <circle cx="12" cy="12" r="3" />
                                 </svg>
                                 <svg v-else width="17" height="17" viewBox="0 0 24 24" fill="none"
+
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path
                                         d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
@@ -736,6 +758,7 @@ onMounted(fetchProfile)
                             <span :class="[styles['strength__label'], styles[`strength__label--${pwdStrength.level}`]]">{{
                                 pwdStrength.label }}</span>
                         </div>
+
                         <p v-else-if="touched.newPassword" :class="styles['field-hint']">Min 8 chars · Uppercase · Lowercase · Number · Special character</p>
                         <p v-if="passwordErrors.new_password" :class="styles['field-error']">{{ passwordErrors.new_password }}</p>
                     </div>
@@ -819,6 +842,7 @@ onMounted(fetchProfile)
     margin-bottom: 24px;
 }
 
+
 /* The avatar circle – fixed dimensions; image never changes its size */
 .avatar {
     width: 72px;
@@ -870,16 +894,15 @@ onMounted(fetchProfile)
 
 .hero-content {
     background: #fff;
-    height:200px;
     display: flex;
     align-items: center;
     gap: 1.25rem;
-    padding: 18px 32px 18px;
+    padding: 12px 24px 70px;
 }
 
 .hero-avatar {
-    width: 180px;
-    height: 180px;
+    width: 145px;
+    height: 145px;
     border-radius: 50%;
     background: #eef1f7;
     display: grid;
@@ -888,7 +911,7 @@ onMounted(fetchProfile)
     font-weight: 700;
     color: #111827;
     position: absolute;
-    margin-bottom: 11%;
+    margin-bottom: 8%;
     cursor: pointer;
     border: 4px solid #fff;
     box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
@@ -948,7 +971,7 @@ onMounted(fetchProfile)
 .hero-text {
     flex: 1;
     position: relative;
-    top: 40px;
+    top: 60px;
 }
 
 .hero-name {
@@ -1052,6 +1075,7 @@ onMounted(fetchProfile)
     font-size: 0.85rem;
     color: #6b7280;
 }
+
 
 .info-list {
     list-style: none;
@@ -1317,6 +1341,7 @@ onMounted(fetchProfile)
     box-shadow: 0 0 0 2px rgba(67, 56, 202, 0.15);
     background: #fff;
 }
+
 
 .input-icon {
     color: #94a3b8;

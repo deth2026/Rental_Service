@@ -1,31 +1,12 @@
 <template>
   <div>
   <div class="vehicles-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon">
-          <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
-        </div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
+    <UserNavbar
+      :nav-items="userNavItems"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
 
     <main class="content">
       <section class="deals-section">
@@ -34,13 +15,10 @@
             <i class="fa-solid fa-car"></i>
             <span>AVAILABLE VEHICLES</span>
           </div>
-  
-          <p v-if="selectedDateError" class="selected-date-error">{{ selectedDateError }}</p>
-          <p v-else class="availability-note">
-            Vehicles that are fully booked for the selected dates are dimmed and cannot be reserved.
-          </p>
 
-          <div class="filter-row">
+           <h2>{{ displayedVehicles.length }} vehicles found in {{ selectedShopName || location }}</h2>
+
+           <div class="filter-row">
            <button  
               v-for="item in filterItems"
               :key="item.id"
@@ -69,49 +47,31 @@
             </div>
 
             <div class="promo-body">
-              <div class="promo-body-head">
-                <div>
-                  <h3>{{ getVehicleName(vehicle) }}</h3>
-                  <p class="vehicle-sub">{{ getVehicleShop(vehicle) }}</p>
-                </div>
-                <span
-                  class="promo-status"
-                  :class="isVehicleUnavailable(vehicle) ? 'status-out' : 'status-available'"
-                >
-                  {{ isVehicleUnavailable(vehicle) ? 'Unavailable' : 'Available' }}
-                </span>
+              <h3>{{ getVehicleName(vehicle) }}</h3>
+
+              <div class="vehicle-meta">
+                <span><i class="fa-solid fa-gear" aria-hidden="true"></i> {{ vehicle.transmission }}</span>
+                <span><i class="fa-solid fa-gas-pump" aria-hidden="true"></i> {{ vehicle.fuel_type }}</span>
+                <span><i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating }}</span>
               </div>
 
-              <div class="promo-meta-tags">
-                <span class="meta-chip">{{ vehicle.transmission }}</span>
-                <span class="meta-chip">{{ vehicle.fuel_type }}</span>
-                <span class="meta-chip">
-                  <i class="fa-regular fa-star" aria-hidden="true"></i> {{ vehicle.rating || '4.8' }}
-                </span>
-              </div>
-
-              <div class="shop-info">
-                <img
-                  v-if="getVehicleShopImage(vehicle)"
-                  :src="getVehicleShopImage(vehicle)"
-                  :alt="getVehicleShop(vehicle) + ' logo'"
-                  class="shop-logo"
-                />
-                <span v-else><i class="fa-regular fa-building" aria-hidden="true"></i></span>
-                <span class="shop-name">{{ getVehicleShop(vehicle) }}</span>
-              </div>
-
-              <div class="availability-note-card">
-                <i class="fa-solid fa-map-location-dot"></i>
-                <span>{{ getVehicleAvailabilityLabel(vehicle) }}</span>
-              </div>
+               <div class="shop-info">
+                 <img 
+                   v-if="getVehicleShopImage(vehicle)" 
+                   :src="getVehicleShopImage(vehicle)" 
+                   :alt="getVehicleShop(vehicle) + ' logo'" 
+                   class="shop-logo"
+                 >
+                 <span v-else><i class="fa-regular fa-building" aria-hidden="true"></i></span>
+                 <span class="shop-name">{{ getVehicleShop(vehicle) }}</span>
+               </div>
 
               <div class="promo-meta">
                 <div class="promo-value">
                   <strong>${{ vehicle.price_per_day }}</strong>
                   <span>per day</span>
                 </div>
-                <button class="book-btn" @click="bookNow(vehicle)">View Details</button>
+                <button class="book-btn" @click="bookNow(vehicle)">Book Now</button>
               </div>
             </div>
           </article>
@@ -130,6 +90,7 @@
                 <strong>Distance:</strong> {{ distanceKm.toFixed(2) }} km
               </div>
             </div>
+
 
             <iframe
               class="map-frame"
@@ -155,13 +116,14 @@
 
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
+import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const location = ref('Siem Reap');
 const formatDate = (date) =>
@@ -176,9 +138,11 @@ const dateRange = ref(buildRollingDateRange());
 let dateRangeTimer = null;
 
 const route = useRoute();
-const navItems = ['Home', 'View Details', 'Bookings'];
 const router = useRouter();
-const activeNav = ref('Home');
+const userNavItems = [
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
+];
 const actionMessage = ref('');
 const activeFilter = ref('all');
 const filterItems = [
@@ -191,11 +155,12 @@ const filterItems = [
 const normalizeType = (raw, fallback = '') => {
   const t = String(raw || fallback || '').trim().toLowerCase();
   if (!t) return '';
+  // Prefer explicit car detection before motorbike keywords
+  if (t.includes('car') || t.includes('suv')) return 'car';
+  if (t.includes('bicy')) return 'bicycle';
   if (['motorbike', 'motorbikes', 'motor', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some((k) => t.includes(k))) {
     return 'motorbike';
   }
-  if (t.includes('bicy')) return 'bicycle';
-  if (t.includes('car') || t.includes('suv')) return 'car';
   return t;
 };
 
@@ -231,6 +196,7 @@ const selectedShopLocation = computed(() => {
   return location.value;
 });
 
+
 const selectedShopAddress = computed(() => {
   if (!selectedShopId.value) return '';
   const shop = shopNamesById.value[selectedShopId.value];
@@ -244,6 +210,22 @@ const selectedShopLocationLink = computed(() => {
   if (typeof loc !== 'string') return '';
   return loc.trim();
 });
+
+const syncShopSelectionToStorage = () => {
+  if (selectedShopId.value) {
+    cacheSelectedShop(selectedShopId.value, selectedShopName.value)
+  } else {
+    clearSelectedShopCache()
+  }
+}
+
+watch(
+  [() => selectedShopId.value, () => selectedShopName.value],
+  () => {
+    syncShopSelectionToStorage()
+  },
+  { immediate: true }
+)
 const extractCoordinatesFromMapUrl = (value) => {
   const url = String(value || '').trim();
   if (!url) return null;
@@ -332,6 +314,7 @@ const mapEmbedUrl = computed(() => {
   if (coords) queryParts.push(`${coords.lat},${coords.lng}`);
   const query = queryParts.join(' - ') || fallback;
 
+
   // Route mode: when origin is available and mapMode is 'route', show directions
   if (mapMode.value === 'route' && coords && originCoords.value) {
     const o = originCoords.value;
@@ -359,89 +342,6 @@ const getVehicleShop = (vehicle) => {
 };
 
 const favoriteIds = reactive(new Set());
-const selectedDateError = computed(() => {
-  if (!selectedStartDate.value || !selectedEndDate.value) {
-    return 'Please choose both pick-up and return dates.';
-  }
-
-  const start = toDateKey(selectedStartDate.value);
-  const end = toDateKey(selectedEndDate.value);
-  if (start === null || end === null) {
-    return 'Please choose valid booking dates.';
-  }
-
-  if (end <= start) {
-    return 'Return date must be after the pick-up date.';
-  }
-
-  return '';
-});
-
-const dateRangeLabel = computed(() => {
-  if (!selectedStartDate.value || !selectedEndDate.value) {
-    return 'Choose your booking dates';
-  }
-  return `${formatDateLabel(selectedStartDate.value)} - ${formatDateLabel(selectedEndDate.value)}`;
-});
-
-const minEndDate = computed(() => {
-  if (!selectedStartDate.value) return todayDate;
-  return addDaysToDateInputValue(selectedStartDate.value, 1);
-});
-
-const hasValidSelectedDates = computed(() => !selectedDateError.value);
-
-const availabilityMap = computed(() => {
-  const map = new Map();
-  vehicles.value.forEach((vehicle) => {
-    const vehicleId = Number(vehicle?.id);
-    if (!Number.isFinite(vehicleId) || vehicleId <= 0) {
-      return;
-    }
-
-    map.set(vehicleId, calculateVehicleAvailability({
-      vehicle,
-      bookings: bookings.value,
-      startDate: selectedStartDate.value,
-      endDate: selectedEndDate.value,
-    }));
-  });
-
-  return map;
-});
-
-const getVehicleAvailability = (vehicle) => {
-  const totalVehicles = getVehicleTotalVehicles(vehicle);
-  return availabilityMap.value.get(Number(vehicle?.id)) || {
-    totalVehicles,
-    bookedQuantity: 0,
-    remainingQuantity: totalVehicles,
-    unavailable: false,
-  };
-};
-
-const getVehicleAvailabilityLabel = (vehicle) => {
-  if (!hasValidSelectedDates.value) {
-    return 'Select valid dates to check availability';
-  }
-
-  const availability = getVehicleAvailability(vehicle);
-  if (availability.unavailable) {
-    return `Fully booked (${availability.bookedQuantity}/${availability.totalVehicles} reserved)`;
-  }
-
-  const noun = availability.remainingQuantity === 1 ? 'vehicle' : 'vehicles';
-  return `${availability.remainingQuantity} ${noun} available for selected dates`;
-};
-
-const isVehicleUnavailable = (vehicle) => {
-  // First check backend availability flag (for vehicles with 1 total_vehicles and active booking)
-  if (vehicle.is_available === false) {
-    return true;
-  }
-  // Then check date-based availability
-  return getVehicleAvailability(vehicle).remainingQuantity <= 0;
-};
 
 const filteredVehicles = computed(() => {
   const source = selectedShopId.value
@@ -510,6 +410,7 @@ const loadAllPages = async (resource) => {
   let lastPage = 1;
   const results = [];
 
+
   while (page <= lastPage) {
     const response = await api.get(`/${resource}`, { params: { page } });
     const payload = response.data;
@@ -539,7 +440,7 @@ const loadVehiclesAndShops = async () => {
 
     vehicles.value = vehicleList.map((vehicle) => ({
       ...vehicle,
-      rating: vehicle.rating ?? 4.8
+      rating: Number(vehicle.rating ?? vehicle.average_rating ?? 0),
     }));
     shopNamesById.value = shopList.reduce((acc, shop) => {
       acc[shop.id] = shop;
@@ -553,23 +454,6 @@ const loadVehiclesAndShops = async () => {
   }
 };
 
-
-const setActiveNav = (item) => {
-  activeNav.value = item;
-  if (item === 'Home') {
-    router.push('/view_shop');
-    return;
-  }
-  if (item === 'My Bookings') {
-    router.push('/my-bookings');
-    return;
-  }
-  if (item === 'Promotion') {
-    router.push('/promotions');
-    return;
-  }
-  actionMessage.value = `${item} opened.`;
-};
 
 const handleSearch = () => {
   actionMessage.value = `Search triggered for ${location}, ${dateRange}.`;
@@ -603,10 +487,6 @@ const notify = (message) => {
   actionMessage.value = message;
 };
 
-const openProfile = () => {
-  router.push('/user/profile');
-};
-
 const handleLogout = async () => {
   await userService.logout();
   router.push('/login');
@@ -637,9 +517,11 @@ const bookNow = (vehicle) => {
 };
 
 onMounted(() => {
-  dateRangeTimer = window.setInterval(() => {
-    dateRange.value = buildRollingDateRange();
-  }, 60 * 1000);
+   dateRangeTimer = window.setInterval(() => {
+     dateRange.value = buildRollingDateRange();
+   }, 60 * 1000);
+   // Scroll to top when page loads to ensure user sees vehicles first
+   window.scrollTo(0, 0);
   loadVehiclesAndShops();
 });
 
@@ -667,6 +549,7 @@ onUnmounted(() => {
   color: var(--text);
 }
 
+
 .btn-reset {
   border: 0;
   background: transparent;
@@ -690,6 +573,7 @@ onUnmounted(() => {
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-sizing: border-box;
+  padding-right: 60px;
 }
 
 .book-btn {
@@ -927,6 +811,7 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: 22px 20px 36px;
 }
+
 
 .results-head h1 {
   margin: 0;

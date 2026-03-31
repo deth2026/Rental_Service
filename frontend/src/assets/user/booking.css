@@ -282,7 +282,7 @@
 }
 
 .checkout-layout {
-  margin-top: 40px;
+  margin-top: 22px;
 
   display: grid;
 
@@ -344,6 +344,7 @@
 
   letter-spacing: 0.04em;
 }
+
 
 .item-title,
 .item-location,
@@ -525,6 +526,56 @@
   cursor: pointer;
 }
 
+.coupon-pricing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.old-total {
+  text-decoration: line-through;
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+.new-total {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.later-payment-info {
+  margin-top: 20px;
+}
+
+.later-payment-info .info-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  color: #1e40af;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.later-payment-info .info-card i {
+  margin-top: 3px;
+  font-size: 1.1rem;
+}
+
+.promo-applied-note,
+.promo-feedback--success {
+  color: #15803d;
+}
+
+.promo-feedback--error {
+  color: #b91c1c;
+}
+
 .encryption-card {
   background: #eef4ff;
 
@@ -647,6 +698,7 @@
   border-top: 1px solid #d9e2ef;
 }
 
+
 .form-divider span {
   position: relative;
 
@@ -705,6 +757,31 @@
 
   margin-bottom: 14px;
 }
+
+.phone-input-group {
+  margin-bottom: 20px;
+  background: white !important;
+}
+
+.phone-input-group input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d6e0ee;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.phone-input-group input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.required {
+  color: #ef4444;
+}
+
 
 .date-selection h3 {
   margin: 0 0 10px;
@@ -964,6 +1041,7 @@
   font-size: 1rem;
 }
 
+
 .transfer-instructions ol {
   margin: 0;
 
@@ -1056,6 +1134,41 @@
 
 .qr-code-section {
   margin-top: 12px;
+}
+
+.qr-shop-selection {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.qr-shop-selection label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.qr-shop-selection select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d2e1fa;
+  font-size: 0.95rem;
+}
+
+.qr-owner-note {
+  margin-top: 6px;
+  color: #5b6f8a;
+  font-size: 0.85rem;
+}
+
+.qr-missing-note {
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  color: #c24f4f;
+  background: #fef2f2;
+  border: 1px solid #fccaca;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 .qr-placeholder,
@@ -1259,6 +1372,7 @@
   gap: 10px;
   flex-wrap: wrap;
 }
+
 
 .social-btn {
   width: 30px;
@@ -1542,6 +1656,7 @@
   color: var(--text);
 }
 
+
 .confirm-actions {
   margin-top: 16px;
 
@@ -1594,11 +1709,15 @@
 
   display: flex;
 
-  align-items: center;
+  /* position modal starting from near top so full receipt is visible */
+  align-items: flex-start;
 
   justify-content: center;
 
-  padding: 20px;
+  /* extra top padding to keep green check and title visible */
+  padding: 30px 20px;
+
+  overflow-y: auto;
 
   z-index: 30;
 }
@@ -1606,25 +1725,30 @@
 .success-modal {
   width: 100%;
 
-  max-width: 440px;
+  /* make modal wider like the desired screenshot */
+  max-width: 520px;
 
-  border-radius: 28px;
+  border-radius: 20px;
 
-  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  /* solid white background so the whole popup appears on white */
+  background: #ffffff;
 
   border: 1px solid #dbe7f4;
 
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.22);
 
-  padding: 34px 30px 28px;
+  /* extra top padding so the green check and title are comfortably inside */
+  padding: 44px 22px 22px;
 
   position: relative;
 
-  overflow: hidden;
+  /* constrain modal height to viewport and allow internal scrolling */
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
 
   text-align: center;
 
-  animation: slideUp 0.3s ease;
+  animation: slideUp 0.28s ease;
 }
 
 .success-modal::before {
@@ -1811,6 +1935,7 @@
 
   height: 92px;
 }
+
 
 .payment-status-modal .booking-loader-core {
   width: 62px;
@@ -2105,6 +2230,7 @@
   justify-content: space-between;
 
   gap: 12px;
+
 
   padding: 18px 18px 14px;
 
@@ -2427,6 +2553,7 @@
   .success-summary-row {
     flex-direction: column;
 
+
     gap: 6px;
   }
 
@@ -2533,7 +2660,6 @@
 
   .checkout-layout {
     grid-template-columns: 1fr;
-    margin-top: 32px;
   }
 
   .steps-grid,
@@ -2566,8 +2692,8 @@
   }
 }
 
-/* Header styles aligned with VehiclesByShop.vue */
-.btn-reset {
+/* Booking page header styles */
+.booking-checkout-page .btn-reset {
   border: 0;
   background: transparent;
   font: inherit;
@@ -2575,184 +2701,89 @@
   cursor: pointer;
 }
 
-.topbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 32px;
-  align-items: center;
-  padding: 14px 40px;
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-  box-sizing: border-box;
+/* Receipt Modal Styles */
+.receipt-modal {
+  /* match outer modal width so content is centered */
+  max-width: 520px !important;
+  padding: -60px !important;
 }
 
-.brand {
+.receipt-preview-container {
+  margin: 20px 0;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.modal-actions {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #2563eb;
-  white-space: nowrap;
-  padding-left: 12vh;
-}
-
-.brand span {
-  margin-right: 20vh;
-}
-
-.brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  background: #dbeafe;
-}
-
-.brand-icon-image {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
-
-.nav-links {
-  display: flex;
-  gap: 50px;
-  justify-self: center;
-  align-items: center;
-  margin-right: 20vh;
-}
-
-.nav-link {
-  padding: 8px 16px;
-  border-radius: 8px;
-  color: #4a556b;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.nav-link.active,
-.nav-link:hover {
-  background: #eef7ff;
-  color: #2563eb;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
   gap: 12px;
-  justify-self: end;
-  white-space: nowrap;
+  justify-content: center;
+  margin-top: 20px;
 }
 
-.btn-back-top {
-  display: inline-flex;
+.btn-download {
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 24px;
-  border-radius: 999px;
-  border: 1px solid #dbeafe;
-  background: #ffffff;
-  color: #1d4ed8;
-  font-weight: 600;
-  font-size: 0.95rem;
-  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.18);
-  cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-}
-
-.btn-back-top:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 35px rgba(37, 99, 235, 0.22);
-}
-
-.btn-back-top:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 3px;
-}
-
-.back-arrow {
-  font-size: 1.1rem;
-  line-height: 1;
-}
-
-.user-display-name {
-  font-size: 16px;
-  font-weight: 800;
-  color: #33435d;
-  margin-right: 12vh;
-}
-
-.avatar {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: #f4f8fc;
-  color: #9a6a32;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  overflow: hidden;
-}
-
-.avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.logout-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
+  background: #0066ff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
   border-radius: 8px;
-  background: #2563eb;
-  color: #fff;
-  font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-.logout-btn:hover {
-  background: #1d4ed8;
+.btn-download:hover {
+  background: #0052cc;
 }
 
-@media (max-width: 1080px) {
-  .topbar {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .nav-links,
-  .top-actions {
-    justify-self: start;
-  }
+.btn-close {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
-@media (max-width: 992px) {
-  .topbar {
-    padding: 12px 14px;
-  }
+.btn-close:hover {
+  background: #e2e8f0;
 }
 
-@media (max-width: 640px) {
-  .topbar {
-    padding: 12px;
-  }
+/* Simple Success Header Styles */
+.simple-success-header {
+  padding-bottom: 20px;
+  text-align: center;
+}
 
-  .nav-links {
-    flex-wrap: wrap;
-  }
+.success-check-icon {
+  font-size: 54px;
+  color: #10b981;
+  margin-bottom: 12px;
+}
 
-  .brand {
-    font-size: 18px;
-  }
+.success-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.receipt-preview-container {
+  margin: 12px 0;
+  /* allow the receipt area to use most of the viewport but leave room for header/actions */
+  max-height: calc(100vh - 260px);
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  /* use white background so the receipt appears fully on white */
+  background: #ffffff;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
 }

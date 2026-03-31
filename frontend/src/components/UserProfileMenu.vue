@@ -21,8 +21,14 @@ const profileMenuRef = ref(null)
 const isProfileMenuOpen = ref(false)
 const avatarLoadFailed = ref(false)
 const showLogoutConfirm = ref(false)
+const currentUserState = ref(userService.getCurrentUser())
 
-const currentUser = computed(() => userService.getCurrentUser())
+const refreshCurrentUser = () => {
+  currentUserState.value = userService.getCurrentUser()
+  avatarLoadFailed.value = false
+}
+
+const currentUser = computed(() => currentUserState.value)
 const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
 const userEmail = computed(() => currentUser.value?.email || '')
 const userRoleLabel = computed(() => {
@@ -109,12 +115,18 @@ const onAvatarError = () => {
 
 onMounted(() => {
   document.addEventListener('click', handleDocumentClick)
+  window.addEventListener('user-updated', refreshCurrentUser)
+  window.addEventListener('storage', refreshCurrentUser)
+  refreshCurrentUser()
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleDocumentClick)
+  window.removeEventListener('user-updated', refreshCurrentUser)
+  window.removeEventListener('storage', refreshCurrentUser)
 })
 </script>
+
 
 <template>
   <div class="profile-menu-wrapper" ref="profileMenuRef">
@@ -261,6 +273,7 @@ onBeforeUnmount(() => {
   transform: rotate(45deg);
   box-shadow: -2px -2px 5px rgba(15, 23, 42, 0.05);
 }
+
 
 .profile-avatar {
   width: 52px;

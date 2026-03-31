@@ -1,4 +1,4 @@
-/* ── Design Tokens ── */
+ /* ── Design Tokens ── */
 :root {
   --ud-primary: #2563eb;
   --ud-primary-dark: #1d4ed8;
@@ -96,112 +96,6 @@
   color: #2563eb;
 }
 
-/* ── Top Actions / Notifications ── */
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.customer-topbar .notification-wrapper {
-  position: relative;
-}
-
-.customer-topbar .notification-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: #475569;
-  border-radius: 10px;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.customer-topbar .notification-btn:hover {
-  background: #f1f5f9;
-  color: #2563eb;
-}
-
-.customer-topbar .notification-count {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  background: #dc2626;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.customer-topbar .notification-popup {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: -6px;
-  width: 420px;
-  max-height: 480px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e2e8f0;
-  z-index: 1002;
-  overflow: hidden;
-}
-
-.customer-topbar .notification-popup::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  right: 20px;
-  width: 14px;
-  height: 14px;
-  background: #fff;
-  border-left: 1px solid #e2e8f0;
-  border-top: 1px solid #e2e8f0;
-  transform: rotate(45deg);
-}
-
-.notification-fade-enter-active,
-.notification-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.notification-fade-enter-from,
-.notification-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-.notification-item__description {
-  margin: 0;
-  color: #475569;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-.notification-item__title {
-  margin: 0;
-  font-weight: 700;
-  font-size: 1rem;
-  color: #111827;
-  line-height: 1.35;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-
 .customer-main {
   max-width: 1400px;
   margin: 0 auto;
@@ -293,6 +187,33 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  position: relative;
+}
+
+.province-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--ud-border);
+  border-radius: 12px;
+  margin-top: 8px;
+  box-shadow: var(--ud-shadow-lg);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.suggestion-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  color: var(--ud-text);
+  font-weight: 500;
+}
+.suggestion-item:hover {
+  background: var(--ud-primary-bg);
+  color: var(--ud-primary);
 }
 
 .search-icon {
@@ -317,7 +238,6 @@
 .province-search-input::placeholder {
   color: #94a3b8;
 }
-
 
 .province-search-btn {
   background: var(--ud-primary);
@@ -483,8 +403,42 @@
 .section-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 30px;
+  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.category-filters {
+  display: flex;
+  gap: 12px;
+  background: white;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--ud-border);
+  box-shadow: var(--ud-shadow-sm);
+}
+
+.category-btn {
+  padding: 8px 20px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--ud-text-subtle);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+.category-btn:hover {
+  background: var(--ud-primary-bg);
+  color: var(--ud-primary);
+}
+
+.category-btn.active {
+  background: var(--ud-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
 }
 
 .section-header h2 {
@@ -540,7 +494,6 @@
 .shop-card:hover .shop-image {
   transform: scale(1.05);
 }
-
 
 .shop-badges {
   position: absolute;

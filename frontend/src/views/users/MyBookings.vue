@@ -10,14 +10,13 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
-  return matchedItem?.label || 'My Booking'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const handleLogout = async () => {
@@ -72,52 +71,19 @@ const overlayRatingValue = ref(0)
 const overlayComment = ref('')
 const overlayLoading = ref(false)
 const overlayError = ref('')
-const COMPLETION_SNAPSHOT_KEY = 'bookingCompletionSnapshot'
-
-const loadCompletionSnapshot = () => {
-  try {
-    const stored = localStorage.getItem(COMPLETION_SNAPSHOT_KEY)
-    return stored ? JSON.parse(stored) : {}
-  } catch {
-    return {}
-  }
-}
-
-const saveCompletionSnapshot = (snapshot) => {
-  try {
-    localStorage.setItem(COMPLETION_SNAPSHOT_KEY, JSON.stringify({ ...snapshot }))
-  } catch {
-    // Ignore storage errors
-  }
-}
-
-const completionSnapshot = reactive(loadCompletionSnapshot())
 const pollingTimer = ref(null)
 const normalizeStatus = (status) => {
   if (status === null || status === undefined) return ''
   return String(status).toLowerCase().trim()
 }
 
-const COMPLETED_STATUS_KEYS = new Set([
-  'completed',
-  'complete',
-  'done',
-  'finished',
-  'returned',
-  'closed',
-  'marked_as_completed'
-])
-
-const isCompletedStatus = (status) => COMPLETED_STATUS_KEYS.has(normalizeStatus(status))
-
-const isBookingCompleted = (booking) => {
-  if (!booking) return false
-  if (isCompletedStatus(booking.status)) return true
-  if (booking.completed_at || booking.is_completed) return true
-  return false
+const isCompletedStatus = (status) => {
+  const normalized = normalizeStatus(status)
+  return normalized === 'completed' || normalized === 'complete'
 }
+
+const isBookingCompleted = (booking) => isCompletedStatus(booking?.status)
 const bookingStatusMap = ref({})
-const bookingCompletionMap = ref({})
 const initialLoadDone = ref(false)
 
 const getStoredToken = () => localStorage.getItem('auth_token') || localStorage.getItem('token') || ''
@@ -174,6 +140,7 @@ const fetchBookings = async () => {
 
 const POLL_INTERVAL_MS = 15000
 
+
 const startBookingPolling = () => {
   if (pollingTimer.value) {
     clearInterval(pollingTimer.value)
@@ -182,8 +149,30 @@ const startBookingPolling = () => {
   pollingTimer.value = setInterval(fetchBookings, POLL_INTERVAL_MS)
 }
 
+const activeMenuId = ref(null)
+
+const toggleMenu = (event, bookingId) => {
+  event.stopPropagation()
+  if (activeMenuId.value === bookingId) {
+    activeMenuId.value = null
+  } else {
+    activeMenuId.value = bookingId
+  }
+}
+
+const closeAllMenus = () => {
+  activeMenuId.value = null
+}
+
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.card-menu-container')) {
+    closeAllMenus()
+  }
+}
+
 onMounted(() => {
   startBookingPolling()
+  window.addEventListener('click', handleClickOutside)
 })
 
 onBeforeUnmount(() => {
@@ -191,6 +180,7 @@ onBeforeUnmount(() => {
     clearInterval(pollingTimer.value)
     pollingTimer.value = null
   }
+  window.removeEventListener('click', handleClickOutside)
 })
 
 const filteredBookings = computed(() => {
@@ -311,6 +301,7 @@ const getBookingVehicleName = (booking) => {
   const legacyName = String(booking?.vehicle_name || '').trim()
   return legacyName && legacyName !== 'N/A' ? legacyName : 'Unnamed Vehicle'
 }
+
 
 const normalizeVehicle = (vehicle) => {
   if (!vehicle) return null
@@ -463,6 +454,7 @@ const detailDays = computed(() => {
   return getTotalDays(selectedBooking.value.start_date, selectedBooking.value.end_date) || 1
 })
 
+
 const detailPricePerDay = computed(() => {
   const fromVehicle = Number(selectedVehicle.value?.price_per_day || 0)
   if (fromVehicle > 0) return fromVehicle
@@ -511,23 +503,29 @@ const closeRatingOverlay = (markSkip = false) => {
   }
 }
 
+const maybeShowRatingOverlay = () => {
+  if (ratingOverlay.value.visible) return
+  const nextBooking = bookings.value.find(
+    (b) => isBookingCompleted(b) && !b.rating && !ratingSkipped[b.id]
+  )
+  if (nextBooking) {
+    openRatingOverlay(nextBooking)
+  }
+}
+
 const handleBookingStatusUpdates = (allBookings) => {
-  const previousCompletion = { ...bookingCompletionMap.value }
-
-  const userRole = getStoredUserRole()
-  const isCustomer = userRole !== 'shop_owner' && userRole !== 'admin'
-
-  const newlyCompleted = isCustomer
+  const previousStatuses = { ...bookingStatusMap.value }
+  
+  // Find bookings that just changed to completed status
+  const newlyCompleted = initialLoadDone.value
     ? allBookings.find((booking) => {
-        const completedNow = isBookingCompleted(booking)
-        if (!completedNow || booking.rating || ratingSkipped[booking.id]) return false
-
-        const wasCompletedPreviously = Boolean(previousCompletion[booking.id])
-        const storedCompleted = Boolean(completionSnapshot[booking.id])
-        const sessionChange = initialLoadDone.value && !wasCompletedPreviously && completedNow
-        const persistentChange = !storedCompleted && completedNow
-
-        return sessionChange || persistentChange
+        const prevStatus = previousStatuses[booking.id]
+        return (
+          !isCompletedStatus(prevStatus) &&
+          isCompletedStatus(booking.status) &&
+          !booking.rating &&
+          !ratingSkipped[booking.id]
+        )
       })
     : null
 
@@ -536,23 +534,18 @@ const handleBookingStatusUpdates = (allBookings) => {
     return map
   }, {})
 
-  bookingCompletionMap.value = allBookings.reduce((map, booking) => {
-    map[booking.id] = isBookingCompleted(booking)
-    return map
-  }, {})
-
-  allBookings.forEach((booking) => {
-    completionSnapshot[booking.id] = isBookingCompleted(booking)
-  })
-  saveCompletionSnapshot(completionSnapshot)
-
   if (!initialLoadDone.value) {
     initialLoadDone.value = true
+    // Show rating immediately for already completed bookings that haven't been rated/skipped
+    maybeShowRatingOverlay()
+    return
   }
 
+  // Show rating when booking status changes TO completed
   if (newlyCompleted) {
     openRatingOverlay(newlyCompleted)
   }
+  // Don't keep prompting for other completed bookings
 }
 
 const selectOverlayRating = (value) => {
@@ -591,7 +584,7 @@ const submitRating = async () => {
     const data = await response.json()
     markBookingRated(booking, data)
     closeRatingOverlay()
-    // Don't reopen the overlay automatically; rating is optional
+    // Don't call maybeShowRatingOverlay() - rating is optional, don't prompt for more
   } catch (err) {
     overlayError.value = err.message || 'Unable to submit rating'
   } finally {
@@ -608,13 +601,14 @@ const markBookingRated = (booking, ratingData) => {
   )
 }
 
+
 const skipRating = () => {
   const booking = ratingOverlay.value.booking
   if (!booking?.id) return
   ratingSkipped[booking.id] = true
   saveSkippedRatings(ratingSkipped) // Persist to localStorage
   closeRatingOverlay()
-  // Don't reopen the overlay automatically after skipping
+  // Don't call maybeShowRatingOverlay() - stop prompting after skip
 }
 
 </script>
@@ -665,7 +659,9 @@ const skipRating = () => {
     <section class="booking-list-wrap">
       <div class="booking-list-header">
         <span class="booking-list-title">Bookings</span>
-        
+        <!-- <button class="bookings-home-btn" type="button" @click="goHome">
+          Back to Home
+        </button> -->
       </div>
       <div v-if="loading" class="empty-state">
         Loading bookings...
@@ -681,10 +677,41 @@ const skipRating = () => {
           <img :src="getBookingImage(booking)" :alt="getBookingVehicleName(booking)" class="vehicle-img" />
         </div>
 
+
         <div class="booking-info">
           <div class="booking-header">
             <h3 class="vehicle-name">{{ getBookingVehicleName(booking) }}</h3>
-            <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
+            <div class="card-top-right">
+              <span :class="['status-pill', getStatusClass(booking.status)]">{{ getStatusLabel(booking.status) }}</span>
+              
+              <div class="card-menu-container">
+                <button class="menu-trigger" @click.stop="toggleMenu($event, booking.id)">
+                  <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <div v-if="activeMenuId === booking.id" class="menu-dropdown">
+                  <button class="menu-item" @click="openDetails(booking)">
+                    <i class="fa-solid fa-eye"></i>
+                    View Details
+                  </button>
+                  <button 
+                    v-if="booking.status === 'pending' || booking.status === 'confirmed'" 
+                    class="menu-item danger" 
+                    @click="openCancelModal(booking)"
+                  >
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel Booking
+                  </button>
+                  <button 
+                    v-if="isBookingCompleted(booking) && !booking.rating" 
+                    class="menu-item" 
+                    @click="openRatingOverlay(booking)"
+                  >
+                    <i class="fa-solid fa-star"></i>
+                    Rate Vehicle
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <p><span class="meta-label">Booking ID:</span> {{ booking.booking_code }}</p>
@@ -694,17 +721,6 @@ const skipRating = () => {
             {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
           </p>
-
-          <div class="card-actions">
-            <button class="details-btn" @click="openDetails(booking)">View Details</button>
-            <button 
-              v-if="booking.status === 'pending' || booking.status === 'confirmed'" 
-              class="cancel-btn" 
-              @click="openCancelModal(booking)"
-            >
-              Cancel Booking
-            </button>
-          </div>
         </div>
 
         <div class="booking-price">
@@ -741,6 +757,7 @@ const skipRating = () => {
           </svg>
         </button>
 
+
         <div v-if="detailError" class="detail-state detail-error">{{ detailError }}</div>
         <div v-else-if="selectedVehicle" class="detail-content detail-grid-layout">
           <div class="detail-left">
@@ -751,6 +768,31 @@ const skipRating = () => {
                 :alt="detailTitle"
               />
             </div>
+            
+            <div class="history-section">
+              <h3 class="history-title">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Booking History
+              </h3>
+              <div class="history-timeline">
+                <div v-for="log in selectedBooking?.booking_status_logs" :key="log.id" class="history-item">
+                  <div class="history-dot" :class="{ active: log.status === selectedBooking.status }"></div>
+                  <div class="history-content">
+                    <span class="history-status">{{ getStatusLabel(log.status) }}</span>
+                    <span class="history-time">{{ formatDate(log.changed_at) }}</span>
+                  </div>
+                </div>
+                <!-- Fallback if no logs -->
+                <div v-if="!selectedBooking?.booking_status_logs?.length" class="history-item">
+                  <div class="history-dot active"></div>
+                  <div class="history-content">
+                    <span class="history-status">Created</span>
+                    <span class="history-time">{{ formatDate(selectedBooking?.created_at) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div class="detail-rating-row" v-if="selectedBooking?.rating?.rating">
               <span class="detail-rating-label">Rating</span>
               <strong>{{ selectedBooking.rating.rating.toFixed(1) }}</strong>
@@ -776,8 +818,7 @@ const skipRating = () => {
             </div>
 
             <div class="detail-price-row">
-
-                <div class="detail-total-box">
+              <div class="detail-total-box">
                 <span>Total</span>
                 <strong>{{ formatCurrency(detailTotalAmount) }}</strong>
               </div>
@@ -786,7 +827,6 @@ const skipRating = () => {
                 <strong class="detail-price">{{ formatCurrency(detailPricePerDay) }}</strong>
                 <span class="detail-price-suffix">USD</span>
               </div>
-            
             </div>
 
             <div class="detail-section detail-section--compact">
@@ -795,6 +835,7 @@ const skipRating = () => {
               <div class="detail-row"><span>Rental Date</span><strong>{{ formatDate(selectedBooking?.start_date) }} - {{ formatDate(selectedBooking?.end_date) }}</strong></div>
               <div class="detail-row"><span>Duration</span><strong>{{ detailDays }} day(s)</strong></div>
             </div>
+
 
             <div class="detail-section detail-section--full">
               <div class="detail-grid detail-grid--info">
@@ -824,7 +865,6 @@ const skipRating = () => {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </div>
@@ -883,6 +923,7 @@ const skipRating = () => {
       <p v-if="overlayError" class="rating-alert-error">{{ overlayError }}</p>
     </div>
   </div>
+
 
   <!-- Cancel Booking Modal -->
   <div v-if="cancelModal.visible" class="cancel-modal-backdrop" @click.self="closeCancelModal">

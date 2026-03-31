@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { vehicleApi, shopApi, ratingApi } from '@/services/api'
 import { userService } from '../../services/database.js'
@@ -7,19 +7,20 @@ import { readStoredLocation } from '@/utils/locationAccess'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
 import UserNavbar from '@/components/UserNavbar.vue'
+import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const route = useRoute()
 const router = useRouter()
 const navItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings' },
-  { label: 'Promotions', route: '/promotions' }
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const shopId = computed(() => route.params.id)
 const vehicles = ref([])
 const selectedCategory = ref('all')
 const shop = ref(null)
+const shopDisplayName = computed(() => shop.value?.name || '')
 const isLoading = ref(true)
 const error = ref('')
 const shopError = ref('')
@@ -35,7 +36,7 @@ const originCoords = ref(
 const currentUser = computed(() => userService.getCurrentUser())
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route))
-  return matchedItem?.label || 'Home'
+  return matchedItem?.label || 'My Bookings'
 })
 
 const isOwnerRole = computed(() => {
@@ -90,11 +91,12 @@ const resolveVehicleImageUrl = (value) => {
 const normalizeType = (raw) => {
   const t = String(raw || '').trim().toLowerCase()
   if (!t) return ''
+  // Prefer explicit car detection before motorbike keywords
+  if (t.includes('car') || t.includes('suv')) return 'car'
+  if (t.includes('bicy')) return 'bicycle'
   if (['motorbike', 'motorbikes', 'motor', 'moto', 'motorbike ', 'motorbike-', 'motorcycle', 'motorcycles', 'scooter', 'scooters', 'bike'].some(k => t.includes(k))) {
     return 'motorbike'
   }
-  if (t.includes('bicy')) return 'bicycle'
-  if (t.includes('car') || t.includes('suv')) return 'car'
   return t
 }
 
@@ -111,6 +113,7 @@ const normalizeVehicle = (vehicle) => {
   } catch (e) {
     parsedPhotos = []
   }
+
 
   // Priority: image_url_full (backend accessor) > photo_urls > image_url > photos
   let imageUrl = ''
@@ -144,6 +147,10 @@ const normalizeVehicle = (vehicle) => {
     rating: typeof vehicle.rating === 'number' || !Number.isNaN(Number(vehicle.rating)) ? Number(vehicle.rating) : null,
     ratingCount: Number(vehicle.rating_count ?? 0),
     total_vehicles: vehicle.total_vehicles ?? 1,
+    available_vehicles:
+      typeof vehicle.available_vehicles === 'number'
+        ? Math.max(0, Math.trunc(vehicle.available_vehicles))
+        : null,
     rider_details: vehicle.rider_details || '',
     insurance_fee: vehicle.insurance_fee ?? 0,
     taxes_fee: vehicle.taxes_fee ?? 0
@@ -173,23 +180,27 @@ const fetchVehicles = async () => {
 const activeBookingsMap = ref({})
 
 const fetchActiveBookings = async () => {
+  const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+  if (!token) {
+    activeBookingsMap.value = {}
+    return
+  }
+
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/bookings?shop_id=' + shopId.value, {
+    const response = await fetch(`http://127.0.0.1:8000/api/bookings?shop_id=${shopId.value}`, {
       headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Bearer ' + (localStorage.getItem('token') || '')
-      }
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
     })
     const result = await response.json()
     const bookings = result.data || result || []
-    
-    // Count active bookings per vehicle (bookings that are not completed/returned)
+
     const counts = {}
-    bookings.forEach(booking => {
+    bookings.forEach((booking) => {
       const vehicleId = booking.vehicle_id
       const status = booking.status?.toLowerCase() || ''
-      // Only count active bookings (not returned, not cancelled)
-      if (status !== 'returned' && status !== 'completed' && status !== 'cancelled' && status !== 'canceled') {
+      if (!['returned', 'completed', 'cancelled', 'canceled'].includes(status)) {
         counts[vehicleId] = (counts[vehicleId] || 0) + 1
       }
     })
@@ -202,10 +213,15 @@ const fetchActiveBookings = async () => {
 
 // Calculate available vehicles (total - active bookings)
 const getAvailableVehicles = (vehicle) => {
+  if (typeof vehicle.available_vehicles === 'number') {
+    return Math.max(0, Math.trunc(vehicle.available_vehicles))
+  }
+
   const total = vehicle.total_vehicles || 1
   const activeBookings = activeBookingsMap.value[vehicle.id] || 0
   return Math.max(0, total - activeBookings)
 }
+
 
 const buildRatingSummaryMap = (summaries) => {
   const map = {}
@@ -253,6 +269,17 @@ const fetchShop = async () => {
   }
 }
 
+const syncShopSelectionCache = () => {
+  const parsedId = Number(shopId.value)
+  if (Number.isFinite(parsedId) && parsedId > 0) {
+    cacheSelectedShop(parsedId, shopDisplayName.value)
+    return
+  }
+  clearSelectedShopCache()
+}
+
+watch([() => shopId.value, shopDisplayName], syncShopSelectionCache, { immediate: true })
+
 const goBack = () => {
   router.push('/view_shop')
 }
@@ -266,7 +293,7 @@ const handleLogout = async () => {
 }
 
 const viewVehicleDetails = (vehicle) => {
-  router.push(`/vehicles/${vehicle.id}`)
+  router.push({ path: `/vehicles/${vehicle.id}`, query: route.query })
 }
 
 const getStatusClass = (status) => {
@@ -323,6 +350,7 @@ const categoryButtons = [
   { label: 'Bicycles', value: 'bicycle' },
   { label: 'Cars', value: 'car' }
 ]
+
 
 onMounted(() => {
   fetchVehicles()
@@ -435,6 +463,7 @@ const openMap = () => {
     return
   }
 
+
   const coords = selectedShopCoords.value
   const name = shop.value?.name || ''
   const address = shop.value?.address || ''
@@ -540,8 +569,12 @@ const extractCoordinatesFromMapUrl = (value) => {
             {{ category.label }}
           </button>
         </div>
-
+        <p class="results-text">
+          {{ filteredVehicles.length }} vehicles found
+          <span v-if="shop?.name">in {{ shop.name }}</span>
+        </p>
       </div>
+
 
       <div v-if="isLoading" class="status-box">Loading vehicles...</div>
       <div v-else-if="error" class="status-box error">{{ error }}</div>
@@ -593,16 +626,30 @@ const extractCoordinatesFromMapUrl = (value) => {
               </div>
             </div>
 
-            <div class="vehicle-meta-row">
-              <div class="vehicle-rating" v-if="vehicle.rating">
-                <i class="fa-solid fa-star"></i>
-                <span>{{ vehicle.rating.toFixed(1) }}</span>
-                <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
+            <div class="vehicle-extra-fees" v-if="vehicle.insurance_fee || vehicle.taxes_fee || vehicle.rider_details">
+              <div class="fee-item" v-if="vehicle.rider_details">
+                <i class="fa-solid fa-user"></i>
+                <span>{{ vehicle.rider_details }}</span>
               </div>
-              <div class="vehicle-price">
-                <span class="price-amount">${{ vehicle.price_per_day }}</span>
-                <span class="price-period">/day</span>
+              <div class="fee-item" v-if="vehicle.insurance_fee">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Insurance: ${{ vehicle.insurance_fee }}</span>
               </div>
+              <div class="fee-item" v-if="vehicle.taxes_fee">
+                <i class="fa-solid fa-file-invoice"></i>
+                <span>Taxes: ${{ vehicle.taxes_fee }}</span>
+              </div>
+            </div>
+            
+            <div class="vehicle-rating" v-if="vehicle.rating">
+              <i class="fa-solid fa-star"></i>
+              <span>{{ vehicle.rating.toFixed(1) }}</span>
+              <small v-if="vehicle.ratingCount">({{ vehicle.ratingCount }})</small>
+            </div>
+
+            <div class="vehicle-price">
+              <span class="price-amount">${{ vehicle.price_per_day }}</span>
+              <span class="price-period">/day</span>
             </div>
 
             <button 
@@ -615,6 +662,7 @@ const extractCoordinatesFromMapUrl = (value) => {
           </div>
         </article>
       </div>
+
 
       <section class="map-section" v-if="shop">
         <div class="map">
@@ -811,6 +859,7 @@ const extractCoordinatesFromMapUrl = (value) => {
   flex-wrap: wrap;
   flex: 1;
 }
+
 
 .owner-btn {
   flex: 1;
@@ -1048,6 +1097,7 @@ const extractCoordinatesFromMapUrl = (value) => {
   object-fit: cover;
 }
 
+
 .vehicle-card-image .no-image {
   width: 100%;
   height: 100%;
@@ -1128,6 +1178,7 @@ const extractCoordinatesFromMapUrl = (value) => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  margin-bottom: 0.75rem;
   color: #047857;
   font-weight: 600;
 }
@@ -1141,14 +1192,6 @@ const extractCoordinatesFromMapUrl = (value) => {
   color: #475569;
 }
 
-.vehicle-meta-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
 .detail-item i {
   font-size: 0.75rem;
 }
@@ -1157,8 +1200,30 @@ const extractCoordinatesFromMapUrl = (value) => {
   margin-bottom: 1rem;
 }
 
+.vehicle-extra-fees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.fee-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.fee-item i {
+  color: #1e40af;
+}
+
 .price-amount {
-  font-size: 1.7rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #667eea;
 }
@@ -1204,4 +1269,3 @@ const extractCoordinatesFromMapUrl = (value) => {
   }
 }
 </style>
-

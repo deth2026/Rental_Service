@@ -1,15 +1,15 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { userService } from '@/services/database.js'
 import UserProfileMenu from '@/components/UserProfileMenu.vue'
 import NotificationMenu from '@/components/NotificationMenu.vue'
 import { useNotifications } from '@/composables/useNotifications'
 
+const baseNavItems = [{ label: 'Home', route: '/' }]
 const defaultNavItems = [
-  { label: 'Home', route: '/view_shop' },
-  { label: 'My Booking', route: '/my-bookings'},
-  { label: 'Promotions', route: '/promotions' }
+  ...baseNavItems,
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
 ]
 
 const props = defineProps({
@@ -17,6 +17,18 @@ const props = defineProps({
   activeLabel: {
     type: String,
     default: ''
+  },
+  showBackButton: {
+    type: Boolean,
+    default: false
+  },
+  backTo: {
+    type: String,
+    default: ''
+  },
+  backLabel: {
+    type: String,
+    default: 'Back'
   },
   showFallbackMessage: {
     type: Boolean,
@@ -27,88 +39,38 @@ const props = defineProps({
 const emit = defineEmits(['logout-request', 'nav-click'])
 const router = useRouter()
 const route = useRoute()
+const { unreadCount, loadNotifications } = useNotifications()
+const notificationMenuOpen = ref(false)
+const notificationMenuRef = ref(null)
 
 const resolvedNavItems = computed(() => {
-  if (Array.isArray(props.navItems) && props.navItems.length) {
-    return props.navItems
-  }
-  return defaultNavItems
+  return props.navItems && props.navItems.length > 0 ? props.navItems : defaultNavItems
 })
 
 const activeNav = computed(() => {
   if (props.activeLabel) return props.activeLabel
-
-  const currentPath = route.path
-  const matchedItem = resolvedNavItems.value.find(
-    (item) => item.route && item.route !== '#' && currentPath.startsWith(item.route)
+  // Try to find the item that matches the current route
+  const matchedItem = resolvedNavItems.value.find(item => 
+    item.route && route.path.startsWith(item.route)
   )
   return matchedItem?.label || resolvedNavItems.value[0]?.label || 'Home'
 })
 
-const userDisplayName = computed(() => userService.getCurrentUser()?.name || 'Guest User')
+const shouldShowBackButton = computed(() => {
+  if (!props.showBackButton) return false
+  return !route.path.startsWith('/view_shop')
+})
 
 const notify = (message) => {
   window.alert(message)
 }
-
-const { unreadCount, loadNotifications } = useNotifications()
-const showNotifications = ref(false)
-const notificationRoot = ref(null)
-const badgeDismissed = ref(false)
-const previousUnread = ref(unreadCount.value)
-
-const badgeLabel = computed(() => {
-  if (badgeDismissed.value) return ''
-  if (!unreadCount.value) return ''
-  return unreadCount.value > 9 ? '9+' : String(unreadCount.value)
-})
-
-const toggleNotifications = () => {
-  showNotifications.value = !showNotifications.value
-  if (showNotifications.value) {
-    badgeDismissed.value = true
-  }
-}
-
-const closeNotifications = () => {
-  showNotifications.value = false
-}
-
-const handleDocumentClick = (event) => {
-  if (showNotifications.value && notificationRoot.value && !notificationRoot.value.contains(event.target)) {
-    closeNotifications()
-  }
-}
-
-onMounted(() => {
-  loadNotifications()
-  document.addEventListener('mousedown', handleDocumentClick)
-})
-
-watch(unreadCount, (value) => {
-  if (value > previousUnread.value) {
-    badgeDismissed.value = false
-  }
-  previousUnread.value = value
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleDocumentClick)
-})
-
-watch(
-  () => route.fullPath,
-  () => {
-    closeNotifications()
-  }
-)
 
 const handleNavClick = (item) => {
   const hasRoute = item.route && item.route !== '#'
   if (hasRoute) {
     router.push(item.route)
   } else if (props.showFallbackMessage) {
-    notify(item.fallbackMessage || 'My Booking page is not available yet.')
+    notify(item.fallbackMessage || 'This page is not available yet.')
   }
 
   emit('nav-click', item)
@@ -121,198 +83,282 @@ const openProfile = () => {
 const requestLogout = () => {
   emit('logout-request')
 }
+
+const toggleNotifications = () => {
+  notificationMenuOpen.value = !notificationMenuOpen.value
+}
+
+const closeNotifications = () => {
+  notificationMenuOpen.value = false
+}
+
+const handleDocumentClick = (event) => {
+  if (!notificationMenuOpen.value) return
+  if (notificationMenuRef.value && !notificationMenuRef.value.contains(event.target)) {
+    closeNotifications()
+  }
+}
+
+const goToNotificationsPage = () => {
+  closeNotifications()
+  router.push('/notifications')
+}
+
+const goBack = () => {
+  if (props.backTo) {
+    router.push(props.backTo)
+    return
+  }
+  router.push('/view_shop')
+}
+
+onMounted(() => {
+  loadNotifications().catch(() => {})
+  document.addEventListener('click', handleDocumentClick)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleDocumentClick)
+})
 </script>
 
 <template>
-  <header class="topbar user-navbar">
-    <div class="brand-left">
-      <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-logo" />
-      <span>Chong Choul</span>
-    </div>
+  <header class="user-navbar-shell">
+    <div class="topbar user-navbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+        </div>
+        <span>Chong Choul</span>
+      </div>
 
-    <nav class="nav-links">
-      <button
-        v-for="item in resolvedNavItems"
-        :key="item.label"
-        class="btn-reset nav-link"
-        :class="{ active: activeNav === item.label }"
-        @click="handleNavClick(item)"
-      >
-        {{ item.label }}
-      </button>
-    </nav>
-
-    <div class="top-actions">
-      <div class="notification-wrapper" ref="notificationRoot">
+      <nav class="nav-links">
         <button
-          type="button"
-          class="icon-btn notification-btn"
-          aria-label="Open notifications"
-          @click.stop="toggleNotifications"
+          v-for="item in resolvedNavItems"
+          :key="item.label"
+          class="btn-reset nav-link"
+          :class="{ active: activeNav === item.label }"
+          @click="handleNavClick(item)"
         >
-          <i class="fa-regular fa-bell" aria-hidden="true"></i>
-          <span v-if="badgeLabel" class="notification-count">{{ badgeLabel }}</span>
+          {{ item.label }}
         </button>
-        <transition name="notification-fade">
-          <div v-if="showNotifications" class="notification-popup">
+      </nav>
+
+
+      <div class="top-actions">
+        <div ref="notificationMenuRef" class="notification-bell-wrap">
+          <button
+            type="button"
+            class="btn-reset notification-bell"
+            :class="{ active: notificationMenuOpen || route.path.startsWith('/notifications') }"
+            aria-label="Notifications"
+            @click.stop="toggleNotifications"
+          >
+            <i class="fa-solid fa-bell" aria-hidden="true"></i>
+            <span v-if="unreadCount > 0" class="notification-bell__badge">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
+          </button>
+
+          <div v-if="notificationMenuOpen" class="notification-bell-popover">
             <NotificationMenu />
           </div>
-        </transition>
+        </div>
+        <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
       </div>
-      <UserProfileMenu @settings="openProfile" @logout="requestLogout" />
+    </div>
+
+    <div v-if="shouldShowBackButton" class="navbar-back-row">
+      <button type="button" class="btn-reset navbar-back-btn" @click="goBack">
+        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+        <span>{{ backLabel }}</span>
+      </button>
     </div>
   </header>
 </template>
 
 <style scoped>
-.topbar.user-navbar {
+.user-navbar-shell {
   width: auto;
-  height: 74px;
   margin-inline: calc(50% - 50vw);
-  padding-inline: calc(32px + (50vw - 50%));
-  padding-block: 14px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 32px;
-  background: #ffffff;
-  border-bottom: 1px solid #d8dee7;
   position: sticky;
   top: 0;
   z-index: 220;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.topbar.user-navbar {
+  min-height: 80px;
+  padding-inline: calc(34px + (50vw - 50%));
+  padding-block: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 36px;
   box-sizing: border-box;
 }
 
-.topbar.user-navbar .brand-left {
+.topbar.user-navbar .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   font-size: 20px;
-  font-weight: 700;
-  color: #1d4ed8;
+  font-weight: 800;
+  color: #245bd4;
   white-space: nowrap;
 }
 
-.topbar.user-navbar .brand-left span {
-  color: #2563eb;
+.topbar.user-navbar .brand span {
+  color: #245bd4;
 }
 
-.topbar.user-navbar .brand-logo {
-  width: 42px;
-  height: 42px;
+.topbar.user-navbar .brand-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.topbar.user-navbar .brand-icon-image {
+  width: 58px;
+  height: 58px;
   object-fit: contain;
-  border-radius: 10px;
+  transform: scale(1.14);
+  transform-origin: center;
 }
 
 .topbar.user-navbar .nav-links {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 32px;
   justify-self: center;
 }
 
 .topbar.user-navbar .nav-link {
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 6px 0;
+  border-radius: 0;
   border: 1px solid transparent;
-  color: #475569;
+  color: #1f3657;
   font-size: 14px;
   font-weight: 700;
   background: transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
 }
 
 .topbar.user-navbar .nav-link:hover {
-  background: #eef7ff;
   color: #2563eb;
 }
 
 .topbar.user-navbar .nav-link.active {
-  background: #eef7ff;
   color: #2563eb;
-  border-color: transparent;
-  box-shadow: none;
 }
 
 .topbar.user-navbar .top-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   justify-self: end;
   white-space: nowrap;
-}
-
-.topbar.user-navbar .notification-wrapper {
   position: relative;
-  display: flex;
-  align-items: center;
 }
 
-.topbar.user-navbar .notification-btn {
+.notification-bell-wrap {
+  position: relative;
+}
+
+.notification-bell {
+  position: relative;
   width: 42px;
   height: 42px;
-  border-radius: 12px;
-  border: 1px solid #d8dee7;
-  background: #f4f8fc;
-  color: #2563eb;
-  font-size: 1rem;
-  display: flex;
+  border-radius: 999px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: #f8fbff;
+  border: 1px solid #dbe7f5;
+  color: #1f3657;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
-.topbar.user-navbar .notification-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.12);
+.notification-bell:hover {
+  background: #eaf2ff;
+  border-color: #bfd4f5;
+  color: #2563eb;
+  transform: translateY(-1px);
 }
 
-.topbar.user-navbar .notification-count {
+.notification-bell.active {
+  background: #eaf2ff;
+  border-color: #bfd4f5;
+  color: #2563eb;
+}
+
+.notification-bell i {
+  font-size: 1rem;
+}
+
+.notification-bell__badge {
   position: absolute;
   top: -4px;
-  right: -4px;
+  right: -2px;
   min-width: 18px;
-  padding: 1px 5px;
+  height: 18px;
+  padding: 0 5px;
   border-radius: 999px;
   background: #ef4444;
   color: #fff;
-  font-size: 0.65rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.32);
 }
 
-.topbar.user-navbar .notification-popup {
+.notification-bell-popover {
   position: absolute;
   top: calc(100% + 12px);
   right: 0;
   z-index: 260;
 }
 
-.topbar.user-navbar .notification-popup::before {
-  content: '';
-  position: absolute;
-  top: -8px;
-  right: 18px;
-  width: 16px;
-  height: 16px;
-  background: #ffffff;
-  border-left: 1px solid rgba(15, 23, 42, 0.08);
-  border-top: 1px solid rgba(15, 23, 42, 0.08);
-  transform: rotate(45deg);
+.navbar-back-row {
+  padding-inline: calc(34px + (50vw - 50%));
+  padding-bottom: 12px;
+  display: flex;
+  align-items: center;
 }
 
-.notification-fade-enter-active,
-.notification-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+
+.navbar-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #dbe4ef;
+  color: #1e3a8a;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
-.notification-fade-enter-from,
-.notification-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
+.navbar-back-btn:hover {
+  background: #e7f0ff;
+  border-color: #bfd4f5;
+  transform: translateY(-1px);
+}
+
+.navbar-back-btn i {
+  font-size: 0.9rem;
 }
 
 @media (max-width: 1080px) {
@@ -329,11 +375,14 @@ const requestLogout = () => {
   .topbar.user-navbar .top-actions {
     justify-self: start;
   }
+
+  .navbar-back-row {
+    padding-inline: calc(20px + (50vw - 50%));
+  }
 }
 
 @media (max-width: 640px) {
   .topbar.user-navbar {
-    height: auto;
     padding-block: 12px;
     padding-inline: calc(12px + (50vw - 50%));
   }
@@ -347,22 +396,37 @@ const requestLogout = () => {
     gap: 8px;
   }
 
+  .notification-bell-popover {
+    position: fixed;
+    top: 88px;
+    right: 12px;
+    left: 12px;
+  }
+
   .topbar.user-navbar .brand {
     font-size: 16px;
   }
 
   .topbar.user-navbar .brand-icon {
-    width: 30px;
-    height: 30px;
+    width: 48px;
+    height: 48px;
   }
 
-  .topbar.user-navbar .notification-btn {
-    width: 36px;
-    height: 36px;
+  .topbar.user-navbar .brand-icon-image {
+    width: 44px;
+    height: 44px;
+    transform: scale(1.1);
   }
 
-  .topbar.user-navbar .notification-popup {
-    right: -6px;
+  .navbar-back-row {
+    padding-inline: calc(12px + (50vw - 50%));
+    padding-bottom: 10px;
+  }
+
+  .navbar-back-btn {
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 0.95rem;
   }
 }
 </style>

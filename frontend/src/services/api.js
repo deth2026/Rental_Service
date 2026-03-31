@@ -2,7 +2,7 @@ import axios from 'axios';
 import axiosRetry from 'axios-retry';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'http://127.0.0.1:8000/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
   }
 
   // Add timeout for performance
-  nextConfig.timeout = 10000; // 10s
+nextConfig.timeout = 30000; // 30s
 
   // Let browser set correct multipart boundary automatically.
   if (typeof FormData !== 'undefined' && nextConfig.data instanceof FormData && nextConfig.headers) {
@@ -40,7 +40,7 @@ api.interceptors.request.use((config) => {
 
 // Add automatic retry for network errors
 axiosRetry(api, {
-  retries: 3,
+retries: 5,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: (error) => {
     return error.code === 'ECONNABORTED' || 

@@ -2,17 +2,16 @@
   <div class="motoride-container">
     <UserNavbar
       :nav-items="navItems"
-      :active-label="activeNavLabel"
       :show-fallback-message="false"
       @logout-request="handleLogout"
     />
-
+ 
     <main class="content">
       <p v-if="isLoading" class="action-message">Loading vehicle details...</p>
       <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
 
       <template v-else>
-        <!-- Top Row: Image Vehicle and Booking Details -->
+        <!-- Top Row: Image Vehicle and Booking Details -->   
         <div class="top-row">
           <div class="detail-left">
             <section class="image-vehicle">
@@ -60,6 +59,7 @@
             </section>
           </div>
 
+
           <aside class="booking-details">
             <div class="booking-card-header">
               <div class="header-icon">
@@ -89,7 +89,7 @@
             <div class="price-row">
               <span class="price-label">
                 <i class="fas fa-tag"></i>
-                Daily Rate (per rider)
+                Daily Rate
               </span>
               <span class="price-value">{{ formatCurrency(dailyRate) }}</span>
             </div>
@@ -101,25 +101,14 @@
               <span class="rider-info">{{ riderDetails }}</span>
             </div>
             <div class="price-row price-row-toggle">
-              <label class="toggle-label">
-                <input v-model="includeInsurance" class="toggle-checkbox" type="checkbox" />
-                <span class="toggle-text">
-                  <i class="fas fa-shield-alt"></i>
-                  Insurance fee
-                </span>
-              </label>
-              <span class="price-value" :class="{ muted: !includeInsurance }">{{ formatCurrency(insuranceFee) }}</span>
-            </div>
-            <div class="price-row price-row-toggle">
-              <label class="toggle-label">
-                <input v-model="includeTaxes" class="toggle-checkbox" type="checkbox" />
-                <span class="toggle-text">
-                  <i class="fas fa-receipt"></i>
-                  Taxes & Fees
-                </span>
-              </label>
-              <span class="price-value" :class="{ muted: !includeTaxes }">{{ formatCurrency(taxesFee) }}</span>
-            </div>
+               <label class="toggle-label">
+                 <input v-model="includeInsurance" class="toggle-checkbox" type="checkbox" />
+                 <span class="toggle-text">
+                   <i class="fas fa-shield-alt"></i>
+                   Insurance fee
+                 </span>
+               </label>
+             </div>
             <div class="total-row">
               <span class="total-label">
                 <i class="fas fa-calculator"></i>
@@ -127,11 +116,10 @@
               </span>
               <span class="price-blue">{{ formatCurrency(totalPrice) }}</span>
             </div>
-            <button class="book-btn" @click="showBookingConfirmModal">
-              <i class="fas fa-check-circle"></i>
-              Book This Bike
-            </button>
-            <p class="disclaimer">
+            <button class="book-btn" @click="goToBooking">
+               <i class="fas fa-check-circle"></i>
+               Booking
+             </button>            <p class="disclaimer">
               No payment taken until booking is confirmed
             </p>
           </aside>
@@ -151,6 +139,7 @@
             </div>
           </div>
         </transition>
+
 
         <!-- Middle Section: Name Label and Content Boxes -->
         <div class="middle-section">
@@ -245,6 +234,7 @@
           </div>
         </div>
 
+
         <!-- Bottom Section: Full Width Box -->
         <div class="bottom-section">
           <div class="full-width-box">
@@ -282,141 +272,56 @@
       </template>
     </main>
 
-    <!-- Booking Confirmation Modal -->
-    <div v-if="showBookingConfirm" class="modal-overlay" @click="cancelBooking">
-      <div class="modal-content animate-modal" @click.stop>
-        <div class="modal-header">
-          <div class="modal-icon">
-            <i class="fas fa-calendar-check"></i>
-          </div>
-          <div class="modal-title">
-            <h3>Confirm Your Booking</h3>
-            <p>Please review your booking details</p>
-          </div>
-          <button class="modal-close-btn" @click="cancelBooking">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div class="booking-summary">
-            <div class="summary-item">
-              <div class="summary-icon">
-                <i class="fas fa-motorcycle"></i>
-              </div>
-              <div class="summary-content">
-                <span class="summary-label">Vehicle</span>
-                <span class="summary-value">{{ vehicleName }}</span>
-              </div>
-            </div>
-
-            <div class="summary-item">
-              <div class="summary-icon">
-                <i class="fas fa-store"></i>
-              </div>
-              <div class="summary-content">
-                <span class="summary-label">Shop</span>
-                <span class="summary-value">{{ vehicleShopName }}</span>
-              </div>
-            </div>
-
-            <div class="summary-item">
-              <div class="summary-icon">
-                <i class="fas fa-clock"></i>
-              </div>
-              <div class="summary-content">
-                <span class="summary-label">Duration</span>
-                <span class="summary-value">{{ bookingDurationLabel }}</span>
-              </div>
-            </div>
-
-            <div class="summary-item total-item">
-              <div class="summary-icon">
-                <i class="fas fa-dollar-sign"></i>
-              </div>
-              <div class="summary-content">
-                <span class="summary-label">Total Price</span>
-                <span class="summary-value total-price">{{ formatCurrency(totalPrice) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button class="btn-cancel" @click="cancelBooking" :disabled="isBooking">
-            <i class="fas fa-times"></i>
-            Cancel
-          </button>
-          <button class="btn-confirm" @click="confirmBooking" :disabled="isBooking || !hasValidBookingDuration">
-            <i v-if="isBooking" class="fas fa-spinner fa-spin"></i>
-            <i v-else class="fas fa-check"></i>
-            <span v-if="isBooking">Processing...</span>
-            <span v-else>Confirm Booking</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showBookingSuccess" class="modal-overlay">
-      <div class="success-modal booking-status-modal animate-modal" @click.stop>
-        <div class="booking-status-hero">
-          <div v-if="bookingFlowState === 'processing'" class="booking-loader-wrap" aria-hidden="true">
-            <div class="booking-loader-circle"></div>
-            <div class="booking-loader-core"></div>
-          </div>
-
-          <div v-else class="booking-check-wrap" aria-hidden="true">
-            <svg class="booking-check-svg" viewBox="0 0 120 120" fill="none">
-              <circle class="booking-check-ring" cx="60" cy="60" r="46" />
-              <path class="booking-check-path" d="M38 62l14 14 30-32" />
-            </svg>
-          </div>
-        </div>
-
-        <span class="booking-status-kicker">
-          {{ bookingFlowState === "processing" ? "Processing Booking" : "Booking Confirmed" }}
-        </span>
-        <h3>{{ bookingFlowState === "processing" ? "Please wait a moment" : "Booking Successful" }}</h3>
-        <p class="booking-status-text">
-          {{
-            bookingFlowState === "processing"
-              ? "We are confirming your booking and preparing the final details."
-              : "Your booking was created successfully. Here is a quick summary."
-          }}
-        </p>
-
-        <div v-if="bookingFlowState === 'success'" class="success-booking-card">
-          <div class="success-booking-row">
-            <span>Vehicle</span>
-            <strong>{{ vehicleName }}</strong>
-          </div>
-          <div class="success-booking-row">
-            <span>Booking Date</span>
-            <strong>{{ bookingDateRangeLabel }}</strong>
-          </div>
-          <div class="success-booking-row">
-            <span>Quantity</span>
-            <strong>{{ bookingQuantityLabel }}</strong>
-          </div>
-          <div class="success-booking-row">
-            <span>Total Price</span>
-            <strong class="success-booking-total">{{ formatCurrency(totalPrice) }}</strong>
-          </div>
-        </div>
-
-        <div v-if="bookingFlowState === 'success'" class="success-actions">
-          <button class="success-secondary-btn" @click="goToUserDashboard">
-            Later
-          </button>
-          <button class="success-primary-btn" @click="goToPaymentPage">
-            Pay Now
-          </button>
-        </div>
-      </div>
-    </div>
+    
 
     <!-- Common Footer -->
     <UserFooter class="detail-page-footer" />
+    <!-- Hidden receipt template used to render PDF -->
+    <div id="receipt-root" style="display:none">
+      <div id="receipt" style="width:768px;padding:28px;font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;">
+        <div style="text-align:center;margin-bottom:8px;">
+          <div style="font-size:34px;font-weight:800;color:#0b4fd6">CHONG CHOUL</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">Powered by MVL</div>
+        </div>
+
+        <h2 style="margin-top:14px;margin-bottom:6px">Receipt</h2>
+        <div style="font-size:22px;font-weight:800;margin-bottom:8px">Paid: <span id="receipt-paid-amount"></span></div>
+
+        <div style="display:flex;justify-content:space-between;border-top:1px solid #eee;padding-top:8px;margin-top:8px">
+          <div style="flex:1">
+            <div id="receipt-trip-details" style="font-size:13px;color:#333"></div>
+            <div id="receipt-booking-id" style="font-size:12px;color:#666;margin-top:6px"></div>
+            <div id="receipt-address" style="font-size:12px;color:#666;margin-top:6px"></div>
+          </div>
+          <div style="text-align:right;min-width:180px">
+            <div style="font-size:12px;color:#666">Date / Time</div>
+            <div id="receipt-datetime" style="font-weight:700;color:#111;margin-top:6px"></div>
+            <div style="font-size:12px;color:#666;margin-top:8px">Payment Method</div>
+            <div id="receipt-method" style="font-weight:700;margin-top:6px"></div>
+          </div>
+        </div>
+
+        <table style="width:100%;margin-top:16px;border-collapse:collapse">
+          <tbody>
+            <tr>
+              <td style="padding:6px 0;color:#666">Fare</td>
+              <td style="text-align:right;font-weight:700"><span id="receipt-fare"></span></td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;color:#666">Discount</td>
+              <td style="text-align:right;color:#e53e3e">-<span id="receipt-discount"></span></td>
+            </tr>
+            <tr style="border-top:1px solid #eee">
+              <td style="padding:10px 0;font-weight:800">Total</td>
+              <td style="text-align:right;font-weight:800"><span id="receipt-total"></span></td>
+            </tr>
+          </tbody>
+        </table>
+
+
+        <div style="margin-top:18px;font-size:12px;color:#666">Support: supportkh@tada.global</div>
+      </div>
+    </div>
     <footer v-if="false" class="site-footer">
       <div class="footer-wrap">
         <div class="footer-top">
@@ -433,6 +338,7 @@
             </div>
             <div class="footer-social-label">Follow Us</div>
           </div>
+
 
           <div class="footer-nav">
             <div class="footer-nav-links">
@@ -496,16 +402,15 @@ const router = useRouter();
 const route = useRoute();
 
 const navItems = [
-  { label: "Home", route: "/view_shop" },
-  { label: "My Booking", route: "/my-bookings" },
-  { label: "Promotions", route: "/promotions" },
+  { label: "My Bookings", route: "/my-bookings" },
+  { label: "Profile", route: "/user/profile" },
 ];
 const actionMessage = ref("");
 const avatarLoadFailed = ref(false);
 const currentUser = computed(() => userService.getCurrentUser());
 const activeNavLabel = computed(() => {
   const matchedItem = navItems.find((item) => item.route && route.path.startsWith(item.route));
-  return matchedItem?.label || "Home";
+  return matchedItem?.label || "My Bookings";
 });
 
 // Booking confirmation modal
@@ -515,6 +420,7 @@ const isBooking = ref(false);
 const createdBookingRecordId = ref(null);
 const bookingFlowState = ref("idle");
 let bookingFlowTimer = null;
+
 
 const normalizeAvatarUrl = (url) => {
   if (!url) return "";
@@ -562,6 +468,7 @@ const closeBookingSuccessModal = () => {
   refreshAvailableVehicles();
 };
 
+
 // Emit event to refresh available vehicles in parent component
 const emit = defineEmits(['refresh-bookings'])
 
@@ -604,10 +511,6 @@ const goToUserDashboard = () => {
 const goToPaymentPage = () => {
   const currentVehicleId = route.params.id || vehicle.value?.id || 1;
   const query = {
-    insuranceFee: String(insuranceAmount.value),
-    taxesFee: String(taxesAmount.value),
-    dailyRate: String(dailyRate.value || 0),
-    totalPrice: String(totalPrice.value || 0),
     includeInsurance: includeInsurance.value ? "1" : "0",
     includeTaxes: includeTaxes.value ? "1" : "0",
     totalDays: String(bookingDuration.value),
@@ -652,6 +555,7 @@ const confirmBooking = async () => {
     return;
   }
 
+
   isBooking.value = true;
   createdBookingRecordId.value = null;
   showBookingConfirm.value = false;
@@ -668,8 +572,6 @@ const confirmBooking = async () => {
       total_days: bookingDuration.value,
       rider_details: riderDetails.value || null,
       daily_rate: Number(dailyRate.value || 0),
-      insurance_fee: includeInsurance.value ? Number(insuranceFee.value) : 0,
-      taxes_fee: includeTaxes.value ? Number(taxesFee.value) : 0,
       total_price: Number(totalPrice.value || 0),
       status: 'pending',
       deposit_amount: 0,
@@ -686,6 +588,14 @@ const confirmBooking = async () => {
       await waitForBookingFlow(remainingSpinnerTime);
     }
     bookingFlowState.value = "success";
+    // Generate and download receipt, then show bookings history
+    try {
+      await downloadReceiptAndShowHistory(record || {});
+    } catch (err) {
+      // If receipt generation fails, still continue to show success
+      console.error('Receipt generation failed', err);
+    }
+
 
   } catch (error) {
     closeBookingSuccessModal();
@@ -704,6 +614,95 @@ const confirmBooking = async () => {
     isBooking.value = false;
   }
 };
+
+// Helpers for receipt generation
+const loadExternalScript = (src) =>
+  new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) return existing.onload ? resolve() : resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = (e) => reject(e);
+    document.head.appendChild(s);
+  });
+
+const fillReceiptFields = (data) => {
+  const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KHR', maximumFractionDigits: 0 });
+  document.getElementById('receipt-paid-amount').textContent = data.paid_amount_text || fmt.format(data.total_price || 0);
+  document.getElementById('receipt-fare').textContent = data.fare_text || fmt.format(data.fare || data.total_price || 0);
+  document.getElementById('receipt-discount').textContent = data.discount_text || fmt.format(data.discount || 0);
+  document.getElementById('receipt-total').textContent = data.total_text || fmt.format(data.total_price || 0);
+  document.getElementById('receipt-datetime').textContent = data.datetime || new Date().toLocaleString();
+  document.getElementById('receipt-method').textContent = data.method || 'Cash';
+  document.getElementById('receipt-booking-id').textContent = 'Booking ID: ' + (data.booking_id || '—');
+  document.getElementById('receipt-address').textContent = data.address || '';
+  document.getElementById('receipt-trip-details').textContent = data.trip || '';
+};
+
+const openPrintWindow = (html) => {
+  const w = window.open('', '_blank');
+  if (!w) throw new Error('Unable to open print window');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  // Delay to allow load, then print
+  setTimeout(() => {
+    w.print();
+  }, 500);
+};
+
+
+const renderReceiptToPdf = async (filename = 'receipt.pdf') => {
+  // Try to load html2canvas and jspdf; fallback to print window
+  try {
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    // @ts-ignore
+    const html2canvas = window.html2canvas || window.HTML2CANVAS;
+    // @ts-ignore
+    const { jsPDF } = window.jspdf || window.jspPDF || window.jspdf;
+    const el = document.getElementById('receipt');
+    if (!el || !html2canvas || !jsPDF) throw new Error('Missing libs');
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const pdf = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+    pdf.save(filename);
+    return true;
+  } catch (e) {
+    // fallback: open printable window so user can Save as PDF
+    const el = document.getElementById('receipt');
+    if (!el) throw e;
+    openPrintWindow(el.outerHTML);
+    return false;
+  }
+};
+
+const downloadReceiptAndShowHistory = async (bookingRecord = {}) => {
+  // Prepare data for receipt
+  const data = {
+    paid_amount_text: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KHR', maximumFractionDigits: 0 }).format(bookingRecord.total_price || totalPrice.value || 0),
+    fare_text: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KHR', maximumFractionDigits: 0 }).format(bookingRecord.daily_rate || dailyRate.value || 0),
+    discount_text: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KHR', maximumFractionDigits: 0 }).format(bookingRecord.discount || 0),
+    total_text: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'KHR', maximumFractionDigits: 0 }).format(bookingRecord.total_price || totalPrice.value || 0),
+    datetime: bookingRecord.created_at || new Date().toLocaleString(),
+    method: bookingRecord.payment_method || 'Cash',
+    booking_id: bookingRecord.id || createdBookingRecordId.value || '',
+    address: bookingRecord.address || vehicle.value?.address || vehicleShopName.value || '',
+    trip: `${vehicleName.value} • ${bookingDurationLabel.value}`,
+  };
+
+  fillReceiptFields(data);
+  // file name using booking id if available
+  const filename = `receipt_${data.booking_id || Date.now()}.pdf`;
+  await renderReceiptToPdf(filename);
+  // After download/showing receipt, navigate to My Bookings
+  router.push('/my-bookings');
+};
+
+// Expose helper so other pages (payment, QR flow) can trigger receipt generation
+try { window.generateBookingReceipt = downloadReceiptAndShowHistory; } catch (e) { /* ignore */ }
 
 onBeforeUnmount(() => {
   clearBookingFlowTimer();
@@ -724,14 +723,14 @@ const vehicle = ref(null);
 const shopNamesById = ref({});
 const isLoading = ref(false);
 const loadingError = ref("");
-const insuranceFee = ref(30);
-const taxesFee = ref(0);
 const includeInsurance = ref(false);
 const includeTaxes = ref(false);
 const riderDetails = ref("1 Rider");
 const bookingDuration = ref(1);
 const currentImageIndex = ref(0);
 const isFavorite = ref(false);
+const insuranceAmount = ref(0);
+const taxesAmount = ref(0);
 const vehicleId = computed(() => {
   const value = Number(route.params.id);
   return Number.isFinite(value) && value > 0 ? value : null;
@@ -745,6 +744,7 @@ const getVehicleName = (item) => {
     .filter((part) => String(part || "").trim())
     .join(" ")
     .trim();
+
 
   return fallbackName;
 };
@@ -809,6 +809,7 @@ const bookingEndDateLabel = computed(() => {
   const totalDays = Number(bookingDuration.value || 0);
   if (!start || totalDays <= 0) return "";
 
+
   const end = new Date(start);
   end.setDate(end.getDate() + totalDays);
   return end.toLocaleDateString("en-US", {
@@ -827,22 +828,26 @@ const bookingDateRangeLabel = computed(() => {
 
 const bookingQuantityLabel = computed(() => "1 Vehicle");
 
-const dailyRate = computed(() => Number(vehicle.value?.price_per_day || 0));
+const dailyRate = computed(() => Number(vehicle.value?.price_per_day ?? vehicle.value?.price ?? 0));
 const riderCount = computed(() => {
   return parseQuantityValue(riderDetails.value, 1);
 });
-// Price per day for the vehicle (not multiplied by riders)
 const baseAmount = computed(() => dailyRate.value * bookingDuration.value);
 
-const insuranceAmount = computed(() =>
-  includeInsurance.value ? Number(insuranceFee.value || 0) : 0,
-);
 
-const taxesAmount = computed(() =>
-  includeTaxes.value ? Number(taxesFee.value || 0) : 0,
-);
 
-const totalPrice = computed(() => baseAmount.value + insuranceAmount.value + taxesAmount.value);
+
+
+const totalPrice = computed(() => {
+  let total = baseAmount.value;
+  if (includeInsurance.value) {
+    total += insuranceAmount.value;
+  }
+  if (includeTaxes.value) {
+    total += taxesAmount.value;
+  }
+  return total;
+});
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
@@ -873,6 +878,7 @@ const loadVehicleDetail = async () => {
   }
   isLoading.value = true;
   loadingError.value = "";
+
 
   try {
     // Prefer fetching the specific vehicle by ID to avoid loading large lists
@@ -917,50 +923,45 @@ const loadVehicleDetail = async () => {
 };
 
 // Watch for vehicle data changes and update fee values from backend
-watch(
-  () => vehicle.value,
-  (newVehicle) => {
-    if (newVehicle) {
-      // Update insurance fee from backend data
-      if (newVehicle.insurance_fee !== undefined && newVehicle.insurance_fee !== null) {
-        insuranceFee.value = Number(newVehicle.insurance_fee);
+  watch(
+    () => vehicle.value,
+    (newVehicle) => {
+      if (newVehicle) {
+        // Update insurance fee from backend data
+        if (newVehicle.insurance_fee !== undefined) {
+          insuranceAmount.value = Number(newVehicle.insurance_fee) || 0;
+        }
+        // Update taxes fee from backend data
+        if (newVehicle.tax_fee !== undefined) {
+          taxesAmount.value = Number(newVehicle.tax_fee) || 0;
+        }
+        // Update rider details from backend data if available
+        if (newVehicle.rider_details) {
+          riderDetails.value = newVehicle.rider_details;
+        }
       }
-      // Update taxes fee from backend data
-      if (newVehicle.taxes_fee !== undefined && newVehicle.taxes_fee !== null) {
-        taxesFee.value = Number(newVehicle.taxes_fee);
-      }
-      // Update rider details from backend data if available
-      if (newVehicle.rider_details) {
-        riderDetails.value = newVehicle.rider_details;
-      }
-    }
-  },
-  { immediate: true }
-);
+    },
+    { immediate: true }
+  );
 
 const goToBooking = () => {
-  const vehicleId = route.params.id;
-  const insuranceValue = Number(insuranceAmount.value);
-  const query = {};
-  if (Number.isFinite(insuranceValue)) {
-    query.insuranceFee = insuranceValue;
-  }
-  if (typeof includeInsurance.value === "boolean") {
-    query.includeInsurance = includeInsurance.value ? "1" : "0";
-  }
-  if (typeof includeTaxes.value === "boolean") {
-    query.includeTaxes = includeTaxes.value ? "1" : "0";
-  }
-  if (riderDetails.value) {
-    query.riderDetails = riderDetails.value;
-  }
+   const vehicleId = route.params.id;
+   const query = {};
 
-  if (vehicleId) {
-    router.push({ name: "booking", params: { id: vehicleId }, query });
-  } else {
-    router.push({ name: "booking", params: { id: 1 }, query }); // Fallback ID
-  }
-};
+   if (typeof includeInsurance.value === "boolean") {
+     query.includeInsurance = includeInsurance.value ? "1" : "0";
+   }
+   if (riderDetails.value) {
+     query.riderDetails = riderDetails.value;
+   }
+
+   if (vehicleId) {
+     router.push({ name: "booking", params: { id: vehicleId }, query });
+   } else {
+     router.push({ name: "booking", params: { id: 1 }, query }); // Fallback ID
+   }
+ };
+
 
 // New UX enhancement functions
 const getNavIcon = (item) => {
@@ -1032,6 +1033,7 @@ onMounted(() => {
   color: inherit;
   cursor: pointer;
 }
+
 
 .topbar {
   position: sticky;
@@ -1199,6 +1201,7 @@ onMounted(() => {
   transform: scale(1.02);
 }
 
+
 .image-vehicle .gallery-controls {
   position: absolute;
   bottom: 2rem;
@@ -1279,6 +1282,7 @@ onMounted(() => {
 .fade-leave-to {
   opacity: 0;
 }
+
 
 /* Enhanced Image Overlay */
 .image-overlay {
@@ -1450,6 +1454,7 @@ onMounted(() => {
   color: #1a1d23;
 }
 
+
 /* Enhanced Feature Items */
 .feature-item {
   display: flex;
@@ -1531,6 +1536,7 @@ onMounted(() => {
   background: #e0f2fe;
   transform: translateY(-1px);
 }
+
 
 .highlight-item i {
   color: #0ea5e9;
@@ -1674,6 +1680,7 @@ onMounted(() => {
   border-radius: 2px;
 }
 
+
 .booking-card-header {
   padding: 10px 10px 18px;
   border-bottom: 1px solid #eef2f7;
@@ -1766,6 +1773,7 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 10px;
 }
+
 
 .chip {
   display: inline-flex;
@@ -1920,6 +1928,7 @@ onMounted(() => {
   gap: 2rem;
 }
 
+
 .horizontal-box {
   background: white;
   border: 1px solid #e2e8f0;
@@ -2002,6 +2011,7 @@ onMounted(() => {
   letter-spacing: 0.05em;
   box-shadow: 0 4px 12px rgba(29, 78, 216, 0.3);
 }
+
 
 .spec-cards {
   display: grid;
@@ -2166,6 +2176,7 @@ onMounted(() => {
   border-color: #1d4ed8;
 }
 
+
 .price-blue {
   background: linear-gradient(135deg, #1d4ed8 0%, #1d4ed8 100%);
   -webkit-background-clip: text;
@@ -2235,6 +2246,7 @@ onMounted(() => {
   position: relative;
   padding-left: 1rem;
 }
+
 
 .description h3::before,
 .rental-terms h3::before {
@@ -2401,6 +2413,7 @@ onMounted(() => {
   text-align: center;
 }
 
+
 .footer-about p {
   margin: 10px auto 0;
   max-width: 520px;
@@ -2483,6 +2496,7 @@ onMounted(() => {
   gap: 16px;
   flex-wrap: wrap;
 }
+
 
 .footer-bottom-links span {
   color: #475569;
@@ -2658,6 +2672,7 @@ onMounted(() => {
   animation: slideUp 0.3s ease;
 }
 
+
 .success-modal {
   width: 100%;
   max-width: 440px;
@@ -2716,6 +2731,7 @@ onMounted(() => {
   border-radius: 50%;
   background: radial-gradient(circle at top, rgba(187, 247, 208, 0.7), rgba(220, 252, 231, 0.2));
 }
+
 
 .booking-check-svg {
   width: 112px;
@@ -2867,6 +2883,7 @@ onMounted(() => {
   }
 }
 
+
 @keyframes bookingCircleReveal {
   to {
     stroke-dashoffset: 0;
@@ -2950,6 +2967,7 @@ onMounted(() => {
   transform: scale(1.05);
 }
 
+
 .modal-body {
   padding: 24px;
 }
@@ -3027,7 +3045,15 @@ onMounted(() => {
   color: #1d4ed8;
 }
 
-
+.booking-notice {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
 
 .notice-icon {
   width: 32px;
@@ -3100,6 +3126,7 @@ onMounted(() => {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(29, 78, 216, 0.4);
 }
+
 
 .btn-cancel:disabled,
 .btn-confirm:disabled {
@@ -3190,6 +3217,7 @@ onMounted(() => {
     width: 92px;
     height: 92px;
   }
+
 
   .booking-loader-core {
     width: 62px;
