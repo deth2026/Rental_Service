@@ -557,6 +557,39 @@
 .status-completed { background: #ecfdf5; color: #059669; }
 .status-cancelled { background: #fff1f2; color: #be123c; }
 
+.payment-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  border: 1px solid transparent;
+  background: #f8fafc;
+  color: #475569;
+  margin-left: 6px;
+}
+
+.payment-pill--paid {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.payment-pill--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.payment-pill--failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.payment-pill--refunded {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
 .meta-label {
   color: #3f618a;
   font-weight: 500;
@@ -565,14 +598,22 @@
 .details-btn {
   margin-top: 0;
   align-self: auto;
-  border: none;
-  border-radius: 12px;
-  background: #2f6eea;
-  color: #fff;
+  border-radius: 999px;
+  padding: 8px 18px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  color: #1d2b4a;
   font-size: 0.95rem;
   font-weight: 700;
-  padding: 8px 16px;
   cursor: pointer;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.details-btn:hover {
+  background: #eef2ff;
+  transform: translateY(-1px);
+  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.18);
 }
 
 

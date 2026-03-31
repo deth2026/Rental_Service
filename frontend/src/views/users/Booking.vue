@@ -440,6 +440,7 @@ import "../../assets/user/booking.css";
 const router = useRouter();
 const route = useRoute();
 const userNavItems = [
+  { label: "Home", route: "/view_shop" },
   { label: "My Bookings", route: "/my-bookings" },
   { label: "Profile", route: "/user/profile" },
 ];
@@ -975,7 +976,6 @@ const validateDates = async () => {
   formatPeriod();
 };
 
-<<<<<<< HEAD
 const formatBackendValidationError = (error) => {
   const errors = error?.response?.data?.errors
   if (errors && typeof errors === 'object') {
@@ -989,30 +989,6 @@ const formatBackendValidationError = (error) => {
       } else if (typeof entry === 'string' && entry.trim()) {
         return entry
       }
-=======
-const applyCoupon = async () => {
-  if (!promoCode.value) {
-    promoMessage.value = "Please enter a promo code.";
-    promoSuccess.value = false;
-    return;
-  }
-
-  try {
-    const shopForCoupon = vehicle.value?.shop_id ?? null;
-    const response = await couponApi.validate(promoCode.value, totalAmount.value, shopForCoupon);
-    const data = response.data;
-    
-    if (data.valid) {
-      promoCouponId.value = data.coupon_id;
-      promoDiscount.value = Number(data.discount_amount || 0);
-      promoSuccess.value = true;
-      promoMessage.value = `Coupon applied! You save ${promoDiscount.value.toFixed(2)}`;
-    } else {
-      promoCouponId.value = null;
-      promoDiscount.value = 0;
-      promoSuccess.value = false;
-      promoMessage.value = data.message || "Invalid promo code.";
->>>>>>> 2819421b0fc6e6719a8fc7601c9a85d6905db0b4
     }
   }
   return null
@@ -1055,13 +1031,14 @@ const saveBookingToDatabase = async (bookingData) => {
     const recordId = record?.id;
     const nextBookingId = recordId ? `BK${recordId}` : bookingData?.bookingId;
 
+    const paymentStatusValue = bookingData?.paymentStatus || "pending";
     const paymentPayload = {
       booking_id: recordId,
       transaction_id: transactionId.value || paymentId.value,
       amount: totalAmount.value,
       payment_method: bookingData?.paymentMethod || method.value,
-      payment_status: bookingData?.status === "confirmed" ? "paid" : "pending",
-      paid_at: bookingData?.status === "confirmed" ? new Date().toISOString() : null,
+      payment_status: paymentStatusValue,
+      paid_at: paymentStatusValue === "paid" ? new Date().toISOString() : null,
     };
 
     await api.post("/payments", paymentPayload);
@@ -1082,7 +1059,7 @@ const saveBookingToDatabase = async (bookingData) => {
 };
 
 
-const buildBookingData = (paymentMethod, status) => ({
+const buildBookingData = (paymentMethod, status, paymentStatus = 'pending') => ({
   bookingId: bookingId.value,
   transactionId: transactionId.value,
   paymentId: paymentId.value,
@@ -1100,6 +1077,7 @@ const buildBookingData = (paymentMethod, status) => ({
   },
   paymentMethod,
   status,
+  paymentStatus,
   createdAt: new Date().toISOString(),
 });
 
@@ -1125,7 +1103,7 @@ const handlePayment = async () => {
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1200));
-    const result = await saveBookingToDatabase(buildBookingData(method.value, "confirmed"));
+    const result = await saveBookingToDatabase(buildBookingData(method.value, "pending", "paid"));
 
     if (result.success) {
       bookingId.value = result.bookingId;
@@ -1302,7 +1280,6 @@ watch(selectedShopQrUrl, (url) => {
   }
 });
 initDates();
-<<<<<<< HEAD
 
 onBeforeUnmount(() => {
   if (successRedirectTimer) {
@@ -1310,6 +1287,4 @@ onBeforeUnmount(() => {
     successRedirectTimer = null;
   }
 });
-=======
->>>>>>> 2819421b0fc6e6719a8fc7601c9a85d6905db0b4
 </script>

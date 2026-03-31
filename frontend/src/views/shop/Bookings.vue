@@ -186,6 +186,7 @@ const fetchShopBookings = async () => {
 
 const updateBookingStatus = async (bookingId, newStatus, extra = {}) => {
   processing.value = true
+  error.value = null
   try {
     const token = getStoredToken()
     const headers = { 
@@ -203,7 +204,9 @@ const updateBookingStatus = async (bookingId, newStatus, extra = {}) => {
     })
     
     if (!response.ok) {
-      throw new Error('Failed to update booking')
+      const data = await response.json().catch(() => ({}))
+      const errorMsg = data.message || data.error || `Failed to update booking (${response.status})`
+      throw new Error(errorMsg)
     }
     
     // Refresh bookings after update

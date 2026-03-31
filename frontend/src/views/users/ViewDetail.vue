@@ -402,6 +402,7 @@ const router = useRouter();
 const route = useRoute();
 
 const navItems = [
+  { label: "Home", route: "/view_shop" },
   { label: "My Bookings", route: "/my-bookings" },
   { label: "Profile", route: "/user/profile" },
 ];

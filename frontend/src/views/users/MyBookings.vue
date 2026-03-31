@@ -10,6 +10,7 @@ const router = useRouter()
 const route = useRoute()
 
 const navItems = [
+  { label: 'Home', route: '/view_shop' },
   { label: 'My Bookings', route: '/my-bookings' },
   { label: 'Profile', route: '/user/profile' }
 ]
@@ -249,6 +250,37 @@ const getStatusLabel = (status) => {
     cancelled: 'Cancelled',
   }
   return labels[status?.toLowerCase()] || 'Pending'
+}
+
+const paymentStatusLabelMap = {
+  paid: 'Paid',
+  completed: 'Paid',
+  settled: 'Paid',
+  captured: 'Paid',
+  pending: 'Unpaid',
+  failed: 'Failed',
+  refunded: 'Refunded'
+}
+
+const normalizePaymentStatus = (status) => (status || '').toString().trim().toLowerCase()
+
+const getPaymentStatusLabel = (status) => {
+  const normalized = normalizePaymentStatus(status)
+  return paymentStatusLabelMap[normalized] || 'Unpaid'
+}
+
+const getPaymentStatusClass = (status) => {
+  const normalized = normalizePaymentStatus(status)
+  if (['paid', 'completed', 'settled', 'captured'].includes(normalized)) {
+    return 'payment-pill--paid'
+  }
+  if (normalized === 'failed') {
+    return 'payment-pill--failed'
+  }
+  if (normalized === 'refunded') {
+    return 'payment-pill--refunded'
+  }
+  return 'payment-pill--pending'
 }
 
 const formatDate = (dateStr) => {
@@ -720,6 +752,12 @@ const skipRating = () => {
             <span class="meta-label">Date:</span>
             {{ formatDate(booking.start_date) }} to {{ formatDate(booking.end_date) }}
             ({{ getTotalDays(booking.start_date, booking.end_date) }} days)
+          </p>
+          <p>
+            <span class="meta-label">Payment:</span>
+            <span class="payment-pill" :class="getPaymentStatusClass(booking.payment_status)">
+              {{ getPaymentStatusLabel(booking.payment_status) }}
+            </span>
           </p>
         </div>
 

@@ -12,6 +12,7 @@ import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelection
 const route = useRoute()
 const router = useRouter()
 const navItems = [
+  { label: 'Home', route: '/view_shop' },
   { label: 'My Bookings', route: '/my-bookings' },
   { label: 'Profile', route: '/user/profile' }
 ]

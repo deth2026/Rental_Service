@@ -124,10 +124,10 @@ onBeforeUnmount(() => {
 
 <template>
   <header class="user-navbar-shell">
-    <div class="topbar user-navbar">
+    <div class="user-navbar">
       <div class="brand">
         <div class="brand-icon">
-          <img src="/images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
+          <img src="/Images/logo-removebg.png" alt="Chong Choul logo" class="brand-icon-image" />
         </div>
         <span>Chong Choul</span>
       </div>
@@ -179,43 +179,36 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .user-navbar-shell {
-  width: auto;
-  margin-inline: calc(50% - 50vw);
   position: sticky;
   top: 0;
   z-index: 220;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  background: #f9fbff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
 }
 
-.topbar.user-navbar {
+.user-navbar {
   min-height: 80px;
-  padding-inline: calc(34px + (50vw - 50%));
-  padding-block: 12px;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 36px;
-  box-sizing: border-box;
-}
-
-.topbar.user-navbar .brand {
+  padding: 0 44px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  font-size: 20px;
+  justify-content: space-between;
+  gap: 36px;
+}
+
+.user-navbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 22px;
   font-weight: 800;
   color: #245bd4;
-  white-space: nowrap;
+  text-transform: none;
 }
 
-.topbar.user-navbar .brand span {
-  color: #245bd4;
-}
-
-.topbar.user-navbar .brand-icon {
-  width: 62px;
-  height: 62px;
+.user-navbar .brand-icon {
+  width: 60px;
+  height: 60px;
   border-radius: 0;
   background: transparent;
   display: grid;
@@ -223,49 +216,42 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.topbar.user-navbar .brand-icon-image {
-  width: 58px;
-  height: 58px;
+.user-navbar .brand-icon-image {
+  width: 56px;
+  height: 56px;
   object-fit: contain;
-  transform: scale(1.14);
-  transform-origin: center;
 }
 
-.topbar.user-navbar .nav-links {
+.user-navbar .nav-links {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 32px;
-  justify-self: center;
+  gap: 28px;
 }
 
-.topbar.user-navbar .nav-link {
-  padding: 6px 0;
-  border-radius: 0;
-  border: 1px solid transparent;
+.user-navbar .nav-link {
+  padding: 12px 0;
   color: #1f3657;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   background: transparent;
   cursor: pointer;
   transition: color 0.2s ease;
+  border: none;
+  outline: none;
 }
 
-.topbar.user-navbar .nav-link:hover {
+.user-navbar .nav-link.active {
   color: #2563eb;
 }
 
-.topbar.user-navbar .nav-link.active {
+.user-navbar .nav-link:hover {
   color: #2563eb;
 }
 
-.topbar.user-navbar .top-actions {
+.user-navbar .top-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-  justify-self: end;
-  white-space: nowrap;
-  position: relative;
+  gap: 16px;
 }
 
 .notification-bell-wrap {
@@ -362,38 +348,40 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1080px) {
-  .topbar.user-navbar {
-    grid-template-columns: 1fr;
-    padding-inline: calc(20px + (50vw - 50%));
-    gap: 10px;
+  .user-navbar {
+    flex-direction: column;
+    padding: 12px 28px;
+    gap: 14px;
   }
 
-  .topbar.user-navbar .nav-links {
-    justify-self: start;
+  .user-navbar .nav-links {
+    width: 100%;
+    justify-content: center;
+    gap: 18px;
   }
 
-  .topbar.user-navbar .top-actions {
-    justify-self: start;
+  .user-navbar .top-actions {
+    justify-content: center;
   }
 
   .navbar-back-row {
-    padding-inline: calc(20px + (50vw - 50%));
+    padding-inline: 28px;
   }
 }
 
 @media (max-width: 640px) {
-  .topbar.user-navbar {
-    padding-block: 12px;
-    padding-inline: calc(12px + (50vw - 50%));
+  .user-navbar {
+    padding: 12px 18px;
   }
 
-  .topbar.user-navbar .nav-links {
+  .user-navbar .nav-links {
     flex-wrap: wrap;
-    justify-content: flex-start;
+    justify-content: center;
+    gap: 12px;
   }
 
-  .topbar.user-navbar .top-actions {
-    gap: 8px;
+  .user-navbar .top-actions {
+    gap: 10px;
   }
 
   .notification-bell-popover {
@@ -403,23 +391,23 @@ onBeforeUnmount(() => {
     left: 12px;
   }
 
-  .topbar.user-navbar .brand {
+  .user-navbar .brand {
     font-size: 16px;
   }
 
-  .topbar.user-navbar .brand-icon {
+  .user-navbar .brand-icon {
     width: 48px;
     height: 48px;
   }
 
-  .topbar.user-navbar .brand-icon-image {
+  .user-navbar .brand-icon-image {
     width: 44px;
     height: 44px;
     transform: scale(1.1);
   }
 
   .navbar-back-row {
-    padding-inline: calc(12px + (50vw - 50%));
+    padding-inline: 18px;
     padding-bottom: 10px;
   }
 

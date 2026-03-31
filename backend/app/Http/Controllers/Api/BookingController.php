@@ -183,24 +183,33 @@ class BookingController extends Controller
     {
         $this->prepareBookingPayload($request, $booking);
 
-        $validated = $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
-            'vehicle_id' => 'required|integer|exists:vehicles,id',
+        // Check if this is a status-only update
+        $isStatusUpdate = $booking !== null && 
+            $request->has('status') && 
+            count($request->all()) === 1;
+
+        $rules = [
+            'user_id' => $isStatusUpdate ? 'sometimes|integer|exists:users,id' : 'required|integer|exists:users,id',
+            'vehicle_id' => $isStatusUpdate ? 'sometimes|integer|exists:vehicles,id' : 'required|integer|exists:vehicles,id',
             'shop_id' => 'nullable|integer',
             'coupon_id' => 'nullable|integer',
-            'start_date' => 'required|date',
-            'total_days' => 'required|integer|min:1',
+            'start_date' => $isStatusUpdate ? 'nullable|date' : 'required|date',
+            'total_days' => $isStatusUpdate ? 'nullable|integer|min:1' : 'required|integer|min:1',
             'rider_details' => 'nullable|string|max:255',
             'daily_rate' => 'nullable|numeric|min:0',
             'insurance_fee' => 'nullable|numeric|min:0',
             'taxes_fee' => 'nullable|numeric|min:0',
-            'total_price' => 'required|numeric|min:0',
+            'total_price' => $isStatusUpdate ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             'status' => 'nullable|string|max:50',
             'deposit_amount' => 'nullable|numeric|min:0',
             'deposit_status' => 'nullable|string|max:50',
-        ]);
+        ];
 
-        $this->validateVehicleAvailability($validated, $booking);
+        $validated = $request->validate($rules);
+
+        if (!$isStatusUpdate) {
+            $this->validateVehicleAvailability($validated, $booking);
+        }
 
         return $validated;
     }
@@ -253,7 +262,7 @@ class BookingController extends Controller
             }
             
             $bookings = Booking::where('user_id', $user->id)
-                ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs', 'rating'])
+            ->with(['vehicle', 'vehicle.shop', 'shop', 'bookingStatusLogs', 'rating', 'payment'])
                 ->orderBy('created_at', 'desc')
                 ->get();
             
@@ -301,6 +310,8 @@ class BookingController extends Controller
                     'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
                     'total_price' => $booking->total_price,
                     'status' => $booking->status,
+                    'payment_status' => $booking->payment?->payment_status ?? 'pending',
+                    'payment_method' => $booking->payment?->payment_method ?? null,
                     'is_completed' => $booking->status === 'completed' || ($booking->bookingStatusLogs && $booking->bookingStatusLogs->contains('status', 'completed')),
                     'completed_at' => $this->getCompletedAt($booking),
                     'image' => $vehicleImage,
@@ -526,11 +537,9 @@ $bookings = Booking::whereIn('shop_id', $shops)
                 'status' => $newStatus,
                 'changed_at' => now()
             ]);
-        }
-        
-        // Send notification when booking is completed
-        if ($oldStatus !== 'completed' && $newStatus === 'completed') {
-            NotificationService::bookingStatusChanged($booking, 'completed');
+            
+            // Send notification for all status changes
+            NotificationService::bookingStatusChanged($booking, $newStatus);
         }
 
         return response()->json($booking->fresh());
