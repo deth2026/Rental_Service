@@ -29,12 +29,15 @@ const vehicleError = ref(null)
 const fetchFeedback = async () => {
   try {
     loading.value = true
-    const response = await feedbackApi.getAll()
+    // Pass shop_id if available
+    const params = props.shopId ? { shop_id: props.shopId } : {}
+    const response = await feedbackApi.getAll(params)
     const data = response.data.data || response.data || []
     
     // Map database fields to expected format
     feedback.value = data.map(f => ({
       id: f.id,
+      shop_id: f.shop_id,
       customer: f.user_name || f.user_id || 'Anonymous',
       customerProfilePicture: f.user_profile_picture || null,
       date: f.created_at ? new Date(f.created_at).toLocaleDateString('en-GB') : '',

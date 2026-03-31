@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ShopContext;
 use App\Http\Controllers\Controller;
 use App\Models\Message;
 use App\Models\NotificationRecord;
 use App\Models\Shop;
 use App\Models\User;
 use App\Services\NotificationService;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class NotificationController extends Controller
 {
+    use ShopContext;
+
     public function index(Request $request)
     {
         if (!Schema::hasTable('notifications')) {
@@ -22,6 +25,10 @@ class NotificationController extends Controller
         }
 
         $user = $request->user();
+        $shopId = $this->requireShopId($request);
+        if (!$shopId) {
+            return response()->json([]);
+        }
         $query = NotificationRecord::with([
             'user:id,name,email,profile_picture,img_url',
             'related' => fn (MorphTo $relation) => $relation->morphWith([
@@ -40,7 +47,11 @@ class NotificationController extends Controller
             });
         }
 
-        $shopId = $request->query('shop_id');
+        $userShopIds = $this->getShopIdsFromUser($request);
+        if (!empty($userShopIds) && !in_array($shopId, $userShopIds)) {
+            return response()->json([]);
+        }
+
         if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
             $query->where('shop_id', $shopId);
         }
@@ -72,14 +83,18 @@ class NotificationController extends Controller
         }
 
         $user = $request->user();
+        $shopId = $this->requireShopId($request);
+        if (!$shopId) {
+            return response()->json(['updated' => 0]);
+        }
+
         $query = NotificationRecord::where(function ($builder) use ($user) {
             $builder->where('user_id', $user->id);
             if ($user->role) {
                 $builder->orWhere('role', $user->role);
             }
         });
-        $shopId = $request->input('shop_id');
-        if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
+        if (Schema::hasColumn('notifications', 'shop_id')) {
             $query->where('shop_id', $shopId);
         }
         $updated = $query->update(['is_read' => true]);

@@ -128,7 +128,11 @@ export const couponApi = {
 
 // Feedback API calls
 export const feedbackApi = {
-  getAll: () => api.get('/feedback'),
+  getAll: (params = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    const url = queryString ? `/feedback?${queryString}` : '/feedback';
+    return api.get(url);
+  },
   getById: (id) => api.get(`/feedback/${id}`),
   create: (data) => api.post('/feedback', data),
   update: (id, data) => api.put(`/feedback/${id}`, data),

@@ -514,40 +514,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section class="admin-page financial-page">
-    <header class="page-head clean-head">
-      <h1 class="page-title">Admin Process Payouts</h1>
-      <button
-        type="button"
-        class="btn btn-primary"
-        :disabled="isProcessingAll || !payableRows.length"
-        @click="processAll"
-      >
-        {{ isProcessingAll ? 'Processing...' : 'Process All Pending Payouts' }}
-      </button>
-    </header>
-
-    <section class="card category-overview">
-      <div class="category-metric-grid">
-        <button
-          v-for="card in categorySummaryCards"
-          :key="card.key"
-          type="button"
-          class="metric-card"
-          :class="{ active: card.active }"
-          @click="setCategoryFilter(card.key)"
-        >
-          <span class="metric-title">
-            <span class="metric-dot" :style="{ backgroundColor: card.color }"></span>
-            {{ card.label }}
-          </span>
-          <span class="metric-main">{{ card.shopsToPay }}</span>
-          <span class="metric-sub">
-            <strong>{{ money0.format(card.amount) }}</strong>
-          </span>
-        </button>
-      </div>
-    </section>
+    <section class="admin-page financial-page">
+      <header class="page-head clean-head">
+        <h1 class="page-title">Admin Process Payouts</h1>
+      </header>
 
     <div class="split-stats three compact-stats">
       <section class="card stat-wide">
@@ -935,72 +905,7 @@ onMounted(async () => {
   font-size: 2rem;
 }
 
-.category-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.75rem;
-}
 
-.metric-card {
-  border: 1px solid #d8e1ef;
-  background: #f8fbff;
-  border-radius: 14px;
-  text-align: left;
-  padding: 0.72rem 0.8rem;
-  cursor: pointer;
-  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
-}
-
-.metric-card:hover {
-  transform: translateY(-2px);
-}
-
-.metric-card.active {
-  background: linear-gradient(135deg, #1f7bff, #0f6be8);
-  border-color: #1f7bff;
-  color: #fff;
-  box-shadow: 0 14px 26px rgba(31, 123, 255, 0.24);
-}
-
-.metric-title {
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #56708f;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.metric-card.active .metric-title {
-  color: #dbeafe;
-}
-
-.metric-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-}.metric-main {
-  margin-top: 0.72rem;
-  font-weight: 800;
-  font-size: 1.85rem;
-  line-height: 1;
-}
-
-.metric-sub {
-  margin-top: 0.4rem;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.5rem;
-  color: #64748b;
-  font-size: 0.85rem;
-}
-
-.metric-sub strong {
-  color: #1f3657;
-}
 
 .metric-card.active .metric-sub,
 .metric-card.active .metric-sub strong {

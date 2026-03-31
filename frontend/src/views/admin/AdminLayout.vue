@@ -36,7 +36,6 @@ const navItems = [
   { label: 'User Management', to: '/admin/users', icon: 'fa-regular fa-user' },
   { label: 'Vehicle Management', to: '/admin/vehicles', icon: 'fa-solid fa-motorcycle' },
   { label: 'Booking Management', to: '/admin/bookings', icon: 'fa-regular fa-calendar-check' },
-  { label: 'Coupons', to: '/admin/coupons', icon: 'fa-solid fa-ticket' },
   { label: 'Categories', to: '/admin/categories', icon: 'fa-solid fa-tags' },
   { label: 'Cities', to: '/admin/cities', icon: 'fa-solid fa-location-dot' },
   { label: 'Financials', to: '/admin/financials', icon: 'fa-solid fa-dollar-sign' },

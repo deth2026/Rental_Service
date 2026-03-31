@@ -171,7 +171,7 @@ class PaymentController extends Controller
 
             if ($shopIds->isEmpty()) {
                 \Log::warning('PaymentController.shopPayments: No shops found for user', ['user_id' => $user->id]);
-                // return all payments when the user has no shops
+                return response()->json([]);
             } else {
                 // Filter payments by booking shop_id or vehicle shop_id
                 $query->whereHas('booking', function ($bookingQuery) use ($shopIds) {

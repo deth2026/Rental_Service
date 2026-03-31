@@ -6,9 +6,7 @@ import Payments from "./Payments.vue";
 import ReviewsFeedback from "./Review_Feedback.vue";
 import Coupons from "./Coupons.vue";
 import MyShop from "./myShop.vue";
-import LoyaltyPoints from "./Loyalty_points.vue";
 import Setting from "./setting.vue";
-import ActivityHistory from "./ActivityHistory.vue";
 import NotificationOwner from "./Notification_owner.vue";
 import api, { bookingApi, shopApi, vehicleApi } from "@/services/api";
 import { getSessionUser, logoutUser } from "@/services/auth";
@@ -17,7 +15,7 @@ import { useNotifications } from "@/composables/useNotifications";
 
 // Toast notifications
 const router = useRouter();
-const logoUrl = "/images/logo-removebg.png";
+const logoUrl = "/Images/logo.png";
 const route = useRoute();
 const SHOP_DASHBOARD_THEME_KEY = "shop-dashboard-theme";
 const toast = ref({ show: false, message: "", type: "success" });
@@ -88,8 +86,6 @@ const sections = [
   { id: "payments", label: "Payments", icon: "wallet" },
   { id: "reviews", label: "Reviews & Feedback", icon: "message-star" },
   { id: "coupons", label: "Coupons", icon: "ticket" },
-  { id: "loyalty", label: "Loyalty Points", icon: "gift" },
-  { id: "activity", label: "Activity History", icon: "history" },
   { id: "notifications", label: "Notifications", icon: "bell" },
   { id: "settings", label: "Settings", icon: "settings" },
 ];
@@ -609,7 +605,7 @@ const getDateKey = (value) => {
 
 const shopMatchesEntry = (entry) => {
   const shopId = Number(shop.value?.id);
-  if (!shopId) return true;
+  if (!shopId) return false;  // Don't show any data if no shop exists
   const bookingShopId =
     entry.shop_id ||
     entry.booking?.shop_id ||
@@ -1339,12 +1335,11 @@ const iconSvg = (name) => {
         <div class="brand-badge">
           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
         </div>
-        <div class="brand-text">
-          <h2>
-            Chong <span class="brand-cyan">Choul</span>
-          </h2>
+        <!-- <div class="brand-text">
+          <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
+          <small class="brand-tagline">Vehicle Rentals</small>
           <p>Shop Owner</p>
-        </div>
+        </div> -->
       </div>
       <button
         class="sidebar-toggle"
@@ -1601,14 +1596,6 @@ const iconSvg = (name) => {
 
       <section v-else-if="active === 'notifications'" class="notifications-view">
         <NotificationOwner :shop-id="shop?.id" />
-      </section>
-
-      <section v-else-if="active === 'loyalty'" class="loyalty-view">
-        <LoyaltyPoints />
-      </section>
-
-      <section v-else-if="active === 'activity'" class="activity-view">
-        <ActivityHistory />
       </section>
 
       <section v-else-if="active === 'reviews'" class="reviews-view">
@@ -2633,12 +2620,13 @@ const iconSvg = (name) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin-left: 10px;
 }
 
 .brand-name {
   font-size: 18px;
   font-weight: 700;
-  color: #fff;
+  color: #111b36;
   white-space: nowrap;
 }
 
@@ -2646,15 +2634,17 @@ const iconSvg = (name) => {
   color: #06b6d4;
 }
 
-.brand-icon,
-.brand h2,
-.brand p {
-  display: none;
+.brand-tagline {
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #94a3c2;
+  text-transform: uppercase;
 }
 
 .brand p {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #8ca4df;
 }

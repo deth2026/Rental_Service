@@ -3,18 +3,44 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Api\Concerns\ShopContext;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
 
 class FeedbackController extends Controller
 {
+    use ShopContext;
+
     public function index(Request $request)
     {
-        $shopId = $request->user()?->shop?->id;
+        // First check if shop_id is provided in query params
+        $requestedShopId = $request->query('shop_id');
         
+        // Get user's owned shop IDs
+        $userShopIds = $this->getShopIdsFromUser($request);
+        
+        // Determine which shop IDs to use for filtering
+        $shopIdsToFilter = [];
+        
+        if ($requestedShopId) {
+            // If specific shop_id is requested, verify user owns it
+            if (!empty($userShopIds) && in_array($requestedShopId, $userShopIds)) {
+                $shopIdsToFilter = [(int)$requestedShopId];
+            } else {
+                // User doesn't own this shop, return empty
+                $shopIdsToFilter = [0]; // Non-existent ID to return empty
+            }
+        } else {
+            // No specific shop_id, use user's owned shops
+            $shopIdsToFilter = $userShopIds;
+        }
+
         $feedback = Feedback::with(['user', 'booking', 'booking.vehicle'])
-            ->when($shopId, function($query) use ($shopId) {
-                return $query->where('shop_id', $shopId);
+            ->when(!empty($shopIdsToFilter), function($query) use ($shopIdsToFilter) {
+                return $query->whereIn('shop_id', $shopIdsToFilter);
+            })
+            ->when(empty($shopIdsToFilter), function($query) {
+                return $query->whereRaw('0 = 1');
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15);

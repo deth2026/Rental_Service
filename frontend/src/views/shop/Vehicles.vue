@@ -1,8 +1,32 @@
 ﻿<script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { vehicleApi, shopApi, api } from '@/services/api'
 import { getSessionUser } from '@/services/auth'
+import UserNavbar from '@/components/UserNavbar.vue'
+import CommonFooter from '@/components/CommonFooter.vue'
 import '../../css/Vehicles.css'
+
+const router = useRouter()
+
+const navItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Bookings', route: '/my-bookings' },
+  { label: 'Profile', route: '/user/profile' }
+]
+
+const route = useRoute()
+
+const activeNavLabel = computed(() => {
+  const matched = navItems.find((item) => item.route && route.path.startsWith(item.route))
+  return matched?.label || 'Home'
+})
+
+const handleLogout = () => {
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('user')
+  router.push('/login')
+}
 
 const categories = ['Car','Moto', 'Bike']
 const statuses = ['Available', 'Rented', 'Maintenance']
@@ -585,7 +609,15 @@ const onPhotoDrop = async (e) => {
 </script>
 
 <template>
-  <div class="panel vehicles-page">
+  <UserNavbar
+    :nav-items="navItems"
+    :active-label="activeNavLabel"
+    :show-fallback-message="false"
+    @logout-request="handleLogout"
+  />
+
+  <main class="vehicles-main">
+    <div class="panel vehicles-page">
     <div class="line top-line">
       <div>
         <h3>Manage Vehicles</h3>
@@ -1105,4 +1137,7 @@ const onPhotoDrop = async (e) => {
     {{ toast.message }}
   </div>
 </div>
+  </main>
+
+  <CommonFooter />
 </template>

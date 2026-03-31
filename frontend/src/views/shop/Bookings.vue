@@ -147,6 +147,9 @@ const fetchShopBookings = async () => {
       // Get payment information
       const payment = booking.payment || {}
 
+      // Get vehicle data from multiple sources
+      const vehicleData = booking.vehicle_details || booking.vehicle || null
+
       return {
         id: booking.id,
         vehicle_id: booking.vehicle_id,
@@ -164,7 +167,7 @@ const fetchShopBookings = async () => {
         customer_name: booking.customer_name || booking.user?.name || 'N/A',
         customer_email: booking.customer_email || booking.user?.email || 'N/A',
         customer_phone: booking.customer_phone || booking.user?.phone || 'N/A',
-        vehicle_details: booking.vehicle || null,
+        vehicle_details: vehicleData,
         shop_details: booking.shop || null,
         user_details: booking.user || null,
         // Payment information
@@ -339,7 +342,24 @@ const confirmCancelBooking = async () => {
   }
 }
 
-const detailVehicleData = computed(() => selectedBookingDetail.value?.vehicle_details || {})
+const detailVehicleData = computed(() => {
+  const v = selectedBookingDetail.value
+  if (!v) return {}
+  // Try multiple sources for vehicle data
+  return v.vehicle_details || v.vehicle || v.vehicle_id ? {
+    brand: v.vehicle_details?.brand || v.vehicle?.brand || v.brand || v.vehicle_name?.split(' ')[0] || 'N/A',
+    fuel_type: v.vehicle_details?.fuel_type || v.vehicle?.fuel_type || v.fuel_type || 'N/A',
+    transmission: v.vehicle_details?.transmission || v.vehicle?.transmission || v.transmission || 'N/A',
+    plate: v.vehicle_details?.plate || v.vehicle?.plate || v.vehicle_details?.plate_number || v.vehicle?.plate_number || v.plate_number || 'N/A',
+    status: v.vehicle_details?.status || v.vehicle?.status || v.status || 'N/A',
+    name: v.vehicle_details?.name || v.vehicle?.name || v.vehicle_name || 'N/A',
+    model: v.vehicle_details?.model || v.vehicle?.model || v.model || 'N/A',
+    total_vehicles: v.vehicle_details?.total_vehicles || v.vehicle?.total_vehicles || v.total_vehicles,
+    rider_details: v.vehicle_details?.rider_details || v.vehicle?.rider_details || v.rider_details,
+    insurance_fee: v.vehicle_details?.insurance_fee || v.vehicle?.insurance_fee || v.insurance_fee,
+    taxes_fee: v.vehicle_details?.taxes_fee || v.vehicle?.taxes_fee || v.taxes_fee,
+  } : {}
+})
 const detailCustomerData = computed(() => selectedBookingDetail.value?.user_details || {})
 const detailShopData = computed(() => selectedBookingDetail.value?.shop_details || {})
 const detailDaysCount = computed(() => {
@@ -545,7 +565,7 @@ const getTotalDays = (start, end) => {
             <template v-if="booking.status === 'pending'">
               <button
                 type="button"
-                class="action-btn btn-green"
+                class="action-btn btn-view"
                 @click="openBookingDetails(booking)"
               >
                 <i class="fa-solid fa-file-lines"></i>
@@ -581,7 +601,7 @@ const getTotalDays = (start, end) => {
               </button>
               <button
                 type="button"
-                class="action-btn btn-gold"
+                class="action-btn btn-complete"
                 @click="openCompletionModal(booking)"
                 :disabled="processing"
               >
@@ -592,7 +612,7 @@ const getTotalDays = (start, end) => {
             <template v-else-if="booking.status === 'completed'">
               <button
                 type="button"
-                class="action-btn btn-gold"
+                class="action-btn btn-view"
                 @click="openBookingDetails(booking)"
               >
                 <i class="fa-solid fa-file-lines"></i>
@@ -602,7 +622,7 @@ const getTotalDays = (start, end) => {
             <template v-else-if="booking.status === 'cancelled'">
               <button
                 type="button"
-                class="action-btn btn-gold"
+                class="action-btn btn-view"
                 @click="openBookingDetails(booking)"
               >
                 <i class="fa-solid fa-file-lines"></i>
@@ -792,12 +812,13 @@ const getTotalDays = (start, end) => {
         <div class="booking-detail-vehicle">
           <h4>Vehicle specs</h4>
           <div class="booking-detail-specs">
+            <span>Name: <strong>{{ detailVehicleData?.name || 'N/A' }}</strong></span>
             <span>Brand: <strong>{{ detailVehicleData?.brand || 'N/A' }}</strong></span>
             <span>Fuel: <strong>{{ detailVehicleData?.fuel_type || 'N/A' }}</strong></span>
             <span>Transmission: <strong>{{ detailVehicleData?.transmission || 'N/A' }}</strong></span>
-            <span>Plate: <strong>{{ detailVehicleData?.plate || detailVehicleData?.plate_number || 'N/A' }}</strong></span>
+            <span>Plate: <strong>{{ detailVehicleData?.plate || 'N/A' }}</strong></span>
             <span>Status: <strong>{{ detailVehicleData?.status || 'N/A' }}</strong></span>
-            <span v-if="detailVehicleData?.total_vehicles">Total Vehicles: <strong>{{ detailVehicleData.total_vehicles }}</strong></span>
+            <span v-if="detailVehicleData?.total_vehicles">Total: <strong>{{ detailVehicleData.total_vehicles }}</strong></span>
             <span v-if="detailVehicleData?.rider_details">Rider: <strong>{{ detailVehicleData.rider_details }}</strong></span>
             <span v-if="detailVehicleData?.insurance_fee">Insurance: <strong>${{ detailVehicleData.insurance_fee }}</strong></span>
             <span v-if="detailVehicleData?.taxes_fee">Taxes: <strong>${{ detailVehicleData.taxes_fee }}</strong></span>

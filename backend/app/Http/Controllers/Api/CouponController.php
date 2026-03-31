@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ShopContext;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use Illuminate\Http\Request;
@@ -10,16 +11,21 @@ use Illuminate\Validation\Rule;
 
 class CouponController extends Controller
 {
+    use ShopContext;
+
     public function index(Request $request)
     {
-        $query = Coupon::query();
+        $shopId = $this->requireShopId($request);
 
-        if ($this->hasShopColumn()) {
-            $query = $query->with('shop:id,name');
+        if (!$this->hasShopColumn()) {
+            return response()->json(Coupon::paginate(15));
+        }
 
-            if ($request->filled('shop_id')) {
-                $query->where('shop_id', $request->input('shop_id'));
-            }
+        $query = Coupon::with('shop:id,name');
+        if ($shopId) {
+            $query->where('shop_id', $shopId);
+        } else {
+            $query->whereRaw('0 = 1');
         }
 
         return response()->json($query->paginate(15));

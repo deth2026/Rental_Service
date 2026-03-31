@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\ShopContext;
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
 use App\Models\Rating;
@@ -11,17 +12,36 @@ use Illuminate\Support\Facades\Auth;
 
 class RatingController extends Controller
 {
+    use ShopContext;
+
     /**
      * Get all vehicle ratings with feedback (for shop owner review page)
      */
     public function vehicleRatings(Request $request)
     {
-        $shopId = $request->query('shop_id');
+        // Check for specific shop_id in query params
+        $requestedShopId = $request->query('shop_id');
+        $userShopIds = $this->getShopIdsFromUser($request);
+        
+        $shopIds = [];
+        if ($requestedShopId) {
+            // If specific shop_id requested, verify ownership
+            if (!empty($userShopIds) && in_array($requestedShopId, $userShopIds)) {
+                $shopIds = [(int)$requestedShopId];
+            } else {
+                $shopIds = [0]; // Non-existent to return empty
+            }
+        } else {
+            $shopIds = $userShopIds;
+        }
         
         // Get ratings with vehicle and user information
         $ratings = Rating::with(['vehicle', 'user', 'booking'])
-            ->when($shopId, function($query) use ($shopId) {
-                return $query->where('shop_id', $shopId);
+            ->when(!empty($shopIds), function($query) use ($shopIds) {
+                return $query->whereIn('shop_id', $shopIds);
+            })
+            ->when(empty($shopIds), function($query) {
+                return $query->whereRaw('0 = 1');
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15);
@@ -34,13 +54,27 @@ class RatingController extends Controller
      */
     public function shopAverageRating(Request $request)
     {
-        $shopId = $request->query('shop_id');
+        // Check for specific shop_id in query params
+        $requestedShopId = $request->query('shop_id');
+        $userShopIds = $this->getShopIdsFromUser($request);
         
-        if (!$shopId) {
+        $shopIds = [];
+        if ($requestedShopId) {
+            // If specific shop_id requested, verify ownership
+            if (!empty($userShopIds) && in_array($requestedShopId, $userShopIds)) {
+                $shopIds = [(int)$requestedShopId];
+            } else {
+                $shopIds = [0]; // Non-existent to return empty results
+            }
+        } else {
+            $shopIds = $userShopIds;
+        }
+        
+        if (empty($shopIds)) {
             return response()->json(['average_rating' => 0, 'total_ratings' => 0]);
         }
         
-        $ratings = Rating::where('shop_id', $shopId);
+        $ratings = Rating::whereIn('shop_id', $shopIds);
         $totalRatings = $ratings->count();
         $averageRating = $totalRatings > 0 ? round($ratings->avg('rating'), 1) : 0;
         
@@ -55,28 +89,46 @@ class RatingController extends Controller
      */
     public function vehicleRatingsSummary(Request $request)
     {
-        $shopId = $request->query('shop_id');
+        // Check for specific shop_id in query params
+        $requestedShopId = $request->query('shop_id');
+        $userShopIds = $this->getShopIdsFromUser($request);
         
+        $shopIds = [];
+        if ($requestedShopId) {
+            // If specific shop_id requested, verify ownership
+            if (!empty($userShopIds) && in_array($requestedShopId, $userShopIds)) {
+                $shopIds = [(int)$requestedShopId];
+            } else {
+                $shopIds = [0]; // Non-existent to return empty
+            }
+        } else {
+            $shopIds = $userShopIds;
+        }
+        
+        if (empty($shopIds)) {
+            return response()->json([]);
+        }
+
         // Get only vehicles that have ratings
-        $vehicles = Vehicle::whereHas('directRatings', function($query) use ($shopId) {
-                if ($shopId) {
-                    $query->where('shop_id', $shopId);
+        $vehicles = Vehicle::whereHas('directRatings', function($query) use ($shopIds) {
+                if (!empty($shopIds)) {
+                    $query->whereIn('shop_id', $shopIds);
                 }
             })
-            ->withCount(['directRatings' => function($query) use ($shopId) {
-                if ($shopId) {
-                    $query->where('shop_id', $shopId);
+            ->withCount(['directRatings' => function($query) use ($shopIds) {
+                if (!empty($shopIds)) {
+                    $query->whereIn('shop_id', $shopIds);
                 }
             }])
-            ->with(['directRatings' => function($query) use ($shopId) {
-                if ($shopId) {
-                    $query->where('shop_id', $shopId);
+            ->with(['directRatings' => function($query) use ($shopIds) {
+                if (!empty($shopIds)) {
+                    $query->whereIn('shop_id', $shopIds);
                 }
                 $query->with('user');
                 $query->orderBy('created_at', 'desc');
             }])
-            ->when($shopId, function($query) use ($shopId) {
-                return $query->where('shop_id', $shopId);
+            ->when(!empty($shopIds), function($query) use ($shopIds) {
+                return $query->whereIn('shop_id', $shopIds);
             })
             ->get()
             ->map(function($vehicle) {
