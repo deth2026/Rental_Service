@@ -7,6 +7,16 @@ export function navigateFromNotification(router, item) {
     return true;
   }
 
+  const bookingId =
+    (item.related && String(item.related.type || '').toLowerCase() === 'booking' && item.related.id) ||
+    (item.relatedModel && String(item.relatedModel.type || '').toLowerCase() === 'booking' && item.relatedModel.id) ||
+    item.bookingId ||
+    item.data?.bookingId;
+  if (bookingId) {
+    router.push({ name: 'booking', params: { id: bookingId } });
+    return true;
+  }
+
   // TODO: Add handling for other notification types as needed
   // For example:
   // if (item.type === 'booking' && item.bookingId) {

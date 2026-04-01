@@ -108,6 +108,10 @@ const loadOwnerShops = async () => {
     } else {
       ownerShops.value = shops.filter((shop) => Number(shop.owner_id) === Number(ownerId))
     }
+    if (!activeShopId.value && ownerShops.value.length) {
+      activeShopId.value = String(ownerShops.value[0].id)
+    }
+    await fetchCoupons()
   } catch (err) {
     console.error('Failed to load shops:', err)
     shopLoadError.value = 'Unable to load your shops'
@@ -119,7 +123,6 @@ const loadOwnerShops = async () => {
 
 onMounted(async () => {
   await loadOwnerShops()
-  await fetchCoupons()
 })
 
 // Create / Edit modal
@@ -200,7 +203,8 @@ const save = async () => {
     showModal.value = false
   } catch (err) {
     console.error('Error saving coupon:', err)
-    showToast('Failed to save coupon. Please try again.', 'error')
+    const message = err.response?.data?.message || err.response?.data?.errors?.code?.[0] || 'Failed to save coupon. Please try again.'
+    showToast(message, 'error')
   }
 }
 
@@ -413,18 +417,20 @@ const exportCoupons = () => {
               </span>
             </td>
             <td class="actions-cell">
-              <button class="action-btn edit" @click="openEdit(c)" title="Edit">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-              </button>
-              <button class="action-btn delete" @click="confirmDelete(c)" title="Delete">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"/>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                </svg>
-              </button>
+              <div class="coupon-actions">
+                <button class="coupon-action edit" @click="openEdit(c)" title="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button class="coupon-action delete" @click="confirmDelete(c)" title="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>

@@ -988,6 +988,17 @@ const monthlyIncome = computed(() => {
     return sum;
   }, 0);
 });
+
+const formatCurrency = (value) => {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return '$0.00';
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(number);
+};
 const newCustomers = computed(
   () => new Set(bookings.value.map((b) => b.customer)).size,
 );
@@ -1335,11 +1346,12 @@ const iconSvg = (name) => {
         <div class="brand-badge">
           <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
         </div>
-        <!-- <div class="brand-text">
-          <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
-          <small class="brand-tagline">Vehicle Rentals</small>
-          <p>Shop Owner</p>
-        </div> -->
+        <div class="brand-text">
+          <div class="brand-row">
+            <span class="brand-name">Chong</span>
+            <span class="brand-cyan">Choul</span>
+          </div>
+        </div>
       </div>
       <button
         class="sidebar-toggle"
@@ -1359,14 +1371,6 @@ const iconSvg = (name) => {
       </button>
       
       <!-- Logo/Brand Section -->
-      <!-- <div class="brand">
-        <div class="brand-badge" aria-hidden="true">
-          <img class="brand-logo" :src="logoUrl" alt="Chong Choul" />
-        </div>
-        <div class="brand-text">
-          <span class="brand-name">Chong <span class="brand-cyan">Choul</span></span>
-        </div>
-      </div> -->
       
       <div class="menu-area">
         <button
@@ -1528,7 +1532,7 @@ const iconSvg = (name) => {
           </article>
           <article class="card">
             <span>Total Earnings</span>
-            <h3>${{ totalEarnings }}</h3>
+            <h3>{{ formatCurrency(totalEarnings) }}</h3>
             <b class="stat-icon icon-green" v-html="iconSvg('dollar')"></b>
           </article>
           <article class="card">
@@ -1543,7 +1547,7 @@ const iconSvg = (name) => {
           </article>
           <article class="card">
             <span>Monthly Income</span>
-            <h3>${{ monthlyIncome }}</h3>
+            <h3>{{ formatCurrency(monthlyIncome) }}</h3>
             <b class="stat-icon icon-green" v-html="iconSvg('trend')"></b>
           </article>
           <article class="card">
@@ -2640,6 +2644,37 @@ const iconSvg = (name) => {
   letter-spacing: 0.02em;
   color: #94a3c2;
   text-transform: uppercase;
+}
+
+.brand-role {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f172a;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.brand-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.tagline-row {
+  color: #64748b;
 }
 
 .brand p {
@@ -5261,9 +5296,10 @@ textarea {
   color: #f8fafc;
 }
 
-.page.dark-theme .menu-item.active {
-  background: #12264c;
-}
+  .page.dark-theme .menu-item.active {
+    background: #12264c;
+  }
+
 
 .page.dark-theme .topbar {
   background: rgba(10, 18, 32, 0.95);

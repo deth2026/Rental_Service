@@ -279,26 +279,6 @@
         <div class="divider">
           <span>OR CONTINUE WITH</span>
         </div>
-
-        <div class="social-buttons">
-          <button class="social-btn">
-            <img
-              src="https://www.svgrepo.com/show/475656/google-color.svg"
-              alt="Google"
-              width="20"
-            />
-            Google
-          </button>
-          <button class="social-btn">
-            <img
-              src="https://www.svgrepo.com/show/475647/facebook-color.svg"
-              alt="Facebook"
-              width="20"
-            />
-            Facebook
-          </button>
-        </div>
-
         <p class="terms">
           By creating an account, you agree to GoRent's
           <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.

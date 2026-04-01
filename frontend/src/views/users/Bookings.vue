@@ -3,40 +3,20 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { vehicleService, userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
-import UserProfileMenu from '@/components/UserProfileMenu.vue'
+import UserNavbar from '@/components/UserNavbar.vue'
+import MobileCustomerLayout from '@/components/MobileCustomerLayout.vue'
 
 const router = useRouter()
 
-const currentUser = computed(() => userService.getCurrentUser())
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
-
-const openProfile = () => {
-  router.push('/user/profile')
-}
+const navbarItems = [
+  { label: 'Home', route: '/view_shop' },
+  { label: 'My Bookings', route: '/bookings' },
+  { label: 'Promotions', route: '/promotions' },
+]
 
 const handleLogout = () => {
   userService.logout()
   router.push('/login')
-}
-
-const goBack = () => {
-  router.back()
-}
-
-const navItems = ['Home', 'My Bookings', 'Promotions']
-const activeNav = ref('My Bookings')
-
-const setActiveNav = (item) => {
-  activeNav.value = item
-  const navRoutes = {
-    Home: '/view_shop',
-    'My Bookings': '/bookings',
-    Promotions: '/promotions',
-  }
-  const target = navRoutes[item]
-  if (target) {
-    router.push(target)
-  }
 }
 
 const activeTab = ref('all')
@@ -240,30 +220,16 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
 </script>
 
 <template>
-  <div class="bookings-page">
-    <header class="topbar">
-      <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-gift" aria-hidden="true"></i></div>
-        <span>Chong Choul</span>
-      </div>
-
-      <nav class="nav-links">
-        <button
-          v-for="item in navItems"
-          :key="item"
-          class="btn-reset nav-link"
-          :class="{ active: activeNav === item }"
-          @click="setActiveNav(item)"
-        >
-          {{ item }}
-        </button>
-      </nav>
-      <div class="top-actions">
-        <span class="user-display-name">{{ userDisplayName }}</span>
-        <UserProfileMenu @settings="openProfile" @logout="handleLogout" />
-      </div>
-    </header>
-    <section class="bookings-panel">
+  <MobileCustomerLayout :show-back="false" :show-fab="false">
+    <UserNavbar
+      :nav-items="navbarItems"
+      active-label="My Bookings"
+      :show-back-button="false"
+      :show-fallback-message="false"
+      @logout-request="handleLogout"
+    />
+    <div class="bookings-page">
+      <section class="bookings-panel">
       <div class="panel-head">
         <h1>My Bookings</h1>
         <p>View and manage your vehicle rentals.</p>
@@ -295,7 +261,7 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
       </div>
     </section>
 
-    <section class="booking-list-wrap">
+      <section class="booking-list-wrap">
       <div v-if="filteredBookings.length === 0" class="empty-state">
         No bookings found for your search.
       </div>
@@ -327,7 +293,7 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
       </article>
     </section>
 
-    <div v-if="showDetailModal" class="detail-overlay" @click.self="closeDetails">
+      <div v-if="showDetailModal" class="detail-overlay" @click.self="closeDetails">
       <div class="detail-modal">
         <button class="detail-close" type="button" @click="closeDetails" aria-label="Close details">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -392,13 +358,16 @@ const detailTotalAmount = computed(() => Number(selectedBooking.value?.total_pri
           <p v-if="selectedVehicle.description" class="detail-description">{{ selectedVehicle.description }}</p>
         </div>
       </div>
-    </div>
-  </div>
+      </div>
 
-  <!-- Common Footer -->
-  <CommonFooter />
+    </div>
+
+    <!-- Common Footer -->
+    <CommonFooter />
+  </MobileCustomerLayout>
 </template>
 
 <style scoped>
 @import "../../css/bookings.css";
+@import "../../css/customer-responsive.css";
 </style>

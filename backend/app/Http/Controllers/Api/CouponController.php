@@ -15,7 +15,15 @@ class CouponController extends Controller
 
     public function index(Request $request)
     {
-        $shopId = $this->requireShopId($request);
+        // Allow passing shop_id as query param for shop owners
+        $queryShopId = $request->query('shop_id');
+        
+        // If shop_id is provided in query, use it
+        if ($queryShopId) {
+            $shopId = (int) $queryShopId;
+        } else {
+            $shopId = $this->requireShopId($request);
+        }
 
         if (!$this->hasShopColumn()) {
             return response()->json(Coupon::paginate(15));
@@ -187,8 +195,52 @@ class CouponController extends Controller
         return response()->json([
             'valid' => true,
             'coupon_id' => $coupon->id,
+            'coupon' => $coupon->only([
+                'id',
+                'shop_id',
+                'code',
+                'discount_percent',
+                'discount_amount',
+                'minimum_amount',
+                'valid_from',
+                'valid_until',
+                'usage_limit',
+                'is_active',
+            ]),
             'discount_amount' => $discount,
             'message' => 'Coupon applied successfully'
         ]);
+    }
+
+    /**
+     * Get coupons for a specific shop (public endpoint for customers)
+     */
+    public function byShop(Request $request)
+    {
+        $shopId = $request->query('shop_id');
+
+        if (!$shopId) {
+            return response()->json([
+                'message' => 'shop_id is required'
+            ], 400);
+        }
+
+        $coupons = Coupon::with('shop:id,name')
+            ->where('shop_id', $shopId)
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $now = now();
+                $query->whereNull('valid_from')
+                    ->orWhere('valid_from', '<=', $now);
+            })
+            ->where(function ($query) {
+                $now = now();
+                $query->whereNull('valid_until')
+                    ->orWhere('valid_until', '>=', $now);
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($coupons);
     }
 }

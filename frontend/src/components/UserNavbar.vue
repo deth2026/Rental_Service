@@ -42,6 +42,7 @@ const route = useRoute()
 const { unreadCount, loadNotifications } = useNotifications()
 const notificationMenuOpen = ref(false)
 const notificationMenuRef = ref(null)
+const mobileMenuOpen = ref(false)
 
 const resolvedNavItems = computed(() => {
   return props.navItems && props.navItems.length > 0 ? props.navItems : defaultNavItems
@@ -74,6 +75,7 @@ const handleNavClick = (item) => {
   }
 
   emit('nav-click', item)
+  mobileMenuOpen.value = false
 }
 
 const openProfile = () => {
@@ -132,7 +134,7 @@ onBeforeUnmount(() => {
         <span>Chong Choul</span>
       </div>
 
-      <nav class="nav-links">
+      <nav class="nav-links" :class="{ open: mobileMenuOpen }">
         <button
           v-for="item in resolvedNavItems"
           :key="item.label"
@@ -143,6 +145,18 @@ onBeforeUnmount(() => {
           {{ item.label }}
         </button>
       </nav>
+
+      <button
+        type="button"
+        class="btn-reset nav-toggle"
+        :class="{ open: mobileMenuOpen }"
+        @click="mobileMenuOpen = !mobileMenuOpen"
+        aria-label="Toggle navigation"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
 
 
       <div class="top-actions">
@@ -228,20 +242,36 @@ onBeforeUnmount(() => {
   gap: 28px;
 }
 
+.user-navbar .nav-links.open {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  flex-direction: column;
+  padding: 14px 12px 18px;
+  border: 1px solid #e5ecff;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.15);
+}
+
 .user-navbar .nav-link {
   padding: 12px 0;
   color: #1f3657;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   background: transparent;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, font-weight 0.2s ease, border-color 0.2s ease;
   border: none;
   outline: none;
 }
 
 .user-navbar .nav-link.active {
-  color: #2563eb;
+  color: #1d4ed8;
+  font-weight: 800;
+  border-bottom: 3px solid #2563eb;
+  padding-bottom: 10px;
 }
 
 .user-navbar .nav-link:hover {
@@ -313,6 +343,38 @@ onBeforeUnmount(() => {
   z-index: 260;
 }
 
+.user-navbar .nav-toggle {
+  display: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid #dbe7f5;
+  background: #f8fbff;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.user-navbar .nav-toggle span {
+  height: 2px;
+  width: 18px;
+  background: #1f3657;
+  border-radius: 999px;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.user-navbar .nav-toggle.open span:nth-child(1) {
+  transform: translateY(5px) rotate(45deg);
+}
+
+.user-navbar .nav-toggle.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.user-navbar .nav-toggle.open span:nth-child(3) {
+  transform: translateY(-5px) rotate(-45deg);
+}
+
 .navbar-back-row {
   padding-inline: calc(34px + (50vw - 50%));
   padding-bottom: 12px;
@@ -369,10 +431,10 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 640px) {
-  .user-navbar {
-    padding: 12px 18px;
-  }
+  @media (max-width: 640px) {
+    .user-navbar {
+      padding: 12px 18px;
+    }
 
   .user-navbar .nav-links {
     flex-wrap: wrap;
@@ -411,10 +473,25 @@ onBeforeUnmount(() => {
     padding-bottom: 10px;
   }
 
-  .navbar-back-btn {
-    min-height: 38px;
-    padding: 0 14px;
-    font-size: 0.95rem;
+    .navbar-back-btn {
+      min-height: 38px;
+      padding: 0 14px;
+      font-size: 0.95rem;
+    }
   }
-}
+
+  @media (max-width: 960px) {
+    .user-navbar {
+      position: relative;
+    }
+    .user-navbar .nav-toggle {
+      display: inline-flex;
+    }
+    .user-navbar .nav-links {
+      display: none;
+    }
+    .user-navbar .nav-links.open {
+      display: flex;
+    }
+  }
 </style>

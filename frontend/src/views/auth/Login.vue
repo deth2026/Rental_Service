@@ -131,7 +131,6 @@
               <input type="checkbox" v-model="form.remember" />
               <span>Remember me</span>
             </label>
-            <a href="#" class="forgot-link">Forgot password?</a>
           </div>
 
           <button type="submit" class="login-btn" :disabled="isLoading">
@@ -149,16 +148,7 @@
           <span>OR CONTINUE WITH</span>
         </div>
 
-        <div class="social-buttons">
-          <button class="social-btn">
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" width="20" />
-            Google
-          </button>
-          <button class="social-btn">
-            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" alt="Facebook" width="20" />
-            Facebook
-          </button>
-        </div>
+       
 
         <p class="terms">
           By signing in, you agree to GoRent's

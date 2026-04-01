@@ -29,7 +29,7 @@ const refreshCurrentUser = () => {
 }
 
 const currentUser = computed(() => currentUserState.value)
-const userDisplayName = computed(() => currentUser.value?.name || 'Guest User')
+const userDisplayName = computed(() => currentUser.value?.name ?? '')
 const userEmail = computed(() => currentUser.value?.email || '')
 const userRoleLabel = computed(() => {
   const roleValue = currentUser.value?.role || 'customer'
@@ -56,7 +56,7 @@ const userAvatarUrl = computed(() => {
 
 const userInitials = computed(() => {
   const words = userDisplayName.value.trim().split(/\s+/).filter(Boolean)
-  if (words.length === 0) return 'GU'
+  if (words.length === 0) return ''
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
   return `${words[0][0] || ''}${words[1][0] || ''}`.toUpperCase()
 })

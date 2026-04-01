@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Shop;
+use App\Models\Booking;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
@@ -225,6 +226,10 @@ class PaymentController extends Controller
             NotificationService::paymentReceived($record);
         }
 
+        if ($record->booking_id && $nowPaid) {
+            Booking::where('id', $record->booking_id)->update(['payment_status' => 'paid']);
+        }
+
         return response()->json($record, 201);
     }
 
@@ -267,6 +272,10 @@ class PaymentController extends Controller
         $nowPaid = strtolower((string) ($payment->payment_status ?? '')) === 'paid';
         if ($nowPaid && !$previouslyPaid) {
             NotificationService::paymentReceived($payment->fresh());
+        }
+
+        if ($payment->booking_id && $nowPaid) {
+            Booking::where('id', $payment->booking_id)->update(['payment_status' => 'paid']);
         }
 
         return response()->json($payment->fresh());

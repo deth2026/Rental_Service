@@ -141,12 +141,12 @@
             <li><span>Bank Transfer</span></li>
           </ul>
         </div>
-
+        
         <div class="footer-col">
           <h5 class="footer-title">Quick Links</h5>
           <ul class="footer-list">
             <li><RouterLink class="footer-link" to="/">Home</RouterLink></li>
-            <li><RouterLink class="footer-link" to="/view_shop">Explore Vehicles</RouterLink></li>
+            <li><RouterLink class="footer-link" to="/register">Explore Vehicles</RouterLink></li>
             <li><RouterLink class="footer-link" to="/register">List Your Shop</RouterLink></li>
             <li><RouterLink class="footer-link" to="/login">Login</RouterLink></li>
             <li><RouterLink class="footer-link" to="/chooserole">Sign Up</RouterLink></li>

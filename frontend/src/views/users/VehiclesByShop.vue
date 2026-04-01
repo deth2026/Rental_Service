@@ -1,4 +1,5 @@
 <template>
+  <MobileCustomerLayout :show-back="false" :show-fab="false">
   <div>
   <div class="vehicles-page">
     <UserNavbar
@@ -112,6 +113,7 @@
   <!-- Common Footer -->
   <CommonFooter />
   </div>
+  </MobileCustomerLayout>
 </template>
 
 
@@ -122,7 +124,9 @@ import api from '@/services/api';
 import { userService } from '../../services/database.js';
 import CommonFooter from '../../components/CommonFooter.vue';
 import '../../css/VehicleByShop.css'
+import '@/css/customer-responsive.css'
 import UserNavbar from '@/components/UserNavbar.vue'
+import MobileCustomerLayout from '@/components/MobileCustomerLayout.vue'
 import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
 const location = ref('Siem Reap');

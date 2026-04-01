@@ -361,10 +361,10 @@ class BookingController extends Controller
             }
             
             // Get bookings for these shops with related data
-$bookings = Booking::whereIn('shop_id', $shops)
-                ->with(['vehicle.shop', 'user', 'bookingStatusLogs'])
-                ->orderBy('created_at', 'desc')
-                ->paginate(25);
+              $bookings = Booking::whereIn('shop_id', $shops)
+                  ->with(['vehicle.shop', 'user', 'bookingStatusLogs', 'payment'])
+                  ->orderBy('created_at', 'desc')
+                  ->paginate(25);
             
             $formattedBookings = $bookings->map(function ($booking) {
                 $vehicle = $booking->vehicle;
@@ -413,7 +413,13 @@ $bookings = Booking::whereIn('shop_id', $shops)
                     'start_date' => $booking->start_date,
                     'end_date' => $booking->start_date ? date('Y-m-d', strtotime($booking->start_date . ' + ' . ($booking->total_days - 1) . ' days')) : null,
                     'total_price' => $booking->total_price,
-                    'status' => $booking->status,
+                      'status' => $booking->status,
+                      'payment_status' => $booking->payment?->payment_status
+                          ?? $booking->payment_status
+                          ?? 'pending',
+                      'payment_method' => $booking->payment?->payment_method
+                          ?? $booking->payment_method
+                          ?? 'N/A',
                     'image' => $vehicleImage,
                     'total_days' => $booking->total_days,
                     'daily_rate' => $booking->daily_rate,

@@ -1,10 +1,12 @@
 <template>
-  <div class="notification-screen">
-    <UserNavbar
-      :nav-items="navItems"
-      :show-fallback-message="false"
-      @logout-request="handleLogout"
-    />
+  <MobileCustomerLayout :show-back="false" :show-fab="false">
+    <div class="notification-screen">
+      <UserNavbar
+        :nav-items="navItems"
+        :show-back="false"
+        :show-fallback-message="false"
+        @logout-request="handleLogout"
+      />
 
     <main class="notification-screen__body">
       <section class="notification-shell">
@@ -101,8 +103,9 @@
     </div>
   </div>
 
-  <CommonFooter />
-</div>
+      <CommonFooter />
+    </div>
+  </MobileCustomerLayout>
 </template>
 
 <script setup>
@@ -110,9 +113,11 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { userService } from '@/services/database.js'
 import UserNavbar from '@/components/UserNavbar.vue'
+import MobileCustomerLayout from '@/components/MobileCustomerLayout.vue'
 import CommonFooter from '@/components/CommonFooter.vue'
 import { useNotifications } from '@/composables/useNotifications'
 import { navigateFromNotification } from '@/utils/notificationNavigation'
+import '@/css/customer-responsive.css'
 
 const router = useRouter()
 

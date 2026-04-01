@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import userService from '@/services/userService.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserNavbar from '@/components/UserNavbar.vue'
+import '@/css/customer-responsive.css'
 
 const styles = useCssModule()
 const router = useRouter()

@@ -95,9 +95,6 @@
                 {{ appliedCoupon && promoCode === appliedCoupon.code ? 'Applied' : 'Apply' }}
               </button>
             </div>
-            <p v-if="appliedCoupon" class="promo-applied-note">
-              {{ appliedCoupon.code }} is applied to this payment.
-            </p>
             <p v-if="promoFeedback" :class="['promo-feedback', `promo-feedback--${promoFeedbackType}`]">
               {{ promoFeedback }}
             </p>
@@ -288,9 +285,6 @@
                     <p v-if="selectedShopQrOption?.ownerName" class="qr-owner-note">
                       Owner: {{ selectedShopQrOption.ownerName }}
                     </p>
-                  </div>
-                  <div v-else class="qr-missing-note">
-                    This shop has not uploaded a QR code yet. You can still generate one below.
                   </div>
                   <div v-if="!showQR" class="qr-placeholder">
                     <h4>Ready to generate your QR code</h4>
@@ -780,50 +774,23 @@ const applyPromoCode = async () => {
   }
 
   try {
-    const response = await couponApi.getAll({ code });
-    const payload = response?.data?.data || response?.data || [];
-    const records = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
-    const coupon = records[0] || null;
+    const totalBeforeDiscount = Number(rental.value.subtotal || 0) + insuranceAmount.value + taxesAmount.value;
+    const shopId = vehicle.value?.shop_id ?? vehicle.value?.shop?.id ?? null;
+    const validation = await couponApi.validate(code, totalBeforeDiscount, shopId);
+    const payload = validation?.data || {};
+
+    if (!payload.valid) {
+      appliedCoupon.value = null;
+      const message = payload?.message || "Coupon code not found.";
+      showPromoFeedback(message, "error");
+      return;
+    }
+
+    const coupon = payload.coupon || null;
 
     if (!coupon) {
       appliedCoupon.value = null;
       showPromoFeedback("Coupon code not found.", "error");
-      return;
-    }
-
-    if (vehicle.value?.shop_id && Number(coupon.shop_id) !== Number(vehicle.value.shop_id)) {
-      appliedCoupon.value = null;
-      showPromoFeedback("This coupon is only valid for a different shop.", "error");
-      return;
-    }
-
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const validFrom = coupon.valid_from ? new Date(coupon.valid_from) : null;
-    const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
-
-    if (validFrom && !Number.isNaN(validFrom.getTime())) {
-      validFrom.setHours(0, 0, 0, 0);
-      if (validFrom > today) {
-        appliedCoupon.value = null;
-        showPromoFeedback("This coupon is not active yet.", "error");
-        return;
-      }
-    }
-
-    if (validUntil && !Number.isNaN(validUntil.getTime())) {
-      validUntil.setHours(0, 0, 0, 0);
-      if (validUntil < today) {
-        appliedCoupon.value = null;
-        showPromoFeedback("This coupon has expired.", "error");
-        return;
-      }
-    }
-
-    if (coupon.is_active === false || coupon.is_active === 0 || coupon.is_active === '0') {
-      appliedCoupon.value = null;
-      showPromoFeedback("This coupon is inactive.", "error");
       return;
     }
 
@@ -832,8 +799,12 @@ const applyPromoCode = async () => {
     showPromoFeedback(`${promoCode.value} applied successfully.`, "success");
   } catch (error) {
     console.error("Failed to apply coupon:", error);
+    const formatted = formatBackendValidationError(error);
     appliedCoupon.value = null;
-    showPromoFeedback("Failed to apply coupon. Please try again.", "error");
+    showPromoFeedback(
+      formatted || error?.response?.data?.message || "Failed to apply coupon. Please try again.",
+      "error"
+    );
   }
 };
 

@@ -305,10 +305,6 @@ watch(
         <h1 class="page-title">Admin Dashboard Overview</h1>
         <p class="page-subtitle">Welcome back, {{ adminName }}. Real-time platform performance monitoring.</p>
       </div>
-      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="addNewShop">
-        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-        <span>Add New Shop</span>
-      </button>
     </header>
 
     <div class="stat-grid">

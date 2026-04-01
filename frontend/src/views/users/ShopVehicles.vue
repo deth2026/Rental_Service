@@ -6,6 +6,7 @@ import { userService } from '../../services/database.js'
 import { readStoredLocation } from '@/utils/locationAccess'
 import CommonFooter from '../../components/CommonFooter.vue'
 import '../../css/ShopVehicle.css'
+import '@/css/customer-responsive.css'
 import UserNavbar from '@/components/UserNavbar.vue'
 import { cacheSelectedShop, clearSelectedShopCache } from '@/utils/shopSelectionCache'
 
@@ -627,21 +628,6 @@ const extractCoordinatesFromMapUrl = (value) => {
               </div>
             </div>
 
-            <div class="vehicle-extra-fees" v-if="vehicle.insurance_fee || vehicle.taxes_fee || vehicle.rider_details">
-              <div class="fee-item" v-if="vehicle.rider_details">
-                <i class="fa-solid fa-user"></i>
-                <span>{{ vehicle.rider_details }}</span>
-              </div>
-              <div class="fee-item" v-if="vehicle.insurance_fee">
-                <i class="fa-solid fa-shield-halved"></i>
-                <span>Insurance: ${{ vehicle.insurance_fee }}</span>
-              </div>
-              <div class="fee-item" v-if="vehicle.taxes_fee">
-                <i class="fa-solid fa-file-invoice"></i>
-                <span>Taxes: ${{ vehicle.taxes_fee }}</span>
-              </div>
-            </div>
-            
             <div class="vehicle-rating" v-if="vehicle.rating">
               <i class="fa-solid fa-star"></i>
               <span>{{ vehicle.rating.toFixed(1) }}</span>

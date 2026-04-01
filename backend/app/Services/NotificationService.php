@@ -222,7 +222,12 @@ class NotificationService
 
         self::notifyAdmins($title, $message, $payload);
         if ($owner) {
-            return self::sendToUser($owner, $title, $message, $payload);
+            self::sendToUser($owner, $title, $message, $payload);
+        }
+
+        $customer = $booking?->user;
+        if ($customer) {
+            self::sendToUser($customer, 'Payment processed', "Payment of \${$amount} for {$code} has been processed.", $payload);
         }
 
         return null;

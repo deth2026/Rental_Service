@@ -1,12 +1,17 @@
 <template>
-  <div class="motoride-container">
-    <UserNavbar
-      :nav-items="navItems"
-      :show-fallback-message="false"
-      @logout-request="handleLogout"
-    />
- 
-    <main class="content">
+  <MobileCustomerLayout
+    :title="vehicleName || 'Vehicle Detail'"
+    :show-back="true"
+    back-to="/view_shop"
+  >
+    <div class="motoride-container">
+      <UserNavbar
+        :nav-items="navItems"
+        :show-fallback-message="false"
+        @logout-request="handleLogout"
+      />
+
+      <main class="content">
       <p v-if="isLoading" class="action-message">Loading vehicle details...</p>
       <p v-else-if="loadingError" class="action-message">{{ loadingError }}</p>
 
@@ -384,6 +389,7 @@
       </div>
     </footer>
   </div>
+  </MobileCustomerLayout>
 </template>
 
 <script setup>
@@ -392,7 +398,10 @@ import { useRouter, useRoute } from "vue-router";
 import api, { vehicleApi, shopApi } from "@/services/api";
 import { userService } from "../../services/database.js";
 import UserNavbar from '@/components/UserNavbar.vue';
+import MobileCustomerLayout from '@/components/MobileCustomerLayout.vue';
 import UserFooter from '@/components/UserFooter.vue';
+import '@/css/customer-responsive.css';
+import '@/css/MyBookings.css';
 import {
   parseDateInputValue,
   parseQuantityValue,

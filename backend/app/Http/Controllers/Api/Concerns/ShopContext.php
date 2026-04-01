@@ -42,6 +42,21 @@ trait ShopContext
 
     protected function requireShopId(Request $request): ?int
     {
-        return $this->getShopIdFromUser($request) ?? $request->query('shop_id');
+        $queryId = $request->query('shop_id');
+        $userShopIds = $this->getShopIdsFromUser($request);
+        if ($queryId && in_array((int) $queryId, $userShopIds, true)) {
+            return (int) $queryId;
+        }
+
+        $shopId = $this->getShopIdFromUser($request);
+        if ($shopId) {
+            return $shopId;
+        }
+
+        if (!empty($userShopIds)) {
+            return $userShopIds[0];
+        }
+
+        return null;
     }
 }

@@ -117,6 +117,7 @@ export const couponApi = {
   create: (data) => api.post('/coupons', data),
   update: (id, data) => api.put(`/coupons/${id}`, data),
   delete: (id) => api.delete(`/coupons/${id}`),
+  getByShop: (shopId) => api.get('/coupons/by-shop', { params: { shop_id: shopId } }),
   validate: (code, totalAmount, shopId = null) => {
     const params = { code, total_amount: totalAmount };
     if (shopId != null && shopId !== '') {

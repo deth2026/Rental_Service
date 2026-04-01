@@ -5,6 +5,7 @@ import { vehicleService, userService } from '../../services/database.js'
 import CommonFooter from '../../components/CommonFooter.vue'
 import UserNavbar from '@/components/UserNavbar.vue'
 import '../../css/MyBookings.css'
+import '@/css/customer-responsive.css'
 
 const router = useRouter()
 const route = useRoute()

@@ -5,9 +5,11 @@ import { logoutUser } from '@/services/auth'
 import { shopApi } from '@/services/api'
 import CommonFooter from '@/components/CommonFooter.vue'
 import UserNavbar from '@/components/UserNavbar.vue'
+import MobileCustomerLayout from '@/components/MobileCustomerLayout.vue'
 import CambodiaMap from '@/components/CambodiaMap.vue'
 import { readStoredLocation, saveLocationAccess } from '@/utils/locationAccess'
 import '@/css/userDashboard.css'
+import '@/css/customer-responsive.css'
 
 const router = useRouter()
 
@@ -429,8 +431,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="customer-page">
-    <UserNavbar
+  <MobileCustomerLayout :show-back="false" :show-fab="false">
+    <div class="customer-page">
+      <UserNavbar
       :nav-items="dashboardNavItems"
       :show-back-button="false"
       :show-fallback-message="false"
@@ -591,4 +594,5 @@ onMounted(async () => {
 
     <CommonFooter />
   </div>
+  </MobileCustomerLayout>
 </template>

@@ -81,6 +81,7 @@ Route::get('/cities', [CityController::class, 'index']);
 // Public coupons listing for customer promotions page
 Route::get('/coupons', [CouponController::class, 'index']);
 Route::get('/coupons/check', [CouponController::class, 'check']);
+Route::get('/coupons/by-shop', [CouponController::class, 'byShop']);
 
 // Admin + Shop Owner shared routes (coupons & loyalty points management)
 Route::middleware(['auth:sanctum', 'role:admin,shop_owner'])->group(function () {

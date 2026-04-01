@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { cityApi } from '../../services/api.js'
+import { cityApi, shopApi } from '../../services/api.js'
 import { useToast } from '../../composables/useToast.js'
 import ConfirmModal from '../../components/ConfirmModal.vue'
 
@@ -29,9 +29,55 @@ const query = computed(() => String(route.query.q || '').trim().toLowerCase())
 const load = async () => {
   loading.value = true
   try {
-    const { data } = await cityApi.getAll()
-    const payload = data?.data?.data || data?.data || data
-    items.value = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : []
+    const [citiesRes, shopsRes] = await Promise.allSettled([cityApi.getAll(), shopApi.getAll()])
+    const cityPayload = citiesRes.status === 'fulfilled' ? citiesRes.value.data : null
+    const shopPayload = shopsRes.status === 'fulfilled' ? shopsRes.value.data : null
+    const cityList = Array.isArray(cityPayload)
+      ? cityPayload
+      : Array.isArray(cityPayload?.data)
+        ? cityPayload.data
+        : Array.isArray(cityPayload?.data?.data)
+          ? cityPayload.data.data
+          : []
+    const shopList = Array.isArray(shopPayload)
+      ? shopPayload
+      : Array.isArray(shopPayload?.data)
+        ? shopPayload.data
+        : Array.isArray(shopPayload?.data?.data)
+          ? shopPayload.data.data
+          : []
+
+    const shopCountByCity = new Map()
+    shopList.forEach((shop) => {
+      const cityId = shop.city_id || null
+      const key = cityId != null ? String(cityId) : shop.city || shop.location || 'unknown'
+      const arr = shopCountByCity.get(key) || []
+      arr.push(shop)
+      shopCountByCity.set(key, arr)
+    })
+
+    const cityIdSet = new Set()
+    const merged = cityList.map((city) => {
+      cityIdSet.add(String(city.id))
+      return {
+        ...city,
+        shopCount: (shopCountByCity.get(String(city.id)) || []).length,
+      }
+    })
+
+    shopCountByCity.forEach((shops, key) => {
+      if (!cityIdSet.has(key)) {
+        merged.push({
+          id: null,
+          name: shops[0]?.city || shops[0]?.location || `City ${key}`,
+          created_at: shops[0]?.created_at,
+          shopCount: shops.length,
+          derived: true,
+        })
+      }
+    })
+
+    items.value = merged
   } catch (err) {
     toast.error(err?.response?.data?.message || err?.message || 'Failed to load cities.')
     items.value = []
@@ -162,20 +208,29 @@ onMounted(load)
       <div v-else class="table-wrap">
         <table class="data-table">
           <thead>
-            <tr>
-              <th>CITY</th>
-              <th>CREATED</th>
-              <th class="actions">ACTIONS</th>
-            </tr>
+          <tr>
+            <th>CITY</th>
+            <th>SHOPS</th>
+            <th>CREATED</th>
+            <th class="actions">ACTIONS</th>
+          </tr>
           </thead>
           <tbody>
             <tr v-for="c in paged" :key="c.id">
               <td class="shop-cell">
                 <span class="shop-icon square" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></span>
                 <div class="shop-meta">
-                  <div class="shop-name">{{ c.name }}</div>
-                  <div class="shop-id">ID: {{ c.id }}</div>
+                  <div class="shop-name">
+                    {{ c.name }}
+                    <span v-if="c.derived" class="badges">(auto)</span>
+                  </div>
+                  <div class="shop-id">ID: {{ c.id ?? '—' }}</div>
                 </div>
+              </td>
+              <td>
+                <span class="badge" :class="{ 'badge--accent': c.shopCount > 0 }">
+                  {{ c.shopCount || 0 }} shop{{ c.shopCount === 1 ? '' : 's' }}
+                </span>
               </td>
               <td class="muted">{{ String(c.created_at || '').slice(0, 10) || '—' }}</td>
               <td class="actions">
@@ -240,16 +295,8 @@ onMounted(load)
             <strong>{{ selected?.name || '—' }}</strong>
           </div>
           <div class="detail-card">
-            <span class="detail-label">City ID</span>
-            <strong>{{ selected?.id ?? '—' }}</strong>
-          </div>
-          <div class="detail-card">
             <span class="detail-label">Created at</span>
             <strong>{{ formatDate(selected?.created_at) }}</strong>
-          </div>
-          <div class="detail-card">
-            <span class="detail-label">Updated at</span>
-            <strong>{{ formatDate(selected?.updated_at) }}</strong>
           </div>
         </div>
       </div>

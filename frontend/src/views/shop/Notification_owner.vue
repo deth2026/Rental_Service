@@ -2,11 +2,7 @@
   <div class="owner-notifications">
     <header class="owner-notifications__header">
       <div>
-        <p class="owner-notifications__eyebrow">Shop Notifications</p>
         <h1>Actions that need your attention</h1>
-        <p class="owner-notifications__subhead">
-          Every booking update, customer message, and cancellation shows up here so you can respond quickly.
-        </p>
       </div>
       <div class="owner-notifications__header-actions">
         <div class="owner-notifications__unread-pill">
@@ -75,18 +71,7 @@
             <span class="notification-card__duration">{{ formatWorkDuration(item.timestamp) }}</span>
           </div>
 
-          <div class="notification-card__actions">
-            <button
-              v-for="action in getActionButtons(item)"
-              :key="`action-${item.id}-${action.label}`"
-              type="button"
-              class="action-btn"
-              :class="action.variant"
-              @click.stop="action.handler"
-            >
-              {{ action.label }}
-            </button>
-          </div>
+          
         </article>
         <button
           v-if="hasHiddenNotifications"
@@ -721,11 +706,7 @@ watch(
   font-weight: 600;
 }
 
-.notification-card__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
+
 
 .action-btn {
   border-radius: 12px;

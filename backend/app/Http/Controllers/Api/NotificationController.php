@@ -25,10 +25,14 @@ class NotificationController extends Controller
         }
 
         $user = $request->user();
-        $shopId = $this->requireShopId($request);
-        if (!$shopId) {
-            return response()->json([]);
+        $shopId = null;
+        if ($this->isShopContextRequired($user)) {
+            $shopId = $this->requireShopId($request);
+            if (!$shopId) {
+                return response()->json([]);
+            }
         }
+
         $query = NotificationRecord::with([
             'user:id,name,email,profile_picture,img_url',
             'related' => fn (MorphTo $relation) => $relation->morphWith([
@@ -47,12 +51,11 @@ class NotificationController extends Controller
             });
         }
 
-        $userShopIds = $this->getShopIdsFromUser($request);
-        if (!empty($userShopIds) && !in_array($shopId, $userShopIds)) {
-            return response()->json([]);
-        }
-
         if ($shopId && Schema::hasColumn('notifications', 'shop_id')) {
+            $userShopIds = $this->getShopIdsFromUser($request);
+            if (!empty($userShopIds) && !in_array($shopId, $userShopIds)) {
+                return response()->json([]);
+            }
             $query->where('shop_id', $shopId);
         }
 
@@ -83,9 +86,12 @@ class NotificationController extends Controller
         }
 
         $user = $request->user();
-        $shopId = $this->requireShopId($request);
-        if (!$shopId) {
-            return response()->json(['updated' => 0]);
+        $shopId = null;
+        if ($this->isShopContextRequired($user)) {
+            $shopId = $this->requireShopId($request);
+            if (!$shopId) {
+                return response()->json(['updated' => 0]);
+            }
         }
 
         $query = NotificationRecord::where(function ($builder) use ($user) {
@@ -95,7 +101,9 @@ class NotificationController extends Controller
             }
         });
         if (Schema::hasColumn('notifications', 'shop_id')) {
-            $query->where('shop_id', $shopId);
+            if ($shopId) {
+                $query->where('shop_id', $shopId);
+            }
         }
         $updated = $query->update(['is_read' => true]);
         return response()->json(['updated' => $updated]);
@@ -167,6 +175,16 @@ class NotificationController extends Controller
             return true;
         }
         abort(403);
+    }
+
+    protected function isShopContextRequired(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        $role = strtolower((string) ($user->role ?? ''));
+        return in_array($role, ['shop_owner'], true);
     }
 
     protected function isAdmin($user): bool

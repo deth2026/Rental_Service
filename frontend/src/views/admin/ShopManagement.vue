@@ -12,7 +12,6 @@ const toast = useToast()
 
 const activeTab = ref('all')
 const sortKey = ref('newest')
-const showSortMenu = ref(false)
 const page = ref(1)
 const perPage = 6
 
@@ -447,10 +446,6 @@ onMounted(() => {
         <h1 class="page-title">Shop Management</h1>
         <p class="page-subtitle">Manage, verify, and monitor all registered rental shops.</p>
       </div>
-      <button type="button" class="btn btn-primary" style="max-width: 200px; justify-content: center;" @click="openCreate">
-        <i class="fa-solid fa-plus" aria-hidden="true"></i>
-        <span>Add New Shop</span>
-      </button>
     </header>
 
     <section class="card">
@@ -461,26 +456,11 @@ onMounted(() => {
           <button type="button" class="tab" :class="{ active: activeTab === 'inactive' }" @click="activeTab = 'inactive'">Inactive</button>
         </div>
 
-        <div class="toolbar-right">
-          <div class="sort">
-            <!-- <span class="muted">Sort by:</span> -->
-            <div class="sort-dropdown">
-              <button type="button" class="btn btn-chip" @click="showSortMenu = !showSortMenu">
-                {{ sortKey === 'newest' ? 'Newest' : sortKey === 'oldest' ? 'Oldest' : sortKey === 'name_asc' ? 'Name (A-Z)' : sortKey === 'name_desc' ? 'Name (Z-A)' : 'Newest' }} 
-                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-              </button>
-              <div v-if="showSortMenu" class="sort-menu">
-                <button type="button" @click="sortKey = 'newest'; showSortMenu = false">Newest</button>
-                <button type="button" @click="sortKey = 'oldest'; showSortMenu = false">Oldest</button>
-                <button type="button" @click="sortKey = 'name_asc'; showSortMenu = false">Name (A-Z)</button>
-                <button type="button" @click="sortKey = 'name_desc'; showSortMenu = false">Name (Z-A)</button>
-              </div>
-            </div>
-          </div>
-          <button type="button" class="icon-btn" title="Download" @click="downloadShops">
-            <i class="fa-solid fa-download" aria-hidden="true"></i>
-          </button>
-        </div>
+    <div class="toolbar-right">
+      <button type="button" class="icon-btn" title="Download" @click="downloadShops">
+        <i class="fa-solid fa-download" aria-hidden="true"></i>
+      </button>
+    </div>
       </div>
 
 
@@ -552,7 +532,7 @@ onMounted(() => {
     </section>
 
     <div v-if="showCreate" class="modal-backdrop" role="dialog" aria-modal="true">
-      <div class="modal">
+      <div class="modal create-shop-modal">
         <div class="modal-head">
           <div>
             <div class="modal-title">Create New Shop</div>
@@ -706,17 +686,10 @@ onMounted(() => {
 </template>
 
 <style>
-  .sort-menu {
-    padding: 10px;
-  }
-  .sort-menu button {
-    margin: 4px;
-  }
-
   .create-shop-layout {
     display: grid;
-    grid-template-columns: minmax(220px, 280px) 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(240px, 320px) 1fr;
+    gap: 32px;
     align-items: start;
   }
 
@@ -793,16 +766,68 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    background: #ffffff;
+    padding: 24px;
+    border-radius: 22px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow:
+      0 20px 40px rgba(15, 23, 42, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .create-shop-modal {
+    width: min(100%, 960px);
+    border-radius: 42px;
+    border: 2px solid rgba(37, 99, 235, 0.35);
+    padding: 40px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, #edf2ff 40%, #e0edff 100%);
+    box-shadow:
+      0 18px 60px rgba(15, 23, 42, 0.18),
+      inset 0 2px 12px rgba(255, 255, 255, 0.6),
+      inset 0 -10px 20px rgba(37, 99, 235, 0.08);
+    backdrop-filter: blur(18px);
+  }
+
+  .create-shop-modal .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .create-shop-modal .modal-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .create-shop-modal .modal-sub {
+    margin-top: 4px;
+    font-size: 0.95rem;
+    color: #475569;
+  }
+
+  .modal-head .icon-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(15, 23, 42, 0.2);
+    background: #ffffff;
+    color: #475569;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.15);
   }
 
   .upload-drop {
     border: 2px dashed #cbd5f5;
-    border-radius: 18px;
-    padding: 32px;
+    border-radius: 22px;
+    padding: 28px;
     text-align: center;
-    background: #fdfdfd;
+    background: #f5f7fb;
     cursor: pointer;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.8);
   }
 
   .upload-drop:hover {
@@ -843,11 +868,13 @@ onMounted(() => {
 
   .field input,
   .field textarea {
-    border-radius: 12px;
-    border: 1px solid #d6dbec;
-    padding: 10px 12px;
+    border-radius: 16px;
+    border: none;
+    padding: 14px 16px;
     font-size: 0.95rem;
     font-family: 'Inter', system-ui, sans-serif;
+    background: #eef2ff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
   .field textarea {

@@ -204,10 +204,12 @@ export const useAdminStore = defineStore('admin', () => {
         .map(([key, entry]) => ({ key, value: entry.val, label: entry.label }))
         .reverse()
 
-      paymentTotal.value = paymentRecords.value.reduce((sum, item) => {
-        const amt = Number(item.amount ?? item.total_amount ?? item.value ?? 0)
-        return sum + (Number.isFinite(amt) ? amt : 0)
-      }, 0)
+      paymentTotal.value = nextState.bookings
+        .filter(b => {
+          const status = String(b.status || '').toLowerCase()
+          return validStatuses.includes(status)
+        })
+        .reduce((sum, b) => sum + toAmount(b), 0)
 
       trends.value = {
         users: percentageTrend(usersCurrent, usersPrevious),
